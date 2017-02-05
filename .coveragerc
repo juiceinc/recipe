@@ -1,0 +1,16 @@
+[paths]
+source =
+   src/recipe
+   */site-packages/recipe
+
+[run]
+branch = true
+source =
+    recipe
+    tests
+parallel = true
+
+[report]
+show_missing = true
+precision = 2
+omit = *migrations*
