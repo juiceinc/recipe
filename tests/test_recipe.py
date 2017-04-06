@@ -1,43 +1,13 @@
 from sqlalchemy import Table
-from sqlalchemy import create_engine
 from sqlalchemy import func
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 
 import recipe
 from recipe import Dimension
+from recipe import Having
 from recipe import Metric
 from recipe import Recipe
 from recipe import Shelf
-from recipe.ingredients import Having
-
-Base = declarative_base()
-engine = create_engine('sqlite://')
-
-TABLEDEF = '''
-        CREATE TABLE IF NOT EXISTS foo
-        (first text,
-         last text,
-         age int);
-'''
-
-# create a configured "Session" class
-Session = sessionmaker(bind=engine)
-
-engine.execute(TABLEDEF)
-engine.execute(
-    "insert into foo values ('hi', 'there', 5), ('hi', 'fred', 10)")
-
-
-class MyTable(Base):
-    """
-    The `icd10_preparedness` table schema
-    """
-    __table__ = Table('foo', Base.metadata,
-                      autoload=True,
-                      autoload_with=engine)
-    # Primary key MUST be specified, but it isn't used.
-    __mapper_args__ = {'primary_key': __table__.c.first}
+from .test_base import *
 
 
 def test_main():
@@ -92,7 +62,6 @@ ORDER BY foo.last"""
         assert self.recipe.all()[0].last == 'fred'
         assert self.recipe.all()[0].age == 10
         assert self.recipe.stats.rows == 2
-
 
     def test_having(self):
         hv = Having(func.sum(MyTable.age) < 10)

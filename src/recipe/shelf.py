@@ -1,4 +1,11 @@
+from sqlalchemy import Float
+from sqlalchemy import Integer
+from sqlalchemy import String
+from sqlalchemy import func
+
 from recipe import BadRecipe, Ingredient
+from recipe import Dimension
+from recipe import Metric
 from recipe.utils import AttrDict
 
 
@@ -25,7 +32,7 @@ class Shelf(AttrDict):
 
     def __setitem__(self, key, ingredient):
         ingredient.id = key
-        super(Shelf, self).__setattr__(key, ingredient)
+        super(Shelf, self).__setitem__(key, ingredient)
 
     def find(self, obj, filter_to_class, constructor=None,
              raise_if_invalid=True):
@@ -66,3 +73,19 @@ class Shelf(AttrDict):
                                                         type(filter_to_class)))
             else:
                 return obj
+
+
+class AutomaticShelf(Shelf):
+    def __init__(self, table, *args, **kwargs):
+        d = self._introspect(table)
+        super(AutomaticShelf, self).__init__(d)
+
+    def _introspect(self, table):
+        """ Build initial shelf using table """
+        d = {}
+        for c in table.__table__.columns:
+            if isinstance(c.type, String):
+                d[c.name] = Dimension(c)
+            if isinstance(c.type, (Integer, Float)):
+                d[c.name] = Metric(func.sum(c))
+        return d

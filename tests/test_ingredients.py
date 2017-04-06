@@ -1,41 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from sqlalchemy import Table
-from sqlalchemy import create_engine
 from sqlalchemy import func
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 
 from recipe import *
-
-Base = declarative_base()
-engine = create_engine('sqlite://')
-
-TABLEDEF = '''
-        CREATE TABLE IF NOT EXISTS foo
-        (first text,
-         last text,
-         age int);
-'''
-
-# create a configured "Session" class
-Session = sessionmaker(bind=engine)
-
-engine.execute(TABLEDEF)
-engine.execute(
-    "insert into foo values ('hi', 'there', 5), ('hi', 'fred', 10)")
-
-
-class MyTable(Base):
-    """
-    The `icd10_preparedness` table schema
-    """
-    __table__ = Table('foo', Base.metadata,
-                      autoload=True,
-                      autoload_with=engine)
-    # Primary key MUST be specified, but it isn't used.
-    __mapper_args__ = {'primary_key': __table__.c.first}
+from .test_base import *
 
 
 class TestIngredients(object):
@@ -309,3 +278,79 @@ class TestMetric(object):
         assert len(d.columns) == 1
         assert len(d.group_by) == 0
         assert len(d.filters) == 0
+
+
+class TestDivideMetric(object):
+    def test_init(self):
+        # DivideMetric should have a two expressions
+        with pytest.raises(TypeError):
+            d = DivideMetric()
+
+        with pytest.raises(TypeError):
+            d = DivideMetric(func.sum(MyTable.age))
+
+        d = DivideMetric(func.sum(MyTable.age), func.sum(MyTable.age))
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 0
+        assert len(d.filters) == 0
+
+        # Generate numerator / (denominator+epsilon) by default
+        assert unicode(d.columns[0]) == 'CAST(sum(foo.age) AS FLOAT) / (' \
+                                        'coalesce(' \
+                                        'CAST(sum(foo.age) AS FLOAT), ' \
+                                        ':coalesce_1) + :coalesce_2)'
+
+        # Generate if denominator == 0 then 'zero' else numerator / denominator
+        d = DivideMetric(func.sum(MyTable.age), func.sum(MyTable.age),
+                         ifzero='zero')
+        assert unicode(d.columns[0]) == \
+               'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
+               ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
+               'CAST(sum(foo.age) AS FLOAT) END'
+
+
+class TestSumIfMetric(object):
+    def test_init(self):
+        # DivideMetric should have a two expressions
+        with pytest.raises(TypeError):
+            d = SumIfMetric()
+
+        with pytest.raises(TypeError):
+            d = SumIfMetric(func.sum(MyTable.age))
+
+        d = SumIfMetric(MyTable.age > 5, func.sum(MyTable.age))
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 0
+        assert len(d.filters) == 0
+
+        # Generate numerator / (denominator+epsilon) by default
+        assert unicode(d.columns[0]) == \
+               'sum(CASE WHEN (foo.age > :age_1) THEN sum(foo.age) END)'
+
+
+class TestCountIfMetric(object):
+    def test_init(self):
+        # DivideMetric should have a two expressions
+        with pytest.raises(TypeError):
+            d = SumIfMetric()
+
+        with pytest.raises(TypeError):
+            d = CountIfMetric(func.sum(MyTable.age))
+
+        d = CountIfMetric(MyTable.age > 5, MyTable.first)
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 0
+        assert len(d.filters) == 0
+
+        # Generate numerator / (denominator+epsilon) by default
+        assert unicode(d.columns[0]) == \
+               'count(DISTINCT CASE WHEN (foo.age > :age_1) THEN foo.first END)'
+
+        d = CountIfMetric(MyTable.age > 5, MyTable.first, count_distinct=False)
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 0
+        assert len(d.filters) == 0
+
+        # Generate numerator / (denominator+epsilon) by default
+        assert unicode(d.columns[0]) == \
+               'count(CASE WHEN (foo.age > :age_1) THEN foo.first END)'

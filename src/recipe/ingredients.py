@@ -1,7 +1,6 @@
 from uuid import uuid4
 
 from sqlalchemy import Float, between, case, cast, distinct, func
-from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from recipe.compat import basestring
 from recipe.exceptions import BadIngredient
@@ -250,6 +249,14 @@ class Metric(Ingredient):
         super(Metric, self).__init__(**kwargs)
         self.columns = [expression]
 
+    @property
+    def expression(self):
+        """ An accessor for metric column """
+        if self.columns:
+            return self.columns[0]
+        else:
+            return None
+
 
 class DivideMetric(Metric):
     """ A metric that divides a numerator by a denominator handling several
@@ -306,15 +313,3 @@ class CountIfMetric(Metric):
         if count_distinct:
             inner_expr = distinct(inner_expr)
         super(CountIfMetric, self).__init__(func.count(inner_expr), **kwargs)
-
-
-class SimpleMetric(Metric):
-    """ A metric created from an Table attribute
-    Can't be used with groupings
-    """
-
-    def __init__(self, field, **kwargs):
-        if not (isinstance(field, InstrumentedAttribute)):
-            raise BadIngredient('SimpleMetric.field must be an '
-                                'InstrumentedAttribute')
-        super(SimpleMetric, self).__init__(field, **kwargs)
