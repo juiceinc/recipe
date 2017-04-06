@@ -32,102 +32,6 @@ logger = logging.getLogger(__name__)
 # config object that you could use instead of passing data in
 #  on every call, control settings via a yamlfile/env variable/object
 
-class _Cauldron(object):
-    """ Cauldron is a private class that tracks the ingredients used to
-    build a query and ensures that the value for each ingredient is available on
-    the result set.
-    """
-    cnt = 0
-
-    def empty(self):
-        """ Reset the cauldron
-        """
-        self.ingredients = {}
-
-    def __init__(self, anonymize=False):
-        self.empty()
-        self.anonymize = anonymize
-
-    def __repr__(self):
-        """ A string representation of the ingredients used in a recipe
-        """
-
-        def ordering(x):
-            # Sort by Dimension,Metric,Filter then by id
-            if isinstance(x, Dimension):
-                return (0, x.id)
-            elif isinstance(x, Metric):
-                return (1, x.id)
-            elif isinstance(x, Filter):
-                return (2, x.id)
-            else:
-                return (3, x.id)
-
-        lines = []
-        # sort the ingredients by type
-        for ingredient in sorted(self.ingredients.values(), cmp,
-                                 key=ordering):
-            lines.append(ingredient.describe())
-        return '\n'.join(lines)
-
-    def use(self, ingredient):
-        ingredient = copy(ingredient)
-        ingredient.anonymize = self.anonymize
-        self.ingredients[ingredient.id] = ingredient
-
-    def brew_query_parts(self, do_group_by=True):
-        """ Make columns, group_bys, filters, havings
-        """
-        columns, group_bys, filters, havings = [], [], set(), set()
-        for ingredient in self.ingredients.itervalues():
-            if ingredient.query_columns:
-                columns.extend(ingredient.query_columns)
-            if ingredient.group_by and do_group_by:
-                group_bys.extend(ingredient.group_by)
-            if ingredient.filters:
-                filters.update(ingredient.filters)
-            if ingredient.havings:
-                havings.update(ingredient.havings)
-
-        return columns, group_bys, filters, havings
-
-    def enchant(self, list, cache_context=None):
-        """ Add any calculated values to each row of a resultset generating a
-        new namedtuple
-
-        :param list: a list of row results
-        :param cache_context: optional extra context for caching
-        :return: a list with ingredient.cauldron_extras added for all
-                 ingredients
-        """
-        enchantedlist = []
-        if list:
-            sample_item = list[0]
-
-            # Extra fields to add to each row
-            # With extra callables
-            extra_fields, extra_callables = [], []
-
-            for ingredient in self.ingredients.itervalues():
-                if not isinstance(ingredient, (Dimension, Metric)):
-                    continue
-                if cache_context:
-                    ingredient.cache_context = cache_context
-                for extra_field, extra_callable in ingredient.cauldron_extras:
-                    extra_fields.append(extra_field)
-                    extra_callables.append(extra_callable)
-
-            # Mixin the extra fields
-            keyed_tuple = lightweight_named_tuple(
-                'result', sample_item._fields + tuple(extra_fields))
-
-            # Iterate over the results and build a new namedtuple for each row
-            for row in list:
-                values = row + tuple(fn(row) for fn in extra_callables)
-                enchantedlist.append(keyed_tuple(values))
-
-        return enchantedlist
-
 
 class Stats(object):
     def __init__(self):
@@ -176,8 +80,8 @@ class Recipe(object):
                  metrics=None,
                  dimensions=None,
                  filters=None,
-                 order_bys=None,
-                 automatic_filters={},
+                 order_by=None,
+                 automatic_filters=None,
                  session=None):
         """
         :param shelf: A shelf to use for looking up
@@ -193,12 +97,15 @@ class Recipe(object):
         self._dimensions = OrderedSet()
         self._filters = OrderedSet()
         self.order_bys = OrderedSet()
+        self._order_bys = []
 
         self.shelf(shelf)
 
-        self.automatic_filters = automatic_filters
+        if automatic_filters is None:
+            self.automatic_filters = {}
+        else:
+            self.automatic_filters = automatic_filters
         self._apply_automatic_filters = True
-        self._order_bys = []
         self.cache_context = None
         self.stats = Stats()
 
@@ -208,8 +115,8 @@ class Recipe(object):
             self.dimensions(*dimensions)
         if filters is not None:
             self.filters(*filters)
-        if order_bys is not None:
-            self.order_bys(*order_bys)
+        if order_by is not None:
+            self.order_by(*order_bys)
 
         self._session = session
 
@@ -309,6 +216,7 @@ class Recipe(object):
                          Filter objects
         :type *filters: list
         """
+
         def filter_constructor(f, shelf=None):
             if isinstance(f, BinaryExpression):
                 return Filter(f)
@@ -318,7 +226,7 @@ class Recipe(object):
         cleaned_filters = OrderedSet()
         for f in filters:
             cleaned_filters.add(self._shelf.find(f, (Filter, Having),
-                                   constructor=filter_constructor))
+                                                 constructor=filter_constructor))
 
         new_filters = self._filters.union(cleaned_filters)
         if new_filters != self._filters:
@@ -412,7 +320,7 @@ class Recipe(object):
             try:
                 dialect = self.session.bind.engine.name
                 if 'redshift' in dialect or 'postg' in dialect or 'pg' in \
-                        dialect:
+                    dialect:
                     is_postgres_engine = True
             except:
                 pass

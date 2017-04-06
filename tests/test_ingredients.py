@@ -279,6 +279,7 @@ class TestMetric(object):
         assert len(d.group_by) == 0
         assert len(d.filters) == 0
 
+        assert d.expression is not None
 
 class TestDivideMetric(object):
     def test_init(self):

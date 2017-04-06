@@ -68,10 +68,10 @@ class TestShelf(object):
         ingredient = self.shelf.find('last', Dimension)
         assert ingredient.id == 'last'
 
-    def test_auto_setup(self):
-        self.auto_shelf = AutomaticShelf(MyTable)
-        assert len(self.auto_shelf) == 3
-
+    def test_clear(self):
+        assert len(self.shelf) == 3
+        self.shelf.clear()
+        assert len(self.shelf) == 0
 
 class TestAutomaticShelf(object):
     def setup(self):
