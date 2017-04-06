@@ -95,7 +95,7 @@ ORDER BY foo.last"""
 
 
     def test_having(self):
-        hv = Having('age', '<', 10)
+        hv = Having(func.sum(MyTable.age) < 10)
         self.recipe = self.recipe().metrics('age').dimensions(
             'last').filters(MyTable.age > 2).filters(hv).order_by('last')
         print self.recipe.to_sql()
@@ -106,9 +106,6 @@ WHERE foo.age > 2
 GROUP BY foo.last
 HAVING sum(foo.age) < 10
 ORDER BY foo.last"""
-        # assert self.recipe.all()[0].last == 'fred'
-        # assert self.recipe.all()[0].age == 10
-        # assert self.recipe.stats.rows == 2
 
 
 def test_ingredients():

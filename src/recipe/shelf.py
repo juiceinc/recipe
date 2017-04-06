@@ -1,7 +1,4 @@
-from copy import deepcopy
-
-from recipe import BadRecipe
-from recipe import Ingredient
+from recipe import BadRecipe, Ingredient
 from recipe.utils import AttrDict
 
 
@@ -30,12 +27,13 @@ class Shelf(AttrDict):
         ingredient.id = key
         super(Shelf, self).__setattr__(key, ingredient)
 
-    def find(self, obj, must_be_type, constructor=None, raise_if_invalid=True):
+    def find(self, obj, filter_to_class, constructor=None,
+             raise_if_invalid=True):
         """
         Find an Ingredient, optionally using the shelf.
 
         :param obj: A string or Ingredient
-        :param must_be_type: The Ingredient subclass that obj must be an
+        :param filter_to_class: The Ingredient subclass that obj must be an
         instance of
         :param constructor: An optional callable for building Ingredients
         from obj
@@ -53,18 +51,18 @@ class Shelf(AttrDict):
                     return obj
             ingredient = self[obj]
 
-            if not isinstance(ingredient, must_be_type):
+            if not isinstance(ingredient, filter_to_class):
                 if raise_if_invalid:
-                    raise BadRecipe("{} is not a {}".format(obj,
-                                                            type(must_be_type)))
+                    raise BadRecipe("{} is not a {}".format(
+                        obj, type(filter_to_class)))
                 else:
                     return obj
             return ingredient
-        elif isinstance(obj, must_be_type):
+        elif isinstance(obj, filter_to_class):
             return obj
         else:
             if raise_if_invalid:
                 raise BadRecipe("{} is not a {}".format(obj,
-                                                        type(must_be_type)))
+                                                        type(filter_to_class)))
             else:
                 return obj

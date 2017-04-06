@@ -85,10 +85,9 @@ class _Cauldron(object):
             if ingredient.group_by and do_group_by:
                 group_bys.extend(ingredient.group_by)
             if ingredient.filters:
-                if isinstance(ingredient, Having):
-                    havings.update(ingredient.filters)
-                else:
-                    filters.update(ingredient.filters)
+                filters.update(ingredient.filters)
+            if ingredient.havings:
+                havings.update(ingredient.havings)
 
         return columns, group_bys, filters, havings
 
@@ -236,11 +235,11 @@ class Recipe(object):
     def shelf(self, shelf=None):
         """ Defines a shelf to use for this recipe """
         if shelf is None:
-            self.shelf = Shelf({})
+            self._shelf = Shelf({})
         elif isinstance(shelf, dict):
-            self.shelf = Shelf(shelf)
+            self._shelf = Shelf(shelf)
         elif isinstance(shelf, Shelf):
-            self.shelf = shelf
+            self._shelf = shelf
         else:
             raise BadRecipe("shelf must be a dict or recipe.shelf.Shelf")
 
@@ -258,7 +257,7 @@ class Recipe(object):
         """
         cleaned_metrics = []
         for m in metrics:
-            cleaned_metrics.append(self.shelf.find(m, Metric))
+            cleaned_metrics.append(self._shelf.find(m, Metric))
 
         new_metrics = OrderedSet(cleaned_metrics)
         if new_metrics != self._metrics:
@@ -284,7 +283,7 @@ class Recipe(object):
         """
         cleaned_dimensions = []
         for d in dimensions:
-            cleaned_dimensions.append(self.shelf.find(d, Dimension))
+            cleaned_dimensions.append(self._shelf.find(d, Dimension))
 
         new_dimensions = OrderedSet(cleaned_dimensions)
         if new_dimensions != self._dimensions:
@@ -313,29 +312,15 @@ class Recipe(object):
         def filter_constructor(f, shelf=None):
             if isinstance(f, BinaryExpression):
                 return Filter(f)
-            elif isinstance(f, Having):
-                # Resolve the having expressions into a filter
-                if not f.filters:
-                    having_left = self.shelf.find(f.left_expression, Metric)
-                    having_right = self.shelf.find(f.right_expression,
-                                                   Metric,
-                                                   raise_if_invalid=False)
-                    right_expression = having_right.columns[0] if \
-                        isinstance(having_right, Metric) else having_right
-
-                    f.filters = [having_left.columns[0].__lt__(
-                        right_expression)]
-                return f
             else:
                 return f
 
-        cleaned_filters = []
+        cleaned_filters = OrderedSet()
         for f in filters:
-            cleaned_filters.append(self.shelf.find(f, Filter,
+            cleaned_filters.add(self._shelf.find(f, (Filter, Having),
                                    constructor=filter_constructor))
 
-        _filters = OrderedSet(cleaned_filters)
-        new_filters = self._filters.union(_filters)
+        new_filters = self._filters.union(cleaned_filters)
         if new_filters != self._filters:
             self._filters = new_filters
             self.dirty = True
@@ -367,10 +352,10 @@ class Recipe(object):
                 if ingr.startswith('-'):
                     desc = True
                     ingr = ingr[1:]
-                if ingr not in self.shelf:
+                if ingr not in self._shelf:
                     raise BadRecipe("{} doesn't exist on the shelf".format(
                         ingr))
-                ingr = self.shelf[ingr]
+                ingr = self._shelf[ingr]
                 if not isinstance(ingr, (Dimension, Metric)):
                     raise BadRecipe(
                         "{} is not a Dimension or Metric".format(ingr))

@@ -19,21 +19,26 @@ class Ingredient(object):
 
     def __init__(self, **kwargs):
         """ Initializing an instance of the Ingredient Class
+
         :param columns: A list of SQLAlchemy columns to use in a query.
+        :type *ColumnElement: list
         :param filters: A list of SQLAlchemy BinaryExpressions to use in the
                         .filter() clause of a query.
         :type *BinaryExpressions: list
-        :param group_by: A list of SQLAlchemy to use in the group_by clause
-                         of a query
+        :param havings: A list of SQLAlchemy BinaryExpressions to use in the
+                        .filter() clause of a query.
+        :type *BinaryExpressions: list
+        :param group_by: A list of SQLAlchemy columns to use in the group_by
+                        clause of a query
         :param formatters: A list of callables to apply to the result values
         :type *callables: list
-        :param formatters: A list of functions to format the response
         :param ordering: The default ordering of this ingredient if it is
         used in a ``recipe.order_by``
         """
         self.id = kwargs.pop('id', uuid4().hex[:12])
         self.columns = kwargs.pop('columns', [])
         self.filters = kwargs.pop('filters', [])
+        self.havings = kwargs.pop('havings', [])
         self.group_by = kwargs.pop('group_by', [])
         self.formatters = kwargs.pop('formatters', [])
         self.column_suffixes = kwargs.pop('column_suffixes', None)
@@ -53,7 +58,7 @@ class Ingredient(object):
         self.meta = AttrDict(kwargs)
 
     def describe(self):
-        return '({}){} {}'.format(self.__class__.__name__, self.id,
+        return u'({}){} {}'.format(self.__class__.__name__, self.id,
                                   ' '.join(
                                       unicode(col) for col in self.columns))
 
@@ -153,7 +158,6 @@ class Filter(Ingredient):
 
     def __init__(self, expression, **kwargs):
         super(Filter, self).__init__(**kwargs)
-        self.having = kwargs.pop('having', False)
         self.filters = [expression]
 
     def __cmp__(self, other):
@@ -164,31 +168,30 @@ class Filter(Ingredient):
 
     def describe(self):
         """ Stringify this ingredient to help in debugging. """
-        return '({}){} {}'.format(self.__class__.__name__,
+        return u'({}){} {}'.format(self.__class__.__name__,
                                   self.id,
-                                  str(self))
+                                  unicode(self))
 
 
-class Having(Filter):
-    def __init__(self, left_expression, operator, right_expression, **kwargs):
-        self.left_expression = left_expression
-        self.operator = operator
-        self.right_expression = right_expression
-        self.filters = []
-        super(Filter, self).__init__(**kwargs)
+class Having(Ingredient):
+    """ A Having that limits results based on an aggregate boolean clause
+    """
 
-    def _build_filters(self, shelf):
-        left = shelf.find(self.left_expression, Metric)
-        right = shelf.find(self.right_expression,
-                           Metric,
-                           raise_if_invalid=False)
-        right_expr = right.columns[0] if \
-            isinstance(right, Metric) else right
+    def __init__(self, expression, **kwargs):
+        super(Having, self).__init__(**kwargs)
+        self.havings = [expression]
 
+    def __cmp__(self, other):
+        return cmp(unicode(self.havings[0]), unicode(other.havings[0]))
 
+    def __repr__(self):
+        return u'{}'.format([unicode(f) for f in self.havings])
 
-        self.filters = [left.columns[0].__lt__(
-            right)]
+    def describe(self):
+        """ Stringify this ingredient to help in debugging. """
+        return u'({}){} {}'.format(self.__class__.__name__,
+                                  self.id,
+                                  unicode(self))
 
 
 class Dimension(Ingredient):
