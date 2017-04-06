@@ -3,6 +3,7 @@ from uuid import uuid4
 from sqlalchemy import Float, between, case, cast, distinct, func
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
+from recipe.compat import basestring
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict
 
@@ -59,8 +60,8 @@ class Ingredient(object):
 
     def describe(self):
         return u'({}){} {}'.format(self.__class__.__name__, self.id,
-                                  ' '.join(
-                                      unicode(col) for col in self.columns))
+                                   ' '.join(
+                                       unicode(col) for col in self.columns))
 
     def make_column_suffixes(self):
         """ Make sure we have the right column suffixes. These will be appended
@@ -116,7 +117,7 @@ class Ingredient(object):
         scalar_ops = ['ne', 'lt', 'lte', 'gt', 'gte', 'eq']
         non_scalar_ops = ['notin', 'between', 'in']
         is_scalar = False
-        if isinstance(value, (int, str)):
+        if isinstance(value, (int, basestring)):
             is_scalar = True
 
         filter_column = self.columns[0]
@@ -169,8 +170,8 @@ class Filter(Ingredient):
     def describe(self):
         """ Stringify this ingredient to help in debugging. """
         return u'({}){} {}'.format(self.__class__.__name__,
-                                  self.id,
-                                  unicode(self))
+                                   self.id,
+                                   unicode(self))
 
 
 class Having(Ingredient):
@@ -190,8 +191,8 @@ class Having(Ingredient):
     def describe(self):
         """ Stringify this ingredient to help in debugging. """
         return u'({}){} {}'.format(self.__class__.__name__,
-                                  self.id,
-                                  unicode(self))
+                                   self.id,
+                                   unicode(self))
 
 
 class Dimension(Ingredient):
@@ -248,9 +249,6 @@ class Metric(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Metric, self).__init__(**kwargs)
         self.columns = [expression]
-
-    def __lt__(self, other):
-        return Filter(self.columns[0] < other, having=True)
 
 
 class DivideMetric(Metric):

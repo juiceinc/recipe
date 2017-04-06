@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import pytest
 from sqlalchemy import Table
 from sqlalchemy import create_engine
@@ -50,6 +52,9 @@ class TestIngredients(object):
         assert len(ingr.id) == 12
         assert isinstance(ingr.columns, list)
 
+        # Ids can be unicode
+        ingr = Ingredient(id=u'ვეპხის')
+
         # Extra properties are stored in a AttrDict
         ingr = Ingredient(foo=2)
         assert ingr.meta.foo == 2
@@ -58,6 +63,10 @@ class TestIngredients(object):
         with pytest.raises(BadIngredient):
             # Formatters must be list
             ingr = Ingredient(formatters='moo')
+
+        with pytest.raises(BadIngredient):
+            # Formatters must be list
+            ingr = Ingredient(formatters=2)
 
         with pytest.raises(BadIngredient):
             # There must be the same number of column suffixes as columns
@@ -125,6 +134,10 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter('moo', 'gte')
         assert unicode(filt.filters[0]) == 'foo.first >= :first_1'
 
+        # Unicode filter values are acceptable
+        filt = d.build_filter(u'Τη γλώσ')
+        assert unicode(filt.filters[0]) == 'foo.first = :first_1'
+
         # operator must agree with value
         with pytest.raises(ValueError):
             filt = d.build_filter(['moo'], 'eq')
@@ -144,7 +157,8 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter(['moo'], operator='notin')
         assert unicode(filt.filters[0]) == 'foo.first NOT IN (:first_1)'
         filt = d.build_filter(['moo', 'foo'], operator='between')
-        assert unicode(filt.filters[0]) == 'foo.first BETWEEN :first_1 AND :first_2'
+        assert unicode(
+            filt.filters[0]) == 'foo.first BETWEEN :first_1 AND :first_2'
 
         with pytest.raises(ValueError):
             filt = d.build_filter('moo', 'in')
@@ -176,7 +190,6 @@ class TestFilter(object):
         assert f1.describe() == u'(Filter)moo [u\'foo.first = :first_1\']'
 
 
-
 class TestHaving(object):
     def test_having_cmp(self):
         """ Filters are compared on their filter expression """
@@ -191,10 +204,108 @@ class TestHaving(object):
         havings.add(f2)
         assert len(havings) == 2
 
-        print unicode(f1)
         assert unicode(f1) == u'[u\'sum(foo.age) > :sum_1\']'
 
     def test_having_describe(self):
         f1 = Having(func.sum(MyTable.age) > 2, id='moo')
         print f1.describe()
         assert f1.describe() == u'(Having)moo [u\'sum(foo.age) > :sum_1\']'
+
+
+class TestDimension(object):
+    def test_init(self):
+        d = Dimension(MyTable.first)
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 1
+
+        # Dimension with different id and value expressions
+        d = Dimension(MyTable.first, id_expression=MyTable.last)
+        assert len(d.columns) == 2
+        assert len(d.group_by) == 2
+
+    def test_dimension_cauldron_extras(self):
+        d = Dimension(MyTable.first, id='moo')
+        extras = list(d.cauldron_extras)
+        assert len(extras) == 1
+        # id gets injected in the response
+        assert extras[0][0] == 'moo_id'
+
+        d = Dimension(MyTable.first, id='moo', formatters=[lambda x: x + 'moo'])
+        extras = list(d.cauldron_extras)
+        assert len(extras) == 2
+        # formatted value and id gets injected in the response
+        assert extras[0][0] == 'moo'
+        assert extras[1][0] == 'moo_id'
+
+
+class TestIdValueDimension(object):
+    def test_init(self):
+        # IdValueDimension should have two params
+        with pytest.raises(TypeError):
+            d = IdValueDimension(MyTable.first)
+
+        d = IdValueDimension(MyTable.first, MyTable.last)
+        assert len(d.columns) == 2
+        assert len(d.group_by) == 2
+
+    def test_dimension_cauldron_extras(self):
+        d = IdValueDimension(MyTable.first, MyTable.last, id='moo')
+        extras = list(d.cauldron_extras)
+        assert len(extras) == 1
+        # id gets injected in the response
+        assert extras[0][0] == 'moo_id'
+
+        d = IdValueDimension(MyTable.first, MyTable.last, id='moo',
+                             formatters=[lambda x: x + 'moo'])
+        extras = list(d.cauldron_extras)
+        assert len(extras) == 2
+        # formatted value and id gets injected in the response
+        assert extras[0][0] == 'moo'
+        assert extras[1][0] == 'moo_id'
+
+
+class TestLookupDimension(object):
+    def test_init(self):
+        # IdValueDimension should have two params
+        with pytest.raises(TypeError):
+            d = LookupDimension(MyTable.first)
+
+        # IdValueDimension lookup should be a dict
+        with pytest.raises(BadIngredient):
+            d = LookupDimension(MyTable.first, lookup="mouse")
+
+        # Lookup dimension injects a formatter in the first position
+        d = LookupDimension(MyTable.first, lookup={'hi': 'there'})
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 1
+        assert len(d.formatters) == 1
+
+        # Existing formatters are preserved
+        d = LookupDimension(MyTable.first, lookup={'hi': 'there'},
+                            formatters=[lambda x: x + 'moo'])
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 1
+        assert len(d.formatters) == 2
+
+        # The lookup formatter is injected before any existing formatters
+        def fmt(value):
+            return value + 'moo'
+
+        d = LookupDimension(MyTable.first, lookup={'hi': 'there'},
+                            formatters=[fmt])
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 1
+        assert len(d.formatters) == 2
+        assert d.formatters[-1] is fmt
+
+
+class TestMetric(object):
+    def test_init(self):
+        # Metric should have an expression
+        with pytest.raises(TypeError):
+            d = Metric()
+
+        d = Metric(func.sum(MyTable.age))
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 0
+        assert len(d.filters) == 0
