@@ -44,6 +44,27 @@ class TestShelf(object):
         ingredient = self.shelf.find('first', Metric, raise_if_invalid=False)
         assert ingredient == 'first'
 
+
+    def test_repr(self):
+        """ Find ingredients on the shelf """
+        assert self.shelf.__repr__() == """(Dimension)first MyTable.first
+(Dimension)last MyTable.last
+(Metric)age sum(foo.age)"""
+
+    def test_brew(self):
+        columns, group_bys, filters, havings = self.shelf.brew_query_parts()
+        assert len(columns) == 3
+        assert len(group_bys) == 2
+        assert len(filters) == 0
+        assert len(havings) == 0
+
+    def test_anonymize(self):
+        """ We can save and store anonymization context """
+        assert self.shelf.Meta.anonymize == False
+        self.shelf.Meta.anonymize = True
+        assert self.shelf.Meta.anonymize == True
+
+
     def test_get(self):
         """ Find ingredients on the shelf """
         ingredient = self.shelf.first

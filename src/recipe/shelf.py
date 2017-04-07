@@ -29,16 +29,23 @@ class Shelf(AttrDict):
         ingredient = super(Shelf, self).get(k, d)
         if isinstance(ingredient, Ingredient):
             ingredient.id = k
+            ingredient.anonymize = self.Meta.anonymize
         return ingredient
 
     def __getitem__(self, key):
+        """ Set the id and anonymize property of the ingredient whenever we
+        get or set items """
         ingredient = super(Shelf, self).__getitem__(key)
         ingredient.id = key
+        ingredient.anonymize = self.Meta.anonymize
         return ingredient
 
     def __setitem__(self, key, ingredient):
+        """ Set the id and anonymize property of the ingredient whenever we
+        get or set items """
         ingredient_copy = copy(ingredient)
         ingredient_copy.id = key
+        ingredient_copy.anonymize = self.Meta.anonymize
         super(Shelf, self).__setitem__(key, ingredient_copy)
 
     def __repr__(self):
@@ -65,8 +72,11 @@ class Shelf(AttrDict):
             lines.append(ingredient.describe())
         return '\n'.join(lines)
 
+    def use(self, ingredient):
+        self[ingredient.id] = ingredient
+
     def find(self, obj, filter_to_class, constructor=None,
-             raise_if_invalid=True):
+             raise_if_invalid=True, apply_sort_order=False):
         """
         Find an Ingredient, optionally using the shelf.
 
@@ -76,18 +86,28 @@ class Shelf(AttrDict):
         :param constructor: An optional callable for building Ingredients
         from obj
         :param raise_if_invalid: Raise an exception if obj is the wrong type
+        :param apply_sort_order: If obj is a string prefixed by '-' set the
+          found ingredient sort order to descending
         :return: An Ingredient of subclass must_be_type
         """
         if callable(constructor):
             obj = constructor(obj, shelf=self)
 
         if isinstance(obj, basestring):
+            set_descending = False
+            if apply_sort_order:
+                if obj.startswith('-'):
+                    set_descending = True
+                    obj = obj[1:]
             if obj not in self:
                 if raise_if_invalid:
                     raise BadRecipe("{} doesn't exist on the shelf".format(obj))
                 else:
                     return obj
+
             ingredient = self[obj]
+            if set_descending:
+                ingredient.ordering = 'desc'
 
             if not isinstance(ingredient, filter_to_class):
                 if raise_if_invalid:
@@ -105,14 +125,14 @@ class Shelf(AttrDict):
             else:
                 return obj
 
-    def brew_query_parts(self, do_group_by=True):
+    def brew_query_parts(self):
         """ Make columns, group_bys, filters, havings
         """
         columns, group_bys, filters, havings = [], [], set(), set()
         for ingredient in self.itervalues():
             if ingredient.query_columns:
                 columns.extend(ingredient.query_columns)
-            if ingredient.group_by and do_group_by:
+            if ingredient.group_by:
                 group_bys.extend(ingredient.group_by)
             if ingredient.filters:
                 filters.update(ingredient.filters)

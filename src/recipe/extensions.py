@@ -91,41 +91,42 @@ class RecipeExtension(object):
         """ This method should be overridden by subclasses """
         pass
 
-    def modify_sqlalchemy(self, columns, group_bys, filters, order_bys):
+    def modify_recipe_parts(self, recipe_parts):
         """ This method allows extensions to directly modify columns,
         group_bys, filters, and order_bys generated from collected
         ingredients. """
         return {
-            "columns": columns,
-            "group_bys": group_bys,
-            "filters": filters,
-            "order_bys": order_bys
+            "columns": recipe_parts['columns'],
+            "group_bys": recipe_parts['group_bys'],
+            "filters": recipe_parts['filters'],
+            "havings": recipe_parts['havings'],
+            "order_bys": recipe_parts['order_bys'],
         }
 
-    def modify_sqlalchemy_prequery(self, query, group_bys,
-                                   filters, order_bys):
+    def modify_prequery_parts(self, prequery_parts):
         """ This method allows extensions to directly modify query,
         group_bys, filters, and order_bys generated from collected
         ingredients after a preliminary query using columns has been created.
         """
         return {
-            "query": query,
-            "group_bys": group_bys,
-            "filters": filters,
-            "order_bys": order_bys
+            "query": prequery_parts['query'],
+            "group_bys": prequery_parts['group_bys'],
+            "filters": prequery_parts['filters'],
+            "havings": prequery_parts['havings'],
+            "order_bys": prequery_parts['order_bys'],
         }
 
-    def modify_sqlalchemy_postquery(self, query, group_bys,
-                                    filters, order_bys):
+    def modify_postquery_parts(self, postquery_parts):
         """ This method allows extensions to directly modify query,
         group_bys, filters, and order_bys generated from collected
         ingredients after a final query using columns has been created.
         """
         return {
-            "query": query,
-            "group_bys": group_bys,
-            "filters": filters,
-            "order_bys": order_bys
+            "query": postquery_parts['query'],
+            "group_bys": postquery_parts['group_bys'],
+            "filters": postquery_parts['filters'],
+            "havings": postquery_parts['havings'],
+            "order_bys": postquery_parts['order_bys'],
         }
 
     def enchant_add_fields(self):

@@ -1,13 +1,11 @@
 import logging
 import time
 import warnings
-from copy import copy, deepcopy
 from uuid import uuid4
 
 from orderedset import OrderedSet
 from sqlalchemy import (alias)
 from sqlalchemy.sql.elements import BinaryExpression
-from sqlalchemy.util import (lightweight_named_tuple)
 
 from recipe.compat import *
 from recipe.exceptions import BadRecipe
@@ -73,7 +71,46 @@ class Stats(object):
 
 class Recipe(object):
     """ Builds a query using Ingredients.
+
+    recipe generates a query in the following way
+
+        (RECIPE) recipe checks its dirty state and all extension dirty states to
+        determine if the cached query needs to be regenerated
+
+        (EXTENSIONS) all extension ``add_ingredients`` run to inject
+        ingredients directly on the recipe
+
+        (RECIPE) recipe runs gather_all_ingredients_into_cauldron to build a
+        global lookup for ingredients
+
+        (RECIPE) recipe runs cauldron.brew_query_parts to gather sqlalchemy
+        columns, group_bys and filters
+
+        (EXTENSIONS) all extension ``modify_sqlalchemy(columns,
+        group_bys, filters)`` run to directly modify the collected
+        sqlalchemy columns, group_bys or filters
+
+        (RECIPE) recipe builds a preliminary query with columns
+
+        (EXTENSIONS) all extension ``modify_sqlalchemy_prequery(query,
+        columns, group_bys, filters)`` run to modify the query
+
+        (RECIPE) recipe builds a full query with group_bys, order_bys,
+        and filters.
+
+        (RECIPE) recipe tests that this query only uses a single from
+
+        (EXTENSIONS) all extension ``modify_sqlalchemy_postquery(query,
+        columns, group_bys, order_bys filters)`` run to modify the query
+
+        (RECIPE) recipe applies limits and offsets on the query
+
+        (RECIPE) recipe caches completed query and sets all dirty flags to
+        False.
+
+
     """
+
 
     def __init__(self,
                  shelf=None,
@@ -82,7 +119,8 @@ class Recipe(object):
                  filters=None,
                  order_by=None,
                  automatic_filters=None,
-                 session=None):
+                 session=None,
+                 extension_classes=None):
         """
         :param shelf: A shelf to use for looking up
         :param metrics:
@@ -93,13 +131,11 @@ class Recipe(object):
         """
 
         self._id = uuid4()
-        self._metrics = OrderedSet()
-        self._dimensions = OrderedSet()
-        self._filters = OrderedSet()
-        self.order_bys = OrderedSet()
-        self._order_bys = []
-
         self.shelf(shelf)
+
+        # Stores all ingredients used in the recipe
+        self._cauldron = Shelf()
+        self._order_bys = []
 
         if automatic_filters is None:
             self.automatic_filters = {}
@@ -116,7 +152,7 @@ class Recipe(object):
         if filters is not None:
             self.filters(*filters)
         if order_by is not None:
-            self.order_by(*order_bys)
+            self.order_by(*order_by)
 
         self._session = session
 
@@ -132,12 +168,44 @@ class Recipe(object):
         self._query = None
         self._all = []
 
-        # Stores all ingredients used in the recipe
-        self._cauldron = _Cauldron()
+        self.recipe_extensions = []
+        if extension_classes is None:
+            extension_classes = []
+
+        for ExtensionClass in extension_classes:
+            self.recipe_extensions.append(ExtensionClass())
 
     # -------
     # Builder for parts of the recipe.
     # -------
+
+    def __getattr__(self, name):
+        """
+        Return an attribute of self, if not found, proxy to all
+        recipe_extensions
+
+        :param name:
+        :return:
+        """
+        try:
+            return self.__getattribute__(name)
+        except AttributeError:
+            pass
+
+        for extension in self.recipe_extensions:
+            try:
+                proxy_callable = getattr(extension, name)
+                break
+            except AttributeError:
+                pass
+
+        try:
+            proxy_callable
+        except NameError:
+            raise AttributeError
+
+        return proxy_callable
+
 
     def shelf(self, shelf=None):
         """ Defines a shelf to use for this recipe """
@@ -162,19 +230,14 @@ class Recipe(object):
                          Metric objects
         :type *metrics: list
         """
-        cleaned_metrics = []
         for m in metrics:
-            cleaned_metrics.append(self._shelf.find(m, Metric))
-
-        new_metrics = OrderedSet(cleaned_metrics)
-        if new_metrics != self._metrics:
-            self._metrics = new_metrics
-            self.dirty = True
+            self._cauldron.use(self._shelf.find(m, Metric))
+        self.dirty = True
         return self
 
     @property
     def metric_ids(self):
-        return (m.id for m in self._metrics)
+        return (m.id for m in self._cauldron if isinstance(m, Metric))
 
     def dimensions(self, *dimensions):
         """ Add a list of Dimension ingredients to the query. These can either be
@@ -188,19 +251,15 @@ class Recipe(object):
                          Dimension objects
         :type *dimensions: list
         """
-        cleaned_dimensions = []
         for d in dimensions:
-            cleaned_dimensions.append(self._shelf.find(d, Dimension))
+            self._cauldron.use(self._shelf.find(d, Dimension))
 
-        new_dimensions = OrderedSet(cleaned_dimensions)
-        if new_dimensions != self._dimensions:
-            self._dimensions = new_dimensions
-            self.dirty = True
+        self.dirty = True
         return self
 
     @property
     def dimension_ids(self):
-        return (d.id for d in self._dimensions)
+        return (d.id for d in self._dimensions if isinstance(d, Dimension))
 
     def filters(self, *filters):
         """
@@ -223,20 +282,16 @@ class Recipe(object):
             else:
                 return f
 
-        cleaned_filters = OrderedSet()
         for f in filters:
-            cleaned_filters.add(self._shelf.find(f, (Filter, Having),
-                                                 constructor=filter_constructor))
+            self._cauldron.use(self._shelf.find(f, (Filter, Having),
+                                                constructor=filter_constructor))
 
-        new_filters = self._filters.union(cleaned_filters)
-        if new_filters != self._filters:
-            self._filters = new_filters
-            self.dirty = True
+        self.dirty = True
         return self
 
     @property
     def filter_ids(self):
-        return (f.id for f in self._filters)
+        return (f.id for f in self._filters if isinstance(f, Filter))
 
     def order_by(self, *order_bys):
         """ Add a list of ingredients to order by to the query. These can
@@ -252,37 +307,15 @@ class Recipe(object):
                          descending.
         :type *order_bys: list
         """
-        cleaned_order_bys = []
+
+        # Order bys shouldn't be added to the _cauldron
+        self._order_bys = []
         for ingr in order_bys:
-            # TODO: python3
-            if isinstance(ingr, basestring):
-                desc = False
-                if ingr.startswith('-'):
-                    desc = True
-                    ingr = ingr[1:]
-                if ingr not in self._shelf:
-                    raise BadRecipe("{} doesn't exist on the shelf".format(
-                        ingr))
-                ingr = self._shelf[ingr]
-                if not isinstance(ingr, (Dimension, Metric)):
-                    raise BadRecipe(
-                        "{} is not a Dimension or Metric".format(ingr))
-                if desc:
-                    # Make a copy to ensure we don't have any side effects
-                    # then set the ordering property on the ingredient
-                    ingr = deepcopy(ingr)
-                    ingr.ordering = 'desc'
+            order_by = self._shelf.find(ingr, (Dimension, Metric),
+                                        apply_sort_order=True)
+            self._order_bys.append(order_by)
 
-                cleaned_order_bys.append(ingr)
-            if isinstance(ingr, (Dimension, Metric)):
-                cleaned_order_bys.append(ingr)
-            else:
-                raise BadRecipe("{} is not a order_by".format(ingr))
-
-        new_order_bys = OrderedSet(cleaned_order_bys)
-        if new_order_bys != self._order_bys:
-            self._order_bys = new_order_bys
-            self.dirty = True
+        self.dirty = True
         return self
 
     def session(self, session):
@@ -302,16 +335,21 @@ class Recipe(object):
             self._limit = limit
         return self
 
+    def offset(self, offset):
+        """ Offset a number of rows before returning rows from the database.
+
+        :param offset: The number of rows to offset in the recipe. 0 will return
+                      from the first available row
+        :type offset: int
+        """
+        if self._offset != offset:
+            self.dirty = True
+            self._offset = offset
+        return self
+
     # ------
     # Utility functions
     # ------
-
-    def _gather_all_ingredients_into_cauldron(self):
-        self._cauldron.empty()
-
-        ingredients = self._metrics.union(self._dimensions).union(self._filters)
-        for ingredient in ingredients:
-            self._cauldron.use(ingredient)
 
     def _is_postgres(self):
         """ Determine if the running engine is postgres """
@@ -360,34 +398,66 @@ class Recipe(object):
         # Step 2: Build the query (now that it has all the filters
         # and apply any blend recipes
 
-        # Gather the ingredients and add them to the cauldron
-        self._gather_all_ingredients_into_cauldron()
-
         # Get the parts of the query from the cauldron
         # We don't need to regather order_bys
         columns, group_bys, filters, havings = self._cauldron.brew_query_parts()
 
+        recipe_parts = {
+            "columns": columns,
+            "group_bys": group_bys,
+            "filters": filters,
+            "havings": havings,
+            "order_bys": order_bys,
+        }
+
+        for extension in self.recipe_extensions:
+            recipe_parts = extension.modify_recipe_parts(recipe_parts)
+
         # Start building the query
-        query = self._session.query(*columns)
+        query = self._session.query(*recipe_parts['columns'])
         # TODO: .options(FromCache("default"))
 
         # Only add group_bys at this point because using blend queries
         # may have added more group_bys
-        query = query.group_by(*group_bys).order_by(*order_bys).filter(
-            *filters)
+        query = query.group_by(*recipe_parts['group_bys']) \
+            .order_by(*recipe_parts['order_bys']) \
+            .filter(*recipe_parts['filters'])
         if havings:
-            for having in havings:
+            for having in recipe_parts['havings']:
                 query = query.having(having)
+
+        prequery_parts = {
+            "query": query,
+            "group_bys": group_bys,
+            "filters": filters,
+            "havings": havings,
+            "order_bys": order_bys,
+        }
+        for extension in self.recipe_extensions:
+            prequery_parts = extension.modify_prequery_parts(prequery_parts)
 
         if len(query.selectable.froms) != 1:
             raise BadRecipe("Recipes must use ingredients that all come from "
                             "the same table. \nDetails on this recipe:\n{"
                             "}".format(str(self._cauldron)))
 
+        postquery_parts = {
+            "query": query,
+            "group_bys": group_bys,
+            "filters": filters,
+            "havings": havings,
+            "order_bys": order_bys,
+        }
+        for extension in self.recipe_extensions:
+            postquery_parts = extension.modify_postquery_parts(postquery_parts)
+
         # Apply limit on the outermost query
         # This happens after building the comparison recipe
         if self._limit and self._limit > 0:
             query = query.limit(self._limit)
+
+        if self._offset and self._offset > 0:
+            query = query.offset(self._offset)
 
         # Step 5:  Clear the dirty flag,
         # Patch the query if there's a comparison query
@@ -398,7 +468,8 @@ class Recipe(object):
         return self._query
 
     def table(self):
-        """ A convenience method to determine the table the query is selecting from
+        """ A convenience method to determine the table the query is
+        selecting from
         """
         query_table = self.query().selectable.froms[0]
         if self._table:
@@ -422,10 +493,12 @@ class Recipe(object):
         query = self.query()
         return query.subquery(name=name)
 
-    def as_table(self):
+    def as_table(self, name=None):
         """ Return an alias to a table
         """
-        return alias(self.subquery(), name=self.id)
+        if name is None:
+            name = self.id
+        return alias(self.subquery(), name=name)
 
     def all(self):
         """ Return a (potentially cached) list of result objects.
