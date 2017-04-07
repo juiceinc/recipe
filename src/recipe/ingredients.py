@@ -42,7 +42,8 @@ class Ingredient(object):
         self.group_by = kwargs.pop('group_by', [])
         self.formatters = kwargs.pop('formatters', [])
         self.column_suffixes = kwargs.pop('column_suffixes', None)
-        # What order should this
+        self.anonymize = False
+        # What order should this be in
         self.ordering = kwargs.pop('ordering', 'asc')
 
         if not isinstance(self.formatters, (list, tuple)):
@@ -151,6 +152,15 @@ class Ingredient(object):
                                       upper_bound))
             return Filter(filter_column.in_(value))
 
+    @property
+    def expression(self):
+        """ An accessor for the sqlalchemy expression representing this
+        Ingredient """
+        if self.columns:
+            return self.columns[0]
+        else:
+            return None
+
 
 class Filter(Ingredient):
     """ A simple filter created from a single expression.
@@ -172,6 +182,15 @@ class Filter(Ingredient):
                                    self.id,
                                    unicode(self))
 
+    @property
+    def expression(self):
+        """ An accessor for the sqlalchemy expression representing this
+        Ingredient """
+        if self.filters:
+            return self.filters[0]
+        else:
+            return None
+
 
 class Having(Ingredient):
     """ A Having that limits results based on an aggregate boolean clause
@@ -192,6 +211,15 @@ class Having(Ingredient):
         return u'({}){} {}'.format(self.__class__.__name__,
                                    self.id,
                                    unicode(self))
+
+    @property
+    def expression(self):
+        """ An accessor for the sqlalchemy expression representing this
+        Ingredient """
+        if self.havings:
+            return self.havings[0]
+        else:
+            return None
 
 
 class Dimension(Ingredient):
@@ -248,14 +276,6 @@ class Metric(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Metric, self).__init__(**kwargs)
         self.columns = [expression]
-
-    @property
-    def expression(self):
-        """ An accessor for metric column """
-        if self.columns:
-            return self.columns[0]
-        else:
-            return None
 
 
 class DivideMetric(Metric):

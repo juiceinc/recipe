@@ -154,6 +154,15 @@ class TestFilter(object):
 
         assert unicode(f1) == "[u'foo.first = :first_1']"
 
+    def test_expression(self):
+        f = Filter(MyTable.first == 'foo')
+        assert f.expression is not None
+
+        f.columns = []
+        assert f.expression is not None
+        f.filters = []
+        assert f.expression is None
+
     def test_filter_describe(self):
         f1 = Filter(MyTable.first == 'moo', id='moo')
         assert f1.describe() == u'(Filter)moo [u\'foo.first = :first_1\']'
@@ -174,6 +183,17 @@ class TestHaving(object):
         assert len(havings) == 2
 
         assert unicode(f1) == u'[u\'sum(foo.age) > :sum_1\']'
+
+    def test_expression(self):
+        h = Having(func.sum(MyTable.age) > 2)
+        assert h.expression is not None
+
+        h.columns = []
+        assert h.expression is not None
+        h.filters = []
+        assert h.expression is not None
+        h.havings = []
+        assert h.expression is None
 
     def test_having_describe(self):
         f1 = Having(func.sum(MyTable.age) > 2, id='moo')
@@ -279,7 +299,13 @@ class TestMetric(object):
         assert len(d.group_by) == 0
         assert len(d.filters) == 0
 
+    def test_expression(self):
+        d = Metric(func.sum(MyTable.age))
         assert d.expression is not None
+
+        d.columns = []
+        assert d.expression is None
+
 
 class TestDivideMetric(object):
     def test_init(self):
