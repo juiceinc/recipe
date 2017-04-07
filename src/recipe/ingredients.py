@@ -63,6 +63,14 @@ class Ingredient(object):
                                    ' '.join(
                                        unicode(col) for col in self.columns))
 
+    def _format_value(self, value):
+        """ Formats value using any stored formatters
+        """
+        for f in self.formatters:
+            # TODO: Add anonymizer caching
+            value = f(value)
+        return value
+
     def make_column_suffixes(self):
         """ Make sure we have the right column suffixes. These will be appended
         to `id` when generating the query.
@@ -244,7 +252,13 @@ class Dimension(Ingredient):
         """
         for extra in super(Dimension, self).cauldron_extras:
             yield extra
-        yield self.id + '_id', lambda row: getattr(row, self.id)
+
+        if self.formatters:
+            prop = self.id + '_raw'
+        else:
+            prop = self.id
+
+        yield self.id + '_id', lambda row: getattr(row, prop)
 
 
 class IdValueDimension(Dimension):

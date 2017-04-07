@@ -212,7 +212,6 @@ class UserFilters(RecipeExtension):
 
     def __init__(self, *args, **kwargs):
         super(UserFilters, self).__init__(*args, **kwargs)
-        self.compare_recipes = []
 
 
 class BlendRecipe(RecipeExtension):
@@ -231,7 +230,7 @@ class BlendRecipe(RecipeExtension):
 
     def __init__(self, *args, **kwargs):
         super(BlendRecipe, self).__init__(*args, **kwargs)
-        self.compare_recipes = []
+        self.blend_recipes = []
 
     @recipeextension
     def blend(self, blend_recipe):
@@ -263,31 +262,36 @@ class CompareRecipe(RecipeExtension):
 
 
 class AnonymizeRecipe(RecipeExtension):
-    """ Allows recipes to be anonymized by looking at the
+    """ Allows recipes to be anonymized by adding an anonymize property
+    This flips the anonymize flag on all Ingredients used in the recipe.
 
     Injects an ingredient.meta._anonymize boolean property on each used
     ingredient.
+
+    AnonymizeRecipe should occur last
     """
 
     def __init__(self, *args, **kwargs):
         super(AnonymizeRecipe, self).__init__(*args, **kwargs)
-        self.anonymize = False
+        self._anonymize = False
 
-    @recipeextension
     def anonymize(self, value):
         """ Should this recipe be anonymized"""
-        if self.anonymize != value:
+        assert isinstance(value, bool)
+
+        if self._anonymize != value:
             self.dirty = True
-            self.anonymize = value
+            self._anonymize = value
 
         # Builder pattern must return the recipe
         return self.recipe
 
-    def modify_sqlalchemy_postquery(self):
+    def add_ingedients(self):
         """ Put the anonymizers in the last position of formatters """
-        for ingredient in self.recipe._cauldron.ingredients.values():
-            if ingredient.meta.anonymizer and self.anonymize:
-                ingredient.meta.formatters.append(ingredient.meta.anonymizer)
+        for ingredient in self.recipe._cauldron.values():
+            if hasattr(ingredient.meta, 'anonymizer') and self._anonymize:
+                if ingredient.meta.anonymizer not in ingredient.formatters:
+                    ingredient.formatters.append(ingredient.meta.anonymizer)
 
 
 class CacheRecipe(RecipeExtension):
