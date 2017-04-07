@@ -83,16 +83,22 @@ class RecipeExtension(object):
     """
     recipeextensions = []
 
-    def __init__(self):
+    def __init__(self, recipe):
         self.dirty = True
-        self.recipe = None
+        self.recipe = recipe
 
     def add_ingedients(self):
-        """ This method should be overridden by subclasses """
+        """
+        Add ingredients to the recipe
+
+        This method should be overridden by subclasses """
         pass
 
     def modify_recipe_parts(self, recipe_parts):
-        """ This method allows extensions to directly modify columns,
+        """
+        Modify sqlalchemy components of the query
+
+        This method allows extensions to directly modify columns,
         group_bys, filters, and order_bys generated from collected
         ingredients. """
         return {
@@ -148,33 +154,31 @@ class AutomaticFilters(RecipeExtension):
     the dictionary, if the
     """
 
-    def __init__(self):
-        super(AutomaticFilters, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(AutomaticFilters, self).__init__(*args, **kwargs)
         self.apply = True
         self.exclude_keys = None
         self.include_keys = None
 
-    @recipeextension
     def apply_automatic_filters(self, value):
         if self.apply != value:
             self.dirty = True
             self.apply = value
         return self.recipe
 
-    @recipeextension
     def exclude_automatic_filter_keys(self, *keys):
         self.exclude_keys = keys
+        return self.recipe
 
-    @recipeextension
     def include_automatic_filter_keys(self, *keys):
         self.include_keys = keys
-
+        return self.recipe
 
 class UserFilters(RecipeExtension):
     """ Add automatic filtering. """
 
-    def __init__(self):
-        super(UserFilters, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(UserFilters, self).__init__(*args, **kwargs)
         self.compare_recipes = []
 
 
@@ -192,8 +196,8 @@ class BlendRecipe(RecipeExtension):
     Supports blend (inner) and full_blend (outer) joins.
     """
 
-    def __init__(self):
-        super(BlendRecipe, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(BlendRecipe, self).__init__(*args, **kwargs)
         self.compare_recipes = []
 
     @recipeextension
@@ -216,8 +220,8 @@ class CompareRecipe(RecipeExtension):
     Ordering from the base recipe is maintained.
     """
 
-    def __init__(self):
-        super(CompareRecipe, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(CompareRecipe, self).__init__(*args, **kwargs)
         self.compare_recipes = []
 
     @recipeextension
@@ -232,8 +236,8 @@ class AnonymizeRecipe(RecipeExtension):
     ingredient.
     """
 
-    def __init__(self):
-        super(AnonymizeRecipe, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(AnonymizeRecipe, self).__init__(*args, **kwargs)
         self.anonymize = False
 
     @recipeextension

@@ -111,7 +111,6 @@ class Recipe(object):
 
     """
 
-
     def __init__(self,
                  shelf=None,
                  metrics=None,
@@ -173,7 +172,9 @@ class Recipe(object):
             extension_classes = []
 
         for ExtensionClass in extension_classes:
-            self.recipe_extensions.append(ExtensionClass())
+            # Create all the extension instances, passing them a reference to
+            # this recipe
+            self.recipe_extensions.append(ExtensionClass(self))
 
     # -------
     # Builder for parts of the recipe.
@@ -205,7 +206,6 @@ class Recipe(object):
             raise AttributeError
 
         return proxy_callable
-
 
     def shelf(self, shelf=None):
         """ Defines a shelf to use for this recipe """
@@ -393,6 +393,9 @@ class Recipe(object):
         # Step 1: Gather up global filters and user filters and
         # apply them as if they had been added to recipe().filters(...)
 
+        for extension in self.recipe_extensions:
+            extension.add_ingedients()
+
         order_bys = self._prepare_order_bys()
 
         # Step 2: Build the query (now that it has all the filters
@@ -466,6 +469,29 @@ class Recipe(object):
         self._query = query
         self.dirty = False
         return self._query
+
+    @property
+    def dirty(self):
+        """ The recipe is dirty if it is flagged dirty or any extensions are
+        flagged dirty """
+        if self._dirty:
+            return True
+        else:
+            for extension in self.recipe_extensions:
+                if extension.dirty:
+                    return True
+        return False
+
+    @dirty.setter
+    def dirty(self, value):
+        """ If dirty is true set the recipe to dirty flag. If false,
+        clear the recipe and all extension dirty flags """
+        if value:
+            self._dirty = True
+        else:
+            self._dirty = False
+            for extension in self.recipe_extensions:
+                extension.dirty = False
 
     def table(self):
         """ A convenience method to determine the table the query is

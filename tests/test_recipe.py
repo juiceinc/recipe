@@ -29,46 +29,45 @@ class TestRecipeIngredients(object):
         return Recipe(shelf=self.shelf, session=self.session)
 
     def test_dimension(self):
-        self.recipe = self.recipe().metrics('age').dimensions('first')
-        assert self.recipe.to_sql() == """SELECT sum(foo.age) AS age,
+        recipe = self.recipe().metrics('age').dimensions('first')
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
        foo.first AS first
 FROM foo
 GROUP BY foo.first"""
-        assert self.recipe.all()[0].first == 'hi'
-        assert self.recipe.all()[0].age == 15
-        assert self.recipe.stats.rows == 1
+        assert recipe.all()[0].first == 'hi'
+        assert recipe.all()[0].age == 15
+        assert recipe.stats.rows == 1
 
     def test_dimension2(self):
-        self.recipe = self.recipe().metrics('age').dimensions('last').order_by(
+        recipe = self.recipe().metrics('age').dimensions('last').order_by(
             'last')
-        assert self.recipe.to_sql() == """SELECT sum(foo.age) AS age,
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
        foo.last AS last
 FROM foo
 GROUP BY foo.last
 ORDER BY foo.last"""
-        assert self.recipe.all()[0].last == 'fred'
-        assert self.recipe.all()[0].age == 10
-        assert self.recipe.stats.rows == 2
+        assert recipe.all()[0].last == 'fred'
+        assert recipe.all()[0].age == 10
+        assert recipe.stats.rows == 2
 
     def test_filter(self):
-        self.recipe = self.recipe().metrics('age').dimensions(
+        recipe = self.recipe().metrics('age').dimensions(
             'last').filters(MyTable.age > 2).order_by('last')
-        assert self.recipe.to_sql() == """SELECT sum(foo.age) AS age,
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
        foo.last AS last
 FROM foo
 WHERE foo.age > 2
 GROUP BY foo.last
 ORDER BY foo.last"""
-        assert self.recipe.all()[0].last == 'fred'
-        assert self.recipe.all()[0].age == 10
-        assert self.recipe.stats.rows == 2
+        assert recipe.all()[0].last == 'fred'
+        assert recipe.all()[0].age == 10
+        assert recipe.stats.rows == 2
 
     def test_having(self):
         hv = Having(func.sum(MyTable.age) < 10)
-        self.recipe = self.recipe().metrics('age').dimensions(
+        recipe = self.recipe().metrics('age').dimensions(
             'last').filters(MyTable.age > 2).filters(hv).order_by('last')
-        print self.recipe.to_sql()
-        assert self.recipe.to_sql() == """SELECT sum(foo.age) AS age,
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
        foo.last AS last
 FROM foo
 WHERE foo.age > 2
