@@ -127,7 +127,6 @@ class TestAutomaticShelf(object):
 
     def test_get(self):
         """ Find ingredients on the shelf """
-        print self.shelf
         ingredient = self.shelf.first
         assert ingredient.id == 'first'
 

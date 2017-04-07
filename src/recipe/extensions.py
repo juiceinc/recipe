@@ -1,4 +1,7 @@
 # TODO as jason about methods of doing this
+from recipe import Dimension
+
+
 def recipeextension(func):
     """ A decorator to indicate if this method should be available to the
     recipes builder pattern """
@@ -157,13 +160,42 @@ class AutomaticFilters(RecipeExtension):
     def __init__(self, *args, **kwargs):
         super(AutomaticFilters, self).__init__(*args, **kwargs)
         self.apply = True
+        self._automatic_filters = {}
         self.exclude_keys = None
         self.include_keys = None
+
+    def add_ingedients(self):
+        if self.apply:
+            for dim, values in self._automatic_filters.iteritems():
+                operator = None
+                if '__' in dim:
+                    dim, operator = dim.split('__')
+                if self.include_keys is not None and \
+                        dim not in self.include_keys:
+                    # Ignore keys that are not in include_keys
+                    continue
+
+                if self.exclude_keys is not None and \
+                        dim in self.exclude_keys:
+                    # Ignore keys that are in exclude_keys
+                    continue
+
+                # Only look for dimensions
+                dimension = self.recipe._shelf.find(dim, Dimension)
+
+                # make a Filter and add it to filters
+                self.recipe.filters(dimension.build_filter(values, operator))
 
     def apply_automatic_filters(self, value):
         if self.apply != value:
             self.dirty = True
             self.apply = value
+        return self.recipe
+
+    def automatic_filters(self, value):
+        assert isinstance(value, dict)
+        self._automatic_filters = value
+        self.dirty = True
         return self.recipe
 
     def exclude_automatic_filter_keys(self, *keys):
@@ -173,6 +205,7 @@ class AutomaticFilters(RecipeExtension):
     def include_automatic_filter_keys(self, *keys):
         self.include_keys = keys
         return self.recipe
+
 
 class UserFilters(RecipeExtension):
     """ Add automatic filtering. """

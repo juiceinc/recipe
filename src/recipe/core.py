@@ -136,11 +136,6 @@ class Recipe(object):
         self._cauldron = Shelf()
         self._order_bys = []
 
-        if automatic_filters is None:
-            self.automatic_filters = {}
-        else:
-            self.automatic_filters = automatic_filters
-        self._apply_automatic_filters = True
         self.cache_context = None
         self.stats = Stats()
 

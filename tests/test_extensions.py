@@ -114,3 +114,130 @@ class TestAutomaticFiltersExtension(object):
             'first').exclude_automatic_filter_keys('last')
         assert recipe.recipe_extensions[0].include_keys == ('first',)
         assert recipe.recipe_extensions[0].exclude_keys == ('last',)
+
+    def test_automatic_filters(self):
+        recipe = self.recipe().metrics('age').dimensions('first')
+        recipe = recipe.apply_automatic_filters(False)
+
+        assert recipe.recipe_extensions[0].apply == False
+
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
+       foo.first AS first
+FROM foo
+GROUP BY foo.first"""
+
+        recipe = self.recipe().metrics('age').dimensions('first')
+        recipe = recipe.apply_automatic_filters(True)
+
+        assert recipe.recipe_extensions[0].apply == True
+
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
+       foo.first AS first
+FROM foo
+GROUP BY foo.first"""
+
+        recipe = self.recipe().metrics('age').dimensions('first')
+        recipe = recipe.automatic_filters({
+            'first': ['foo']
+        })
+
+        assert recipe.recipe_extensions[0].apply == True
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
+       foo.first AS first
+FROM foo
+WHERE foo.first IN ('foo')
+GROUP BY foo.first"""
+
+        recipe = self.recipe().metrics('age').dimensions('first')
+        recipe = recipe.automatic_filters({
+            'first': ['foo']
+        }).apply_automatic_filters(False)
+        assert recipe.recipe_extensions[0].dirty == True
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
+       foo.first AS first
+FROM foo
+GROUP BY foo.first"""
+
+        recipe = self.recipe().metrics('age').dimensions('first')
+        recipe = recipe.automatic_filters({
+            'first': ['foo']
+        }).include_automatic_filter_keys('foo')
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
+       foo.first AS first
+FROM foo
+GROUP BY foo.first"""
+
+        recipe = self.recipe().metrics('age').dimensions('first')
+        recipe = recipe.automatic_filters({
+            'first': ['foo']
+        }).include_automatic_filter_keys('foo', 'first')
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
+       foo.first AS first
+FROM foo
+WHERE foo.first IN ('foo')
+GROUP BY foo.first"""
+
+        recipe = self.recipe().metrics('age').dimensions('first')
+        recipe = recipe.automatic_filters({
+            'first': ['foo']
+        }).exclude_automatic_filter_keys('foo')
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
+       foo.first AS first
+FROM foo
+WHERE foo.first IN ('foo')
+GROUP BY foo.first"""
+
+        recipe = self.recipe().metrics('age').dimensions('first')
+        recipe = recipe.automatic_filters({
+            'first': ['foo']
+        }).exclude_automatic_filter_keys('first')
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
+       foo.first AS first
+FROM foo
+GROUP BY foo.first"""
+
+        recipe = self.recipe().metrics('age').dimensions('first')
+        recipe = recipe.automatic_filters({
+            'first': ['foo']
+        }).exclude_automatic_filter_keys('first')
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
+       foo.first AS first
+FROM foo
+GROUP BY foo.first"""
+
+        # Testing operators
+        recipe = self.recipe().metrics('age').dimensions('first')
+        recipe = recipe.automatic_filters({
+            'first__notin': ['foo']
+        })
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
+       foo.first AS first
+FROM foo
+WHERE foo.first NOT IN ('foo')
+GROUP BY foo.first"""
+
+        # between operator
+        recipe = self.recipe().metrics('age').dimensions('first')
+        recipe = recipe.automatic_filters({
+            'first__between': ['foo', 'moo']
+        })
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
+       foo.first AS first
+FROM foo
+WHERE foo.first BETWEEN 'foo' AND 'moo'
+GROUP BY foo.first"""
+
+        # scalar operator
+        recipe = self.recipe().metrics('age').dimensions('first')
+        recipe = recipe.automatic_filters({
+            'first__lt': 'moo'
+        })
+        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
+       foo.first AS first
+FROM foo
+WHERE foo.first < 'moo'
+GROUP BY foo.first"""
+
+
+
+
