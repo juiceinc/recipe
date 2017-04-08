@@ -1,30 +1,10 @@
 # TODO as jason about methods of doing this
+from copy import copy
+
+from sqlalchemy import func
+
 from recipe import Dimension
-
-
-def recipeextension(func):
-    """ A decorator to indicate if this method should be available to the
-    recipes builder pattern """
-
-    def decorator(func):
-        return
-
-
-def reg(func):
-    for m in dir(func):
-        print
-        print m
-        print getattr(func, m)
-    # func.im_class.recipeextensions.add(func.__name__)
-    return func
-
-
-class A(object):
-    recipeextensions = set()
-
-    @reg
-    def a(self):
-        return 1
+from tests.test_base import Base
 
 
 class RecipeExtension(object):
@@ -232,13 +212,13 @@ class BlendRecipe(RecipeExtension):
         super(BlendRecipe, self).__init__(*args, **kwargs)
         self.blend_recipes = []
 
-    @recipeextension
-    def blend(self, blend_recipe):
-        return self.recipe
 
-    @recipeextension
-    def full_blend(self, blend_recipe):
-        return self.recipe
+def blend(self, blend_recipe):
+    return self.recipe
+
+
+def full_blend(self, blend_recipe):
+    return self.recipe
 
 
 class CompareRecipe(RecipeExtension):
@@ -254,10 +234,13 @@ class CompareRecipe(RecipeExtension):
 
     def __init__(self, *args, **kwargs):
         super(CompareRecipe, self).__init__(*args, **kwargs)
-        self.compare_recipes = []
+        self.compare_recipe = None
+        self.suffix = '_compare'
 
-    @recipeextension
     def compare(self, compare_recipe, suffix='_compare'):
+        self.compare_recipe = compare_recipe
+        self.suffix = suffix
+        self.dirty = True
         return self.recipe
 
 
@@ -292,6 +275,77 @@ class AnonymizeRecipe(RecipeExtension):
             if hasattr(ingredient.meta, 'anonymizer') and self._anonymize:
                 if ingredient.meta.anonymizer not in ingredient.formatters:
                     ingredient.formatters.append(ingredient.meta.anonymizer)
+
+
+class SummarizeOverRecipe(RecipeExtension):
+    def __init__(self, *args, **kwargs):
+        super(SummarizeOverRecipe, self).__init__(*args, **kwargs)
+        self._summarize_over = None
+        self.active = True
+
+    def summarize_over(self, dimension_key):
+        self.dirty = True
+        self._summarize_over = dimension_key
+        return self.recipe
+
+    def add_ingedients(self):
+        """
+        Take a recipe that has dimensions
+        Resummarize it over one of the dimensions returning averages of the
+        metrics.
+        """
+        if self._summarize_over is None:
+            return
+
+        if not self.active:
+            return
+
+        assert self._summarize_over in self.recipe.dimension_ids
+
+        # Deactivate this summarization to get a clean query
+        self.active = False
+        base_table = self.recipe.as_table(name='summarized')
+        self.active = True
+
+        summmarize_over_dim = self.recipe._cauldron[self._summarize_over]
+
+        # Construct a class dynamically so we can give it a dynamic name
+        T = type('T', (Base,), {
+            '__table__': base_table,
+            '__mapper_args__': {'primary_key': base_table.c.first}
+        })
+
+        metrics = []
+        for m in self.recipe.metric_ids:
+            # Replace the base metric with an averaged version of it
+            # targetted to the new table
+            base_metric = self.recipe._cauldron[m]
+
+            summarized_metric = copy(base_metric)
+            summarized_metric.columns = [func.avg(getattr(T, base_metric.id))]
+            metrics.append(summarized_metric)
+
+        dimensions = []
+        for dim in self.recipe.dimension_ids:
+            if dim != self._summarize_over:
+                # Replace the base dimension with a version of it targetted
+                # to the new table
+                base_dim = self.recipe._cauldron[dim]
+                summarized_dim = copy(base_dim)
+                summarized_dim.columns = []
+                summarized_dim.group_by = []
+                for col in base_dim.columns:
+                    newcol = getattr(T, col.name)
+                    summarized_dim.columns.append(newcol)
+                    summarized_dim.group_by.append(newcol)
+                dimensions.append(summarized_dim)
+
+        # Rebuild the cauldron using only the dimensions and metrics
+        self.recipe._cauldron.clear()
+        for met in metrics:
+            self.recipe._cauldron.use(met)
+        for dim in dimensions:
+            self.recipe._cauldron.use(dim)
 
 
 class CacheRecipe(RecipeExtension):

@@ -5,7 +5,9 @@ from recipe import Dimension
 from recipe import Metric
 from recipe import Recipe
 from recipe import Shelf
-from recipe.extensions import RecipeExtension, AutomaticFilters, AnonymizeRecipe
+from recipe.extensions import RecipeExtension, AutomaticFilters, \
+    AnonymizeRecipe, \
+    SummarizeOverRecipe
 from .test_base import *
 
 
@@ -259,8 +261,8 @@ class TestAnonymizeRecipeExtension(object):
             'first': Dimension(MyTable.first),
             'last': Dimension(MyTable.last,
                               # formatters=[lambda value: value[::-1]]),
-                            anonymizer=lambda value: value[::-1]),
-        'age': Metric(func.sum(MyTable.age))
+                              anonymizer=lambda value: value[::-1]),
+            'age': Metric(func.sum(MyTable.age))
         })
         self.extension_classes = [AnonymizeRecipe]
 
@@ -302,7 +304,7 @@ ORDER BY foo.last"""
         assert recipe.all()[0].age == 10
         assert recipe.stats.rows == 2
 
-    def test_anonymize_with_anonymizer(self):
+    def test_anonymize_without_anonymizer(self):
         """ If the dimension doesn't have an anonymizer, there is no change """
         recipe = self.recipe().metrics('age').dimensions(
             'first').order_by('first').anonymize(False)
@@ -327,4 +329,41 @@ ORDER BY foo.first"""
         assert recipe.all()[0].first_id == 'hi'
         assert recipe.all()[0].age == 15
         assert recipe.stats.rows == 1
+
+
+class TestSummarizeOverExtension(object):
+    def setup(self):
+        # create a Session
+        self.session = Session()
+
+        self.shelf = Shelf({
+            'first': Dimension(MyTable.first),
+            'last': Dimension(MyTable.last,
+                              # formatters=[lambda value: value[::-1]]),
+                              anonymizer=lambda value: value[::-1]),
+            'age': Metric(func.sum(MyTable.age))
+        })
+        self.extension_classes = [SummarizeOverRecipe]
+
+    def recipe(self):
+        return Recipe(shelf=self.shelf, session=self.session,
+                      extension_classes=self.extension_classes)
+
+    def test_summarize_over(self):
+        """ Anonymize requires ingredients to have an anonymizer """
+        recipe = self.recipe().metrics('age').dimensions(
+            'first', 'last').summarize_over('last')
+        assert recipe.to_sql() == """SELECT avg(summarized.age) AS age,
+       summarized.first AS first
+FROM
+  (SELECT sum(foo.age) AS age,
+          foo.last AS last,
+          foo.first AS first
+   FROM foo
+   GROUP BY foo.last,
+            foo.first) AS summarized
+GROUP BY summarized.first"""
+        assert len(recipe.all()) == 1
+        assert recipe.one().first == 'hi'
+        assert recipe.one().age == 7.5
 

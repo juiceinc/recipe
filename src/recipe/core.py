@@ -129,7 +129,7 @@ class Recipe(object):
         :param session:
         """
 
-        self._id = uuid4()
+        self._id = str(uuid4())[:8]
         self.shelf(shelf)
 
         # Stores all ingredients used in the recipe
@@ -232,7 +232,7 @@ class Recipe(object):
 
     @property
     def metric_ids(self):
-        return (m.id for m in self._cauldron if isinstance(m, Metric))
+        return (m.id for m in self._cauldron.values() if isinstance(m, Metric))
 
     def dimensions(self, *dimensions):
         """ Add a list of Dimension ingredients to the query. These can either be
@@ -254,7 +254,7 @@ class Recipe(object):
 
     @property
     def dimension_ids(self):
-        return (d.id for d in self._dimensions if isinstance(d, Dimension))
+        return (d.id for d in self._cauldron.values() if isinstance(d, Dimension))
 
     def filters(self, *filters):
         """
@@ -518,7 +518,7 @@ class Recipe(object):
         """ Return an alias to a table
         """
         if name is None:
-            name = self.id
+            name = self._id
         return alias(self.subquery(), name=name)
 
     def all(self):
