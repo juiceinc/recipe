@@ -433,6 +433,7 @@ class Recipe(object):
         }
         for extension in self.recipe_extensions:
             prequery_parts = extension.modify_prequery_parts(prequery_parts)
+        query = prequery_parts['query']
 
         if len(query.selectable.froms) != 1:
             raise BadRecipe("Recipes must use ingredients that all come from "
@@ -448,6 +449,7 @@ class Recipe(object):
         }
         for extension in self.recipe_extensions:
             postquery_parts = extension.modify_postquery_parts(postquery_parts)
+        query = postquery_parts['query']
 
         # Apply limit on the outermost query
         # This happens after building the comparison recipe

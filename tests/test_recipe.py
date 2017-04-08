@@ -1,14 +1,9 @@
 import pytest
-from sqlalchemy import Table
-from sqlalchemy import func
 
 import recipe
 from recipe import BadRecipe
-from recipe import Dimension
 from recipe import Having
-from recipe import Metric
 from recipe import Recipe
-from recipe import Shelf
 from .test_base import *
 
 
@@ -73,7 +68,6 @@ HAVING sum(foo.age) < 10
 ORDER BY foo.last"""
 
 
-
 class TestStats(object):
     def setup(self):
         # create a Session
@@ -96,5 +90,3 @@ class TestStats(object):
         # Stats are ready after the recipe is run
         assert recipe.stats.ready == True
         assert recipe.stats.rows == 2
-
-

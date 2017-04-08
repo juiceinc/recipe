@@ -256,9 +256,17 @@ class Dimension(Ingredient):
         if self.formatters:
             prop = self.id + '_raw'
         else:
-            prop = self.id
+            prop = self.id_prop
 
         yield self.id + '_id', lambda row: getattr(row, prop)
+
+    @property
+    def id_prop(self):
+        """ The label of this dimensions id in the query columns """
+        if len(self.columns) == 1:
+            return self.id
+        else:
+            return self.id + '_id'
 
 
 class IdValueDimension(Dimension):

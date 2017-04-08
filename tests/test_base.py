@@ -4592,5 +4592,8 @@ mytable_shelf = Shelf({
 
 census_shelf = Shelf({
     'state': Dimension(Census.state),
-
+    'sex': Dimension(Census.sex),
+    'age': Dimension(Census.age),
+    'pop2000': Metric(func.sum(Census.pop2000)),
+    'pop2008': Metric(func.sum(Census.pop2008)),
 })

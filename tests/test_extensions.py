@@ -1,13 +1,11 @@
-import pytest
-from sqlalchemy import func
+from copy import copy
 
-from recipe import Dimension
-from recipe import Metric
+import pytest
+
 from recipe import Recipe
-from recipe import Shelf
 from recipe.extensions import RecipeExtension, AutomaticFilters, \
     AnonymizeRecipe, \
-    SummarizeOverRecipe
+    SummarizeOverRecipe, CompareRecipe
 from .test_base import *
 
 
@@ -351,3 +349,89 @@ GROUP BY summarized.first"""
         assert len(recipe.all()) == 1
         assert recipe.one().first == 'hi'
         assert recipe.one().age == 7.5
+
+
+class TestCompareRecipeExtension(object):
+    def setup(self):
+        # create a Session
+        self.session = Session()
+
+        self.shelf = copy(census_shelf)
+        self.extension_classes = [CompareRecipe]
+
+    def recipe(self):
+        return Recipe(shelf=self.shelf, session=self.session,
+                      extension_classes=self.extension_classes)
+
+    def test_compare(self):
+        """ A basic comparison recipe. The base recipe looks at all data, the
+        comparison only applies to vermont
+
+        Note: Ordering is only preserved on postgres engines.
+        """
+
+        r = self.recipe().metrics('pop2000').dimensions(
+            'sex').order_by('sex')
+        r = r.compare(self.recipe() \
+                      .metrics('pop2000')
+                      .dimensions('sex')
+                      .filters(Census.state == 'Vermont'))
+
+        assert len(r.all()) == 2
+        assert r.to_sql() == """SELECT sum(census.pop2000) AS pop2000,
+       census.sex AS sex,
+       anon_1.pop2000 AS pop2000_compare
+FROM census
+LEFT OUTER JOIN
+  (SELECT sum(census.pop2000) AS pop2000,
+          census.sex AS sex
+   FROM census
+   WHERE census.state = 'Vermont'
+   GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
+GROUP BY census.sex
+ORDER BY census.sex"""
+        rowwomen, rowmen = r.all()[0], r.all()[1]
+        # We should get the lookup values
+        assert rowwomen.sex == 'F'
+        assert rowwomen.pop2000 == 143534804
+        assert rowwomen.pop2000_compare == 310948
+        assert rowmen.sex == 'M'
+        assert rowmen.pop2000 == 137392517
+        assert rowmen.pop2000_compare == 298532
+
+    def test_compare_suffix(self):
+        """ Test that the proper suffix gets added to the comparison metrics
+        """
+
+        r = self.recipe().metrics('pop2000').dimensions(
+            'sex').order_by('sex')
+        r = r.compare(self.recipe()
+                      .metrics('pop2000')
+                      .dimensions('sex')
+                      .filters(Census.state == 'Vermont'),
+                      suffix='_x')
+
+        assert len(r.all()) == 2
+
+        assert r.to_sql() == """SELECT sum(census.pop2000) AS pop2000,
+       census.sex AS sex,
+       anon_1.pop2000 AS pop2000_x
+FROM census
+LEFT OUTER JOIN
+  (SELECT sum(census.pop2000) AS pop2000,
+          census.sex AS sex
+   FROM census
+   WHERE census.state = 'Vermont'
+   GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
+GROUP BY census.sex
+ORDER BY census.sex"""
+        rowwomen, rowmen = r.all()[0], r.all()[1]
+        # The comparison metric is named with the suffix
+        assert rowwomen.sex == 'F'
+        assert rowwomen.pop2000 == 143534804
+        assert rowwomen.pop2000_x == 310948
+        assert not hasattr(rowwomen, 'pop2000_compare')
+        assert rowmen.sex == 'M'
+        assert rowmen.pop2000 == 137392517
+        assert rowmen.pop2000_x == 298532
+        assert not hasattr(rowmen, 'pop2000_compare')
