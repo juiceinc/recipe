@@ -42,31 +42,31 @@ class Stats(object):
         self._enchanttime = enchanttime
         self._from_cache = from_cache
 
-    def _get_value(self, val):
+    def _get_value(self, prop):
         if self.ready:
-            return val
+            return getattr(self, prop)
         else:
             raise BadRecipe("Can't access stats before the query has run")
 
     @property
     def rows(self):
         """ The number of rows in this result. """
-        return self._get_value(self._rows)
+        return self._get_value('_rows')
 
     @property
     def dbtime(self):
         """ The amount of time the database took to process. """
-        return self._get_value(self._dbtime)
+        return self._get_value('_dbtime')
 
     @property
     def enchanttime(self):
         """ The amount of time the database took to process. """
-        return self._get_value(self._enchanttime)
+        return self._get_value('_enchanttime')
 
     @property
     def from_cache(self):
         """ Was this result cached """
-        return self._get_value(self._from_cache)
+        return self._get_value('_from_cache')
 
 
 class Recipe(object):

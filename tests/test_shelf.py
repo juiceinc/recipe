@@ -1,4 +1,5 @@
 import pytest
+from copy import copy
 from sqlalchemy import func
 from .test_base import *
 
@@ -11,11 +12,7 @@ from recipe import Shelf, AutomaticShelf
 class TestShelf(object):
     def setup(self):
         # create a Session
-        self.shelf = Shelf({
-            'first': Dimension(MyTable.first),
-            'last': Dimension(MyTable.last),
-            'age': Metric(func.sum(MyTable.age))
-        })
+        self.shelf = copy(mytable_shelf)
 
     def test_find(self):
         """ Find ingredients on the shelf """
@@ -44,9 +41,21 @@ class TestShelf(object):
         ingredient = self.shelf.find('first', Metric, raise_if_invalid=False)
         assert ingredient == 'first'
 
+        with pytest.raises(BadRecipe):
+            ingredient = self.shelf.find('foo', Dimension)
+
+        # We can choose not to raise
+        ingredient = self.shelf.find('foo', Dimension, raise_if_invalid=False)
+        assert ingredient == 'foo'
+
+        self.shelf['foo'] = Dimension(MyTable.last)
+        ingredient = self.shelf.find('last', Dimension)
+        assert ingredient.id == 'last'
+
 
     def test_repr(self):
         """ Find ingredients on the shelf """
+        print self.shelf.__repr__()
         assert self.shelf.__repr__() == """(Dimension)first MyTable.first
 (Dimension)last MyTable.last
 (Metric)age sum(foo.age)"""
@@ -135,16 +144,3 @@ class TestAutomaticShelf(object):
 
         ingredient = self.shelf.get('primo', None)
         assert ingredient is None
-
-    def test_add_to_shelf(self):
-        """ We can add an ingredient to a shelf """
-        with pytest.raises(BadRecipe):
-            ingredient = self.shelf.find('foo', Dimension)
-
-        # We can choose not to raise
-        ingredient = self.shelf.find('foo', Dimension, raise_if_invalid=False)
-        assert ingredient == 'foo'
-
-        self.shelf['foo'] = Dimension(MyTable.last)
-        ingredient = self.shelf.find('last', Dimension)
-        assert ingredient.id == 'last'

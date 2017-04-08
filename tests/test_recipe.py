@@ -1,7 +1,9 @@
+import pytest
 from sqlalchemy import Table
 from sqlalchemy import func
 
 import recipe
+from recipe import BadRecipe
 from recipe import Dimension
 from recipe import Having
 from recipe import Metric
@@ -18,12 +20,7 @@ class TestRecipeIngredients(object):
     def setup(self):
         # create a Session
         self.session = Session()
-
-        self.shelf = Shelf({
-            'first': Dimension(MyTable.first),
-            'last': Dimension(MyTable.last),
-            'age': Metric(func.sum(MyTable.age))
-        })
+        self.shelf = mytable_shelf
 
     def recipe(self):
         return Recipe(shelf=self.shelf, session=self.session)
@@ -75,5 +72,29 @@ GROUP BY foo.last
 HAVING sum(foo.age) < 10
 ORDER BY foo.last"""
 
+
+
+class TestStats(object):
+    def setup(self):
+        # create a Session
+        self.session = Session()
+        self.shelf = mytable_shelf
+
+    def recipe(self):
+        return Recipe(shelf=self.shelf, session=self.session)
+
+    def test_stats(self):
+        recipe = self.recipe().metrics('age').dimensions(
+            'last')
+
+        assert recipe.stats.ready == False
+        with pytest.raises(BadRecipe):
+            assert recipe.stats.rows == 5
+
+        recipe.all()
+
+        # Stats are ready after the recipe is run
+        assert recipe.stats.ready == True
+        assert recipe.stats.rows == 2
 
 

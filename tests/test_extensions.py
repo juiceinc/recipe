@@ -20,12 +20,7 @@ class TestExtensions(object):
     def setup(self):
         # create a Session
         self.session = Session()
-
-        self.shelf = Shelf({
-            'first': Dimension(MyTable.first),
-            'last': Dimension(MyTable.last),
-            'age': Metric(func.sum(MyTable.age))
-        })
+        self.shelf = mytable_shelf
         self.extension_classes = []
 
     def recipe(self):
@@ -64,12 +59,7 @@ class TestAddFilterExtension(object):
     def setup(self):
         # create a Session
         self.session = Session()
-
-        self.shelf = Shelf({
-            'first': Dimension(MyTable.first),
-            'last': Dimension(MyTable.last),
-            'age': Metric(func.sum(MyTable.age))
-        })
+        self.shelf = mytable_shelf
         self.extension_classes = [AddFilter]
 
     def recipe(self):
@@ -89,12 +79,7 @@ class TestAutomaticFiltersExtension(object):
     def setup(self):
         # create a Session
         self.session = Session()
-
-        self.shelf = Shelf({
-            'first': Dimension(MyTable.first),
-            'last': Dimension(MyTable.last),
-            'age': Metric(func.sum(MyTable.age))
-        })
+        self.shelf = mytable_shelf
         self.extension_classes = [AutomaticFilters]
 
     def recipe(self):
@@ -366,4 +351,3 @@ GROUP BY summarized.first"""
         assert len(recipe.all()) == 1
         assert recipe.one().first == 'hi'
         assert recipe.one().age == 7.5
-

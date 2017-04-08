@@ -10,11 +10,7 @@ from .test_base import *
 class TestIngredients(object):
     def setup(self):
         # create a Session
-        self.shelf = Shelf({
-            'first': Dimension(MyTable.first),
-            'last': Dimension(MyTable.last),
-            'age': Metric(func.sum(MyTable.age))
-        })
+        self.shelf = mytable_shelf
 
     def test_ingredient_init(self):
         ingr = Ingredient()
