@@ -560,28 +560,30 @@ ORDER BY census.sex"""
         """
 
         r = self.recipe().metrics('pop2000').dimensions(
-            'sex').order_by('sex')
+            'state').order_by('state')
 
-        blend_recipe = self.recipe() \
-            .metrics('pop2008') \
-            .dimensions('sex') \
-            .filters(Census.sex == 'F')
-        r = r.full_blend(blend_recipe, join_base='sex',
-                    join_blend='sex')
+        blend_recipe = self.recipe().shelf(statefact_shelf) \
+            .dimensions('state', 'abbreviation')
+        r = r.blend(blend_recipe, join_base='state',
+                    join_blend='state')
 
-        assert len(r.all()) == 2
+        print r.to_sql()
+        for row in r.all():
+            print row
+        assert len(r.all()) == 51
+
         assert r.to_sql() == """SELECT sum(census.pop2000) AS pop2000,
-       census.sex AS sex,
-       anon_1.pop2008 AS pop2008
+       census.state AS state,
+       anon_1.abbreviation AS abbreviation
 FROM census
-LEFT OUTER JOIN
-  (SELECT sum(census.pop2008) AS pop2008,
-          census.sex AS sex
-   FROM census
-   WHERE census.sex = 'F'
-   GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
-GROUP BY census.sex
-ORDER BY census.sex"""
+JOIN
+  (SELECT state_fact.abbreviation AS abbreviation,
+          state_fact.name AS state
+   FROM state_fact
+   GROUP BY state_fact.abbreviation,
+            state_fact.name) AS anon_1 ON census.state = anon_1.state
+GROUP BY census.state,
+         anon_1.abbreviation"""
         rowwomen, rowmen = r.all()[0], r.all()[1]
         # We should get the lookup values
         assert rowwomen.sex == 'F'

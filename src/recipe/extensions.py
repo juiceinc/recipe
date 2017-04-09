@@ -286,7 +286,8 @@ class BlendRecipe(RecipeExtension):
                     if col is not None:
                         postquery_parts['query'] = postquery_parts[
                             'query'].add_columns(col.label(dim.id + suffix))
-                        postquery_parts['query'].append_group_by(col)
+                        postquery_parts['query'] = postquery_parts[
+                            'query'].group_by(col)
                     else:
                         raise BadRecipe('{} could not be found in .blend() '
                                         'recipe subquery'.format(

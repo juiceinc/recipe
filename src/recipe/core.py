@@ -212,6 +212,7 @@ class Recipe(object):
             self._shelf = shelf
         else:
             raise BadRecipe("shelf must be a dict or recipe.shelf.Shelf")
+        return self
 
     def metrics(self, *metrics):
         """ Add a list of Metric ingredients to the query. These can either be

@@ -4657,3 +4657,9 @@ census_shelf = Shelf({
     'pop2000': Metric(func.sum(Census.pop2000)),
     'pop2008': Metric(func.sum(Census.pop2008)),
 })
+
+
+statefact_shelf = Shelf({
+    'state': Dimension(StateFact.name),
+    'abbreviation': Dimension(StateFact.abbreviation),
+})
