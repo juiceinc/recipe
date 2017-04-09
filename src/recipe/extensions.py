@@ -272,7 +272,7 @@ class BlendRecipe(RecipeExtension):
                                         'recipe subquery'.format(
                             id + suffix))
 
-            # For all dimensinos in the blend recipe
+            # For all dimensions in the blend recipe
             # Use the dimension in the base recipe and
             # Add the dimension columns and group_by to the base recipe
             # Ignore the join_blend dimension
@@ -310,14 +310,6 @@ class BlendRecipe(RecipeExtension):
                     .join(blend_subq, base_col == blend_col)
 
         return postquery_parts
-
-
-def blend(self, blend_recipe):
-    return self.recipe
-
-
-def full_blend(self, blend_recipe):
-    return self.recipe
 
 
 class CompareRecipe(RecipeExtension):

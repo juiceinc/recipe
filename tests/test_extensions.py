@@ -498,9 +498,6 @@ ORDER BY census.sex,
             r.all()
 
 
-
-
-
 class TestBlendRecipeExtension(object):
     def setup(self):
         # create a Session
@@ -528,9 +525,10 @@ class TestBlendRecipeExtension(object):
             .dimensions('sex') \
             .filters(Census.sex == 'F')
         r = r.full_blend(blend_recipe, join_base='sex',
-                    join_blend='sex')
+                         join_blend='sex')
 
         assert len(r.all()) == 2
+        print r.to_sql()
         assert r.to_sql() == """SELECT sum(census.pop2000) AS pop2000,
        census.sex AS sex,
        anon_1.pop2008 AS pop2008
@@ -567,11 +565,6 @@ ORDER BY census.sex"""
         r = r.blend(blend_recipe, join_base='state',
                     join_blend='state')
 
-        print r.to_sql()
-        for row in r.all():
-            print row
-        assert len(r.all()) == 51
-
         assert r.to_sql() == """SELECT sum(census.pop2000) AS pop2000,
        census.state AS state,
        anon_1.abbreviation AS abbreviation
@@ -583,12 +576,18 @@ JOIN
    GROUP BY state_fact.abbreviation,
             state_fact.name) AS anon_1 ON census.state = anon_1.state
 GROUP BY census.state,
-         anon_1.abbreviation"""
-        rowwomen, rowmen = r.all()[0], r.all()[1]
-        # We should get the lookup values
-        assert rowwomen.sex == 'F'
-        assert rowwomen.pop2000 == 143534804
-        assert rowwomen.pop2008 == 153959198
-        assert rowmen.sex == 'M'
-        assert rowmen.pop2000 == 137392517
-        assert rowmen.pop2008 == None
+         anon_1.abbreviation
+ORDER BY census.state"""
+
+        assert len(r.all()) == 50
+        alabamarow, alaskarow = r.all()[0], r.all()[1]
+        assert alabamarow.state == 'Alabama'
+        assert alabamarow.state_id == 'Alabama'
+        assert alabamarow.abbreviation == 'AL'
+        assert alabamarow.abbreviation_id == 'AL'
+        assert alabamarow.pop2000 == 4438559
+        assert alaskarow.state == 'Alaska'
+        assert alaskarow.state_id == 'Alaska'
+        assert alaskarow.abbreviation == 'AK'
+        assert alaskarow.abbreviation_id == 'AK'
+        assert alaskarow.pop2000 == 608588
