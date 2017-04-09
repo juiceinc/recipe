@@ -1,4 +1,4 @@
-# TODO as jason about methods of doing this
+# TODO ask jason about methods of doing this
 from copy import copy
 
 from sqlalchemy import and_
@@ -7,6 +7,8 @@ from sqlalchemy import text
 
 from recipe import BadRecipe
 from recipe import Dimension
+from recipe import Recipe
+from recipe.compat import basestring
 from tests.test_base import Base
 
 
@@ -214,6 +216,99 @@ class BlendRecipe(RecipeExtension):
     def __init__(self, *args, **kwargs):
         super(BlendRecipe, self).__init__(*args, **kwargs)
         self.blend_recipes = []
+        self.blend_types = []
+        self.blend_criteria = []
+
+    def blend(self, blend_recipe, join_base, join_blend):
+        assert isinstance(blend_recipe, Recipe)
+
+        self.blend_recipes.append(blend_recipe)
+        self.blend_types.append('inner')
+        self.blend_criteria.append((join_base, join_blend))
+        self.dirty = True
+        return self.recipe
+
+    def full_blend(self, blend_recipe, join_base, join_blend):
+        assert isinstance(blend_recipe, Recipe)
+
+        self.blend_recipes.append(blend_recipe)
+        self.blend_types.append('outer')
+        self.blend_criteria.append((join_base, join_blend))
+        self.dirty = True
+        return self.recipe
+
+    def modify_postquery_parts(self, postquery_parts):
+        """
+        Make the comparison recipe a subquery that is left joined to the
+        base recipe using dimensions that are shared between the recipes.
+
+        Hoist the metric from the comparison recipe up to the base query
+        while adding the suffix.
+
+        """
+        if not self.blend_recipes:
+            return postquery_parts
+
+        for blend_recipe, blend_type, blend_criteria in zip(self.blend_recipes,
+                                                            self.blend_types,
+                                                            self.blend_criteria):
+            join_base, join_blend = blend_criteria
+
+            blend_subq = blend_recipe.subquery()
+
+            # For all metrics in the blend recipe
+            # Use the metric in the base recipe and
+            # Add the metric columns to the base recipe
+            for m in blend_recipe.metric_ids:
+                met = blend_recipe._cauldron[m]
+                self.recipe._cauldron.use(met)
+                for suffix in met.make_column_suffixes():
+                    col = getattr(blend_subq.c, met.id, None)
+                    if col is not None:
+                        postquery_parts['query'] = postquery_parts[
+                            'query'].add_columns(col.label(met.id + suffix))
+                    else:
+                        raise BadRecipe('{} could not be found in .blend() '
+                                        'recipe subquery'.format(
+                            id + suffix))
+
+            # For all dimensinos in the blend recipe
+            # Use the dimension in the base recipe and
+            # Add the dimension columns and group_by to the base recipe
+            # Ignore the join_blend dimension
+            for d in blend_recipe.dimension_ids:
+                if d == join_blend:
+                    continue
+                dim = blend_recipe._cauldron[d]
+                self.recipe._cauldron.use(dim)
+                for suffix in dim.make_column_suffixes():
+                    col = getattr(blend_subq.c, dim.id, None)
+                    if col is not None:
+                        postquery_parts['query'] = postquery_parts[
+                            'query'].add_columns(col.label(dim.id + suffix))
+                        postquery_parts['query'].append_group_by(col)
+                    else:
+                        raise BadRecipe('{} could not be found in .blend() '
+                                        'recipe subquery'.format(
+                            id + suffix))
+
+            base_dim = self.recipe._cauldron[join_base]
+            blend_dim = blend_recipe._cauldron[join_blend]
+
+            base_col = base_dim.columns[0]
+            blend_col = getattr(blend_subq.c, blend_dim.id_prop, None)
+            if blend_col is None:
+                raise BadRecipe('Can\'t find join property for {} dimension in \
+                        blend recipe'.format(blend_dim.id_prop))
+
+            if blend_type == 'outer':
+                postquery_parts['query'] = postquery_parts['query'] \
+                    .outerjoin(blend_subq, base_col == blend_col)
+            else:
+                postquery_parts['query'] = postquery_parts['query'] \
+                    .join(blend_subq, base_col == blend_col)
+
+        return postquery_parts
 
 
 def blend(self, blend_recipe):
@@ -237,168 +332,75 @@ class CompareRecipe(RecipeExtension):
 
     def __init__(self, *args, **kwargs):
         super(CompareRecipe, self).__init__(*args, **kwargs)
-        self.compare_recipe = None
-        self.suffix = '_compare'
+        self.compare_recipe = []
+        self.suffix = []
 
     def compare(self, compare_recipe, suffix='_compare'):
-        self.compare_recipe = compare_recipe
-        self.suffix = suffix
+        assert isinstance(compare_recipe, Recipe)
+        assert isinstance(suffix, basestring)
+        self.compare_recipe.append(compare_recipe)
+        self.suffix.append(suffix)
         self.dirty = True
         return self.recipe
 
     def modify_postquery_parts(self, postquery_parts):
-        # postquery_parts = {
-        #     "query": query,
-        #     "group_bys": group_bys,
-        #     "filters": filters,
-        #     "havings": havings,
-        #     "order_bys": order_bys,
-        # }
-        if self.compare_recipe is None:
+        """
+        Make the comparison recipe a subquery that is left joined to the
+        base recipe using dimensions that are shared between the recipes.
+
+        Hoist the metric from the comparison recipe up to the base query
+        while adding the suffix.
+
+        """
+        if not self.compare_recipe:
             return postquery_parts
 
-        comparison_subq = self.compare_recipe.subquery()
+        for compare_recipe, compare_suffix in zip(self.compare_recipe,
+                                                  self.suffix):
+            comparison_subq = compare_recipe.subquery()
 
-        # For all metrics in the comparison recipe
-        # Use the metric in the base recipe and
-        # Add the metric columns to the base recipe
-        for m in self.compare_recipe.metric_ids:
-            met = self.compare_recipe._cauldron[m]
-            id = met.id
-            met.id = id + self.suffix
-            self.recipe._cauldron.use(met)
-            for suffix in met.make_column_suffixes():
-                col = getattr(comparison_subq.c, id + suffix, None)
-                if col is not None:
-                    postquery_parts['query'] = postquery_parts[
-                        'query'].add_columns(col.label(met.id + suffix))
-                else:
-                    raise BadRecipe('{} could not be found in .compare() '
-                                    'recipe subquery'.format(
-                        id + suffix))
-
-        join_conditions = []
-        for dim in self.compare_recipe.dimension_ids:
-            if dim not in self.recipe.dimension_ids:
-                raise BadRecipe('{} dimension in comparison recipe must exist '
-                                'in base recipe')
-            base_dim = self.recipe._cauldron[dim]
-            compare_dim = self.compare_recipe._cauldron[dim]
-            base_col = base_dim.columns[0]
-            compare_col = getattr(comparison_subq.c, compare_dim.id_prop, None)
-            if compare_col is None:
-                raise BadRecipe('Can\'t find join property for {} dimension in \
-                    compare recipe'.format(compare_dim.id_prop))
-            join_conditions.append(base_col == compare_col)
-
-        join_clause = text('1=1')
-        if join_conditions:
-            join_clause = and_(*join_conditions)
-
-        postquery_parts['query'] = postquery_parts['query'] \
-            .outerjoin(comparison_subq, join_clause)
-
-        return postquery_parts
-
-    def _apply_compare_recipes(self, query, order_bys):
-        # Apply comparison recipes (a special type of blend recipe where the blend
-        # happens through a outer join)
-        if self._compare_recipes:
-            subq = query.subquery()
-            compare_query = self.service.session.query(subq)
-            for compare_recipe in self._compare_recipes:
-                compare_details = self.build_compare_recipe(subq,
-                                                            compare_recipe,
-                                                            order_bys)
-                compare_query = compare_query.outerjoin(
-                    compare_details['subquery'], compare_details['join_clause'])
-                compare_query = compare_query.add_columns(
-                    *compare_details['added_columns'])
-
-            # If the primary recipe had an ordering use this ordering on the final output
-            if order_bys and self._is_postgres():
-                compare_query = compare_query.order_by(
-                    getattr(subq.c, '_ordering'))
-            query = compare_query
-        return query
-
-    def build_compare_recipe(self, subq, compare_recipe, order_bys):
-        """
-        Apply a comparison recipe to the query
-
-        :param subq: A subquery based on the base recipe's query
-        :param compare_recipe: The comparison recipe to join
-        :param order_bys: A list of order bys to apply to the
-        :return: A query
-        """
-        comparison_subq = compare_recipe.subquery()
-        added_columns = []
-
-        # Add all the columns for the current query
-        comparison_metrics = compare_recipe._gather(
-            compare_recipe.service.metric_shelf,
-            compare_recipe._metrics)
-        comparison_dimensions = compare_recipe._gather(
-            compare_recipe.service.dimension_shelf,
-            compare_recipe._dimensions)
-
-        # Promote all the Metrics from the comparison to the base recipe
-        # while suffixing them with compare_recipe._compare_suffix
-        for ingredient in comparison_metrics:
-            new_ingredient = copy(ingredient)
-            original_id = new_ingredient.id
-            new_ingredient.id += compare_recipe._compare_suffix
-            if new_ingredient.id not in self._cauldron.ingredients:
-                # Putting the ingredient in the cauldron ensures it will
-                # be in the result rows
-                # Add it to the _metrics which are used by renderers
-                self._cauldron.use(new_ingredient)
-                self._metrics += (new_ingredient.id,)
-                if original_id in self.service.metric_shelf and \
-                        new_ingredient.id not in self.service.metric_shelf:
-                    self.service.metric_shelf[new_ingredient.id] = \
-                        new_ingredient
-
-                # Find the columns that are used by the metrics in the
-                # comparison subquery and add them to the base query columns
-                for suffix in new_ingredient.make_column_suffixes():
-                    col = getattr(comparison_subq.c, ingredient.id + suffix,
-                                  None)
+            # For all metrics in the comparison recipe
+            # Use the metric in the base recipe and
+            # Add the metric columns to the base recipe
+            for m in compare_recipe.metric_ids:
+                met = compare_recipe._cauldron[m]
+                id = met.id
+                met.id = id + compare_suffix
+                self.recipe._cauldron.use(met)
+                for suffix in met.make_column_suffixes():
+                    col = getattr(comparison_subq.c, id + suffix, None)
                     if col is not None:
-                        added_columns.append(col.label(new_ingredient.id +
-                                                       suffix))
+                        postquery_parts['query'] = postquery_parts[
+                            'query'].add_columns(col.label(met.id + suffix))
                     else:
                         raise BadRecipe('{} could not be found in .compare() '
                                         'recipe subquery'.format(
-                            ingredient.id + suffix))
+                            id + suffix))
 
-        join_conditions = []
-        for dim in comparison_dimensions:
-            if dim.id + '_id' not in subq.c:
-                raise BadRecipe('When using compare(), the '
-                                'recipe\'s dimensions must be used in the '
-                                'base recipe.')
-            subq_attr = getattr(subq.c, dim.id + '_id', getattr(subq.c, dim.id,
-                                                                None))
-            comparison_subq_attr = getattr(comparison_subq.c, dim.id + '_id',
-                                           getattr(comparison_subq.c, dim.id,
-                                                   None))
+            join_conditions = []
+            for dim in compare_recipe.dimension_ids:
+                if dim not in self.recipe.dimension_ids:
+                    raise BadRecipe(
+                        '{} dimension in comparison recipe must exist '
+                        'in base recipe')
+                base_dim = self.recipe._cauldron[dim]
+                compare_dim = compare_recipe._cauldron[dim]
+                base_col = base_dim.columns[0]
+                compare_col = getattr(comparison_subq.c, compare_dim.id_prop,
+                                      None)
+                if compare_col is None:
+                    raise BadRecipe('Can\'t find join property for {} dimension in \
+                        compare recipe'.format(compare_dim.id_prop))
+                join_conditions.append(base_col == compare_col)
 
-            if subq_attr is None or comparison_subq_attr is None:
-                raise BadRecipe('Attempting to join')
-
-            join_conditions.append(subq_attr == comparison_subq_attr)
-
-        if join_conditions:
-            join_clause = and_(*join_conditions)
-        else:
             join_clause = text('1=1')
+            if join_conditions:
+                join_clause = and_(*join_conditions)
 
-        return {
-            'subquery': comparison_subq,
-            'join_clause': join_clause,
-            'added_columns': added_columns
-        }
+            postquery_parts['query'] = postquery_parts['query'] \
+                .outerjoin(comparison_subq, join_clause)
+
+        return postquery_parts
 
 
 class AnonymizeRecipe(RecipeExtension):

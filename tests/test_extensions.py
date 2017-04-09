@@ -2,10 +2,11 @@ from copy import copy
 
 import pytest
 
+from recipe import BadRecipe
 from recipe import Recipe
 from recipe.extensions import RecipeExtension, AutomaticFilters, \
     AnonymizeRecipe, \
-    SummarizeOverRecipe, CompareRecipe
+    SummarizeOverRecipe, CompareRecipe, BlendRecipe
 from .test_base import *
 
 
@@ -435,3 +436,157 @@ ORDER BY census.sex"""
         assert rowmen.pop2000 == 137392517
         assert rowmen.pop2000_x == 298532
         assert not hasattr(rowmen, 'pop2000_compare')
+
+    def test_multiple_compares(self):
+        """ Test that we can do multiple comparisons
+        """
+
+        r = self.recipe().metrics('pop2000').dimensions(
+            'sex', 'state').order_by('sex', 'state')
+        r = r.compare(self.recipe().metrics('pop2000').dimensions('sex')
+                      .filters(Census.state == 'Vermont'),
+                      suffix='_vermont')
+        r = r.compare(self.recipe().metrics('pop2000'),
+                      suffix='_total')
+
+        assert len(r.all()) == 102
+
+        assert r.to_sql() == """SELECT sum(census.pop2000) AS pop2000,
+       census.state AS state,
+       census.sex AS sex,
+       anon_1.pop2000 AS pop2000_vermont,
+       anon_2.pop2000 AS pop2000_total
+FROM census
+LEFT OUTER JOIN
+  (SELECT sum(census.pop2000) AS pop2000,
+          census.sex AS sex
+   FROM census
+   WHERE census.state = 'Vermont'
+   GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
+LEFT OUTER JOIN
+  (SELECT sum(census.pop2000) AS pop2000
+   FROM census) AS anon_2 ON 1=1
+GROUP BY census.state,
+         census.sex
+ORDER BY census.sex,
+         census.state"""
+
+        alabama_women, alaska_women = r.all()[0], r.all()[1]
+        assert alabama_women.sex == 'F'
+        assert alabama_women.pop2000 == 2300612
+        assert alabama_women.pop2000_vermont == 310948
+        assert alabama_women.pop2000_total == 280927321
+        assert not hasattr(alabama_women, 'pop2000_compare')
+        assert alaska_women.sex == 'F'
+        assert alaska_women.pop2000 == 300043
+        assert alaska_women.pop2000_vermont == 310948
+        assert alaska_women.pop2000_total == 280927321
+        assert not hasattr(alaska_women, 'pop2000_compare')
+
+    def test_mismatched_dimensions_raises(self):
+        """ Dimensions in the comparison recipe must be a subset of the
+        dimensions in the base recipe """
+        r = self.recipe().metrics('pop2000').dimensions(
+            'sex').order_by('sex')
+        r = r.compare(self.recipe()
+                      .metrics('pop2000')
+                      .dimensions('state')
+                      .filters(Census.state == 'Vermont'),
+                      suffix='_x')
+
+        with pytest.raises(BadRecipe):
+            r.all()
+
+
+
+
+
+class TestBlendRecipeExtension(object):
+    def setup(self):
+        # create a Session
+        self.session = Session()
+
+        self.shelf = copy(census_shelf)
+        self.extension_classes = [BlendRecipe]
+
+    def recipe(self):
+        return Recipe(shelf=self.shelf, session=self.session,
+                      extension_classes=self.extension_classes)
+
+    def test_self_blend(self):
+        """ A basic comparison recipe. The base recipe looks at all data, the
+        comparison only applies to vermont
+
+        Note: Ordering is only preserved on postgres engines.
+        """
+
+        r = self.recipe().metrics('pop2000').dimensions(
+            'sex').order_by('sex')
+
+        blend_recipe = self.recipe() \
+            .metrics('pop2008') \
+            .dimensions('sex') \
+            .filters(Census.sex == 'F')
+        r = r.full_blend(blend_recipe, join_base='sex',
+                    join_blend='sex')
+
+        assert len(r.all()) == 2
+        assert r.to_sql() == """SELECT sum(census.pop2000) AS pop2000,
+       census.sex AS sex,
+       anon_1.pop2008 AS pop2008
+FROM census
+LEFT OUTER JOIN
+  (SELECT sum(census.pop2008) AS pop2008,
+          census.sex AS sex
+   FROM census
+   WHERE census.sex = 'F'
+   GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
+GROUP BY census.sex
+ORDER BY census.sex"""
+        rowwomen, rowmen = r.all()[0], r.all()[1]
+        # We should get the lookup values
+        assert rowwomen.sex == 'F'
+        assert rowwomen.pop2000 == 143534804
+        assert rowwomen.pop2008 == 153959198
+        assert rowmen.sex == 'M'
+        assert rowmen.pop2000 == 137392517
+        assert rowmen.pop2008 == None
+
+    def test_blend(self):
+        """ A basic comparison recipe. The base recipe looks at all data, the
+        comparison only applies to vermont
+
+        Note: Ordering is only preserved on postgres engines.
+        """
+
+        r = self.recipe().metrics('pop2000').dimensions(
+            'sex').order_by('sex')
+
+        blend_recipe = self.recipe() \
+            .metrics('pop2008') \
+            .dimensions('sex') \
+            .filters(Census.sex == 'F')
+        r = r.full_blend(blend_recipe, join_base='sex',
+                    join_blend='sex')
+
+        assert len(r.all()) == 2
+        assert r.to_sql() == """SELECT sum(census.pop2000) AS pop2000,
+       census.sex AS sex,
+       anon_1.pop2008 AS pop2008
+FROM census
+LEFT OUTER JOIN
+  (SELECT sum(census.pop2008) AS pop2008,
+          census.sex AS sex
+   FROM census
+   WHERE census.sex = 'F'
+   GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
+GROUP BY census.sex
+ORDER BY census.sex"""
+        rowwomen, rowmen = r.all()[0], r.all()[1]
+        # We should get the lookup values
+        assert rowwomen.sex == 'F'
+        assert rowwomen.pop2000 == 143534804
+        assert rowwomen.pop2008 == 153959198
+        assert rowmen.sex == 'M'
+        assert rowmen.pop2000 == 137392517
+        assert rowmen.pop2008 == None

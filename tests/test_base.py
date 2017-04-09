@@ -715,119 +715,179 @@ engine.execute("""INSERT INTO CENSUS values
 ('Delaware','F',79,2224,2426), ('Delaware','F',80,2157,2341),
 ('Delaware','F',81,1847,2282), ('Delaware','F',82,1656,1977),
 ('Delaware','F',83,1494,1939), ('Delaware','F',84,1308,1832),
-('Delaware','F',85,7682,10755), ('District of Columbia','M',0,3358,4017),
-('District of Columbia','M',1,3084,3977), ('District of
-Columbia','M',2,3357,3625), ('District of Columbia','M',3,3245,3525), ('District
-of Columbia','M',4,3361,3456), ('District of Columbia','M',5,3360,3341),
-('District of Columbia','M',6,3504,2831), ('District of
-Columbia','M',7,3600,3156), ('District of Columbia','M',8,3600,2997), ('District
-of Columbia','M',9,3542,2335), ('District of Columbia','M',10,3566,2878),
-('District of Columbia','M',11,3119,2610), ('District of
-Columbia','M',12,2857,2902), ('District of Columbia','M',13,2848,2793),
-('District of Columbia','M',14,2746,3034), ('District of
-Columbia','M',15,2851,3102), ('District of Columbia','M',16,2835,3300),
-('District of Columbia','M',17,2887,3199), ('District of
-Columbia','M',18,4020,4457), ('District of Columbia','M',19,5264,5406),
-('District of Columbia','M',20,5016,4710), ('District of
-Columbia','M',21,4709,4718), ('District of Columbia','M',22,4348,4622),
-('District of Columbia','M',23,4399,4592), ('District of
-Columbia','M',24,4554,5569), ('District of Columbia','M',25,4721,4931),
-('District of Columbia','M',26,4609,6682), ('District of
-Columbia','M',27,4879,5187), ('District of Columbia','M',28,4957,5772),
-('District of Columbia','M',29,5377,5997), ('District of
-Columbia','M',30,5562,4864), ('District of Columbia','M',31,4801,4871),
-('District of Columbia','M',32,4652,4615), ('District of
-Columbia','M',33,4328,4948), ('District of Columbia','M',34,4639,3829),
-('District of Columbia','M',35,4915,4668), ('District of
-Columbia','M',36,4700,4112), ('District of Columbia','M',37,4497,4267),
-('District of Columbia','M',38,4247,4857), ('District of
-Columbia','M',39,4367,4034), ('District of Columbia','M',40,4515,4176),
-('District of Columbia','M',41,4081,3595), ('District of
-Columbia','M',42,4066,3753), ('District of Columbia','M',43,3926,4175),
-('District of Columbia','M',44,3759,4293), ('District of
-Columbia','M',45,3920,3957), ('District of Columbia','M',46,3858,3935),
-('District of Columbia','M',47,3750,3712), ('District of
-Columbia','M',48,3447,3976), ('District of Columbia','M',49,3699,3679),
-('District of Columbia','M',50,3677,3697), ('District of
-Columbia','M',51,3508,3591), ('District of Columbia','M',52,3405,3350),
-('District of Columbia','M',53,3449,3626), ('District of
-Columbia','M',54,2686,3338), ('District of Columbia','M',55,2762,3383),
-('District of Columbia','M',56,2626,2869), ('District of
-Columbia','M',57,2558,3246), ('District of Columbia','M',58,2460,3144),
-('District of Columbia','M',59,2283,3078), ('District of
-Columbia','M',60,2251,2818), ('District of Columbia','M',61,2154,2944),
-('District of Columbia','M',62,2055,2187), ('District of
-Columbia','M',63,1791,2318), ('District of Columbia','M',64,1805,2257),
-('District of Columbia','M',65,1807,2046), ('District of
-Columbia','M',66,1645,1967), ('District of Columbia','M',67,1647,1743),
-('District of Columbia','M',68,1516,1699), ('District of
-Columbia','M',69,1511,1644), ('District of Columbia','M',70,1498,1611),
-('District of Columbia','M',71,1399,1320), ('District of
-Columbia','M',72,1417,1304), ('District of Columbia','M',73,1356,1359),
-('District of Columbia','M',74,1235,1162), ('District of
-Columbia','M',75,1275,1122), ('District of Columbia','M',76,1182,1022),
-('District of Columbia','M',77,1110,982), ('District of
-Columbia','M',78,1060,933), ('District of Columbia','M',79,972,899), ('District
-of Columbia','M',80,939,827), ('District of Columbia','M',81,783,832),
-('District of Columbia','M',82,639,704), ('District of
-Columbia','M',83,587,645), ('District of Columbia','M',84,481,624), ('District
-of Columbia','M',85,2441,3195), ('District of Columbia','F',0,3219,3869),
-('District of Columbia','F',1,3120,3640), ('District of
-Columbia','F',2,3106,3484), ('District of Columbia','F',3,3204,3326), ('District
-of Columbia','F',4,3334,3433), ('District of Columbia','F',5,3387,2849),
-('District of Columbia','F',6,3496,2797), ('District of
-Columbia','F',7,3493,3117), ('District of Columbia','F',8,3528,2580), ('District
-of Columbia','F',9,3561,2608), ('District of Columbia','F',10,3456,2529),
-('District of Columbia','F',11,3054,2563), ('District of
-Columbia','F',12,2896,2748), ('District of Columbia','F',13,2859,2805),
-('District of Columbia','F',14,2700,3017), ('District of
-Columbia','F',15,2738,3083), ('District of Columbia','F',16,2792,3175),
-('District of Columbia','F',17,2943,3315), ('District of
-Columbia','F',18,4869,5377), ('District of Columbia','F',19,6429,6317),
-('District of Columbia','F',20,5907,5687), ('District of
-Columbia','F',21,5520,5842), ('District of Columbia','F',22,5435,5384),
-('District of Columbia','F',23,5594,5672), ('District of
-Columbia','F',24,5688,6365), ('District of Columbia','F',25,5669,6145),
-('District of Columbia','F',26,5256,7164), ('District of
-Columbia','F',27,5328,4927), ('District of Columbia','F',28,5363,8131),
-('District of Columbia','F',29,5686,4980), ('District of
-Columbia','F',30,5676,5204), ('District of Columbia','F',31,4867,5339),
-('District of Columbia','F',32,4753,4893), ('District of
-Columbia','F',33,4479,4811), ('District of Columbia','F',34,4462,4458),
-('District of Columbia','F',35,4722,4749), ('District of
-Columbia','F',36,4648,4063), ('District of Columbia','F',37,4370,4314),
-('District of Columbia','F',38,4266,4936), ('District of
-Columbia','F',39,4356,3883), ('District of Columbia','F',40,4507,4195),
-('District of Columbia','F',41,4193,3843), ('District of
-Columbia','F',42,4063,3789), ('District of Columbia','F',43,4240,4064),
-('District of Columbia','F',44,4080,4201), ('District of
-Columbia','F',45,4349,4107), ('District of Columbia','F',46,4144,3852),
-('District of Columbia','F',47,4072,4011), ('District of
-Columbia','F',48,4041,4202), ('District of Columbia','F',49,4086,3873),
-('District of Columbia','F',50,4237,3872), ('District of
-Columbia','F',51,4079,4124), ('District of Columbia','F',52,4004,3719),
-('District of Columbia','F',53,3987,4090), ('District of
-Columbia','F',54,3163,4045), ('District of Columbia','F',55,3224,3727),
-('District of Columbia','F',56,3251,3809), ('District of
-Columbia','F',57,3136,3936), ('District of Columbia','F',58,2851,3870),
-('District of Columbia','F',59,2700,3668), ('District of
-Columbia','F',60,2793,3647), ('District of Columbia','F',61,2360,3726),
-('District of Columbia','F',62,2433,2752), ('District of
-Columbia','F',63,2206,2851), ('District of Columbia','F',64,2137,2827),
-('District of Columbia','F',65,2195,2751), ('District of
-Columbia','F',66,2061,2500), ('District of Columbia','F',67,2100,2280),
-('District of Columbia','F',68,1980,2391), ('District of
-Columbia','F',69,1977,1962), ('District of Columbia','F',70,2193,2007),
-('District of Columbia','F',71,2118,1821), ('District of
-Columbia','F',72,1978,1734), ('District of Columbia','F',73,2071,1780),
-('District of Columbia','F',74,2020,1649), ('District of
-Columbia','F',75,2049,1643), ('District of Columbia','F',76,1946,1477),
-('District of Columbia','F',77,1949,1448), ('District of
-Columbia','F',78,1751,1579), ('District of Columbia','F',79,1681,1528),
-('District of Columbia','F',80,1627,1365), ('District of
-Columbia','F',81,1380,1408), ('District of Columbia','F',82,1327,1327),
-('District of Columbia','F',83,1195,1274), ('District of
-Columbia','F',84,1090,1135), ('District of Columbia','F',85,6578,7949),
+('Delaware','F',85,7682,10755),
+('District of Columbia','M',0,3358,4017),
+('District of Columbia','M',1,3084,3977),
+('District of Columbia','M',2,3357,3625),
+('District of Columbia','M',3,3245,3525),
+('District of Columbia','M',4,3361,3456),
+('District of Columbia','M',5,3360,3341),
+('District of Columbia','M',6,3504,2831),
+('District of Columbia','M',7,3600,3156),
+('District of Columbia','M',8,3600,2997),
+('District of Columbia','M',9,3542,2335),
+('District of Columbia','M',10,3566,2878),
+('District of Columbia','M',11,3119,2610),
+('District of Columbia','M',12,2857,2902),
+('District of Columbia','M',13,2848,2793),
+('District of Columbia','M',14,2746,3034),
+('District of Columbia','M',15,2851,3102),
+('District of Columbia','M',16,2835,3300),
+('District of Columbia','M',17,2887,3199),
+('District of Columbia','M',18,4020,4457),
+('District of Columbia','M',19,5264,5406),
+('District of Columbia','M',20,5016,4710),
+('District of Columbia','M',21,4709,4718),
+('District of Columbia','M',22,4348,4622),
+('District of Columbia','M',23,4399,4592),
+('District of Columbia','M',24,4554,5569),
+('District of Columbia','M',25,4721,4931),
+('District of Columbia','M',26,4609,6682),
+('District of Columbia','M',27,4879,5187),
+('District of Columbia','M',28,4957,5772),
+('District of Columbia','M',29,5377,5997),
+('District of Columbia','M',30,5562,4864),
+('District of Columbia','M',31,4801,4871),
+('District of Columbia','M',32,4652,4615),
+('District of Columbia','M',33,4328,4948),
+('District of Columbia','M',34,4639,3829),
+('District of Columbia','M',35,4915,4668),
+('District of Columbia','M',36,4700,4112),
+('District of Columbia','M',37,4497,4267),
+('District of Columbia','M',38,4247,4857),
+('District of Columbia','M',39,4367,4034),
+('District of Columbia','M',40,4515,4176),
+('District of Columbia','M',41,4081,3595),
+('District of Columbia','M',42,4066,3753),
+('District of Columbia','M',43,3926,4175),
+('District of Columbia','M',44,3759,4293),
+('District of Columbia','M',45,3920,3957),
+('District of Columbia','M',46,3858,3935),
+('District of Columbia','M',47,3750,3712),
+('District of Columbia','M',48,3447,3976),
+('District of Columbia','M',49,3699,3679),
+('District of Columbia','M',50,3677,3697),
+('District of Columbia','M',51,3508,3591),
+('District of Columbia','M',52,3405,3350),
+('District of Columbia','M',53,3449,3626),
+('District of Columbia','M',54,2686,3338),
+('District of Columbia','M',55,2762,3383),
+('District of Columbia','M',56,2626,2869),
+('District of Columbia','M',57,2558,3246),
+('District of Columbia','M',58,2460,3144),
+('District of Columbia','M',59,2283,3078),
+('District of Columbia','M',60,2251,2818),
+('District of Columbia','M',61,2154,2944),
+('District of Columbia','M',62,2055,2187),
+('District of Columbia','M',63,1791,2318),
+('District of Columbia','M',64,1805,2257),
+('District of Columbia','M',65,1807,2046),
+('District of Columbia','M',66,1645,1967),
+('District of Columbia','M',67,1647,1743),
+('District of Columbia','M',68,1516,1699),
+('District of Columbia','M',69,1511,1644),
+('District of Columbia','M',70,1498,1611),
+('District of Columbia','M',71,1399,1320),
+('District of Columbia','M',72,1417,1304),
+('District of Columbia','M',73,1356,1359),
+('District of Columbia','M',74,1235,1162),
+('District of Columbia','M',75,1275,1122),
+('District of Columbia','M',76,1182,1022),
+('District of Columbia','M',77,1110,982),
+('District of Columbia','M',78,1060,933),
+('District of Columbia','M',79,972,899),
+('District of Columbia','M',80,939,827),
+('District of Columbia','M',81,783,832),
+('District of Columbia','M',82,639,704),
+('District of Columbia','M',83,587,645),
+('District of Columbia','M',84,481,624),
+('District of Columbia','M',85,2441,3195),
+('District of Columbia','F',0,3219,3869),
+('District of Columbia','F',1,3120,3640),
+('District of Columbia','F',2,3106,3484),
+('District of Columbia','F',3,3204,3326),
+('District of Columbia','F',4,3334,3433),
+('District of Columbia','F',5,3387,2849),
+('District of Columbia','F',6,3496,2797),
+('District of Columbia','F',7,3493,3117),
+('District of Columbia','F',8,3528,2580),
+('District of Columbia','F',9,3561,2608),
+('District of Columbia','F',10,3456,2529),
+('District of Columbia','F',11,3054,2563),
+('District of Columbia','F',12,2896,2748),
+('District of Columbia','F',13,2859,2805),
+('District of Columbia','F',14,2700,3017),
+('District of Columbia','F',15,2738,3083),
+('District of Columbia','F',16,2792,3175),
+('District of Columbia','F',17,2943,3315),
+('District of Columbia','F',18,4869,5377),
+('District of Columbia','F',19,6429,6317),
+('District of Columbia','F',20,5907,5687),
+('District of Columbia','F',21,5520,5842),
+('District of Columbia','F',22,5435,5384),
+('District of Columbia','F',23,5594,5672),
+('District of Columbia','F',24,5688,6365),
+('District of Columbia','F',25,5669,6145),
+('District of Columbia','F',26,5256,7164),
+('District of Columbia','F',27,5328,4927),
+('District of Columbia','F',28,5363,8131),
+('District of Columbia','F',29,5686,4980),
+('District of Columbia','F',30,5676,5204),
+('District of Columbia','F',31,4867,5339),
+('District of Columbia','F',32,4753,4893),
+('District of Columbia','F',33,4479,4811),
+('District of Columbia','F',34,4462,4458),
+('District of Columbia','F',35,4722,4749),
+('District of Columbia','F',36,4648,4063),
+('District of Columbia','F',37,4370,4314),
+('District of Columbia','F',38,4266,4936),
+('District of Columbia','F',39,4356,3883),
+('District of Columbia','F',40,4507,4195),
+('District of Columbia','F',41,4193,3843),
+('District of Columbia','F',42,4063,3789),
+('District of Columbia','F',43,4240,4064),
+('District of Columbia','F',44,4080,4201),
+('District of Columbia','F',45,4349,4107),
+('District of Columbia','F',46,4144,3852),
+('District of Columbia','F',47,4072,4011),
+('District of Columbia','F',48,4041,4202),
+('District of Columbia','F',49,4086,3873),
+('District of Columbia','F',50,4237,3872),
+('District of Columbia','F',51,4079,4124),
+('District of Columbia','F',52,4004,3719),
+('District of Columbia','F',53,3987,4090),
+('District of Columbia','F',54,3163,4045),
+('District of Columbia','F',55,3224,3727),
+('District of Columbia','F',56,3251,3809),
+('District of Columbia','F',57,3136,3936),
+('District of Columbia','F',58,2851,3870),
+('District of Columbia','F',59,2700,3668),
+('District of Columbia','F',60,2793,3647),
+('District of Columbia','F',61,2360,3726),
+('District of Columbia','F',62,2433,2752),
+('District of Columbia','F',63,2206,2851),
+('District of Columbia','F',64,2137,2827),
+('District of Columbia','F',65,2195,2751),
+('District of Columbia','F',66,2061,2500),
+('District of Columbia','F',67,2100,2280),
+('District of Columbia','F',68,1980,2391),
+('District of Columbia','F',69,1977,1962),
+('District of Columbia','F',70,2193,2007),
+('District of Columbia','F',71,2118,1821),
+('District of Columbia','F',72,1978,1734),
+('District of Columbia','F',73,2071,1780),
+('District of Columbia','F',74,2020,1649),
+('District of Columbia','F',75,2049,1643),
+('District of Columbia','F',76,1946,1477),
+('District of Columbia','F',77,1949,1448),
+('District of Columbia','F',78,1751,1579),
+('District of Columbia','F',79,1681,1528),
+('District of Columbia','F',80,1627,1365),
+('District of Columbia','F',81,1380,1408),
+('District of Columbia','F',82,1327,1327),
+('District of Columbia','F',83,1195,1274),
+('District of Columbia','F',84,1090,1135),
+('District of Columbia','F',85,6578,7949),
 ('Florida','M',0,96891,118845), ('Florida','M',1,96241,118562),
 ('Florida','M',2,95962,117764), ('Florida','M',3,97571,115442),
 ('Florida','M',4,98921,113414), ('Florida','M',5,100872,112225),
@@ -2541,523 +2601,523 @@ Columbia','F',84,1090,1135), ('District of Columbia','F',85,6578,7949),
 ('Nevada','F',78,4584,5844), ('Nevada','F',79,4124,5125),
 ('Nevada','F',80,3810,5122), ('Nevada','F',81,3218,4673),
 ('Nevada','F',82,3034,4337), ('Nevada','F',83,2586,4114),
-('Nevada','F',84,2341,3750), ('Nevada','F',85,11557,19286), ('New
-Hampshire','M',0,7302,7491), ('New Hampshire','M',1,7665,7450), ('New
-Hampshire','M',2,7703,7905), ('New Hampshire','M',3,8112,8021), ('New
-Hampshire','M',4,8278,7542), ('New Hampshire','M',5,8668,7627), ('New
-Hampshire','M',6,8680,7917), ('New Hampshire','M',7,9049,7992), ('New
-Hampshire','M',8,9174,7776), ('New Hampshire','M',9,9653,8154), ('New
-Hampshire','M',10,9912,8096), ('New Hampshire','M',11,9533,8579), ('New
-Hampshire','M',12,9544,8680), ('New Hampshire','M',13,9352,9068), ('New
-Hampshire','M',14,9399,9079), ('New Hampshire','M',15,9273,9446), ('New
-Hampshire','M',16,8813,9480), ('New Hampshire','M',17,8881,9803), ('New
-Hampshire','M',18,8812,9518), ('New Hampshire','M',19,8539,8778), ('New
-Hampshire','M',20,7752,8802), ('New Hampshire','M',21,7459,8873), ('New
-Hampshire','M',22,6923,8654), ('New Hampshire','M',23,6256,8029), ('New
-Hampshire','M',24,5938,7455), ('New Hampshire','M',25,6365,7482), ('New
-Hampshire','M',26,6428,7895), ('New Hampshire','M',27,6675,8636), ('New
-Hampshire','M',28,7423,7807), ('New Hampshire','M',29,8150,7228), ('New
-Hampshire','M',30,8529,6971), ('New Hampshire','M',31,8499,7296), ('New
-Hampshire','M',32,8592,6974), ('New Hampshire','M',33,8971,7922), ('New
-Hampshire','M',34,9305,7350), ('New Hampshire','M',35,10164,7890), ('New
-Hampshire','M',36,10464,8461), ('New Hampshire','M',37,10783,9338), ('New
-Hampshire','M',38,10819,9593), ('New Hampshire','M',39,11414,9383), ('New
-Hampshire','M',40,11448,9392), ('New Hampshire','M',41,11412,9639), ('New
-Hampshire','M',42,11283,9996), ('New Hampshire','M',43,11075,10901), ('New
-Hampshire','M',44,10639,11110), ('New Hampshire','M',45,10502,11332), ('New
-Hampshire','M',46,10120,11306), ('New Hampshire','M',47,9972,11777), ('New
-Hampshire','M',48,9542,11791), ('New Hampshire','M',49,9133,11563), ('New
-Hampshire','M',50,9113,11379), ('New Hampshire','M',51,9019,11173), ('New
-Hampshire','M',52,9018,10636), ('New Hampshire','M',53,9661,10501), ('New
-Hampshire','M',54,6578,9861), ('New Hampshire','M',55,6633,9789), ('New
-Hampshire','M',56,6839,9280), ('New Hampshire','M',57,6861,8825), ('New
-Hampshire','M',58,5955,8848), ('New Hampshire','M',59,5350,8619), ('New
-Hampshire','M',60,5116,8577), ('New Hampshire','M',61,4755,9242), ('New
-Hampshire','M',62,4660,6153), ('New Hampshire','M',63,4384,6162), ('New
-Hampshire','M',64,4273,6303), ('New Hampshire','M',65,4294,6256), ('New
-Hampshire','M',66,4062,5237), ('New Hampshire','M',67,3863,4614), ('New
-Hampshire','M',68,3919,4376), ('New Hampshire','M',69,3713,4116), ('New
-Hampshire','M',70,3752,3945), ('New Hampshire','M',71,3503,3639), ('New
-Hampshire','M',72,3305,3460), ('New Hampshire','M',73,3194,3403), ('New
-Hampshire','M',74,3010,3252), ('New Hampshire','M',75,2954,3015), ('New
-Hampshire','M',76,2671,2970), ('New Hampshire','M',77,2557,2714), ('New
-Hampshire','M',78,2394,2751), ('New Hampshire','M',79,2245,2504), ('New
-Hampshire','M',80,1980,2263), ('New Hampshire','M',81,1795,2088), ('New
-Hampshire','M',82,1527,1819), ('New Hampshire','M',83,1334,1801), ('New
-Hampshire','M',84,1219,1514), ('New Hampshire','M',85,5137,7617), ('New
-Hampshire','F',0,6860,7119), ('New Hampshire','F',1,7124,7090), ('New
-Hampshire','F',2,7431,7568), ('New Hampshire','F',3,7507,7658), ('New
-Hampshire','F',4,7821,7453), ('New Hampshire','F',5,8084,7358), ('New
-Hampshire','F',6,8228,7480), ('New Hampshire','F',7,8543,7696), ('New
-Hampshire','F',8,8928,7415), ('New Hampshire','F',9,9294,7613), ('New
-Hampshire','F',10,9369,7973), ('New Hampshire','F',11,9312,8014), ('New
-Hampshire','F',12,9263,8306), ('New Hampshire','F',13,8973,8491), ('New
-Hampshire','F',14,9067,8613), ('New Hampshire','F',15,8668,8852), ('New
-Hampshire','F',16,8356,9160), ('New Hampshire','F',17,8423,9393), ('New
-Hampshire','F',18,8503,9071), ('New Hampshire','F',19,8834,9063), ('New
-Hampshire','F',20,8217,9063), ('New Hampshire','F',21,7722,8628), ('New
-Hampshire','F',22,6769,8384), ('New Hampshire','F',23,6021,7396), ('New
-Hampshire','F',24,5971,7082), ('New Hampshire','F',25,6450,7596), ('New
-Hampshire','F',26,6365,7241), ('New Hampshire','F',27,6985,8581), ('New
-Hampshire','F',28,7575,7372), ('New Hampshire','F',29,8323,7710), ('New
-Hampshire','F',30,8682,6905), ('New Hampshire','F',31,8677,7169), ('New
-Hampshire','F',32,8618,7237), ('New Hampshire','F',33,9157,7549), ('New
-Hampshire','F',34,9632,7356), ('New Hampshire','F',35,10474,8438), ('New
-Hampshire','F',36,11036,8822), ('New Hampshire','F',37,11190,9628), ('New
-Hampshire','F',38,11171,9844), ('New Hampshire','F',39,11698,9531), ('New
-Hampshire','F',40,11597,9431), ('New Hampshire','F',41,11419,9796), ('New
-Hampshire','F',42,11312,10407), ('New Hampshire','F',43,11231,11046), ('New
-Hampshire','F',44,10496,11391), ('New Hampshire','F',45,10592,11521), ('New
-Hampshire','F',46,10303,11323), ('New Hampshire','F',47,10000,12011), ('New
-Hampshire','F',48,9608,11728), ('New Hampshire','F',49,9112,11491), ('New
-Hampshire','F',50,9068,11356), ('New Hampshire','F',51,9058,11071), ('New
-Hampshire','F',52,9151,10400), ('New Hampshire','F',53,9553,10342), ('New
-Hampshire','F',54,6655,10214), ('New Hampshire','F',55,6640,9823), ('New
-Hampshire','F',56,6584,9439), ('New Hampshire','F',57,6981,9068), ('New
-Hampshire','F',58,6021,8842), ('New Hampshire','F',59,5319,8820), ('New
-Hampshire','F',60,5252,8933), ('New Hampshire','F',61,4876,9281), ('New
-Hampshire','F',62,4777,6522), ('New Hampshire','F',63,4576,6404), ('New
-Hampshire','F',64,4652,6381), ('New Hampshire','F',65,4556,6530), ('New
-Hampshire','F',66,4134,5684), ('New Hampshire','F',67,4240,4971), ('New
-Hampshire','F',68,4232,4794), ('New Hampshire','F',69,4131,4517), ('New
-Hampshire','F',70,4338,4387), ('New Hampshire','F',71,4005,4144), ('New
-Hampshire','F',72,4097,4166), ('New Hampshire','F',73,4145,4106), ('New
-Hampshire','F',74,3878,3593), ('New Hampshire','F',75,3957,3722), ('New
-Hampshire','F',76,3558,3652), ('New Hampshire','F',77,3549,3482), ('New
-Hampshire','F',78,3433,3664), ('New Hampshire','F',79,3400,3269), ('New
-Hampshire','F',80,3088,3292), ('New Hampshire','F',81,2801,3277), ('New
-Hampshire','F',82,2663,2973), ('New Hampshire','F',83,2379,2990), ('New
-Hampshire','F',84,2237,2548), ('New Hampshire','F',85,13312,16863), ('New
-Jersey','M',0,56983,58756), ('New Jersey','M',1,56686,57325), ('New
-Jersey','M',2,57011,55475), ('New Jersey','M',3,57912,56059), ('New
-Jersey','M',4,59359,58048), ('New Jersey','M',5,60392,58472), ('New
-Jersey','M',6,60739,57080), ('New Jersey','M',7,61579,56754), ('New
-Jersey','M',8,62089,56616), ('New Jersey','M',9,63384,56322), ('New
-Jersey','M',10,64593,56617), ('New Jersey','M',11,62494,57482), ('New
-Jersey','M',12,60570,58834), ('New Jersey','M',13,58189,59925), ('New
-Jersey','M',14,57931,60294), ('New Jersey','M',15,56752,61056), ('New
-Jersey','M',16,55887,61478), ('New Jersey','M',17,56712,62450), ('New
-Jersey','M',18,53265,62809), ('New Jersey','M',19,48344,55700), ('New
-Jersey','M',20,49564,55794), ('New Jersey','M',21,48141,54769), ('New
-Jersey','M',22,48353,55026), ('New Jersey','M',23,49130,54730), ('New
-Jersey','M',24,48723,53471), ('New Jersey','M',25,51092,56073), ('New
-Jersey','M',26,50357,55169), ('New Jersey','M',27,52179,51964), ('New
-Jersey','M',28,55938,52358), ('New Jersey','M',29,60638,51467), ('New
-Jersey','M',30,64220,52596), ('New Jersey','M',31,61484,54346), ('New
-Jersey','M',32,61927,54414), ('New Jersey','M',33,63487,56786), ('New
-Jersey','M',34,66737,56190), ('New Jersey','M',35,71274,56869), ('New
-Jersey','M',36,71449,60652), ('New Jersey','M',37,71026,64156), ('New
-Jersey','M',38,71811,67107), ('New Jersey','M',39,72043,63562), ('New
-Jersey','M',40,73665,63306), ('New Jersey','M',41,70514,64273), ('New
-Jersey','M',42,69835,67210), ('New Jersey','M',43,68650,71249), ('New
-Jersey','M',44,65564,71097), ('New Jersey','M',45,65529,69934), ('New
-Jersey','M',46,61817,70961), ('New Jersey','M',47,59206,70886), ('New
-Jersey','M',48,56977,71595), ('New Jersey','M',49,55780,68022), ('New
-Jersey','M',50,56235,67401), ('New Jersey','M',51,53235,65757), ('New
-Jersey','M',52,54900,62616), ('New Jersey','M',53,58013,62490), ('New
-Jersey','M',54,43584,58355), ('New Jersey','M',55,42959,55466), ('New
-Jersey','M',56,42179,53088), ('New Jersey','M',57,45575,51211), ('New
-Jersey','M',58,38376,51039), ('New Jersey','M',59,34722,47299), ('New
-Jersey','M',60,34278,48085), ('New Jersey','M',61,32730,51579), ('New
-Jersey','M',62,31589,37378), ('New Jersey','M',63,29440,36620), ('New
-Jersey','M',64,28747,34605), ('New Jersey','M',65,27751,38210), ('New
-Jersey','M',66,26129,32006), ('New Jersey','M',67,26479,28279), ('New
-Jersey','M',68,26076,27635), ('New Jersey','M',69,25811,26304), ('New
-Jersey','M',70,26370,25459), ('New Jersey','M',71,24801,23197), ('New
-Jersey','M',72,24358,22627), ('New Jersey','M',73,23724,21789), ('New
-Jersey','M',74,22304,19294), ('New Jersey','M',75,21663,19267), ('New
-Jersey','M',76,20280,18629), ('New Jersey','M',77,18958,17897), ('New
-Jersey','M',78,17839,17860), ('New Jersey','M',79,17030,16034), ('New
-Jersey','M',80,15262,15261), ('New Jersey','M',81,12609,14193), ('New
-Jersey','M',82,12104,12912), ('New Jersey','M',83,10004,12085), ('New
-Jersey','M',84,8864,10759), ('New Jersey','M',85,39309,54920), ('New
-Jersey','F',0,54679,55841), ('New Jersey','F',1,53913,54437), ('New
-Jersey','F',2,54744,52450), ('New Jersey','F',3,55427,53490), ('New
-Jersey','F',4,56860,55540), ('New Jersey','F',5,57486,55247), ('New
-Jersey','F',6,57751,54660), ('New Jersey','F',7,58696,53617), ('New
-Jersey','F',8,59465,54257), ('New Jersey','F',9,60277,53421), ('New
-Jersey','F',10,61606,54270), ('New Jersey','F',11,59279,54850), ('New
-Jersey','F',12,57384,56348), ('New Jersey','F',13,55913,56884), ('New
-Jersey','F',14,54804,57080), ('New Jersey','F',15,54208,58022), ('New
-Jersey','F',16,52815,58825), ('New Jersey','F',17,52918,59284), ('New
-Jersey','F',18,48383,58217), ('New Jersey','F',19,45910,51872), ('New
-Jersey','F',20,47658,52726), ('New Jersey','F',21,46601,54512), ('New
-Jersey','F',22,46518,52223), ('New Jersey','F',23,47909,52601), ('New
-Jersey','F',24,47751,51185), ('New Jersey','F',25,49805,53116), ('New
-Jersey','F',26,50344,51334), ('New Jersey','F',27,52524,48697), ('New
-Jersey','F',28,56102,52359), ('New Jersey','F',29,61685,47013), ('New
-Jersey','F',30,64873,51329), ('New Jersey','F',31,62665,53082), ('New
-Jersey','F',32,63572,53301), ('New Jersey','F',33,65517,54789), ('New
-Jersey','F',34,68457,56177), ('New Jersey','F',35,72558,57404), ('New
-Jersey','F',36,73865,59897), ('New Jersey','F',37,73266,64997), ('New
-Jersey','F',38,72927,67366), ('New Jersey','F',39,73816,64546), ('New
-Jersey','F',40,75226,64632), ('New Jersey','F',41,73159,66421), ('New
-Jersey','F',42,72371,68732), ('New Jersey','F',43,71100,72619), ('New
-Jersey','F',44,68286,73252), ('New Jersey','F',45,67763,72477), ('New
-Jersey','F',46,64313,71522), ('New Jersey','F',47,62759,72520), ('New
-Jersey','F',48,60526,73425), ('New Jersey','F',49,59877,71188), ('New
-Jersey','F',50,60058,69825), ('New Jersey','F',51,57978,68238), ('New
-Jersey','F',52,58637,65557), ('New Jersey','F',53,62757,64292), ('New
-Jersey','F',54,47727,60739), ('New Jersey','F',55,45851,58823), ('New
-Jersey','F',56,45758,56115), ('New Jersey','F',57,49139,55014), ('New
-Jersey','F',58,42678,55051), ('New Jersey','F',59,38667,52644), ('New
-Jersey','F',60,38032,52050), ('New Jersey','F',61,35600,57253), ('New
-Jersey','F',62,35577,42643), ('New Jersey','F',63,33562,40568), ('New
-Jersey','F',64,32452,39824), ('New Jersey','F',65,32848,43182), ('New
-Jersey','F',66,31080,37439), ('New Jersey','F',67,31588,33677), ('New
-Jersey','F',68,32232,33216), ('New Jersey','F',69,32391,31084), ('New
-Jersey','F',70,33124,30891), ('New Jersey','F',71,31678,28959), ('New
-Jersey','F',72,32246,28018), ('New Jersey','F',73,31706,27975), ('New
-Jersey','F',74,30619,25920), ('New Jersey','F',75,31196,25888), ('New
-Jersey','F',76,30070,25957), ('New Jersey','F',77,28748,25597), ('New
-Jersey','F',78,27658,25598), ('New Jersey','F',79,27035,23913), ('New
-Jersey','F',80,25439,23803), ('New Jersey','F',81,21730,22789), ('New
-Jersey','F',82,21220,21318), ('New Jersey','F',83,19121,21073), ('New
-Jersey','F',84,17164,19637), ('New Jersey','F',85,98078,120390), ('New
-Mexico','M',0,13560,15655), ('New Mexico','M',1,13293,15614), ('New
-Mexico','M',2,13001,15032), ('New Mexico','M',3,12904,14989), ('New
-Mexico','M',4,13332,14495), ('New Mexico','M',5,13642,14361), ('New
-Mexico','M',6,13910,14156), ('New Mexico','M',7,14408,13904), ('New
-Mexico','M',8,14551,13560), ('New Mexico','M',9,14866,13331), ('New
-Mexico','M',10,15259,13078), ('New Mexico','M',11,14874,13002), ('New
-Mexico','M',12,14927,13356), ('New Mexico','M',13,15239,13682), ('New
-Mexico','M',14,15089,13811), ('New Mexico','M',15,15310,14338), ('New
-Mexico','M',16,15222,14451), ('New Mexico','M',17,15232,14747), ('New
-Mexico','M',18,14493,15210), ('New Mexico','M',19,13774,14673), ('New
-Mexico','M',20,13160,14398), ('New Mexico','M',21,12122,14415), ('New
-Mexico','M',22,11588,14066), ('New Mexico','M',23,11512,14640), ('New
-Mexico','M',24,10832,14597), ('New Mexico','M',25,10935,15096), ('New
-Mexico','M',26,10919,14363), ('New Mexico','M',27,10875,15127), ('New
-Mexico','M',28,11239,14480), ('New Mexico','M',29,11713,13321), ('New
-Mexico','M',30,12146,13185), ('New Mexico','M',31,11498,12827), ('New
-Mexico','M',32,11102,12076), ('New Mexico','M',33,11194,11483), ('New
-Mexico','M',34,11586,12186), ('New Mexico','M',35,12861,11443), ('New
-Mexico','M',36,13156,11874), ('New Mexico','M',37,13594,12182), ('New
-Mexico','M',38,13760,12472), ('New Mexico','M',39,13842,11955), ('New
-Mexico','M',40,14187,11387), ('New Mexico','M',41,13760,11780), ('New
-Mexico','M',42,13725,11905), ('New Mexico','M',43,13844,13147), ('New
-Mexico','M',44,13183,13172), ('New Mexico','M',45,13446,13739), ('New
-Mexico','M',46,12976,13626), ('New Mexico','M',47,12673,13534), ('New
-Mexico','M',48,12224,14076), ('New Mexico','M',49,12342,13555), ('New
-Mexico','M',50,12443,13402), ('New Mexico','M',51,11814,13623), ('New
-Mexico','M',52,11420,12904), ('New Mexico','M',53,11886,12925), ('New
-Mexico','M',54,8960,12455), ('New Mexico','M',55,9087,12563), ('New
-Mexico','M',56,8689,11736), ('New Mexico','M',57,8960,11884), ('New
-Mexico','M',58,7859,12140), ('New Mexico','M',59,7497,11430), ('New
-Mexico','M',60,7384,11104), ('New Mexico','M',61,7020,11657), ('New
-Mexico','M',62,6897,8675), ('New Mexico','M',63,6594,8710), ('New
-Mexico','M',64,6424,8179), ('New Mexico','M',65,6533,8606), ('New
-Mexico','M',66,6072,7295), ('New Mexico','M',67,5962,6988), ('New
-Mexico','M',68,5935,6844), ('New Mexico','M',69,5648,6329), ('New
-Mexico','M',70,5788,6244), ('New Mexico','M',71,5199,5788), ('New
-Mexico','M',72,4988,5589), ('New Mexico','M',73,4745,5530), ('New
-Mexico','M',74,4477,5121), ('New Mexico','M',75,4299,4934), ('New
-Mexico','M',76,4142,4855), ('New Mexico','M',77,3787,4391), ('New
-Mexico','M',78,3622,4453), ('New Mexico','M',79,3310,3929), ('New
-Mexico','M',80,2985,3692), ('New Mexico','M',81,2460,3438), ('New
-Mexico','M',82,2271,3025), ('New Mexico','M',83,1990,2842), ('New
-Mexico','M',84,1788,2625), ('New Mexico','M',85,7749,13095), ('New
-Mexico','F',0,13171,14776), ('New Mexico','F',1,12869,14605), ('New
-Mexico','F',2,12623,14357), ('New Mexico','F',3,12671,14575), ('New
-Mexico','F',4,13016,14225), ('New Mexico','F',5,13130,14095), ('New
-Mexico','F',6,13466,13939), ('New Mexico','F',7,13759,13480), ('New
-Mexico','F',8,14102,13148), ('New Mexico','F',9,14538,12875), ('New
-Mexico','F',10,14699,12614), ('New Mexico','F',11,14425,12630), ('New
-Mexico','F',12,14233,13006), ('New Mexico','F',13,14410,13109), ('New
-Mexico','F',14,14445,13390), ('New Mexico','F',15,14602,13669), ('New
-Mexico','F',16,14325,13974), ('New Mexico','F',17,14426,14421), ('New
-Mexico','F',18,14001,14533), ('New Mexico','F',19,13382,14195), ('New
-Mexico','F',20,13136,14052), ('New Mexico','F',21,12074,13484), ('New
-Mexico','F',22,11672,14067), ('New Mexico','F',23,11355,14292), ('New
-Mexico','F',24,11186,13715), ('New Mexico','F',25,11179,13888), ('New
-Mexico','F',26,10982,14224), ('New Mexico','F',27,11166,14682), ('New
-Mexico','F',28,11677,13200), ('New Mexico','F',29,12066,13738), ('New
-Mexico','F',30,12322,12732), ('New Mexico','F',31,11723,11946), ('New
-Mexico','F',32,11448,11989), ('New Mexico','F',33,11619,11898), ('New
-Mexico','F',34,12163,11425), ('New Mexico','F',35,13475,11912), ('New
-Mexico','F',36,13636,12522), ('New Mexico','F',37,14283,12691), ('New
-Mexico','F',38,14312,12719), ('New Mexico','F',39,14744,12003), ('New
-Mexico','F',40,14956,11865), ('New Mexico','F',41,14320,11980), ('New
-Mexico','F',42,14450,12600), ('New Mexico','F',43,14488,13852), ('New
-Mexico','F',44,13943,13790), ('New Mexico','F',45,14157,14080), ('New
-Mexico','F',46,13692,14464), ('New Mexico','F',47,13575,14637), ('New
-Mexico','F',48,13297,15405), ('New Mexico','F',49,12740,14380), ('New
-Mexico','F',50,12677,14251), ('New Mexico','F',51,12302,14377), ('New
-Mexico','F',52,12032,13993), ('New Mexico','F',53,12565,14199), ('New
-Mexico','F',54,9425,13702), ('New Mexico','F',55,9651,13459), ('New
-Mexico','F',56,9450,13011), ('New Mexico','F',57,9428,12507), ('New
-Mexico','F',58,8747,12614), ('New Mexico','F',59,8054,12279), ('New
-Mexico','F',60,8007,11807), ('New Mexico','F',61,7732,12196), ('New
-Mexico','F',62,7532,9223), ('New Mexico','F',63,7263,9360), ('New
-Mexico','F',64,6875,9177), ('New Mexico','F',65,7143,9145), ('New
-Mexico','F',66,6471,8494), ('New Mexico','F',67,6489,7778), ('New
-Mexico','F',68,6686,7694), ('New Mexico','F',69,6332,7352), ('New
-Mexico','F',70,6330,7066), ('New Mexico','F',71,5877,6789), ('New
-Mexico','F',72,5974,6351), ('New Mexico','F',73,5739,6521), ('New
-Mexico','F',74,5549,5817), ('New Mexico','F',75,5568,5640), ('New
-Mexico','F',76,5243,5874), ('New Mexico','F',77,4758,5419), ('New
-Mexico','F',78,4849,5361), ('New Mexico','F',79,4407,4892), ('New
-Mexico','F',80,3942,4843), ('New Mexico','F',81,3421,4502), ('New
-Mexico','F',82,3247,4204), ('New Mexico','F',83,2946,4225), ('New
-Mexico','F',84,2732,3717), ('New Mexico','F',85,15879,22754), ('New
-York','M',0,126237,128088), ('New York','M',1,124008,125649), ('New
-York','M',2,124725,121615), ('New York','M',3,126697,120580), ('New
-York','M',4,131357,122482), ('New York','M',5,133095,121205), ('New
-York','M',6,134203,120089), ('New York','M',7,137986,122355), ('New
-York','M',8,139455,118653), ('New York','M',9,142454,117369), ('New
-York','M',10,145621,118810), ('New York','M',11,138746,121121), ('New
-York','M',12,135565,126338), ('New York','M',13,132288,128713), ('New
-York','M',14,132388,129812), ('New York','M',15,131959,134463), ('New
-York','M',16,130189,136569), ('New York','M',17,132566,140114), ('New
-York','M',18,132672,156892), ('New York','M',19,133654,147556), ('New
-York','M',20,132121,146611), ('New York','M',21,126166,141932), ('New
-York','M',22,123215,138557), ('New York','M',23,121282,136150), ('New
-York','M',24,118953,132383), ('New York','M',25,123151,141850), ('New
-York','M',26,118727,129603), ('New York','M',27,122359,131419), ('New
-York','M',28,128651,127224), ('New York','M',29,140687,122449), ('New
-York','M',30,149558,126404), ('New York','M',31,139477,126124), ('New
-York','M',32,138911,123362), ('New York','M',33,139031,126486), ('New
-York','M',34,145440,120030), ('New York','M',35,156168,123017), ('New
-York','M',36,153840,127076), ('New York','M',37,152078,136270), ('New
-York','M',38,150765,144715), ('New York','M',39,152606,135027), ('New
-York','M',40,159345,135355), ('New York','M',41,148628,132905), ('New
-York','M',42,147892,140025), ('New York','M',43,144195,151555), ('New
-York','M',44,139354,149030), ('New York','M',45,141953,148147), ('New
-York','M',46,131875,146692), ('New York','M',47,128767,147648), ('New
-York','M',48,125406,155155), ('New York','M',49,124155,144287), ('New
-York','M',50,125955,143466), ('New York','M',51,118542,139630), ('New
-York','M',52,118532,133939), ('New York','M',53,124418,136723), ('New
-York','M',54,95025,125953), ('New York','M',55,92652,122478), ('New
-York','M',56,90096,118070), ('New York','M',57,95340,115823), ('New
-York','M',58,83273,117177), ('New York','M',59,77213,108293), ('New
-York','M',60,77054,106825), ('New York','M',61,72212,113681), ('New
-York','M',62,70967,83763), ('New York','M',63,66461,81226), ('New
-York','M',64,64361,76961), ('New York','M',65,64385,82242), ('New
-York','M',66,58819,70423), ('New York','M',67,58176,64117), ('New
-York','M',68,57310,63657), ('New York','M',69,57057,58801), ('New
-York','M',70,57761,57609), ('New York','M',71,53775,53231), ('New
-York','M',72,53568,51132), ('New York','M',73,51263,50696), ('New
-York','M',74,48440,44822), ('New York','M',75,46702,43592), ('New
-York','M',76,43508,41900), ('New York','M',77,40730,40417), ('New
-York','M',78,37950,40241), ('New York','M',79,35774,35941), ('New
-York','M',80,32453,34659), ('New York','M',81,26803,32022), ('New
-York','M',82,25041,28890), ('New York','M',83,21687,27217), ('New
-York','M',84,18873,23879), ('New York','M',85,88366,124478), ('New
-York','F',0,120355,122194), ('New York','F',1,118219,119661), ('New
-York','F',2,119577,116413), ('New York','F',3,121029,114877), ('New
-York','F',4,125247,116936), ('New York','F',5,128227,116051), ('New
-York','F',6,128428,115186), ('New York','F',7,131161,116951), ('New
-York','F',8,133646,113279), ('New York','F',9,135746,111919), ('New
-York','F',10,138287,113891), ('New York','F',11,131904,115607), ('New
-York','F',12,129028,120156), ('New York','F',13,126571,123797), ('New
-York','F',14,125682,124343), ('New York','F',15,125409,127635), ('New
-York','F',16,122770,130769), ('New York','F',17,123978,134311), ('New
-York','F',18,125307,150772), ('New York','F',19,127956,142871), ('New
-York','F',20,129184,141831), ('New York','F',21,124575,142302), ('New
-York','F',22,123701,138703), ('New York','F',23,124108,138084), ('New
-York','F',24,122624,135339), ('New York','F',25,127474,141601), ('New
-York','F',26,123033,130002), ('New York','F',27,128125,129600), ('New
-York','F',28,134795,129868), ('New York','F',29,146832,119821), ('New
-York','F',30,152973,125047), ('New York','F',31,144001,127486), ('New
-York','F',32,143930,123742), ('New York','F',33,144653,126908), ('New
-York','F',34,151147,121824), ('New York','F',35,159228,124485), ('New
-York','F',36,159999,130377), ('New York','F',37,157911,140890), ('New
-York','F',38,156103,148408), ('New York','F',39,159284,137936), ('New
-York','F',40,163331,138561), ('New York','F',41,155353,139720), ('New
-York','F',42,153688,145307), ('New York','F',43,151615,154437), ('New
-York','F',44,146774,154805), ('New York','F',45,148318,153651), ('New
-York','F',46,139802,151107), ('New York','F',47,138062,154997), ('New
-York','F',48,134107,158855), ('New York','F',49,134399,151022), ('New
-York','F',50,136630,149883), ('New York','F',51,130843,146988), ('New
-York','F',52,130196,142566), ('New York','F',53,136064,144121), ('New
-York','F',54,106579,135180), ('New York','F',55,104847,132338), ('New
-York','F',56,101857,127500), ('New York','F',57,108406,126450), ('New
-York','F',58,94346,128713), ('New York','F',59,88584,121743), ('New
-York','F',60,88932,119540), ('New York','F',61,82899,126847), ('New
-York','F',62,82172,96462), ('New York','F',63,77171,94667), ('New
-York','F',64,76032,90185), ('New York','F',65,76498,97321), ('New
-York','F',66,70465,83336), ('New York','F',67,71088,77404), ('New
-York','F',68,70847,77802), ('New York','F',69,71377,71850), ('New
-York','F',70,74378,71451), ('New York','F',71,70611,66625), ('New
-York','F',72,70513,65037), ('New York','F',73,69156,65719), ('New
-York','F',74,68042,58818), ('New York','F',75,68410,58722), ('New
-York','F',76,64971,57584), ('New York','F',77,61287,56907), ('New
-York','F',78,58911,58456), ('New York','F',79,56865,54136), ('New
-York','F',80,54553,52932), ('New York','F',81,46381,50693), ('New
-York','F',82,45599,48206), ('New York','F',83,40525,47777), ('New
-York','F',84,37436,43454), ('New York','F',85,226378,273476), ('North
-Carolina','M',0,57058,68632), ('North Carolina','M',1,55868,69182), ('North
-Carolina','M',2,54967,66195), ('North Carolina','M',3,53963,65476), ('North
-Carolina','M',4,54652,64198), ('North Carolina','M',5,55808,64246), ('North
-Carolina','M',6,56048,64453), ('North Carolina','M',7,57330,66096), ('North
-Carolina','M',8,58531,62662), ('North Carolina','M',9,59683,61728), ('North
-Carolina','M',10,60087,60929), ('North Carolina','M',11,57433,60051), ('North
-Carolina','M',12,56057,60632), ('North Carolina','M',13,54839,61680), ('North
-Carolina','M',14,54175,61644), ('North Carolina','M',15,54640,62380), ('North
-Carolina','M',16,52467,63186), ('North Carolina','M',17,53700,64735), ('North
-Carolina','M',18,54928,65129), ('North Carolina','M',19,55535,60358), ('North
-Carolina','M',20,57099,60045), ('North Carolina','M',21,54484,59271), ('North
-Carolina','M',22,54154,58611), ('North Carolina','M',23,53183,58381), ('North
-Carolina','M',24,52431,58793), ('North Carolina','M',25,55683,59022), ('North
-Carolina','M',26,54777,57489), ('North Carolina','M',27,56915,57699), ('North
-Carolina','M',28,59678,60502), ('North Carolina','M',29,63016,57042), ('North
-Carolina','M',30,63768,59001), ('North Carolina','M',31,59781,58754), ('North
-Carolina','M',32,58489,57683), ('North Carolina','M',33,57714,60215), ('North
-Carolina','M',34,59018,59691), ('North Carolina','M',35,62789,62394), ('North
-Carolina','M',36,63820,65222), ('North Carolina','M',37,63005,68014), ('North
-Carolina','M',38,63348,69066), ('North Carolina','M',39,63280,64307), ('North
-Carolina','M',40,64351,63117), ('North Carolina','M',41,61495,62618), ('North
-Carolina','M',42,61873,63887), ('North Carolina','M',43,61547,67086), ('North
-Carolina','M',44,58850,67602), ('North Carolina','M',45,59127,67372), ('North
-Carolina','M',46,57555,67338), ('North Carolina','M',47,55128,66905), ('North
-Carolina','M',48,54231,67298), ('North Carolina','M',49,52438,64023), ('North
-Carolina','M',50,52916,64717), ('North Carolina','M',51,51816,64095), ('North
-Carolina','M',52,52155,61380), ('North Carolina','M',53,54702,60351), ('North
-Carolina','M',54,41289,59072), ('North Carolina','M',55,40943,56460), ('North
-Carolina','M',56,40548,55733), ('North Carolina','M',57,41515,53519), ('North
-Carolina','M',58,36465,53628), ('North Carolina','M',59,34196,52697), ('North
-Carolina','M',60,33214,53053), ('North Carolina','M',61,31148,54641), ('North
-Carolina','M',62,30594,41203), ('North Carolina','M',63,29044,40390), ('North
-Carolina','M',64,28976,39965), ('North Carolina','M',65,28924,40251), ('North
-Carolina','M',66,26095,34251), ('North Carolina','M',67,25705,31407), ('North
-Carolina','M',68,24586,29845), ('North Carolina','M',69,23675,27347), ('North
-Carolina','M',70,23750,26431), ('North Carolina','M',71,22857,24300), ('North
-Carolina','M',72,22025,23557), ('North Carolina','M',73,20831,23095), ('North
-Carolina','M',74,19331,20242), ('North Carolina','M',75,18976,19741), ('North
-Carolina','M',76,17326,18328), ('North Carolina','M',77,15468,17189), ('North
-Carolina','M',78,14830,16857), ('North Carolina','M',79,13561,15485), ('North
-Carolina','M',80,11830,14546), ('North Carolina','M',81,9969,13222), ('North
-Carolina','M',82,8901,11735), ('North Carolina','M',83,7636,11083), ('North
-Carolina','M',84,6614,9746), ('North Carolina','M',85,27820,45074), ('North
-Carolina','F',0,54957,65616), ('North Carolina','F',1,52831,65830), ('North
-Carolina','F',2,52043,63424), ('North Carolina','F',3,51668,62507), ('North
-Carolina','F',4,51947,61763), ('North Carolina','F',5,52660,60663), ('North
-Carolina','F',6,53368,61529), ('North Carolina','F',7,54876,63075), ('North
-Carolina','F',8,55428,60433), ('North Carolina','F',9,56660,58563), ('North
-Carolina','F',10,57831,57776), ('North Carolina','F',11,55158,57467), ('North
-Carolina','F',12,54108,57649), ('North Carolina','F',13,52533,58258), ('North
-Carolina','F',14,52009,58652), ('North Carolina','F',15,51296,60165), ('North
-Carolina','F',16,49397,60459), ('North Carolina','F',17,50519,61700), ('North
-Carolina','F',18,53287,63462), ('North Carolina','F',19,56332,59628), ('North
-Carolina','F',20,57113,59337), ('North Carolina','F',21,55141,58627), ('North
-Carolina','F',22,53973,58312), ('North Carolina','F',23,53188,57823), ('North
-Carolina','F',24,52287,56712), ('North Carolina','F',25,55514,59091), ('North
-Carolina','F',26,54548,58117), ('North Carolina','F',27,56413,63638), ('North
-Carolina','F',28,60061,63388), ('North Carolina','F',29,63972,62540), ('North
-Carolina','F',30,63782,62040), ('North Carolina','F',31,59775,61138), ('North
-Carolina','F',32,59039,60399), ('North Carolina','F',33,59269,62576), ('North
-Carolina','F',34,59811,61255), ('North Carolina','F',35,64406,63200), ('North
-Carolina','F',36,65817,67146), ('North Carolina','F',37,65920,70404), ('North
-Carolina','F',38,65281,70141), ('North Carolina','F',39,65960,65775), ('North
-Carolina','F',40,66558,64198), ('North Carolina','F',41,64392,65214), ('North
-Carolina','F',42,64513,65442), ('North Carolina','F',43,64095,69710), ('North
-Carolina','F',44,62106,70689), ('North Carolina','F',45,61907,70829), ('North
-Carolina','F',46,60702,69570), ('North Carolina','F',47,58708,70596), ('North
-Carolina','F',48,57602,70745), ('North Carolina','F',49,55716,67850), ('North
-Carolina','F',50,55772,68321), ('North Carolina','F',51,54686,67247), ('North
-Carolina','F',52,55187,65778), ('North Carolina','F',53,58031,65269), ('North
-Carolina','F',54,43844,64155), ('North Carolina','F',55,43716,61740), ('North
-Carolina','F',56,43340,60875), ('North Carolina','F',57,44844,59157), ('North
-Carolina','F',58,40133,58824), ('North Carolina','F',59,37290,58067), ('North
-Carolina','F',60,36281,58555), ('North Carolina','F',61,34851,60193), ('North
-Carolina','F',62,34769,45868), ('North Carolina','F',63,32951,45471), ('North
-Carolina','F',64,33398,44969), ('North Carolina','F',65,33528,45463), ('North
-Carolina','F',66,30407,39823), ('North Carolina','F',67,30955,36295), ('North
-Carolina','F',68,30006,34813), ('North Carolina','F',69,29030,32906), ('North
-Carolina','F',70,29886,32300), ('North Carolina','F',71,29275,30015), ('North
-Carolina','F',72,28897,29907), ('North Carolina','F',73,27852,29591), ('North
-Carolina','F',74,26442,26361), ('North Carolina','F',75,26798,26732), ('North
-Carolina','F',76,25909,25595), ('North Carolina','F',77,23893,24285), ('North
-Carolina','F',78,23591,24526), ('North Carolina','F',79,21988,23303), ('North
-Carolina','F',80,20656,22712), ('North Carolina','F',81,17945,21341), ('North
-Carolina','F',82,16773,19467), ('North Carolina','F',83,15190,19011), ('North
-Carolina','F',84,14091,17894), ('North Carolina','F',85,78872,102980), ('North
-Dakota','M',0,3999,4584), ('North Dakota','M',1,3943,4419), ('North
-Dakota','M',2,4088,4365), ('North Dakota','M',3,3971,4113), ('North
-Dakota','M',4,4093,3892), ('North Dakota','M',5,4171,3870), ('North
-Dakota','M',6,4322,3787), ('North Dakota','M',7,4348,3586), ('North
-Dakota','M',8,4497,3790), ('North Dakota','M',9,4462,3687), ('North
-Dakota','M',10,4821,3869), ('North Dakota','M',11,4716,3773), ('North
-Dakota','M',12,4944,3909), ('North Dakota','M',13,4823,4026), ('North
-Dakota','M',14,5159,4217), ('North Dakota','M',15,5220,4260), ('North
-Dakota','M',16,5232,4468), ('North Dakota','M',17,5438,4430), ('North
-Dakota','M',18,5604,5047), ('North Dakota','M',19,5886,6434), ('North
-Dakota','M',20,5795,6182), ('North Dakota','M',21,5231,5748), ('North
-Dakota','M',22,5249,6440), ('North Dakota','M',23,4698,6109), ('North
-Dakota','M',24,4096,5648), ('North Dakota','M',25,3994,4936), ('North
-Dakota','M',26,3727,5810), ('North Dakota','M',27,3671,4168), ('North
-Dakota','M',28,3610,4274), ('North Dakota','M',29,3812,4208), ('North
-Dakota','M',30,3818,3901), ('North Dakota','M',31,3668,3381), ('North
-Dakota','M',32,3588,3243), ('North Dakota','M',33,3584,3448), ('North
-Dakota','M',34,3726,3374), ('North Dakota','M',35,4095,3547), ('North
-Dakota','M',36,4314,3420), ('North Dakota','M',37,4484,3688), ('North
-Dakota','M',38,4616,3600), ('North Dakota','M',39,4866,3643), ('North
-Dakota','M',40,4969,3508), ('North Dakota','M',41,4962,3569), ('North
-Dakota','M',42,4934,3585), ('North Dakota','M',43,5064,3932), ('North
-Dakota','M',44,5132,4123), ('North Dakota','M',45,5081,4365), ('North
-Dakota','M',46,4954,4400), ('North Dakota','M',47,4943,4637), ('North
-Dakota','M',48,4933,4813), ('North Dakota','M',49,4354,4707), ('North
-Dakota','M',50,4379,4765), ('North Dakota','M',51,4095,4806), ('North
-Dakota','M',52,4010,4821), ('North Dakota','M',53,4026,4819), ('North
-Dakota','M',54,3045,4675), ('North Dakota','M',55,3123,4650), ('North
-Dakota','M',56,3093,4668), ('North Dakota','M',57,3065,4075), ('North
-Dakota','M',58,2777,4068), ('North Dakota','M',59,2557,3753), ('North
-Dakota','M',60,2411,3716), ('North Dakota','M',61,2403,3641), ('North
-Dakota','M',62,2397,2755), ('North Dakota','M',63,2372,2806), ('North
-Dakota','M',64,2279,2785), ('North Dakota','M',65,2324,2693), ('North
-Dakota','M',66,2074,2360), ('North Dakota','M',67,2230,2201), ('North
-Dakota','M',68,2115,2036), ('North Dakota','M',69,2066,2026), ('North
-Dakota','M',70,2178,1984), ('North Dakota','M',71,2132,1900), ('North
-Dakota','M',72,2080,1848), ('North Dakota','M',73,2069,1860), ('North
-Dakota','M',74,1988,1592), ('North Dakota','M',75,1909,1738), ('North
-Dakota','M',76,1721,1575), ('North Dakota','M',77,1554,1506), ('North
-Dakota','M',78,1625,1551), ('North Dakota','M',79,1456,1436), ('North
-Dakota','M',80,1355,1378), ('North Dakota','M',81,1192,1317), ('North
-Dakota','M',82,1188,1234), ('North Dakota','M',83,1071,1133), ('North
-Dakota','M',84,951,1027), ('North Dakota','M',85,4623,5774), ('North
-Dakota','F',0,3700,4414), ('North Dakota','F',1,3733,4236), ('North
-Dakota','F',2,3853,4099), ('North Dakota','F',3,3879,3852), ('North
-Dakota','F',4,3968,3922), ('North Dakota','F',5,4012,3673), ('North
-Dakota','F',6,4070,3652), ('North Dakota','F',7,4094,3580), ('North
-Dakota','F',8,4217,3527), ('North Dakota','F',9,4402,3554), ('North
-Dakota','F',10,4488,3661), ('North Dakota','F',11,4600,3725), ('North
-Dakota','F',12,4408,3831), ('North Dakota','F',13,4630,3858), ('North
-Dakota','F',14,4818,3957), ('North Dakota','F',15,5021,3999), ('North
-Dakota','F',16,4983,4117), ('North Dakota','F',17,5107,4346), ('North
-Dakota','F',18,5224,4798), ('North Dakota','F',19,5359,5936), ('North
-Dakota','F',20,5395,5831), ('North Dakota','F',21,5159,5717), ('North
-Dakota','F',22,4717,5763), ('North Dakota','F',23,4283,5139), ('North
-Dakota','F',24,3791,4923), ('North Dakota','F',25,3821,4184), ('North
-Dakota','F',26,3599,5024), ('North Dakota','F',27,3475,4093), ('North
-Dakota','F',28,3585,3602), ('North Dakota','F',29,3598,3717), ('North
-Dakota','F',30,3794,3176), ('North Dakota','F',31,3555,3473), ('North
-Dakota','F',32,3518,3067), ('North Dakota','F',33,3666,3469), ('North
-Dakota','F',34,3808,3377), ('North Dakota','F',35,4232,3348), ('North
-Dakota','F',36,4406,3465), ('North Dakota','F',37,4740,3590), ('North
-Dakota','F',38,4740,3625), ('North Dakota','F',39,4907,3514), ('North
-Dakota','F',40,5081,3432), ('North Dakota','F',41,5105,3599), ('North
-Dakota','F',42,5072,3666), ('North Dakota','F',43,5079,4068), ('North
-Dakota','F',44,5019,4105), ('North Dakota','F',45,4959,4499), ('North
-Dakota','F',46,4823,4549), ('North Dakota','F',47,4651,4701), ('North
-Dakota','F',48,4404,4799), ('North Dakota','F',49,4275,4871), ('North
-Dakota','F',50,3993,4841), ('North Dakota','F',51,3838,4832), ('North
-Dakota','F',52,3698,4765), ('North Dakota','F',53,3854,4767), ('North
-Dakota','F',54,3193,4544), ('North Dakota','F',55,3009,4395), ('North
-Dakota','F',56,3017,4148), ('North Dakota','F',57,2985,4047), ('North
-Dakota','F',58,2725,3654), ('North Dakota','F',59,2623,3615), ('North
-Dakota','F',60,2532,3467), ('North Dakota','F',61,2549,3541), ('North
-Dakota','F',62,2515,2981), ('North Dakota','F',63,2554,2753), ('North
-Dakota','F',64,2513,2797), ('North Dakota','F',65,2516,2739), ('North
-Dakota','F',66,2490,2479), ('North Dakota','F',67,2341,2379), ('North
-Dakota','F',68,2488,2290), ('North Dakota','F',69,2381,2272), ('North
-Dakota','F',70,2589,2231), ('North Dakota','F',71,2523,2226), ('North
-Dakota','F',72,2444,2188), ('North Dakota','F',73,2342,2170), ('North
-Dakota','F',74,2330,2109), ('North Dakota','F',75,2291,1982), ('North
-Dakota','F',76,2205,2093), ('North Dakota','F',77,2156,1939), ('North
-Dakota','F',78,2121,2075), ('North Dakota','F',79,2032,2020), ('North
-Dakota','F',80,2007,1946), ('North Dakota','F',81,1811,1790), ('North
-Dakota','F',82,1873,1838), ('North Dakota','F',83,1741,1723), ('North
-Dakota','F',84,1658,1620), ('North Dakota','F',85,10223,11998),
+('Nevada','F',84,2341,3750), ('Nevada','F',85,11557,19286),
+('New Hampshire','M',0,7302,7491), ('New Hampshire','M',1,7665,7450),
+('New Hampshire','M',2,7703,7905), ('New Hampshire','M',3,8112,8021),
+('New Hampshire','M',4,8278,7542), ('New Hampshire','M',5,8668,7627),
+('New Hampshire','M',6,8680,7917), ('New Hampshire','M',7,9049,7992),
+('New Hampshire','M',8,9174,7776), ('New Hampshire','M',9,9653,8154),
+('New Hampshire','M',10,9912,8096), ('New Hampshire','M',11,9533,8579),
+('New Hampshire','M',12,9544,8680), ('New Hampshire','M',13,9352,9068),
+('New Hampshire','M',14,9399,9079), ('New Hampshire','M',15,9273,9446),
+('New Hampshire','M',16,8813,9480), ('New Hampshire','M',17,8881,9803),
+('New Hampshire','M',18,8812,9518), ('New Hampshire','M',19,8539,8778),
+('New Hampshire','M',20,7752,8802), ('New Hampshire','M',21,7459,8873),
+('New Hampshire','M',22,6923,8654), ('New Hampshire','M',23,6256,8029),
+('New Hampshire','M',24,5938,7455), ('New Hampshire','M',25,6365,7482),
+('New Hampshire','M',26,6428,7895), ('New Hampshire','M',27,6675,8636),
+('New Hampshire','M',28,7423,7807), ('New Hampshire','M',29,8150,7228),
+('New Hampshire','M',30,8529,6971), ('New Hampshire','M',31,8499,7296),
+('New Hampshire','M',32,8592,6974), ('New Hampshire','M',33,8971,7922),
+('New Hampshire','M',34,9305,7350), ('New Hampshire','M',35,10164,7890),
+('New Hampshire','M',36,10464,8461), ('New Hampshire','M',37,10783,9338),
+('New Hampshire','M',38,10819,9593), ('New Hampshire','M',39,11414,9383),
+('New Hampshire','M',40,11448,9392), ('New Hampshire','M',41,11412,9639),
+('New Hampshire','M',42,11283,9996), ('New Hampshire','M',43,11075,10901),
+('New Hampshire','M',44,10639,11110), ('New Hampshire','M',45,10502,11332),
+('New Hampshire','M',46,10120,11306), ('New Hampshire','M',47,9972,11777),
+('New Hampshire','M',48,9542,11791), ('New Hampshire','M',49,9133,11563),
+('New Hampshire','M',50,9113,11379), ('New Hampshire','M',51,9019,11173),
+('New Hampshire','M',52,9018,10636), ('New Hampshire','M',53,9661,10501),
+('New Hampshire','M',54,6578,9861), ('New Hampshire','M',55,6633,9789),
+('New Hampshire','M',56,6839,9280), ('New Hampshire','M',57,6861,8825),
+('New Hampshire','M',58,5955,8848), ('New Hampshire','M',59,5350,8619),
+('New Hampshire','M',60,5116,8577), ('New Hampshire','M',61,4755,9242),
+('New Hampshire','M',62,4660,6153), ('New Hampshire','M',63,4384,6162),
+('New Hampshire','M',64,4273,6303), ('New Hampshire','M',65,4294,6256),
+('New Hampshire','M',66,4062,5237), ('New Hampshire','M',67,3863,4614),
+('New Hampshire','M',68,3919,4376), ('New Hampshire','M',69,3713,4116),
+('New Hampshire','M',70,3752,3945), ('New Hampshire','M',71,3503,3639),
+('New Hampshire','M',72,3305,3460), ('New Hampshire','M',73,3194,3403),
+('New Hampshire','M',74,3010,3252), ('New Hampshire','M',75,2954,3015),
+('New Hampshire','M',76,2671,2970), ('New Hampshire','M',77,2557,2714),
+('New Hampshire','M',78,2394,2751), ('New Hampshire','M',79,2245,2504),
+('New Hampshire','M',80,1980,2263), ('New Hampshire','M',81,1795,2088),
+('New Hampshire','M',82,1527,1819), ('New Hampshire','M',83,1334,1801),
+('New Hampshire','M',84,1219,1514), ('New Hampshire','M',85,5137,7617),
+('New Hampshire','F',0,6860,7119), ('New Hampshire','F',1,7124,7090),
+('New Hampshire','F',2,7431,7568), ('New Hampshire','F',3,7507,7658),
+('New Hampshire','F',4,7821,7453), ('New Hampshire','F',5,8084,7358),
+('New Hampshire','F',6,8228,7480), ('New Hampshire','F',7,8543,7696),
+('New Hampshire','F',8,8928,7415), ('New Hampshire','F',9,9294,7613),
+('New Hampshire','F',10,9369,7973), ('New Hampshire','F',11,9312,8014),
+('New Hampshire','F',12,9263,8306), ('New Hampshire','F',13,8973,8491),
+('New Hampshire','F',14,9067,8613), ('New Hampshire','F',15,8668,8852),
+('New Hampshire','F',16,8356,9160), ('New Hampshire','F',17,8423,9393),
+('New Hampshire','F',18,8503,9071), ('New Hampshire','F',19,8834,9063),
+('New Hampshire','F',20,8217,9063), ('New Hampshire','F',21,7722,8628),
+('New Hampshire','F',22,6769,8384), ('New Hampshire','F',23,6021,7396),
+('New Hampshire','F',24,5971,7082), ('New Hampshire','F',25,6450,7596),
+('New Hampshire','F',26,6365,7241), ('New Hampshire','F',27,6985,8581),
+('New Hampshire','F',28,7575,7372), ('New Hampshire','F',29,8323,7710),
+('New Hampshire','F',30,8682,6905), ('New Hampshire','F',31,8677,7169),
+('New Hampshire','F',32,8618,7237), ('New Hampshire','F',33,9157,7549),
+('New Hampshire','F',34,9632,7356), ('New Hampshire','F',35,10474,8438),
+('New Hampshire','F',36,11036,8822), ('New Hampshire','F',37,11190,9628),
+('New Hampshire','F',38,11171,9844), ('New Hampshire','F',39,11698,9531),
+('New Hampshire','F',40,11597,9431), ('New Hampshire','F',41,11419,9796),
+('New Hampshire','F',42,11312,10407), ('New Hampshire','F',43,11231,11046),
+('New Hampshire','F',44,10496,11391), ('New Hampshire','F',45,10592,11521),
+('New Hampshire','F',46,10303,11323), ('New Hampshire','F',47,10000,12011),
+('New Hampshire','F',48,9608,11728), ('New Hampshire','F',49,9112,11491),
+('New Hampshire','F',50,9068,11356), ('New Hampshire','F',51,9058,11071),
+('New Hampshire','F',52,9151,10400), ('New Hampshire','F',53,9553,10342),
+('New Hampshire','F',54,6655,10214), ('New Hampshire','F',55,6640,9823),
+('New Hampshire','F',56,6584,9439), ('New Hampshire','F',57,6981,9068),
+('New Hampshire','F',58,6021,8842), ('New Hampshire','F',59,5319,8820),
+('New Hampshire','F',60,5252,8933), ('New Hampshire','F',61,4876,9281),
+('New Hampshire','F',62,4777,6522), ('New Hampshire','F',63,4576,6404),
+('New Hampshire','F',64,4652,6381), ('New Hampshire','F',65,4556,6530),
+('New Hampshire','F',66,4134,5684), ('New Hampshire','F',67,4240,4971),
+('New Hampshire','F',68,4232,4794), ('New Hampshire','F',69,4131,4517),
+('New Hampshire','F',70,4338,4387), ('New Hampshire','F',71,4005,4144),
+('New Hampshire','F',72,4097,4166), ('New Hampshire','F',73,4145,4106),
+('New Hampshire','F',74,3878,3593), ('New Hampshire','F',75,3957,3722),
+('New Hampshire','F',76,3558,3652), ('New Hampshire','F',77,3549,3482),
+('New Hampshire','F',78,3433,3664), ('New Hampshire','F',79,3400,3269),
+('New Hampshire','F',80,3088,3292), ('New Hampshire','F',81,2801,3277),
+('New Hampshire','F',82,2663,2973), ('New Hampshire','F',83,2379,2990),
+('New Hampshire','F',84,2237,2548), ('New Hampshire','F',85,13312,16863),
+('New Jersey','M',0,56983,58756), ('New Jersey','M',1,56686,57325),
+('New Jersey','M',2,57011,55475), ('New Jersey','M',3,57912,56059),
+('New Jersey','M',4,59359,58048), ('New Jersey','M',5,60392,58472),
+('New Jersey','M',6,60739,57080), ('New Jersey','M',7,61579,56754),
+('New Jersey','M',8,62089,56616), ('New Jersey','M',9,63384,56322),
+('New Jersey','M',10,64593,56617), ('New Jersey','M',11,62494,57482),
+('New Jersey','M',12,60570,58834), ('New Jersey','M',13,58189,59925),
+('New Jersey','M',14,57931,60294), ('New Jersey','M',15,56752,61056),
+('New Jersey','M',16,55887,61478), ('New Jersey','M',17,56712,62450),
+('New Jersey','M',18,53265,62809), ('New Jersey','M',19,48344,55700),
+('New Jersey','M',20,49564,55794), ('New Jersey','M',21,48141,54769),
+('New Jersey','M',22,48353,55026), ('New Jersey','M',23,49130,54730),
+('New Jersey','M',24,48723,53471), ('New Jersey','M',25,51092,56073),
+('New Jersey','M',26,50357,55169), ('New Jersey','M',27,52179,51964),
+('New Jersey','M',28,55938,52358), ('New Jersey','M',29,60638,51467),
+('New Jersey','M',30,64220,52596), ('New Jersey','M',31,61484,54346),
+('New Jersey','M',32,61927,54414), ('New Jersey','M',33,63487,56786),
+('New Jersey','M',34,66737,56190), ('New Jersey','M',35,71274,56869),
+('New Jersey','M',36,71449,60652), ('New Jersey','M',37,71026,64156),
+('New Jersey','M',38,71811,67107), ('New Jersey','M',39,72043,63562),
+('New Jersey','M',40,73665,63306), ('New Jersey','M',41,70514,64273),
+('New Jersey','M',42,69835,67210), ('New Jersey','M',43,68650,71249),
+('New Jersey','M',44,65564,71097), ('New Jersey','M',45,65529,69934),
+('New Jersey','M',46,61817,70961), ('New Jersey','M',47,59206,70886),
+('New Jersey','M',48,56977,71595), ('New Jersey','M',49,55780,68022),
+('New Jersey','M',50,56235,67401), ('New Jersey','M',51,53235,65757),
+('New Jersey','M',52,54900,62616), ('New Jersey','M',53,58013,62490),
+('New Jersey','M',54,43584,58355), ('New Jersey','M',55,42959,55466),
+('New Jersey','M',56,42179,53088), ('New Jersey','M',57,45575,51211),
+('New Jersey','M',58,38376,51039), ('New Jersey','M',59,34722,47299),
+('New Jersey','M',60,34278,48085), ('New Jersey','M',61,32730,51579),
+('New Jersey','M',62,31589,37378), ('New Jersey','M',63,29440,36620),
+('New Jersey','M',64,28747,34605), ('New Jersey','M',65,27751,38210),
+('New Jersey','M',66,26129,32006), ('New Jersey','M',67,26479,28279),
+('New Jersey','M',68,26076,27635), ('New Jersey','M',69,25811,26304),
+('New Jersey','M',70,26370,25459), ('New Jersey','M',71,24801,23197),
+('New Jersey','M',72,24358,22627), ('New Jersey','M',73,23724,21789),
+('New Jersey','M',74,22304,19294), ('New Jersey','M',75,21663,19267),
+('New Jersey','M',76,20280,18629), ('New Jersey','M',77,18958,17897),
+('New Jersey','M',78,17839,17860), ('New Jersey','M',79,17030,16034),
+('New Jersey','M',80,15262,15261), ('New Jersey','M',81,12609,14193),
+('New Jersey','M',82,12104,12912), ('New Jersey','M',83,10004,12085),
+('New Jersey','M',84,8864,10759), ('New Jersey','M',85,39309,54920),
+('New Jersey','F',0,54679,55841), ('New Jersey','F',1,53913,54437),
+('New Jersey','F',2,54744,52450), ('New Jersey','F',3,55427,53490),
+('New Jersey','F',4,56860,55540), ('New Jersey','F',5,57486,55247),
+('New Jersey','F',6,57751,54660), ('New Jersey','F',7,58696,53617),
+('New Jersey','F',8,59465,54257), ('New Jersey','F',9,60277,53421),
+('New Jersey','F',10,61606,54270), ('New Jersey','F',11,59279,54850),
+('New Jersey','F',12,57384,56348), ('New Jersey','F',13,55913,56884),
+('New Jersey','F',14,54804,57080), ('New Jersey','F',15,54208,58022),
+('New Jersey','F',16,52815,58825), ('New Jersey','F',17,52918,59284),
+('New Jersey','F',18,48383,58217), ('New Jersey','F',19,45910,51872),
+('New Jersey','F',20,47658,52726), ('New Jersey','F',21,46601,54512),
+('New Jersey','F',22,46518,52223), ('New Jersey','F',23,47909,52601),
+('New Jersey','F',24,47751,51185), ('New Jersey','F',25,49805,53116),
+('New Jersey','F',26,50344,51334), ('New Jersey','F',27,52524,48697),
+('New Jersey','F',28,56102,52359), ('New Jersey','F',29,61685,47013),
+('New Jersey','F',30,64873,51329), ('New Jersey','F',31,62665,53082),
+('New Jersey','F',32,63572,53301), ('New Jersey','F',33,65517,54789),
+('New Jersey','F',34,68457,56177), ('New Jersey','F',35,72558,57404),
+('New Jersey','F',36,73865,59897), ('New Jersey','F',37,73266,64997),
+('New Jersey','F',38,72927,67366), ('New Jersey','F',39,73816,64546),
+('New Jersey','F',40,75226,64632), ('New Jersey','F',41,73159,66421),
+('New Jersey','F',42,72371,68732), ('New Jersey','F',43,71100,72619),
+('New Jersey','F',44,68286,73252), ('New Jersey','F',45,67763,72477),
+('New Jersey','F',46,64313,71522), ('New Jersey','F',47,62759,72520),
+('New Jersey','F',48,60526,73425), ('New Jersey','F',49,59877,71188),
+('New Jersey','F',50,60058,69825), ('New Jersey','F',51,57978,68238),
+('New Jersey','F',52,58637,65557), ('New Jersey','F',53,62757,64292),
+('New Jersey','F',54,47727,60739), ('New Jersey','F',55,45851,58823),
+('New Jersey','F',56,45758,56115), ('New Jersey','F',57,49139,55014),
+('New Jersey','F',58,42678,55051), ('New Jersey','F',59,38667,52644),
+('New Jersey','F',60,38032,52050), ('New Jersey','F',61,35600,57253),
+('New Jersey','F',62,35577,42643), ('New Jersey','F',63,33562,40568),
+('New Jersey','F',64,32452,39824), ('New Jersey','F',65,32848,43182),
+('New Jersey','F',66,31080,37439), ('New Jersey','F',67,31588,33677),
+('New Jersey','F',68,32232,33216), ('New Jersey','F',69,32391,31084),
+('New Jersey','F',70,33124,30891), ('New Jersey','F',71,31678,28959),
+('New Jersey','F',72,32246,28018), ('New Jersey','F',73,31706,27975),
+('New Jersey','F',74,30619,25920), ('New Jersey','F',75,31196,25888),
+('New Jersey','F',76,30070,25957), ('New Jersey','F',77,28748,25597),
+('New Jersey','F',78,27658,25598), ('New Jersey','F',79,27035,23913),
+('New Jersey','F',80,25439,23803), ('New Jersey','F',81,21730,22789),
+('New Jersey','F',82,21220,21318), ('New Jersey','F',83,19121,21073),
+('New Jersey','F',84,17164,19637), ('New Jersey','F',85,98078,120390),
+('New Mexico','M',0,13560,15655), ('New Mexico','M',1,13293,15614),
+('New Mexico','M',2,13001,15032), ('New Mexico','M',3,12904,14989),
+('New Mexico','M',4,13332,14495), ('New Mexico','M',5,13642,14361),
+('New Mexico','M',6,13910,14156), ('New Mexico','M',7,14408,13904),
+('New Mexico','M',8,14551,13560), ('New Mexico','M',9,14866,13331),
+('New Mexico','M',10,15259,13078), ('New Mexico','M',11,14874,13002),
+('New Mexico','M',12,14927,13356), ('New Mexico','M',13,15239,13682),
+('New Mexico','M',14,15089,13811), ('New Mexico','M',15,15310,14338),
+('New Mexico','M',16,15222,14451), ('New Mexico','M',17,15232,14747),
+('New Mexico','M',18,14493,15210), ('New Mexico','M',19,13774,14673),
+('New Mexico','M',20,13160,14398), ('New Mexico','M',21,12122,14415),
+('New Mexico','M',22,11588,14066), ('New Mexico','M',23,11512,14640),
+('New Mexico','M',24,10832,14597), ('New Mexico','M',25,10935,15096),
+('New Mexico','M',26,10919,14363), ('New Mexico','M',27,10875,15127),
+('New Mexico','M',28,11239,14480), ('New Mexico','M',29,11713,13321),
+('New Mexico','M',30,12146,13185), ('New Mexico','M',31,11498,12827),
+('New Mexico','M',32,11102,12076), ('New Mexico','M',33,11194,11483),
+('New Mexico','M',34,11586,12186), ('New Mexico','M',35,12861,11443),
+('New Mexico','M',36,13156,11874), ('New Mexico','M',37,13594,12182),
+('New Mexico','M',38,13760,12472), ('New Mexico','M',39,13842,11955),
+('New Mexico','M',40,14187,11387), ('New Mexico','M',41,13760,11780),
+('New Mexico','M',42,13725,11905), ('New Mexico','M',43,13844,13147),
+('New Mexico','M',44,13183,13172), ('New Mexico','M',45,13446,13739),
+('New Mexico','M',46,12976,13626), ('New Mexico','M',47,12673,13534),
+('New Mexico','M',48,12224,14076), ('New Mexico','M',49,12342,13555),
+('New Mexico','M',50,12443,13402), ('New Mexico','M',51,11814,13623),
+('New Mexico','M',52,11420,12904), ('New Mexico','M',53,11886,12925),
+('New Mexico','M',54,8960,12455), ('New Mexico','M',55,9087,12563),
+('New Mexico','M',56,8689,11736), ('New Mexico','M',57,8960,11884),
+('New Mexico','M',58,7859,12140), ('New Mexico','M',59,7497,11430),
+('New Mexico','M',60,7384,11104), ('New Mexico','M',61,7020,11657),
+('New Mexico','M',62,6897,8675), ('New Mexico','M',63,6594,8710),
+('New Mexico','M',64,6424,8179), ('New Mexico','M',65,6533,8606),
+('New Mexico','M',66,6072,7295), ('New Mexico','M',67,5962,6988),
+('New Mexico','M',68,5935,6844), ('New Mexico','M',69,5648,6329),
+('New Mexico','M',70,5788,6244), ('New Mexico','M',71,5199,5788),
+('New Mexico','M',72,4988,5589), ('New Mexico','M',73,4745,5530),
+('New Mexico','M',74,4477,5121), ('New Mexico','M',75,4299,4934),
+('New Mexico','M',76,4142,4855), ('New Mexico','M',77,3787,4391),
+('New Mexico','M',78,3622,4453), ('New Mexico','M',79,3310,3929),
+('New Mexico','M',80,2985,3692), ('New Mexico','M',81,2460,3438),
+('New Mexico','M',82,2271,3025), ('New Mexico','M',83,1990,2842),
+('New Mexico','M',84,1788,2625), ('New Mexico','M',85,7749,13095),
+('New Mexico','F',0,13171,14776), ('New Mexico','F',1,12869,14605),
+('New Mexico','F',2,12623,14357), ('New Mexico','F',3,12671,14575),
+('New Mexico','F',4,13016,14225), ('New Mexico','F',5,13130,14095),
+('New Mexico','F',6,13466,13939), ('New Mexico','F',7,13759,13480),
+('New Mexico','F',8,14102,13148), ('New Mexico','F',9,14538,12875),
+('New Mexico','F',10,14699,12614), ('New Mexico','F',11,14425,12630),
+('New Mexico','F',12,14233,13006), ('New Mexico','F',13,14410,13109),
+('New Mexico','F',14,14445,13390), ('New Mexico','F',15,14602,13669),
+('New Mexico','F',16,14325,13974), ('New Mexico','F',17,14426,14421),
+('New Mexico','F',18,14001,14533), ('New Mexico','F',19,13382,14195),
+('New Mexico','F',20,13136,14052), ('New Mexico','F',21,12074,13484),
+('New Mexico','F',22,11672,14067), ('New Mexico','F',23,11355,14292),
+('New Mexico','F',24,11186,13715), ('New Mexico','F',25,11179,13888),
+('New Mexico','F',26,10982,14224), ('New Mexico','F',27,11166,14682),
+('New Mexico','F',28,11677,13200), ('New Mexico','F',29,12066,13738),
+('New Mexico','F',30,12322,12732), ('New Mexico','F',31,11723,11946),
+('New Mexico','F',32,11448,11989), ('New Mexico','F',33,11619,11898),
+('New Mexico','F',34,12163,11425), ('New Mexico','F',35,13475,11912),
+('New Mexico','F',36,13636,12522), ('New Mexico','F',37,14283,12691),
+('New Mexico','F',38,14312,12719), ('New Mexico','F',39,14744,12003),
+('New Mexico','F',40,14956,11865), ('New Mexico','F',41,14320,11980),
+('New Mexico','F',42,14450,12600), ('New Mexico','F',43,14488,13852),
+('New Mexico','F',44,13943,13790), ('New Mexico','F',45,14157,14080),
+('New Mexico','F',46,13692,14464), ('New Mexico','F',47,13575,14637),
+('New Mexico','F',48,13297,15405), ('New Mexico','F',49,12740,14380),
+('New Mexico','F',50,12677,14251), ('New Mexico','F',51,12302,14377),
+('New Mexico','F',52,12032,13993), ('New Mexico','F',53,12565,14199),
+('New Mexico','F',54,9425,13702), ('New Mexico','F',55,9651,13459),
+('New Mexico','F',56,9450,13011), ('New Mexico','F',57,9428,12507),
+('New Mexico','F',58,8747,12614), ('New Mexico','F',59,8054,12279),
+('New Mexico','F',60,8007,11807), ('New Mexico','F',61,7732,12196),
+('New Mexico','F',62,7532,9223), ('New Mexico','F',63,7263,9360),
+('New Mexico','F',64,6875,9177), ('New Mexico','F',65,7143,9145),
+('New Mexico','F',66,6471,8494), ('New Mexico','F',67,6489,7778),
+('New Mexico','F',68,6686,7694), ('New Mexico','F',69,6332,7352),
+('New Mexico','F',70,6330,7066), ('New Mexico','F',71,5877,6789),
+('New Mexico','F',72,5974,6351), ('New Mexico','F',73,5739,6521),
+('New Mexico','F',74,5549,5817), ('New Mexico','F',75,5568,5640),
+('New Mexico','F',76,5243,5874), ('New Mexico','F',77,4758,5419),
+('New Mexico','F',78,4849,5361), ('New Mexico','F',79,4407,4892),
+('New Mexico','F',80,3942,4843), ('New Mexico','F',81,3421,4502),
+('New Mexico','F',82,3247,4204), ('New Mexico','F',83,2946,4225),
+('New Mexico','F',84,2732,3717), ('New Mexico','F',85,15879,22754),
+('New York','M',0,126237,128088), ('New York','M',1,124008,125649),
+('New York','M',2,124725,121615), ('New York','M',3,126697,120580),
+('New York','M',4,131357,122482), ('New York','M',5,133095,121205),
+('New York','M',6,134203,120089), ('New York','M',7,137986,122355),
+('New York','M',8,139455,118653), ('New York','M',9,142454,117369),
+('New York','M',10,145621,118810), ('New York','M',11,138746,121121),
+('New York','M',12,135565,126338), ('New York','M',13,132288,128713),
+('New York','M',14,132388,129812), ('New York','M',15,131959,134463),
+('New York','M',16,130189,136569), ('New York','M',17,132566,140114),
+('New York','M',18,132672,156892), ('New York','M',19,133654,147556),
+('New York','M',20,132121,146611), ('New York','M',21,126166,141932),
+('New York','M',22,123215,138557), ('New York','M',23,121282,136150),
+('New York','M',24,118953,132383), ('New York','M',25,123151,141850),
+('New York','M',26,118727,129603), ('New York','M',27,122359,131419),
+('New York','M',28,128651,127224), ('New York','M',29,140687,122449),
+('New York','M',30,149558,126404), ('New York','M',31,139477,126124),
+('New York','M',32,138911,123362), ('New York','M',33,139031,126486),
+('New York','M',34,145440,120030), ('New York','M',35,156168,123017),
+('New York','M',36,153840,127076), ('New York','M',37,152078,136270),
+('New York','M',38,150765,144715), ('New York','M',39,152606,135027),
+('New York','M',40,159345,135355), ('New York','M',41,148628,132905),
+('New York','M',42,147892,140025), ('New York','M',43,144195,151555),
+('New York','M',44,139354,149030), ('New York','M',45,141953,148147),
+('New York','M',46,131875,146692), ('New York','M',47,128767,147648),
+('New York','M',48,125406,155155), ('New York','M',49,124155,144287),
+('New York','M',50,125955,143466), ('New York','M',51,118542,139630),
+('New York','M',52,118532,133939), ('New York','M',53,124418,136723),
+('New York','M',54,95025,125953), ('New York','M',55,92652,122478),
+('New York','M',56,90096,118070), ('New York','M',57,95340,115823),
+('New York','M',58,83273,117177), ('New York','M',59,77213,108293),
+('New York','M',60,77054,106825), ('New York','M',61,72212,113681),
+('New York','M',62,70967,83763), ('New York','M',63,66461,81226),
+('New York','M',64,64361,76961), ('New York','M',65,64385,82242),
+('New York','M',66,58819,70423), ('New York','M',67,58176,64117),
+('New York','M',68,57310,63657), ('New York','M',69,57057,58801),
+('New York','M',70,57761,57609), ('New York','M',71,53775,53231),
+('New York','M',72,53568,51132), ('New York','M',73,51263,50696),
+('New York','M',74,48440,44822), ('New York','M',75,46702,43592),
+('New York','M',76,43508,41900), ('New York','M',77,40730,40417),
+('New York','M',78,37950,40241), ('New York','M',79,35774,35941),
+('New York','M',80,32453,34659), ('New York','M',81,26803,32022),
+('New York','M',82,25041,28890), ('New York','M',83,21687,27217),
+('New York','M',84,18873,23879), ('New York','M',85,88366,124478),
+('New York','F',0,120355,122194), ('New York','F',1,118219,119661),
+('New York','F',2,119577,116413), ('New York','F',3,121029,114877),
+('New York','F',4,125247,116936), ('New York','F',5,128227,116051),
+('New York','F',6,128428,115186), ('New York','F',7,131161,116951),
+('New York','F',8,133646,113279), ('New York','F',9,135746,111919),
+('New York','F',10,138287,113891), ('New York','F',11,131904,115607),
+('New York','F',12,129028,120156), ('New York','F',13,126571,123797),
+('New York','F',14,125682,124343), ('New York','F',15,125409,127635),
+('New York','F',16,122770,130769), ('New York','F',17,123978,134311),
+('New York','F',18,125307,150772), ('New York','F',19,127956,142871),
+('New York','F',20,129184,141831), ('New York','F',21,124575,142302),
+('New York','F',22,123701,138703), ('New York','F',23,124108,138084),
+('New York','F',24,122624,135339), ('New York','F',25,127474,141601),
+('New York','F',26,123033,130002), ('New York','F',27,128125,129600),
+('New York','F',28,134795,129868), ('New York','F',29,146832,119821),
+('New York','F',30,152973,125047), ('New York','F',31,144001,127486),
+('New York','F',32,143930,123742), ('New York','F',33,144653,126908),
+('New York','F',34,151147,121824), ('New York','F',35,159228,124485),
+('New York','F',36,159999,130377), ('New York','F',37,157911,140890),
+('New York','F',38,156103,148408), ('New York','F',39,159284,137936),
+('New York','F',40,163331,138561), ('New York','F',41,155353,139720),
+('New York','F',42,153688,145307), ('New York','F',43,151615,154437),
+('New York','F',44,146774,154805), ('New York','F',45,148318,153651),
+('New York','F',46,139802,151107), ('New York','F',47,138062,154997),
+('New York','F',48,134107,158855), ('New York','F',49,134399,151022),
+('New York','F',50,136630,149883), ('New York','F',51,130843,146988),
+('New York','F',52,130196,142566), ('New York','F',53,136064,144121),
+('New York','F',54,106579,135180), ('New York','F',55,104847,132338),
+('New York','F',56,101857,127500), ('New York','F',57,108406,126450),
+('New York','F',58,94346,128713), ('New York','F',59,88584,121743),
+('New York','F',60,88932,119540), ('New York','F',61,82899,126847),
+('New York','F',62,82172,96462), ('New York','F',63,77171,94667),
+('New York','F',64,76032,90185), ('New York','F',65,76498,97321),
+('New York','F',66,70465,83336), ('New York','F',67,71088,77404),
+('New York','F',68,70847,77802), ('New York','F',69,71377,71850),
+('New York','F',70,74378,71451), ('New York','F',71,70611,66625),
+('New York','F',72,70513,65037), ('New York','F',73,69156,65719),
+('New York','F',74,68042,58818), ('New York','F',75,68410,58722),
+('New York','F',76,64971,57584), ('New York','F',77,61287,56907),
+('New York','F',78,58911,58456), ('New York','F',79,56865,54136),
+('New York','F',80,54553,52932), ('New York','F',81,46381,50693),
+('New York','F',82,45599,48206), ('New York','F',83,40525,47777),
+('New York','F',84,37436,43454), ('New York','F',85,226378,273476),
+('North Carolina','M',0,57058,68632), ('North Carolina','M',1,55868,69182),
+('North Carolina','M',2,54967,66195), ('North Carolina','M',3,53963,65476),
+('North Carolina','M',4,54652,64198), ('North Carolina','M',5,55808,64246),
+('North Carolina','M',6,56048,64453), ('North Carolina','M',7,57330,66096),
+('North Carolina','M',8,58531,62662), ('North Carolina','M',9,59683,61728),
+('North Carolina','M',10,60087,60929), ('North Carolina','M',11,57433,60051),
+('North Carolina','M',12,56057,60632), ('North Carolina','M',13,54839,61680),
+('North Carolina','M',14,54175,61644), ('North Carolina','M',15,54640,62380),
+('North Carolina','M',16,52467,63186), ('North Carolina','M',17,53700,64735),
+('North Carolina','M',18,54928,65129), ('North Carolina','M',19,55535,60358),
+('North Carolina','M',20,57099,60045), ('North Carolina','M',21,54484,59271),
+('North Carolina','M',22,54154,58611), ('North Carolina','M',23,53183,58381),
+('North Carolina','M',24,52431,58793), ('North Carolina','M',25,55683,59022),
+('North Carolina','M',26,54777,57489), ('North Carolina','M',27,56915,57699),
+('North Carolina','M',28,59678,60502), ('North Carolina','M',29,63016,57042),
+('North Carolina','M',30,63768,59001), ('North Carolina','M',31,59781,58754),
+('North Carolina','M',32,58489,57683), ('North Carolina','M',33,57714,60215),
+('North Carolina','M',34,59018,59691), ('North Carolina','M',35,62789,62394),
+('North Carolina','M',36,63820,65222), ('North Carolina','M',37,63005,68014),
+('North Carolina','M',38,63348,69066), ('North Carolina','M',39,63280,64307),
+('North Carolina','M',40,64351,63117), ('North Carolina','M',41,61495,62618),
+('North Carolina','M',42,61873,63887), ('North Carolina','M',43,61547,67086),
+('North Carolina','M',44,58850,67602), ('North Carolina','M',45,59127,67372),
+('North Carolina','M',46,57555,67338), ('North Carolina','M',47,55128,66905),
+('North Carolina','M',48,54231,67298), ('North Carolina','M',49,52438,64023),
+('North Carolina','M',50,52916,64717), ('North Carolina','M',51,51816,64095),
+('North Carolina','M',52,52155,61380), ('North Carolina','M',53,54702,60351),
+('North Carolina','M',54,41289,59072), ('North Carolina','M',55,40943,56460),
+('North Carolina','M',56,40548,55733), ('North Carolina','M',57,41515,53519),
+('North Carolina','M',58,36465,53628), ('North Carolina','M',59,34196,52697),
+('North Carolina','M',60,33214,53053), ('North Carolina','M',61,31148,54641),
+('North Carolina','M',62,30594,41203), ('North Carolina','M',63,29044,40390),
+('North Carolina','M',64,28976,39965), ('North Carolina','M',65,28924,40251),
+('North Carolina','M',66,26095,34251), ('North Carolina','M',67,25705,31407),
+('North Carolina','M',68,24586,29845), ('North Carolina','M',69,23675,27347),
+('North Carolina','M',70,23750,26431), ('North Carolina','M',71,22857,24300),
+('North Carolina','M',72,22025,23557), ('North Carolina','M',73,20831,23095),
+('North Carolina','M',74,19331,20242), ('North Carolina','M',75,18976,19741),
+('North Carolina','M',76,17326,18328), ('North Carolina','M',77,15468,17189),
+('North Carolina','M',78,14830,16857), ('North Carolina','M',79,13561,15485),
+('North Carolina','M',80,11830,14546), ('North Carolina','M',81,9969,13222),
+('North Carolina','M',82,8901,11735), ('North Carolina','M',83,7636,11083),
+('North Carolina','M',84,6614,9746), ('North Carolina','M',85,27820,45074),
+('North Carolina','F',0,54957,65616), ('North Carolina','F',1,52831,65830),
+('North Carolina','F',2,52043,63424), ('North Carolina','F',3,51668,62507),
+('North Carolina','F',4,51947,61763), ('North Carolina','F',5,52660,60663),
+('North Carolina','F',6,53368,61529), ('North Carolina','F',7,54876,63075),
+('North Carolina','F',8,55428,60433), ('North Carolina','F',9,56660,58563),
+('North Carolina','F',10,57831,57776), ('North Carolina','F',11,55158,57467),
+('North Carolina','F',12,54108,57649), ('North Carolina','F',13,52533,58258),
+('North Carolina','F',14,52009,58652), ('North Carolina','F',15,51296,60165),
+('North Carolina','F',16,49397,60459), ('North Carolina','F',17,50519,61700),
+('North Carolina','F',18,53287,63462), ('North Carolina','F',19,56332,59628),
+('North Carolina','F',20,57113,59337), ('North Carolina','F',21,55141,58627),
+('North Carolina','F',22,53973,58312), ('North Carolina','F',23,53188,57823),
+('North Carolina','F',24,52287,56712), ('North Carolina','F',25,55514,59091),
+('North Carolina','F',26,54548,58117), ('North Carolina','F',27,56413,63638),
+('North Carolina','F',28,60061,63388), ('North Carolina','F',29,63972,62540),
+('North Carolina','F',30,63782,62040), ('North Carolina','F',31,59775,61138),
+('North Carolina','F',32,59039,60399), ('North Carolina','F',33,59269,62576),
+('North Carolina','F',34,59811,61255), ('North Carolina','F',35,64406,63200),
+('North Carolina','F',36,65817,67146), ('North Carolina','F',37,65920,70404),
+('North Carolina','F',38,65281,70141), ('North Carolina','F',39,65960,65775),
+('North Carolina','F',40,66558,64198), ('North Carolina','F',41,64392,65214),
+('North Carolina','F',42,64513,65442), ('North Carolina','F',43,64095,69710),
+('North Carolina','F',44,62106,70689), ('North Carolina','F',45,61907,70829),
+('North Carolina','F',46,60702,69570), ('North Carolina','F',47,58708,70596),
+('North Carolina','F',48,57602,70745), ('North Carolina','F',49,55716,67850),
+('North Carolina','F',50,55772,68321), ('North Carolina','F',51,54686,67247),
+('North Carolina','F',52,55187,65778), ('North Carolina','F',53,58031,65269),
+('North Carolina','F',54,43844,64155), ('North Carolina','F',55,43716,61740),
+('North Carolina','F',56,43340,60875), ('North Carolina','F',57,44844,59157),
+('North Carolina','F',58,40133,58824), ('North Carolina','F',59,37290,58067),
+('North Carolina','F',60,36281,58555), ('North Carolina','F',61,34851,60193),
+('North Carolina','F',62,34769,45868), ('North Carolina','F',63,32951,45471),
+('North Carolina','F',64,33398,44969), ('North Carolina','F',65,33528,45463),
+('North Carolina','F',66,30407,39823), ('North Carolina','F',67,30955,36295),
+('North Carolina','F',68,30006,34813), ('North Carolina','F',69,29030,32906),
+('North Carolina','F',70,29886,32300), ('North Carolina','F',71,29275,30015),
+('North Carolina','F',72,28897,29907), ('North Carolina','F',73,27852,29591),
+('North Carolina','F',74,26442,26361), ('North Carolina','F',75,26798,26732),
+('North Carolina','F',76,25909,25595), ('North Carolina','F',77,23893,24285),
+('North Carolina','F',78,23591,24526), ('North Carolina','F',79,21988,23303),
+('North Carolina','F',80,20656,22712), ('North Carolina','F',81,17945,21341),
+('North Carolina','F',82,16773,19467), ('North Carolina','F',83,15190,19011),
+('North Carolina','F',84,14091,17894), ('North Carolina','F',85,78872,102980),
+('North Dakota','M',0,3999,4584), ('North Dakota','M',1,3943,4419),
+('North Dakota','M',2,4088,4365), ('North Dakota','M',3,3971,4113),
+('North Dakota','M',4,4093,3892), ('North Dakota','M',5,4171,3870),
+('North Dakota','M',6,4322,3787), ('North Dakota','M',7,4348,3586),
+('North Dakota','M',8,4497,3790), ('North Dakota','M',9,4462,3687),
+('North Dakota','M',10,4821,3869), ('North Dakota','M',11,4716,3773),
+('North Dakota','M',12,4944,3909), ('North Dakota','M',13,4823,4026),
+('North Dakota','M',14,5159,4217), ('North Dakota','M',15,5220,4260),
+('North Dakota','M',16,5232,4468), ('North Dakota','M',17,5438,4430),
+('North Dakota','M',18,5604,5047), ('North Dakota','M',19,5886,6434),
+('North Dakota','M',20,5795,6182), ('North Dakota','M',21,5231,5748),
+('North Dakota','M',22,5249,6440), ('North Dakota','M',23,4698,6109),
+('North Dakota','M',24,4096,5648), ('North Dakota','M',25,3994,4936),
+('North Dakota','M',26,3727,5810), ('North Dakota','M',27,3671,4168),
+('North Dakota','M',28,3610,4274), ('North Dakota','M',29,3812,4208),
+('North Dakota','M',30,3818,3901), ('North Dakota','M',31,3668,3381),
+('North Dakota','M',32,3588,3243), ('North Dakota','M',33,3584,3448),
+('North Dakota','M',34,3726,3374), ('North Dakota','M',35,4095,3547),
+('North Dakota','M',36,4314,3420), ('North Dakota','M',37,4484,3688),
+('North Dakota','M',38,4616,3600), ('North Dakota','M',39,4866,3643),
+('North Dakota','M',40,4969,3508), ('North Dakota','M',41,4962,3569),
+('North Dakota','M',42,4934,3585), ('North Dakota','M',43,5064,3932),
+('North Dakota','M',44,5132,4123), ('North Dakota','M',45,5081,4365),
+('North Dakota','M',46,4954,4400), ('North Dakota','M',47,4943,4637),
+('North Dakota','M',48,4933,4813), ('North Dakota','M',49,4354,4707),
+('North Dakota','M',50,4379,4765), ('North Dakota','M',51,4095,4806),
+('North Dakota','M',52,4010,4821), ('North Dakota','M',53,4026,4819),
+('North Dakota','M',54,3045,4675), ('North Dakota','M',55,3123,4650),
+('North Dakota','M',56,3093,4668), ('North Dakota','M',57,3065,4075),
+('North Dakota','M',58,2777,4068), ('North Dakota','M',59,2557,3753),
+('North Dakota','M',60,2411,3716), ('North Dakota','M',61,2403,3641),
+('North Dakota','M',62,2397,2755), ('North Dakota','M',63,2372,2806),
+('North Dakota','M',64,2279,2785), ('North Dakota','M',65,2324,2693),
+('North Dakota','M',66,2074,2360), ('North Dakota','M',67,2230,2201),
+('North Dakota','M',68,2115,2036), ('North Dakota','M',69,2066,2026),
+('North Dakota','M',70,2178,1984), ('North Dakota','M',71,2132,1900),
+('North Dakota','M',72,2080,1848), ('North Dakota','M',73,2069,1860),
+('North Dakota','M',74,1988,1592), ('North Dakota','M',75,1909,1738),
+('North Dakota','M',76,1721,1575), ('North Dakota','M',77,1554,1506),
+('North Dakota','M',78,1625,1551), ('North Dakota','M',79,1456,1436),
+('North Dakota','M',80,1355,1378), ('North Dakota','M',81,1192,1317),
+('North Dakota','M',82,1188,1234), ('North Dakota','M',83,1071,1133),
+('North Dakota','M',84,951,1027), ('North Dakota','M',85,4623,5774),
+('North Dakota','F',0,3700,4414), ('North Dakota','F',1,3733,4236),
+('North Dakota','F',2,3853,4099), ('North Dakota','F',3,3879,3852),
+('North Dakota','F',4,3968,3922), ('North Dakota','F',5,4012,3673),
+('North Dakota','F',6,4070,3652), ('North Dakota','F',7,4094,3580),
+('North Dakota','F',8,4217,3527), ('North Dakota','F',9,4402,3554),
+('North Dakota','F',10,4488,3661), ('North Dakota','F',11,4600,3725),
+('North Dakota','F',12,4408,3831), ('North Dakota','F',13,4630,3858),
+('North Dakota','F',14,4818,3957), ('North Dakota','F',15,5021,3999),
+('North Dakota','F',16,4983,4117), ('North Dakota','F',17,5107,4346),
+('North Dakota','F',18,5224,4798), ('North Dakota','F',19,5359,5936),
+('North Dakota','F',20,5395,5831), ('North Dakota','F',21,5159,5717),
+('North Dakota','F',22,4717,5763), ('North Dakota','F',23,4283,5139),
+('North Dakota','F',24,3791,4923), ('North Dakota','F',25,3821,4184),
+('North Dakota','F',26,3599,5024), ('North Dakota','F',27,3475,4093),
+('North Dakota','F',28,3585,3602), ('North Dakota','F',29,3598,3717),
+('North Dakota','F',30,3794,3176), ('North Dakota','F',31,3555,3473),
+('North Dakota','F',32,3518,3067), ('North Dakota','F',33,3666,3469),
+('North Dakota','F',34,3808,3377), ('North Dakota','F',35,4232,3348),
+('North Dakota','F',36,4406,3465), ('North Dakota','F',37,4740,3590),
+('North Dakota','F',38,4740,3625), ('North Dakota','F',39,4907,3514),
+('North Dakota','F',40,5081,3432), ('North Dakota','F',41,5105,3599),
+('North Dakota','F',42,5072,3666), ('North Dakota','F',43,5079,4068),
+('North Dakota','F',44,5019,4105), ('North Dakota','F',45,4959,4499),
+('North Dakota','F',46,4823,4549), ('North Dakota','F',47,4651,4701),
+('North Dakota','F',48,4404,4799), ('North Dakota','F',49,4275,4871),
+('North Dakota','F',50,3993,4841), ('North Dakota','F',51,3838,4832),
+('North Dakota','F',52,3698,4765), ('North Dakota','F',53,3854,4767),
+('North Dakota','F',54,3193,4544), ('North Dakota','F',55,3009,4395),
+('North Dakota','F',56,3017,4148), ('North Dakota','F',57,2985,4047),
+('North Dakota','F',58,2725,3654), ('North Dakota','F',59,2623,3615),
+('North Dakota','F',60,2532,3467), ('North Dakota','F',61,2549,3541),
+('North Dakota','F',62,2515,2981), ('North Dakota','F',63,2554,2753),
+('North Dakota','F',64,2513,2797), ('North Dakota','F',65,2516,2739),
+('North Dakota','F',66,2490,2479), ('North Dakota','F',67,2341,2379),
+('North Dakota','F',68,2488,2290), ('North Dakota','F',69,2381,2272),
+('North Dakota','F',70,2589,2231), ('North Dakota','F',71,2523,2226),
+('North Dakota','F',72,2444,2188), ('North Dakota','F',73,2342,2170),
+('North Dakota','F',74,2330,2109), ('North Dakota','F',75,2291,1982),
+('North Dakota','F',76,2205,2093), ('North Dakota','F',77,2156,1939),
+('North Dakota','F',78,2121,2075), ('North Dakota','F',79,2032,2020),
+('North Dakota','F',80,2007,1946), ('North Dakota','F',81,1811,1790),
+('North Dakota','F',82,1873,1838), ('North Dakota','F',83,1741,1723),
+('North Dakota','F',84,1658,1620), ('North Dakota','F',85,10223,11998),
 ('Ohio','M',0,76427,78012), ('Ohio','M',1,75867,77502),
 ('Ohio','M',2,76503,75206), ('Ohio','M',3,76428,74289),
 ('Ohio','M',4,79291,75660), ('Ohio','M',5,79656,74783),
@@ -3402,264 +3462,264 @@ Dakota','F',84,1658,1620), ('North Dakota','F',85,10223,11998),
 ('Pennsylvania','F',80,44407,42571), ('Pennsylvania','F',81,39486,40168),
 ('Pennsylvania','F',82,37997,39015), ('Pennsylvania','F',83,34028,37870),
 ('Pennsylvania','F',84,31652,35142), ('Pennsylvania','F',85,173095,215482),
-('Rhode Island','M',0,6267,6464), ('Rhode Island','M',1,6420,6290), ('Rhode
-Island','M',2,6614,6077), ('Rhode Island','M',3,6581,5885), ('Rhode
-Island','M',4,6740,6410), ('Rhode Island','M',5,7030,6173), ('Rhode
-Island','M',6,7163,6159), ('Rhode Island','M',7,7356,6283), ('Rhode
-Island','M',8,7537,6103), ('Rhode Island','M',9,7702,6163), ('Rhode
-Island','M',10,7854,6421), ('Rhode Island','M',11,7523,6411), ('Rhode
-Island','M',12,7256,6557), ('Rhode Island','M',13,7234,6791), ('Rhode
-Island','M',14,7060,6912), ('Rhode Island','M',15,7108,7094), ('Rhode
-Island','M',16,6947,7290), ('Rhode Island','M',17,6940,7486), ('Rhode
-Island','M',18,8195,9187), ('Rhode Island','M',19,9023,9044), ('Rhode
-Island','M',20,8540,8913), ('Rhode Island','M',21,7883,8505), ('Rhode
-Island','M',22,6987,7324), ('Rhode Island','M',23,6157,7177), ('Rhode
-Island','M',24,5778,6614), ('Rhode Island','M',25,5990,7221), ('Rhode
-Island','M',26,5794,6311), ('Rhode Island','M',27,6049,7167), ('Rhode
-Island','M',28,6429,6645), ('Rhode Island','M',29,6798,5741), ('Rhode
-Island','M',30,7323,6831), ('Rhode Island','M',31,6983,5953), ('Rhode
-Island','M',32,7243,5937), ('Rhode Island','M',33,7107,6042), ('Rhode
-Island','M',34,7664,5866), ('Rhode Island','M',35,8052,6134), ('Rhode
-Island','M',36,8213,6669), ('Rhode Island','M',37,8061,6853), ('Rhode
-Island','M',38,8362,7354), ('Rhode Island','M',39,8375,6734), ('Rhode
-Island','M',40,8416,7248), ('Rhode Island','M',41,8285,6955), ('Rhode
-Island','M',42,8393,7569), ('Rhode Island','M',43,8083,7888), ('Rhode
-Island','M',44,7997,7890), ('Rhode Island','M',45,8073,7952), ('Rhode
-Island','M',46,7549,8020), ('Rhode Island','M',47,7252,8126), ('Rhode
-Island','M',48,7057,8157), ('Rhode Island','M',49,6851,7827), ('Rhode
-Island','M',50,7024,8109), ('Rhode Island','M',51,6739,7591), ('Rhode
-Island','M',52,6594,7552), ('Rhode Island','M',53,7262,7580), ('Rhode
-Island','M',54,5312,7260), ('Rhode Island','M',55,5224,6870), ('Rhode
-Island','M',56,5038,6496), ('Rhode Island','M',57,5398,6375), ('Rhode
-Island','M',58,4511,6416), ('Rhode Island','M',59,4010,6133), ('Rhode
-Island','M',60,4007,5978), ('Rhode Island','M',61,3824,6543), ('Rhode
-Island','M',62,3734,4721), ('Rhode Island','M',63,3446,4581), ('Rhode
-Island','M',64,3386,4322), ('Rhode Island','M',65,3433,4639), ('Rhode
-Island','M',66,3241,3789), ('Rhode Island','M',67,3232,3338), ('Rhode
-Island','M',68,3082,3275), ('Rhode Island','M',69,3361,3089), ('Rhode
-Island','M',70,3193,3029), ('Rhode Island','M',71,3231,2715), ('Rhode
-Island','M',72,3314,2699), ('Rhode Island','M',73,3229,2690), ('Rhode
-Island','M',74,3150,2442), ('Rhode Island','M',75,3053,2382), ('Rhode
-Island','M',76,2847,2215), ('Rhode Island','M',77,2721,2385), ('Rhode
-Island','M',78,2587,2165), ('Rhode Island','M',79,2443,2113), ('Rhode
-Island','M',80,2156,2037), ('Rhode Island','M',81,1854,1984), ('Rhode
-Island','M',82,1772,1776), ('Rhode Island','M',83,1437,1670), ('Rhode
-Island','M',84,1248,1467), ('Rhode Island','M',85,5500,7775), ('Rhode
-Island','F',0,6090,6149), ('Rhode Island','F',1,6297,5974), ('Rhode
-Island','F',2,6229,5856), ('Rhode Island','F',3,6282,5738), ('Rhode
-Island','F',4,6430,6091), ('Rhode Island','F',5,6752,5896), ('Rhode
-Island','F',6,6835,5741), ('Rhode Island','F',7,6978,5787), ('Rhode
-Island','F',8,7047,5884), ('Rhode Island','F',9,7273,6115), ('Rhode
-Island','F',10,7506,6039), ('Rhode Island','F',11,6937,6126), ('Rhode
-Island','F',12,6990,6204), ('Rhode Island','F',13,6794,6555), ('Rhode
-Island','F',14,6537,6662), ('Rhode Island','F',15,6708,6827), ('Rhode
-Island','F',16,6499,6862), ('Rhode Island','F',17,6603,7065), ('Rhode
-Island','F',18,8114,9162), ('Rhode Island','F',19,9361,9453), ('Rhode
-Island','F',20,8797,8735), ('Rhode Island','F',21,8339,8631), ('Rhode
-Island','F',22,7013,7324), ('Rhode Island','F',23,6275,7045), ('Rhode
-Island','F',24,5932,6568), ('Rhode Island','F',25,6051,6938), ('Rhode
-Island','F',26,6139,6494), ('Rhode Island','F',27,6179,6216), ('Rhode
-Island','F',28,6889,7010), ('Rhode Island','F',29,7398,6481), ('Rhode
-Island','F',30,7848,6688), ('Rhode Island','F',31,7575,6132), ('Rhode
-Island','F',32,7561,6210), ('Rhode Island','F',33,7749,6034), ('Rhode
-Island','F',34,7988,6326), ('Rhode Island','F',35,8540,6181), ('Rhode
-Island','F',36,8612,6849), ('Rhode Island','F',37,8600,7413), ('Rhode
-Island','F',38,8734,7680), ('Rhode Island','F',39,8862,7704), ('Rhode
-Island','F',40,8873,7322), ('Rhode Island','F',41,8902,7601), ('Rhode
-Island','F',42,8769,7679), ('Rhode Island','F',43,8695,8398), ('Rhode
-Island','F',44,8331,8363), ('Rhode Island','F',45,8535,8266), ('Rhode
-Island','F',46,7985,8408), ('Rhode Island','F',47,7734,8582), ('Rhode
-Island','F',48,7544,8474), ('Rhode Island','F',49,7144,8670), ('Rhode
-Island','F',50,7106,8533), ('Rhode Island','F',51,6922,8187), ('Rhode
-Island','F',52,6996,7975), ('Rhode Island','F',53,7586,8123), ('Rhode
-Island','F',54,5513,7692), ('Rhode Island','F',55,5471,7366), ('Rhode
-Island','F',56,5406,7242), ('Rhode Island','F',57,5818,6639), ('Rhode
-Island','F',58,4887,6517), ('Rhode Island','F',59,4546,6422), ('Rhode
-Island','F',60,4414,6429), ('Rhode Island','F',61,4139,7040), ('Rhode
-Island','F',62,4227,5075), ('Rhode Island','F',63,4027,4900), ('Rhode
-Island','F',64,3999,4791), ('Rhode Island','F',65,3941,5285), ('Rhode
-Island','F',66,3690,4332), ('Rhode Island','F',67,3975,4018), ('Rhode
-Island','F',68,3833,3892), ('Rhode Island','F',69,4085,3623), ('Rhode
-Island','F',70,4259,3657), ('Rhode Island','F',71,4169,3473), ('Rhode
-Island','F',72,4353,3484), ('Rhode Island','F',73,4353,3403), ('Rhode
-Island','F',74,4297,3107), ('Rhode Island','F',75,4356,3322), ('Rhode
-Island','F',76,4164,3127), ('Rhode Island','F',77,4124,3276), ('Rhode
-Island','F',78,4026,3371), ('Rhode Island','F',79,3757,3170), ('Rhode
-Island','F',80,3539,3285), ('Rhode Island','F',81,3245,3151), ('Rhode
-Island','F',82,3202,3040), ('Rhode Island','F',83,2832,2990), ('Rhode
-Island','F',84,2611,2740), ('Rhode Island','F',85,15590,18226), ('South
-Carolina','M',0,27869,31229), ('South Carolina','M',1,26890,32115), ('South
-Carolina','M',2,27298,31260), ('South Carolina','M',3,26782,30390), ('South
-Carolina','M',4,26942,30133), ('South Carolina','M',5,27728,29450), ('South
-Carolina','M',6,27895,29840), ('South Carolina','M',7,29079,30199), ('South
-Carolina','M',8,29535,29898), ('South Carolina','M',9,30942,28788), ('South
-Carolina','M',10,31664,29321), ('South Carolina','M',11,30364,28947), ('South
-Carolina','M',12,28978,29061), ('South Carolina','M',13,28956,29898), ('South
-Carolina','M',14,28810,29976), ('South Carolina','M',15,29317,31115), ('South
-Carolina','M',16,28679,31252), ('South Carolina','M',17,28790,32480), ('South
-Carolina','M',18,29176,32824), ('South Carolina','M',19,29729,31139), ('South
-Carolina','M',20,29449,29422), ('South Carolina','M',21,27988,29884), ('South
-Carolina','M',22,26552,29395), ('South Carolina','M',23,26096,29299), ('South
-Carolina','M',24,24190,29018), ('South Carolina','M',25,25675,28903), ('South
-Carolina','M',26,25378,28321), ('South Carolina','M',27,25900,29390), ('South
-Carolina','M',28,26954,29948), ('South Carolina','M',29,28309,28278), ('South
-Carolina','M',30,28935,27300), ('South Carolina','M',31,27247,27910), ('South
-Carolina','M',32,26656,25654), ('South Carolina','M',33,26373,27236), ('South
-Carolina','M',34,27527,26937), ('South Carolina','M',35,29854,27791), ('South
-Carolina','M',36,30720,29183), ('South Carolina','M',37,29823,30541), ('South
-Carolina','M',38,29866,30378), ('South Carolina','M',39,30180,28770), ('South
-Carolina','M',40,31046,28316), ('South Carolina','M',41,29857,27809), ('South
-Carolina','M',42,30272,29171), ('South Carolina','M',43,30125,31280), ('South
-Carolina','M',44,28787,32195), ('South Carolina','M',45,29690,31328), ('South
-Carolina','M',46,28446,31242), ('South Carolina','M',47,27593,31485), ('South
-Carolina','M',48,26970,32262), ('South Carolina','M',49,26507,30841), ('South
-Carolina','M',50,26936,30958), ('South Carolina','M',51,26324,30947), ('South
-Carolina','M',52,26330,29533), ('South Carolina','M',53,27660,29967), ('South
-Carolina','M',54,20965,28952), ('South Carolina','M',55,21366,27992), ('South
-Carolina','M',56,20706,27572), ('South Carolina','M',57,21053,27348), ('South
-Carolina','M',58,18908,27561), ('South Carolina','M',59,17955,26947), ('South
-Carolina','M',60,17484,27196), ('South Carolina','M',61,16156,27866), ('South
-Carolina','M',62,15580,21434), ('South Carolina','M',63,14679,21879), ('South
-Carolina','M',64,14803,21114), ('South Carolina','M',65,15195,20832), ('South
-Carolina','M',66,13641,18352), ('South Carolina','M',67,13369,16854), ('South
-Carolina','M',68,12553,16315), ('South Carolina','M',69,12226,14681), ('South
-Carolina','M',70,12104,13938), ('South Carolina','M',71,11186,12595), ('South
-Carolina','M',72,10956,12392), ('South Carolina','M',73,10145,12492), ('South
-Carolina','M',74,9678,10987), ('South Carolina','M',75,9457,10600), ('South
-Carolina','M',76,8829,9705), ('South Carolina','M',77,8065,9294), ('South
-Carolina','M',78,7525,8853), ('South Carolina','M',79,6751,8010), ('South
-Carolina','M',80,6183,7647), ('South Carolina','M',81,5043,6671), ('South
-Carolina','M',82,4434,6189), ('South Carolina','M',83,3805,5636), ('South
-Carolina','M',84,3212,5156), ('South Carolina','M',85,13358,24244), ('South
-Carolina','F',0,26650,29854), ('South Carolina','F',1,25719,30618), ('South
-Carolina','F',2,25320,29975), ('South Carolina','F',3,25168,28819), ('South
-Carolina','F',4,25910,28631), ('South Carolina','F',5,26111,28265), ('South
-Carolina','F',6,26657,28644), ('South Carolina','F',7,27854,29096), ('South
-Carolina','F',8,28798,28621), ('South Carolina','F',9,29225,27657), ('South
-Carolina','F',10,30192,27283), ('South Carolina','F',11,29130,26969), ('South
-Carolina','F',12,28295,27841), ('South Carolina','F',13,27606,28025), ('South
-Carolina','F',14,27841,28557), ('South Carolina','F',15,27808,29722), ('South
-Carolina','F',16,27380,30711), ('South Carolina','F',17,27647,31086), ('South
-Carolina','F',18,29371,32368), ('South Carolina','F',19,30774,31360), ('South
-Carolina','F',20,29734,29010), ('South Carolina','F',21,28404,28846), ('South
-Carolina','F',22,27272,28814), ('South Carolina','F',23,26493,28918), ('South
-Carolina','F',24,24977,28343), ('South Carolina','F',25,26072,28952), ('South
-Carolina','F',26,25968,29297), ('South Carolina','F',27,26932,30346), ('South
-Carolina','F',28,28126,31337), ('South Carolina','F',29,29551,29578), ('South
-Carolina','F',30,29490,29034), ('South Carolina','F',31,28279,28015), ('South
-Carolina','F',32,27696,26924), ('South Carolina','F',33,27832,27734), ('South
-Carolina','F',34,29307,27706), ('South Carolina','F',35,31047,28486), ('South
-Carolina','F',36,32496,30244), ('South Carolina','F',37,31479,31651), ('South
-Carolina','F',38,31831,31249), ('South Carolina','F',39,31923,30255), ('South
-Carolina','F',40,32765,29651), ('South Carolina','F',41,31489,29410), ('South
-Carolina','F',42,32025,31322), ('South Carolina','F',43,32264,32788), ('South
-Carolina','F',44,31105,34387), ('South Carolina','F',45,31470,33250), ('South
-Carolina','F',46,30553,33508), ('South Carolina','F',47,30130,33408), ('South
-Carolina','F',48,29062,34403), ('South Carolina','F',49,28571,32974), ('South
-Carolina','F',50,28869,33470), ('South Carolina','F',51,27639,33838), ('South
-Carolina','F',52,28190,32544), ('South Carolina','F',53,29802,32988), ('South
-Carolina','F',54,22564,32250), ('South Carolina','F',55,22558,32140), ('South
-Carolina','F',56,22084,30747), ('South Carolina','F',57,22982,30732), ('South
-Carolina','F',58,20724,30767), ('South Carolina','F',59,19717,29635), ('South
-Carolina','F',60,18896,30658), ('South Carolina','F',61,17745,31289), ('South
-Carolina','F',62,17567,24134), ('South Carolina','F',63,16963,23894), ('South
-Carolina','F',64,17045,23479), ('South Carolina','F',65,17168,23672), ('South
-Carolina','F',66,15967,20913), ('South Carolina','F',67,15793,19468), ('South
-Carolina','F',68,15359,18498), ('South Carolina','F',69,14502,17133), ('South
-Carolina','F',70,14708,16652), ('South Carolina','F',71,14189,15742), ('South
-Carolina','F',72,14335,15562), ('South Carolina','F',73,13788,15399), ('South
-Carolina','F',74,13539,14129), ('South Carolina','F',75,13555,13845), ('South
-Carolina','F',76,12935,13508), ('South Carolina','F',77,12191,12551), ('South
-Carolina','F',78,11689,12328), ('South Carolina','F',79,10984,11664), ('South
-Carolina','F',80,10610,11545), ('South Carolina','F',81,8738,10784), ('South
-Carolina','F',82,8086,10163), ('South Carolina','F',83,7365,9861), ('South
-Carolina','F',84,6741,9075), ('South Carolina','F',85,37523,52360), ('South
-Dakota','M',0,5312,6302), ('South Dakota','M',1,5306,6136), ('South
-Dakota','M',2,5063,5806), ('South Dakota','M',3,5199,5811), ('South
-Dakota','M',4,5228,5692), ('South Dakota','M',5,5261,5452), ('South
-Dakota','M',6,5487,5291), ('South Dakota','M',7,5501,5261), ('South
-Dakota','M',8,5751,5368), ('South Dakota','M',9,5854,5495), ('South
-Dakota','M',10,5986,5186), ('South Dakota','M',11,6044,5361), ('South
-Dakota','M',12,5906,5445), ('South Dakota','M',13,6136,5398), ('South
-Dakota','M',14,6478,5707), ('South Dakota','M',15,6518,5718), ('South
-Dakota','M',16,6393,5948), ('South Dakota','M',17,6456,6041), ('South
-Dakota','M',18,6621,5617), ('South Dakota','M',19,6192,6114), ('South
-Dakota','M',20,6088,6198), ('South Dakota','M',21,5528,5962), ('South
-Dakota','M',22,5083,6046), ('South Dakota','M',23,5112,6133), ('South
-Dakota','M',24,4705,6005), ('South Dakota','M',25,4592,5180), ('South
-Dakota','M',26,4275,6331), ('South Dakota','M',27,4230,5849), ('South
-Dakota','M',28,4537,5292), ('South Dakota','M',29,4674,5223), ('South
-Dakota','M',30,4749,4764), ('South Dakota','M',31,4566,4848), ('South
-Dakota','M',32,4419,4431), ('South Dakota','M',33,4502,4761), ('South
-Dakota','M',34,4739,4342), ('South Dakota','M',35,5030,4289), ('South
-Dakota','M',36,5441,4647), ('South Dakota','M',37,5732,4844), ('South
-Dakota','M',38,5778,4837), ('South Dakota','M',39,5760,4690), ('South
-Dakota','M',40,5922,4649), ('South Dakota','M',41,5758,4543), ('South
-Dakota','M',42,5961,4920), ('South Dakota','M',43,5892,5150), ('South
-Dakota','M',44,5900,5534), ('South Dakota','M',45,5699,5843), ('South
-Dakota','M',46,5770,5890), ('South Dakota','M',47,5505,5942), ('South
-Dakota','M',48,5391,5956), ('South Dakota','M',49,5114,5917), ('South
-Dakota','M',50,5032,5970), ('South Dakota','M',51,4759,5902), ('South
-Dakota','M',52,4591,5897), ('South Dakota','M',53,4646,5674), ('South
-Dakota','M',54,3564,5791), ('South Dakota','M',55,3501,5473), ('South
-Dakota','M',56,3432,5428), ('South Dakota','M',57,3590,5149), ('South
-Dakota','M',58,3205,5082), ('South Dakota','M',59,3033,4890), ('South
-Dakota','M',60,2944,4761), ('South Dakota','M',61,2777,4770), ('South
-Dakota','M',62,2694,3696), ('South Dakota','M',63,2768,3619), ('South
-Dakota','M',64,2814,3638), ('South Dakota','M',65,2620,3604), ('South
-Dakota','M',66,2495,3182), ('South Dakota','M',67,2446,2952), ('South
-Dakota','M',68,2543,2815), ('South Dakota','M',69,2470,2612), ('South
-Dakota','M',70,2531,2432), ('South Dakota','M',71,2485,2450), ('South
-Dakota','M',72,2435,2396), ('South Dakota','M',73,2321,2253), ('South
-Dakota','M',74,2213,2069), ('South Dakota','M',75,2212,1967), ('South
-Dakota','M',76,2253,1921), ('South Dakota','M',77,1934,1912), ('South
-Dakota','M',78,1817,1897), ('South Dakota','M',79,1706,1782), ('South
-Dakota','M',80,1613,1693), ('South Dakota','M',81,1401,1553), ('South
-Dakota','M',82,1264,1416), ('South Dakota','M',83,1115,1353), ('South
-Dakota','M',84,996,1344), ('South Dakota','M',85,4796,6732), ('South
-Dakota','F',0,5016,6066), ('South Dakota','F',1,4977,5990), ('South
-Dakota','F',2,4888,5618), ('South Dakota','F',3,4964,5621), ('South
-Dakota','F',4,5061,5524), ('South Dakota','F',5,5013,5285), ('South
-Dakota','F',6,5124,5115), ('South Dakota','F',7,5315,5141), ('South
-Dakota','F',8,5441,5032), ('South Dakota','F',9,5416,5071), ('South
-Dakota','F',10,5732,5019), ('South Dakota','F',11,5719,5090), ('South
-Dakota','F',12,5824,5246), ('South Dakota','F',13,5871,5182), ('South
-Dakota','F',14,5891,5300), ('South Dakota','F',15,6032,5455), ('South
-Dakota','F',16,6194,5637), ('South Dakota','F',17,6155,5499), ('South
-Dakota','F',18,5994,5390), ('South Dakota','F',19,5922,5898), ('South
-Dakota','F',20,6019,6020), ('South Dakota','F',21,5446,5923), ('South
-Dakota','F',22,5112,5699), ('South Dakota','F',23,4737,5398), ('South
-Dakota','F',24,4352,5399), ('South Dakota','F',25,4377,4972), ('South
-Dakota','F',26,4236,5823), ('South Dakota','F',27,4105,5173), ('South
-Dakota','F',28,4366,5371), ('South Dakota','F',29,4712,4640), ('South
-Dakota','F',30,4501,4713), ('South Dakota','F',31,4496,4542), ('South
-Dakota','F',32,4271,4455), ('South Dakota','F',33,4397,4343), ('South
-Dakota','F',34,4738,4395), ('South Dakota','F',35,5161,4122), ('South
-Dakota','F',36,5470,4462), ('South Dakota','F',37,5620,4906), ('South
-Dakota','F',38,5727,4497), ('South Dakota','F',39,5963,4641), ('South
-Dakota','F',40,6013,4362), ('South Dakota','F',41,5842,4583), ('South
-Dakota','F',42,5757,4891), ('South Dakota','F',43,5807,5216), ('South
-Dakota','F',44,5748,5535), ('South Dakota','F',45,5607,5676), ('South
-Dakota','F',46,5542,5806), ('South Dakota','F',47,5256,6048), ('South
-Dakota','F',48,5244,6058), ('South Dakota','F',49,4943,5850), ('South
-Dakota','F',50,4731,5712), ('South Dakota','F',51,4537,6007), ('South
-Dakota','F',52,4363,5882), ('South Dakota','F',53,4448,5728), ('South
-Dakota','F',54,3487,5772), ('South Dakota','F',55,3459,5458), ('South
-Dakota','F',56,3654,5443), ('South Dakota','F',57,3605,5184), ('South
-Dakota','F',58,3249,4944), ('South Dakota','F',59,3064,4699), ('South
-Dakota','F',60,3033,4640), ('South Dakota','F',61,3077,4600), ('South
-Dakota','F',62,2964,3717), ('South Dakota','F',63,2916,3610), ('South
-Dakota','F',64,2868,3898), ('South Dakota','F',65,2876,3745), ('South
-Dakota','F',66,2795,3273), ('South Dakota','F',67,2833,3059), ('South
-Dakota','F',68,2940,2946), ('South Dakota','F',69,2986,2924), ('South
-Dakota','F',70,2860,2756), ('South Dakota','F',71,2841,2663), ('South
-Dakota','F',72,2713,2543), ('South Dakota','F',73,2811,2538), ('South
-Dakota','F',74,2716,2469), ('South Dakota','F',75,2579,2453), ('South
-Dakota','F',76,2594,2557), ('South Dakota','F',77,2494,2572), ('South
-Dakota','F',78,2514,2401), ('South Dakota','F',79,2417,2355), ('South
-Dakota','F',80,2261,2240), ('South Dakota','F',81,2118,2272), ('South
-Dakota','F',82,2017,2146), ('South Dakota','F',83,1969,1977), ('South
-Dakota','F',84,1741,1963), ('South Dakota','F',85,11427,13913),
+('Rhode Island','M',0,6267,6464), ('Rhode Island','M',1,6420,6290),
+('Rhode Island','M',2,6614,6077), ('Rhode Island','M',3,6581,5885),
+('Rhode Island','M',4,6740,6410), ('Rhode Island','M',5,7030,6173),
+('Rhode Island','M',6,7163,6159), ('Rhode Island','M',7,7356,6283),
+('Rhode Island','M',8,7537,6103), ('Rhode Island','M',9,7702,6163),
+('Rhode Island','M',10,7854,6421), ('Rhode Island','M',11,7523,6411),
+('Rhode Island','M',12,7256,6557), ('Rhode Island','M',13,7234,6791),
+('Rhode Island','M',14,7060,6912), ('Rhode Island','M',15,7108,7094),
+('Rhode Island','M',16,6947,7290), ('Rhode Island','M',17,6940,7486),
+('Rhode Island','M',18,8195,9187), ('Rhode Island','M',19,9023,9044),
+('Rhode Island','M',20,8540,8913), ('Rhode Island','M',21,7883,8505),
+('Rhode Island','M',22,6987,7324), ('Rhode Island','M',23,6157,7177),
+('Rhode Island','M',24,5778,6614), ('Rhode Island','M',25,5990,7221),
+('Rhode Island','M',26,5794,6311), ('Rhode Island','M',27,6049,7167),
+('Rhode Island','M',28,6429,6645), ('Rhode Island','M',29,6798,5741),
+('Rhode Island','M',30,7323,6831), ('Rhode Island','M',31,6983,5953),
+('Rhode Island','M',32,7243,5937), ('Rhode Island','M',33,7107,6042),
+('Rhode Island','M',34,7664,5866), ('Rhode Island','M',35,8052,6134),
+('Rhode Island','M',36,8213,6669), ('Rhode Island','M',37,8061,6853),
+('Rhode Island','M',38,8362,7354), ('Rhode Island','M',39,8375,6734),
+('Rhode Island','M',40,8416,7248), ('Rhode Island','M',41,8285,6955),
+('Rhode Island','M',42,8393,7569), ('Rhode Island','M',43,8083,7888),
+('Rhode Island','M',44,7997,7890), ('Rhode Island','M',45,8073,7952),
+('Rhode Island','M',46,7549,8020), ('Rhode Island','M',47,7252,8126),
+('Rhode Island','M',48,7057,8157), ('Rhode Island','M',49,6851,7827),
+('Rhode Island','M',50,7024,8109), ('Rhode Island','M',51,6739,7591),
+('Rhode Island','M',52,6594,7552), ('Rhode Island','M',53,7262,7580),
+('Rhode Island','M',54,5312,7260), ('Rhode Island','M',55,5224,6870),
+('Rhode Island','M',56,5038,6496), ('Rhode Island','M',57,5398,6375),
+('Rhode Island','M',58,4511,6416), ('Rhode Island','M',59,4010,6133),
+('Rhode Island','M',60,4007,5978), ('Rhode Island','M',61,3824,6543),
+('Rhode Island','M',62,3734,4721), ('Rhode Island','M',63,3446,4581),
+('Rhode Island','M',64,3386,4322), ('Rhode Island','M',65,3433,4639),
+('Rhode Island','M',66,3241,3789), ('Rhode Island','M',67,3232,3338),
+('Rhode Island','M',68,3082,3275), ('Rhode Island','M',69,3361,3089),
+('Rhode Island','M',70,3193,3029), ('Rhode Island','M',71,3231,2715),
+('Rhode Island','M',72,3314,2699), ('Rhode Island','M',73,3229,2690),
+('Rhode Island','M',74,3150,2442), ('Rhode Island','M',75,3053,2382),
+('Rhode Island','M',76,2847,2215), ('Rhode Island','M',77,2721,2385),
+('Rhode Island','M',78,2587,2165), ('Rhode Island','M',79,2443,2113),
+('Rhode Island','M',80,2156,2037), ('Rhode Island','M',81,1854,1984),
+('Rhode Island','M',82,1772,1776), ('Rhode Island','M',83,1437,1670),
+('Rhode Island','M',84,1248,1467), ('Rhode Island','M',85,5500,7775),
+('Rhode Island','F',0,6090,6149), ('Rhode Island','F',1,6297,5974),
+('Rhode Island','F',2,6229,5856), ('Rhode Island','F',3,6282,5738),
+('Rhode Island','F',4,6430,6091), ('Rhode Island','F',5,6752,5896),
+('Rhode Island','F',6,6835,5741), ('Rhode Island','F',7,6978,5787),
+('Rhode Island','F',8,7047,5884), ('Rhode Island','F',9,7273,6115),
+('Rhode Island','F',10,7506,6039), ('Rhode Island','F',11,6937,6126),
+('Rhode Island','F',12,6990,6204), ('Rhode Island','F',13,6794,6555),
+('Rhode Island','F',14,6537,6662), ('Rhode Island','F',15,6708,6827),
+('Rhode Island','F',16,6499,6862), ('Rhode Island','F',17,6603,7065),
+('Rhode Island','F',18,8114,9162), ('Rhode Island','F',19,9361,9453),
+('Rhode Island','F',20,8797,8735), ('Rhode Island','F',21,8339,8631),
+('Rhode Island','F',22,7013,7324), ('Rhode Island','F',23,6275,7045),
+('Rhode Island','F',24,5932,6568), ('Rhode Island','F',25,6051,6938),
+('Rhode Island','F',26,6139,6494), ('Rhode Island','F',27,6179,6216),
+('Rhode Island','F',28,6889,7010), ('Rhode Island','F',29,7398,6481),
+('Rhode Island','F',30,7848,6688), ('Rhode Island','F',31,7575,6132),
+('Rhode Island','F',32,7561,6210), ('Rhode Island','F',33,7749,6034),
+('Rhode Island','F',34,7988,6326), ('Rhode Island','F',35,8540,6181),
+('Rhode Island','F',36,8612,6849), ('Rhode Island','F',37,8600,7413),
+('Rhode Island','F',38,8734,7680), ('Rhode Island','F',39,8862,7704),
+('Rhode Island','F',40,8873,7322), ('Rhode Island','F',41,8902,7601),
+('Rhode Island','F',42,8769,7679), ('Rhode Island','F',43,8695,8398),
+('Rhode Island','F',44,8331,8363), ('Rhode Island','F',45,8535,8266),
+('Rhode Island','F',46,7985,8408), ('Rhode Island','F',47,7734,8582),
+('Rhode Island','F',48,7544,8474), ('Rhode Island','F',49,7144,8670),
+('Rhode Island','F',50,7106,8533), ('Rhode Island','F',51,6922,8187),
+('Rhode Island','F',52,6996,7975), ('Rhode Island','F',53,7586,8123),
+('Rhode Island','F',54,5513,7692), ('Rhode Island','F',55,5471,7366),
+('Rhode Island','F',56,5406,7242), ('Rhode Island','F',57,5818,6639),
+('Rhode Island','F',58,4887,6517), ('Rhode Island','F',59,4546,6422),
+('Rhode Island','F',60,4414,6429), ('Rhode Island','F',61,4139,7040),
+('Rhode Island','F',62,4227,5075), ('Rhode Island','F',63,4027,4900),
+('Rhode Island','F',64,3999,4791), ('Rhode Island','F',65,3941,5285),
+('Rhode Island','F',66,3690,4332), ('Rhode Island','F',67,3975,4018),
+('Rhode Island','F',68,3833,3892), ('Rhode Island','F',69,4085,3623),
+('Rhode Island','F',70,4259,3657), ('Rhode Island','F',71,4169,3473),
+('Rhode Island','F',72,4353,3484), ('Rhode Island','F',73,4353,3403),
+('Rhode Island','F',74,4297,3107), ('Rhode Island','F',75,4356,3322),
+('Rhode Island','F',76,4164,3127), ('Rhode Island','F',77,4124,3276),
+('Rhode Island','F',78,4026,3371), ('Rhode Island','F',79,3757,3170),
+('Rhode Island','F',80,3539,3285), ('Rhode Island','F',81,3245,3151),
+('Rhode Island','F',82,3202,3040), ('Rhode Island','F',83,2832,2990),
+('Rhode Island','F',84,2611,2740), ('Rhode Island','F',85,15590,18226),
+('South Carolina','M',0,27869,31229), ('South Carolina','M',1,26890,32115),
+('South Carolina','M',2,27298,31260), ('South Carolina','M',3,26782,30390),
+('South Carolina','M',4,26942,30133), ('South Carolina','M',5,27728,29450),
+('South Carolina','M',6,27895,29840), ('South Carolina','M',7,29079,30199),
+('South Carolina','M',8,29535,29898), ('South Carolina','M',9,30942,28788),
+('South Carolina','M',10,31664,29321), ('South Carolina','M',11,30364,28947),
+('South Carolina','M',12,28978,29061), ('South Carolina','M',13,28956,29898),
+('South Carolina','M',14,28810,29976), ('South Carolina','M',15,29317,31115),
+('South Carolina','M',16,28679,31252), ('South Carolina','M',17,28790,32480),
+('South Carolina','M',18,29176,32824), ('South Carolina','M',19,29729,31139),
+('South Carolina','M',20,29449,29422), ('South Carolina','M',21,27988,29884),
+('South Carolina','M',22,26552,29395), ('South Carolina','M',23,26096,29299),
+('South Carolina','M',24,24190,29018), ('South Carolina','M',25,25675,28903),
+('South Carolina','M',26,25378,28321), ('South Carolina','M',27,25900,29390),
+('South Carolina','M',28,26954,29948), ('South Carolina','M',29,28309,28278),
+('South Carolina','M',30,28935,27300), ('South Carolina','M',31,27247,27910),
+('South Carolina','M',32,26656,25654), ('South Carolina','M',33,26373,27236),
+('South Carolina','M',34,27527,26937), ('South Carolina','M',35,29854,27791),
+('South Carolina','M',36,30720,29183), ('South Carolina','M',37,29823,30541),
+('South Carolina','M',38,29866,30378), ('South Carolina','M',39,30180,28770),
+('South Carolina','M',40,31046,28316), ('South Carolina','M',41,29857,27809),
+('South Carolina','M',42,30272,29171), ('South Carolina','M',43,30125,31280),
+('South Carolina','M',44,28787,32195), ('South Carolina','M',45,29690,31328),
+('South Carolina','M',46,28446,31242), ('South Carolina','M',47,27593,31485),
+('South Carolina','M',48,26970,32262), ('South Carolina','M',49,26507,30841),
+('South Carolina','M',50,26936,30958), ('South Carolina','M',51,26324,30947),
+('South Carolina','M',52,26330,29533), ('South Carolina','M',53,27660,29967),
+('South Carolina','M',54,20965,28952), ('South Carolina','M',55,21366,27992),
+('South Carolina','M',56,20706,27572), ('South Carolina','M',57,21053,27348),
+('South Carolina','M',58,18908,27561), ('South Carolina','M',59,17955,26947),
+('South Carolina','M',60,17484,27196), ('South Carolina','M',61,16156,27866),
+('South Carolina','M',62,15580,21434), ('South Carolina','M',63,14679,21879),
+('South Carolina','M',64,14803,21114), ('South Carolina','M',65,15195,20832),
+('South Carolina','M',66,13641,18352), ('South Carolina','M',67,13369,16854),
+('South Carolina','M',68,12553,16315), ('South Carolina','M',69,12226,14681),
+('South Carolina','M',70,12104,13938), ('South Carolina','M',71,11186,12595),
+('South Carolina','M',72,10956,12392), ('South Carolina','M',73,10145,12492),
+('South Carolina','M',74,9678,10987), ('South Carolina','M',75,9457,10600),
+('South Carolina','M',76,8829,9705), ('South Carolina','M',77,8065,9294),
+('South Carolina','M',78,7525,8853), ('South Carolina','M',79,6751,8010),
+('South Carolina','M',80,6183,7647), ('South Carolina','M',81,5043,6671),
+('South Carolina','M',82,4434,6189), ('South Carolina','M',83,3805,5636),
+('South Carolina','M',84,3212,5156), ('South Carolina','M',85,13358,24244),
+('South Carolina','F',0,26650,29854), ('South Carolina','F',1,25719,30618),
+('South Carolina','F',2,25320,29975), ('South Carolina','F',3,25168,28819),
+('South Carolina','F',4,25910,28631), ('South Carolina','F',5,26111,28265),
+('South Carolina','F',6,26657,28644), ('South Carolina','F',7,27854,29096),
+('South Carolina','F',8,28798,28621), ('South Carolina','F',9,29225,27657),
+('South Carolina','F',10,30192,27283), ('South Carolina','F',11,29130,26969),
+('South Carolina','F',12,28295,27841), ('South Carolina','F',13,27606,28025),
+('South Carolina','F',14,27841,28557), ('South Carolina','F',15,27808,29722),
+('South Carolina','F',16,27380,30711), ('South Carolina','F',17,27647,31086),
+('South Carolina','F',18,29371,32368), ('South Carolina','F',19,30774,31360),
+('South Carolina','F',20,29734,29010), ('South Carolina','F',21,28404,28846),
+('South Carolina','F',22,27272,28814), ('South Carolina','F',23,26493,28918),
+('South Carolina','F',24,24977,28343), ('South Carolina','F',25,26072,28952),
+('South Carolina','F',26,25968,29297), ('South Carolina','F',27,26932,30346),
+('South Carolina','F',28,28126,31337), ('South Carolina','F',29,29551,29578),
+('South Carolina','F',30,29490,29034), ('South Carolina','F',31,28279,28015),
+('South Carolina','F',32,27696,26924), ('South Carolina','F',33,27832,27734),
+('South Carolina','F',34,29307,27706), ('South Carolina','F',35,31047,28486),
+('South Carolina','F',36,32496,30244), ('South Carolina','F',37,31479,31651),
+('South Carolina','F',38,31831,31249), ('South Carolina','F',39,31923,30255),
+('South Carolina','F',40,32765,29651), ('South Carolina','F',41,31489,29410),
+('South Carolina','F',42,32025,31322), ('South Carolina','F',43,32264,32788),
+('South Carolina','F',44,31105,34387), ('South Carolina','F',45,31470,33250),
+('South Carolina','F',46,30553,33508), ('South Carolina','F',47,30130,33408),
+('South Carolina','F',48,29062,34403), ('South Carolina','F',49,28571,32974),
+('South Carolina','F',50,28869,33470), ('South Carolina','F',51,27639,33838),
+('South Carolina','F',52,28190,32544), ('South Carolina','F',53,29802,32988),
+('South Carolina','F',54,22564,32250), ('South Carolina','F',55,22558,32140),
+('South Carolina','F',56,22084,30747), ('South Carolina','F',57,22982,30732),
+('South Carolina','F',58,20724,30767), ('South Carolina','F',59,19717,29635),
+('South Carolina','F',60,18896,30658), ('South Carolina','F',61,17745,31289),
+('South Carolina','F',62,17567,24134), ('South Carolina','F',63,16963,23894),
+('South Carolina','F',64,17045,23479), ('South Carolina','F',65,17168,23672),
+('South Carolina','F',66,15967,20913), ('South Carolina','F',67,15793,19468),
+('South Carolina','F',68,15359,18498), ('South Carolina','F',69,14502,17133),
+('South Carolina','F',70,14708,16652), ('South Carolina','F',71,14189,15742),
+('South Carolina','F',72,14335,15562), ('South Carolina','F',73,13788,15399),
+('South Carolina','F',74,13539,14129), ('South Carolina','F',75,13555,13845),
+('South Carolina','F',76,12935,13508), ('South Carolina','F',77,12191,12551),
+('South Carolina','F',78,11689,12328), ('South Carolina','F',79,10984,11664),
+('South Carolina','F',80,10610,11545), ('South Carolina','F',81,8738,10784),
+('South Carolina','F',82,8086,10163), ('South Carolina','F',83,7365,9861),
+('South Carolina','F',84,6741,9075), ('South Carolina','F',85,37523,52360),
+('South Dakota','M',0,5312,6302), ('South Dakota','M',1,5306,6136),
+('South Dakota','M',2,5063,5806), ('South Dakota','M',3,5199,5811),
+('South Dakota','M',4,5228,5692), ('South Dakota','M',5,5261,5452),
+('South Dakota','M',6,5487,5291), ('South Dakota','M',7,5501,5261),
+('South Dakota','M',8,5751,5368), ('South Dakota','M',9,5854,5495),
+('South Dakota','M',10,5986,5186), ('South Dakota','M',11,6044,5361),
+('South Dakota','M',12,5906,5445), ('South Dakota','M',13,6136,5398),
+('South Dakota','M',14,6478,5707), ('South Dakota','M',15,6518,5718),
+('South Dakota','M',16,6393,5948), ('South Dakota','M',17,6456,6041),
+('South Dakota','M',18,6621,5617), ('South Dakota','M',19,6192,6114),
+('South Dakota','M',20,6088,6198), ('South Dakota','M',21,5528,5962),
+('South Dakota','M',22,5083,6046), ('South Dakota','M',23,5112,6133),
+('South Dakota','M',24,4705,6005), ('South Dakota','M',25,4592,5180),
+('South Dakota','M',26,4275,6331), ('South Dakota','M',27,4230,5849),
+('South Dakota','M',28,4537,5292), ('South Dakota','M',29,4674,5223),
+('South Dakota','M',30,4749,4764), ('South Dakota','M',31,4566,4848),
+('South Dakota','M',32,4419,4431), ('South Dakota','M',33,4502,4761),
+('South Dakota','M',34,4739,4342), ('South Dakota','M',35,5030,4289),
+('South Dakota','M',36,5441,4647), ('South Dakota','M',37,5732,4844),
+('South Dakota','M',38,5778,4837), ('South Dakota','M',39,5760,4690),
+('South Dakota','M',40,5922,4649), ('South Dakota','M',41,5758,4543),
+('South Dakota','M',42,5961,4920), ('South Dakota','M',43,5892,5150),
+('South Dakota','M',44,5900,5534), ('South Dakota','M',45,5699,5843),
+('South Dakota','M',46,5770,5890), ('South Dakota','M',47,5505,5942),
+('South Dakota','M',48,5391,5956), ('South Dakota','M',49,5114,5917),
+('South Dakota','M',50,5032,5970), ('South Dakota','M',51,4759,5902),
+('South Dakota','M',52,4591,5897), ('South Dakota','M',53,4646,5674),
+('South Dakota','M',54,3564,5791), ('South Dakota','M',55,3501,5473),
+('South Dakota','M',56,3432,5428), ('South Dakota','M',57,3590,5149),
+('South Dakota','M',58,3205,5082), ('South Dakota','M',59,3033,4890),
+('South Dakota','M',60,2944,4761), ('South Dakota','M',61,2777,4770),
+('South Dakota','M',62,2694,3696), ('South Dakota','M',63,2768,3619),
+('South Dakota','M',64,2814,3638), ('South Dakota','M',65,2620,3604),
+('South Dakota','M',66,2495,3182), ('South Dakota','M',67,2446,2952),
+('South Dakota','M',68,2543,2815), ('South Dakota','M',69,2470,2612),
+('South Dakota','M',70,2531,2432), ('South Dakota','M',71,2485,2450),
+('South Dakota','M',72,2435,2396), ('South Dakota','M',73,2321,2253),
+('South Dakota','M',74,2213,2069), ('South Dakota','M',75,2212,1967),
+('South Dakota','M',76,2253,1921), ('South Dakota','M',77,1934,1912),
+('South Dakota','M',78,1817,1897), ('South Dakota','M',79,1706,1782),
+('South Dakota','M',80,1613,1693), ('South Dakota','M',81,1401,1553),
+('South Dakota','M',82,1264,1416), ('South Dakota','M',83,1115,1353),
+('South Dakota','M',84,996,1344), ('South Dakota','M',85,4796,6732),
+('South Dakota','F',0,5016,6066), ('South Dakota','F',1,4977,5990),
+('South Dakota','F',2,4888,5618), ('South Dakota','F',3,4964,5621),
+('South Dakota','F',4,5061,5524), ('South Dakota','F',5,5013,5285),
+('South Dakota','F',6,5124,5115), ('South Dakota','F',7,5315,5141),
+('South Dakota','F',8,5441,5032), ('South Dakota','F',9,5416,5071),
+('South Dakota','F',10,5732,5019), ('South Dakota','F',11,5719,5090),
+('South Dakota','F',12,5824,5246), ('South Dakota','F',13,5871,5182),
+('South Dakota','F',14,5891,5300), ('South Dakota','F',15,6032,5455),
+('South Dakota','F',16,6194,5637), ('South Dakota','F',17,6155,5499),
+('South Dakota','F',18,5994,5390), ('South Dakota','F',19,5922,5898),
+('South Dakota','F',20,6019,6020), ('South Dakota','F',21,5446,5923),
+('South Dakota','F',22,5112,5699), ('South Dakota','F',23,4737,5398),
+('South Dakota','F',24,4352,5399), ('South Dakota','F',25,4377,4972),
+('South Dakota','F',26,4236,5823), ('South Dakota','F',27,4105,5173),
+('South Dakota','F',28,4366,5371), ('South Dakota','F',29,4712,4640),
+('South Dakota','F',30,4501,4713), ('South Dakota','F',31,4496,4542),
+('South Dakota','F',32,4271,4455), ('South Dakota','F',33,4397,4343),
+('South Dakota','F',34,4738,4395), ('South Dakota','F',35,5161,4122),
+('South Dakota','F',36,5470,4462), ('South Dakota','F',37,5620,4906),
+('South Dakota','F',38,5727,4497), ('South Dakota','F',39,5963,4641),
+('South Dakota','F',40,6013,4362), ('South Dakota','F',41,5842,4583),
+('South Dakota','F',42,5757,4891), ('South Dakota','F',43,5807,5216),
+('South Dakota','F',44,5748,5535), ('South Dakota','F',45,5607,5676),
+('South Dakota','F',46,5542,5806), ('South Dakota','F',47,5256,6048),
+('South Dakota','F',48,5244,6058), ('South Dakota','F',49,4943,5850),
+('South Dakota','F',50,4731,5712), ('South Dakota','F',51,4537,6007),
+('South Dakota','F',52,4363,5882), ('South Dakota','F',53,4448,5728),
+('South Dakota','F',54,3487,5772), ('South Dakota','F',55,3459,5458),
+('South Dakota','F',56,3654,5443), ('South Dakota','F',57,3605,5184),
+('South Dakota','F',58,3249,4944), ('South Dakota','F',59,3064,4699),
+('South Dakota','F',60,3033,4640), ('South Dakota','F',61,3077,4600),
+('South Dakota','F',62,2964,3717), ('South Dakota','F',63,2916,3610),
+('South Dakota','F',64,2868,3898), ('South Dakota','F',65,2876,3745),
+('South Dakota','F',66,2795,3273), ('South Dakota','F',67,2833,3059),
+('South Dakota','F',68,2940,2946), ('South Dakota','F',69,2986,2924),
+('South Dakota','F',70,2860,2756), ('South Dakota','F',71,2841,2663),
+('South Dakota','F',72,2713,2543), ('South Dakota','F',73,2811,2538),
+('South Dakota','F',74,2716,2469), ('South Dakota','F',75,2579,2453),
+('South Dakota','F',76,2594,2557), ('South Dakota','F',77,2494,2572),
+('South Dakota','F',78,2514,2401), ('South Dakota','F',79,2417,2355),
+('South Dakota','F',80,2261,2240), ('South Dakota','F',81,2118,2272),
+('South Dakota','F',82,2017,2146), ('South Dakota','F',83,1969,1977),
+('South Dakota','F',84,1741,1963), ('South Dakota','F',85,11427,13913),
 ('Tennessee','M',0,38916,43537), ('Tennessee','M',1,38569,43343),
 ('Tennessee','M',2,38157,42592), ('Tennessee','M',3,37780,41530),
 ('Tennessee','M',4,38789,41627), ('Tennessee','M',5,39442,40758),
@@ -4168,93 +4228,93 @@ Dakota','F',84,1741,1963), ('South Dakota','F',85,11427,13913),
 ('Washington','F',78,16114,15834), ('Washington','F',79,15589,14948),
 ('Washington','F',80,14489,14174), ('Washington','F',81,12841,14120),
 ('Washington','F',82,12116,13275), ('Washington','F',83,10777,12937),
-('Washington','F',84,9725,12088), ('Washington','F',85,58444,75374), ('West
-Virginia','M',0,10278,10815), ('West Virginia','M',1,10018,10734), ('West
-Virginia','M',2,10346,10830), ('West Virginia','M',3,10388,10654), ('West
-Virginia','M',4,10617,10976), ('West Virginia','M',5,10993,10712), ('West
-Virginia','M',6,10994,10893), ('West Virginia','M',7,11274,10797), ('West
-Virginia','M',8,11665,10647), ('West Virginia','M',9,11805,10323), ('West
-Virginia','M',10,12104,10633), ('West Virginia','M',11,11741,10683), ('West
-Virginia','M',12,11749,10861), ('West Virginia','M',13,11960,11306), ('West
-Virginia','M',14,12286,11298), ('West Virginia','M',15,12463,11524), ('West
-Virginia','M',16,12389,11953), ('West Virginia','M',17,13032,12055), ('West
-Virginia','M',18,13053,12242), ('West Virginia','M',19,13675,12208), ('West
-Virginia','M',20,13702,11868), ('West Virginia','M',21,12750,11430), ('West
-Virginia','M',22,12234,11700), ('West Virginia','M',23,11634,11130), ('West
-Virginia','M',24,10624,10416), ('West Virginia','M',25,11021,10838), ('West
-Virginia','M',26,10612,10857), ('West Virginia','M',27,11108,12283), ('West
-Virginia','M',28,11469,12900), ('West Virginia','M',29,11983,12566), ('West
-Virginia','M',30,11740,11721), ('West Virginia','M',31,11466,11799), ('West
-Virginia','M',32,11185,10763), ('West Virginia','M',33,11192,11360), ('West
-Virginia','M',34,11567,10708), ('West Virginia','M',35,12257,11329), ('West
-Virginia','M',36,12465,11648), ('West Virginia','M',37,12448,12353), ('West
-Virginia','M',38,12603,11838), ('West Virginia','M',39,12955,11645), ('West
-Virginia','M',40,13719,11486), ('West Virginia','M',41,13622,11462), ('West
-Virginia','M',42,14480,11857), ('West Virginia','M',43,14211,12652), ('West
-Virginia','M',44,13834,12688), ('West Virginia','M',45,14328,12773), ('West
-Virginia','M',46,14078,12757), ('West Virginia','M',47,13991,12923), ('West
-Virginia','M',48,14010,13703), ('West Virginia','M',49,13845,13367), ('West
-Virginia','M',50,13844,14207), ('West Virginia','M',51,13655,13944), ('West
-Virginia','M',52,13397,13476), ('West Virginia','M',53,13952,13748), ('West
-Virginia','M',54,10146,13468), ('West Virginia','M',55,10104,13446), ('West
-Virginia','M',56,9901,13172), ('West Virginia','M',57,10442,13040), ('West
-Virginia','M',58,9401,12976), ('West Virginia','M',59,8961,12706), ('West
-Virginia','M',60,8554,12469), ('West Virginia','M',61,8713,13007), ('West
-Virginia','M',62,8459,9291), ('West Virginia','M',63,7761,9127), ('West
-Virginia','M',64,7732,9011), ('West Virginia','M',65,7773,9372), ('West
-Virginia','M',66,6825,8290), ('West Virginia','M',67,6632,7702), ('West
-Virginia','M',68,6635,7183), ('West Virginia','M',69,6562,7183), ('West
-Virginia','M',70,6733,6893), ('West Virginia','M',71,6332,6182), ('West
-Virginia','M',72,6724,5973), ('West Virginia','M',73,6235,6009), ('West
-Virginia','M',74,5783,5073), ('West Virginia','M',75,5637,4835), ('West
-Virginia','M',76,5320,4733), ('West Virginia','M',77,4678,4507), ('West
-Virginia','M',78,4378,4513), ('West Virginia','M',79,3948,3985), ('West
-Virginia','M',80,3423,4133), ('West Virginia','M',81,3002,3715), ('West
-Virginia','M',82,2705,3195), ('West Virginia','M',83,2256,2997), ('West
-Virginia','M',84,2057,2694), ('West Virginia','M',85,9011,12061), ('West
-Virginia','F',0,10001,10278), ('West Virginia','F',1,9944,10300), ('West
-Virginia','F',2,9734,10308), ('West Virginia','F',3,9896,10087), ('West
-Virginia','F',4,10177,10453), ('West Virginia','F',5,10074,10346), ('West
-Virginia','F',6,10338,10386), ('West Virginia','F',7,10573,10317), ('West
-Virginia','F',8,11201,10323), ('West Virginia','F',9,11317,10306), ('West
-Virginia','F',10,11461,10048), ('West Virginia','F',11,11081,10190), ('West
-Virginia','F',12,11017,10543), ('West Virginia','F',13,11300,10335), ('West
-Virginia','F',14,11436,10604), ('West Virginia','F',15,11550,10740), ('West
-Virginia','F',16,11561,11428), ('West Virginia','F',17,12326,11472), ('West
-Virginia','F',18,12508,11599), ('West Virginia','F',19,13042,11503), ('West
-Virginia','F',20,13297,10860), ('West Virginia','F',21,12565,10935), ('West
-Virginia','F',22,11923,10807), ('West Virginia','F',23,11395,10814), ('West
-Virginia','F',24,10572,10268), ('West Virginia','F',25,10916,10376), ('West
-Virginia','F',26,10422,10963), ('West Virginia','F',27,11117,12037), ('West
-Virginia','F',28,11568,13026), ('West Virginia','F',29,11981,12450), ('West
-Virginia','F',30,11724,12065), ('West Virginia','F',31,11491,11312), ('West
-Virginia','F',32,11305,10465), ('West Virginia','F',33,11514,11326), ('West
-Virginia','F',34,11725,10714), ('West Virginia','F',35,12631,11121), ('West
-Virginia','F',36,12990,12092), ('West Virginia','F',37,13107,12622), ('West
-Virginia','F',38,13274,11965), ('West Virginia','F',39,13878,11649), ('West
-Virginia','F',40,14093,11419), ('West Virginia','F',41,14403,11673), ('West
-Virginia','F',42,14541,11810), ('West Virginia','F',43,14878,12680), ('West
-Virginia','F',44,14411,13083), ('West Virginia','F',45,14603,13062), ('West
-Virginia','F',46,14268,13219), ('West Virginia','F',47,14443,13796), ('West
-Virginia','F',48,14064,14041), ('West Virginia','F',49,13950,14186), ('West
-Virginia','F',50,13724,14310), ('West Virginia','F',51,13703,14631), ('West
-Virginia','F',52,13369,14044), ('West Virginia','F',53,14040,14225), ('West
-Virginia','F',54,10213,13798), ('West Virginia','F',55,10209,13962), ('West
-Virginia','F',56,10148,13415), ('West Virginia','F',57,10931,13493), ('West
-Virginia','F',58,9877,13198), ('West Virginia','F',59,9272,13197), ('West
-Virginia','F',60,9164,12853), ('West Virginia','F',61,9149,13452), ('West
-Virginia','F',62,9143,9704), ('West Virginia','F',63,8743,9631), ('West
-Virginia','F',64,8613,9445), ('West Virginia','F',65,8827,10170), ('West
-Virginia','F',66,7867,9027), ('West Virginia','F',67,8139,8288), ('West
-Virginia','F',68,8158,8171), ('West Virginia','F',69,8135,7990), ('West
-Virginia','F',70,8465,7926), ('West Virginia','F',71,8239,7439), ('West
-Virginia','F',72,8229,7250), ('West Virginia','F',73,7938,7299), ('West
-Virginia','F',74,7717,6362), ('West Virginia','F',75,7560,6481), ('West
-Virginia','F',76,7478,6427), ('West Virginia','F',77,6801,6246), ('West
-Virginia','F',78,6847,6379), ('West Virginia','F',79,6179,5971), ('West
-Virginia','F',80,5800,5883), ('West Virginia','F',81,5278,5476), ('West
-Virginia','F',82,4935,5158), ('West Virginia','F',83,4492,4892), ('West
-Virginia','F',84,4150,4563), ('West Virginia','F',85,23095,26441),
+('Washington','F',84,9725,12088), ('Washington','F',85,58444,75374),
+('West Virginia','M',0,10278,10815), ('West Virginia','M',1,10018,10734),
+('West Virginia','M',2,10346,10830), ('West Virginia','M',3,10388,10654),
+('West Virginia','M',4,10617,10976), ('West Virginia','M',5,10993,10712),
+('West Virginia','M',6,10994,10893), ('West Virginia','M',7,11274,10797),
+('West Virginia','M',8,11665,10647), ('West Virginia','M',9,11805,10323),
+('West Virginia','M',10,12104,10633), ('West Virginia','M',11,11741,10683),
+('West Virginia','M',12,11749,10861), ('West Virginia','M',13,11960,11306),
+('West Virginia','M',14,12286,11298), ('West Virginia','M',15,12463,11524),
+('West Virginia','M',16,12389,11953), ('West Virginia','M',17,13032,12055),
+('West Virginia','M',18,13053,12242), ('West Virginia','M',19,13675,12208),
+('West Virginia','M',20,13702,11868), ('West Virginia','M',21,12750,11430),
+('West Virginia','M',22,12234,11700), ('West Virginia','M',23,11634,11130),
+('West Virginia','M',24,10624,10416), ('West Virginia','M',25,11021,10838),
+('West Virginia','M',26,10612,10857), ('West Virginia','M',27,11108,12283),
+('West Virginia','M',28,11469,12900), ('West Virginia','M',29,11983,12566),
+('West Virginia','M',30,11740,11721), ('West Virginia','M',31,11466,11799),
+('West Virginia','M',32,11185,10763), ('West Virginia','M',33,11192,11360),
+('West Virginia','M',34,11567,10708), ('West Virginia','M',35,12257,11329),
+('West Virginia','M',36,12465,11648), ('West Virginia','M',37,12448,12353),
+('West Virginia','M',38,12603,11838), ('West Virginia','M',39,12955,11645),
+('West Virginia','M',40,13719,11486), ('West Virginia','M',41,13622,11462),
+('West Virginia','M',42,14480,11857), ('West Virginia','M',43,14211,12652),
+('West Virginia','M',44,13834,12688), ('West Virginia','M',45,14328,12773),
+('West Virginia','M',46,14078,12757), ('West Virginia','M',47,13991,12923),
+('West Virginia','M',48,14010,13703), ('West Virginia','M',49,13845,13367),
+('West Virginia','M',50,13844,14207), ('West Virginia','M',51,13655,13944),
+('West Virginia','M',52,13397,13476), ('West Virginia','M',53,13952,13748),
+('West Virginia','M',54,10146,13468), ('West Virginia','M',55,10104,13446),
+('West Virginia','M',56,9901,13172), ('West Virginia','M',57,10442,13040),
+('West Virginia','M',58,9401,12976), ('West Virginia','M',59,8961,12706),
+('West Virginia','M',60,8554,12469), ('West Virginia','M',61,8713,13007),
+('West Virginia','M',62,8459,9291), ('West Virginia','M',63,7761,9127),
+('West Virginia','M',64,7732,9011), ('West Virginia','M',65,7773,9372),
+('West Virginia','M',66,6825,8290), ('West Virginia','M',67,6632,7702),
+('West Virginia','M',68,6635,7183), ('West Virginia','M',69,6562,7183),
+('West Virginia','M',70,6733,6893), ('West Virginia','M',71,6332,6182),
+('West Virginia','M',72,6724,5973), ('West Virginia','M',73,6235,6009),
+('West Virginia','M',74,5783,5073), ('West Virginia','M',75,5637,4835),
+('West Virginia','M',76,5320,4733), ('West Virginia','M',77,4678,4507),
+('West Virginia','M',78,4378,4513), ('West Virginia','M',79,3948,3985),
+('West Virginia','M',80,3423,4133), ('West Virginia','M',81,3002,3715),
+('West Virginia','M',82,2705,3195), ('West Virginia','M',83,2256,2997),
+('West Virginia','M',84,2057,2694), ('West Virginia','M',85,9011,12061),
+('West Virginia','F',0,10001,10278), ('West Virginia','F',1,9944,10300),
+('West Virginia','F',2,9734,10308), ('West Virginia','F',3,9896,10087),
+('West Virginia','F',4,10177,10453), ('West Virginia','F',5,10074,10346),
+('West Virginia','F',6,10338,10386), ('West Virginia','F',7,10573,10317),
+('West Virginia','F',8,11201,10323), ('West Virginia','F',9,11317,10306),
+('West Virginia','F',10,11461,10048), ('West Virginia','F',11,11081,10190),
+('West Virginia','F',12,11017,10543), ('West Virginia','F',13,11300,10335),
+('West Virginia','F',14,11436,10604), ('West Virginia','F',15,11550,10740),
+('West Virginia','F',16,11561,11428), ('West Virginia','F',17,12326,11472),
+('West Virginia','F',18,12508,11599), ('West Virginia','F',19,13042,11503),
+('West Virginia','F',20,13297,10860), ('West Virginia','F',21,12565,10935),
+('West Virginia','F',22,11923,10807), ('West Virginia','F',23,11395,10814),
+('West Virginia','F',24,10572,10268), ('West Virginia','F',25,10916,10376),
+('West Virginia','F',26,10422,10963), ('West Virginia','F',27,11117,12037),
+('West Virginia','F',28,11568,13026), ('West Virginia','F',29,11981,12450),
+('West Virginia','F',30,11724,12065), ('West Virginia','F',31,11491,11312),
+('West Virginia','F',32,11305,10465), ('West Virginia','F',33,11514,11326),
+('West Virginia','F',34,11725,10714), ('West Virginia','F',35,12631,11121),
+('West Virginia','F',36,12990,12092), ('West Virginia','F',37,13107,12622),
+('West Virginia','F',38,13274,11965), ('West Virginia','F',39,13878,11649),
+('West Virginia','F',40,14093,11419), ('West Virginia','F',41,14403,11673),
+('West Virginia','F',42,14541,11810), ('West Virginia','F',43,14878,12680),
+('West Virginia','F',44,14411,13083), ('West Virginia','F',45,14603,13062),
+('West Virginia','F',46,14268,13219), ('West Virginia','F',47,14443,13796),
+('West Virginia','F',48,14064,14041), ('West Virginia','F',49,13950,14186),
+('West Virginia','F',50,13724,14310), ('West Virginia','F',51,13703,14631),
+('West Virginia','F',52,13369,14044), ('West Virginia','F',53,14040,14225),
+('West Virginia','F',54,10213,13798), ('West Virginia','F',55,10209,13962),
+('West Virginia','F',56,10148,13415), ('West Virginia','F',57,10931,13493),
+('West Virginia','F',58,9877,13198), ('West Virginia','F',59,9272,13197),
+('West Virginia','F',60,9164,12853), ('West Virginia','F',61,9149,13452),
+('West Virginia','F',62,9143,9704), ('West Virginia','F',63,8743,9631),
+('West Virginia','F',64,8613,9445), ('West Virginia','F',65,8827,10170),
+('West Virginia','F',66,7867,9027), ('West Virginia','F',67,8139,8288),
+('West Virginia','F',68,8158,8171), ('West Virginia','F',69,8135,7990),
+('West Virginia','F',70,8465,7926), ('West Virginia','F',71,8239,7439),
+('West Virginia','F',72,8229,7250), ('West Virginia','F',73,7938,7299),
+('West Virginia','F',74,7717,6362), ('West Virginia','F',75,7560,6481),
+('West Virginia','F',76,7478,6427), ('West Virginia','F',77,6801,6246),
+('West Virginia','F',78,6847,6379), ('West Virginia','F',79,6179,5971),
+('West Virginia','F',80,5800,5883), ('West Virginia','F',81,5278,5476),
+('West Virginia','F',82,4935,5158), ('West Virginia','F',83,4492,4892),
+('West Virginia','F',84,4150,4563), ('West Virginia','F',85,23095,26441),
 ('Wisconsin','M',0,35034,37979), ('Wisconsin','M',1,34576,38037),
 ('Wisconsin','M',2,34554,36435), ('Wisconsin','M',3,35085,36364),
 ('Wisconsin','M',4,35755,36498), ('Wisconsin','M',5,36988,36049),
