@@ -77,8 +77,7 @@ setup(
         'six==1.10.0',
         'SQLAlchemy==1.1.9',
         'sqlparse==0.2.2',
-
-
+        'tablib==0.11.4',
         # eg: 'aspectlib==1.1.1', 'six>=1.7',
     ],
     extras_require={

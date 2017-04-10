@@ -16,3 +16,4 @@ SQLAlchemy==1.1.9
 Sphinx==1.5.5
 sphinx_rtd_theme==0.2.4
 sqlparse==0.2.2
+tablib==0.11.4

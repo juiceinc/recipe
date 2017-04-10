@@ -567,6 +567,16 @@ class Recipe(object):
         else:
             return []
 
+    @property
+    def dataset(self):
+        rows = self.all()
+        if rows:
+            first_row = rows[0]
+            return tablib.Dataset(*rows, headers=first_row._fields)
+        else:
+            return  tablib.Dataset([], headers=[])
+
+
     def first(self):
         """ Return the first element on the result
         """

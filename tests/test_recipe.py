@@ -20,15 +20,28 @@ class TestRecipeIngredients(object):
     def recipe(self):
         return Recipe(shelf=self.shelf, session=self.session)
 
-    def test_dimension(self):
+        def test_dimension(self):
+            recipe = self.recipe().metrics('age').dimensions('first')
+            assert recipe.to_sql() == """SELECT foo.first AS first,
+           sum(foo.age) AS age
+    FROM foo
+    GROUP BY foo.first"""
+            assert recipe.all()[0].first == 'hi'
+            assert recipe.all()[0].age == 15
+            assert recipe.stats.rows == 1
+
+    def test_dataset(self):
         recipe = self.recipe().metrics('age').dimensions('first')
-        assert recipe.to_sql() == """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY foo.first"""
-        assert recipe.all()[0].first == 'hi'
-        assert recipe.all()[0].age == 15
-        assert recipe.stats.rows == 1
+        assert recipe.dataset.json == '''[{"first": "hi", "age": 15, "first_id": "hi"}]'''
+
+        # Line delimiter is \r\n
+        assert recipe.dataset.csv == '''first,age,first_id\r
+hi,15,hi\r
+'''
+        # Line delimiter is \r\n
+        assert recipe.dataset.tsv == '''first\tage\tfirst_id\r
+hi\t15\thi\r
+'''
 
     def test_dimension2(self):
         recipe = self.recipe().metrics('age').dimensions('last').order_by(
