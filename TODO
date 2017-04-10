@@ -1,0 +1,10 @@
+- Docs
+- Supporting multiple blends
+- Add type hinting
+- Support autocomplete for recipe extensions on the Recipe using metaclass
+- Caching query
+- RecipePool
+- Connection base
+- Caching for anonymizer
+- Renderers
+- tox building for py35 and py27

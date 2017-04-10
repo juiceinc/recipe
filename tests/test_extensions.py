@@ -50,7 +50,7 @@ class TestExtensions(object):
 class AddFilter(RecipeExtension):
     """ A simple extension that adds a filter """
 
-    def add_ingedients(self):
+    def add_ingredients(self):
         self.recipe.filters(MyTable.first > 2)
 
 

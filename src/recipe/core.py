@@ -390,7 +390,7 @@ class Recipe(object):
         # apply them as if they had been added to recipe().filters(...)
 
         for extension in self.recipe_extensions:
-            extension.add_ingedients()
+            extension.add_ingredients()
 
         order_bys = self._prepare_order_bys()
 

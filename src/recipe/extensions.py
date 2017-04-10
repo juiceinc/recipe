@@ -75,7 +75,7 @@ class RecipeExtension(object):
         self.dirty = True
         self.recipe = recipe
 
-    def add_ingedients(self):
+    def add_ingredients(self):
         """
         Add ingredients to the recipe
 
@@ -149,7 +149,7 @@ class AutomaticFilters(RecipeExtension):
         self.exclude_keys = None
         self.include_keys = None
 
-    def add_ingedients(self):
+    def add_ingredients(self):
         if self.apply:
             for dim, values in self._automatic_filters.iteritems():
                 operator = None
@@ -421,7 +421,7 @@ class AnonymizeRecipe(RecipeExtension):
         # Builder pattern must return the recipe
         return self.recipe
 
-    def add_ingedients(self):
+    def add_ingredients(self):
         """ Put the anonymizers in the last position of formatters """
         for ingredient in self.recipe._cauldron.values():
             if hasattr(ingredient.meta, 'anonymizer') and self._anonymize:
@@ -440,7 +440,7 @@ class SummarizeOverRecipe(RecipeExtension):
         self._summarize_over = dimension_key
         return self.recipe
 
-    def add_ingedients(self):
+    def add_ingredients(self):
         """
         Take a recipe that has dimensions
         Resummarize it over one of the dimensions returning averages of the
