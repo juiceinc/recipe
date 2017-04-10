@@ -67,8 +67,8 @@ class TestAddFilterExtension(object):
 
     def test_add_filter(self):
         recipe = self.recipe().metrics('age').dimensions('first')
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 WHERE foo.first > 2
 GROUP BY foo.first"""
@@ -109,8 +109,8 @@ class TestAutomaticFiltersExtension(object):
 
         assert recipe.recipe_extensions[0].apply == False
 
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 GROUP BY foo.first"""
 
@@ -119,8 +119,8 @@ GROUP BY foo.first"""
 
         assert recipe.recipe_extensions[0].apply == True
 
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 GROUP BY foo.first"""
 
@@ -132,8 +132,8 @@ GROUP BY foo.first"""
         })
 
         assert recipe.recipe_extensions[0].apply == True
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 WHERE foo.first IN ('foo')
 GROUP BY foo.first"""
@@ -148,8 +148,8 @@ GROUP BY foo.first"""
             'first': ['foo']
         }).apply_automatic_filters(False)
         assert recipe.recipe_extensions[0].dirty == True
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 GROUP BY foo.first"""
 
@@ -158,8 +158,8 @@ GROUP BY foo.first"""
         recipe = recipe.automatic_filters({
             'first': ['foo']
         }).include_automatic_filter_keys('foo')
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 GROUP BY foo.first"""
 
@@ -167,8 +167,8 @@ GROUP BY foo.first"""
         recipe = recipe.automatic_filters({
             'first': ['foo']
         }).include_automatic_filter_keys('foo', 'first')
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 WHERE foo.first IN ('foo')
 GROUP BY foo.first"""
@@ -177,8 +177,8 @@ GROUP BY foo.first"""
         recipe = recipe.automatic_filters({
             'first': ['foo']
         }).exclude_automatic_filter_keys('foo')
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 WHERE foo.first IN ('foo')
 GROUP BY foo.first"""
@@ -187,8 +187,8 @@ GROUP BY foo.first"""
         recipe = recipe.automatic_filters({
             'first': ['foo']
         }).exclude_automatic_filter_keys('first')
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 GROUP BY foo.first"""
 
@@ -196,8 +196,8 @@ GROUP BY foo.first"""
         recipe = recipe.automatic_filters({
             'first': ['foo']
         }).exclude_automatic_filter_keys('first')
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 GROUP BY foo.first"""
 
@@ -207,8 +207,8 @@ GROUP BY foo.first"""
         recipe = recipe.automatic_filters({
             'first__notin': ['foo']
         })
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 WHERE foo.first NOT IN ('foo')
 GROUP BY foo.first"""
@@ -218,8 +218,8 @@ GROUP BY foo.first"""
         recipe = recipe.automatic_filters({
             'first__between': ['foo', 'moo']
         })
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 WHERE foo.first BETWEEN 'foo' AND 'moo'
 GROUP BY foo.first"""
@@ -229,8 +229,8 @@ GROUP BY foo.first"""
         recipe = recipe.automatic_filters({
             'first__lt': 'moo'
         })
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 WHERE foo.first < 'moo'
 GROUP BY foo.first"""
@@ -265,8 +265,8 @@ class TestAnonymizeRecipeExtension(object):
         """ Anonymize requires ingredients to have an anonymizer """
         recipe = self.recipe().metrics('age').dimensions(
             'last').order_by('last').anonymize(False)
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.last AS last
+        assert recipe.to_sql() == """SELECT foo.last AS last,
+       sum(foo.age) AS age
 FROM foo
 GROUP BY foo.last
 ORDER BY foo.last"""
@@ -277,8 +277,9 @@ ORDER BY foo.last"""
 
         recipe = self.recipe().metrics('age').dimensions(
             'last').order_by('last').anonymize(True)
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.last AS last_raw
+        print recipe.to_sql()
+        assert recipe.to_sql() == """SELECT foo.last AS last_raw,
+       sum(foo.age) AS age
 FROM foo
 GROUP BY foo.last
 ORDER BY foo.last"""
@@ -292,8 +293,8 @@ ORDER BY foo.last"""
         """ If the dimension doesn't have an anonymizer, there is no change """
         recipe = self.recipe().metrics('age').dimensions(
             'first').order_by('first').anonymize(False)
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 GROUP BY foo.first
 ORDER BY foo.first"""
@@ -304,8 +305,8 @@ ORDER BY foo.first"""
 
         recipe = self.recipe().metrics('age').dimensions(
             'first').order_by('first').anonymize(True)
-        assert recipe.to_sql() == """SELECT sum(foo.age) AS age,
-       foo.first AS first
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
 FROM foo
 GROUP BY foo.first
 ORDER BY foo.first"""
@@ -337,15 +338,15 @@ class TestSummarizeOverExtension(object):
         """ Anonymize requires ingredients to have an anonymizer """
         recipe = self.recipe().metrics('age').dimensions(
             'first', 'last').summarize_over('last')
-        assert recipe.to_sql() == """SELECT avg(summarized.age) AS age,
-       summarized.first AS first
+        assert recipe.to_sql() == """SELECT summarized.first AS first,
+       avg(summarized.age) AS age
 FROM
-  (SELECT sum(foo.age) AS age,
+  (SELECT foo.first AS first,
           foo.last AS last,
-          foo.first AS first
+          sum(foo.age) AS age
    FROM foo
-   GROUP BY foo.last,
-            foo.first) AS summarized
+   GROUP BY foo.first,
+            foo.last) AS summarized
 GROUP BY summarized.first"""
         assert len(recipe.all()) == 1
         assert recipe.one().first == 'hi'
@@ -379,13 +380,13 @@ class TestCompareRecipeExtension(object):
                       .filters(Census.state == 'Vermont'))
 
         assert len(r.all()) == 2
-        assert r.to_sql() == """SELECT sum(census.pop2000) AS pop2000,
-       census.sex AS sex,
+        assert r.to_sql() == """SELECT census.sex AS sex,
+       sum(census.pop2000) AS pop2000,
        anon_1.pop2000 AS pop2000_compare
 FROM census
 LEFT OUTER JOIN
-  (SELECT sum(census.pop2000) AS pop2000,
-          census.sex AS sex
+  (SELECT census.sex AS sex,
+          sum(census.pop2000) AS pop2000
    FROM census
    WHERE census.state = 'Vermont'
    GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
@@ -413,14 +414,13 @@ ORDER BY census.sex"""
                       suffix='_x')
 
         assert len(r.all()) == 2
-
-        assert r.to_sql() == """SELECT sum(census.pop2000) AS pop2000,
-       census.sex AS sex,
+        assert r.to_sql() == """SELECT census.sex AS sex,
+       sum(census.pop2000) AS pop2000,
        anon_1.pop2000 AS pop2000_x
 FROM census
 LEFT OUTER JOIN
-  (SELECT sum(census.pop2000) AS pop2000,
-          census.sex AS sex
+  (SELECT census.sex AS sex,
+          sum(census.pop2000) AS pop2000
    FROM census
    WHERE census.state = 'Vermont'
    GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
@@ -450,24 +450,23 @@ ORDER BY census.sex"""
                       suffix='_total')
 
         assert len(r.all()) == 102
-
-        assert r.to_sql() == """SELECT sum(census.pop2000) AS pop2000,
+        assert r.to_sql() == """SELECT census.sex AS sex,
        census.state AS state,
-       census.sex AS sex,
+       sum(census.pop2000) AS pop2000,
        anon_1.pop2000 AS pop2000_vermont,
        anon_2.pop2000 AS pop2000_total
 FROM census
 LEFT OUTER JOIN
-  (SELECT sum(census.pop2000) AS pop2000,
-          census.sex AS sex
+  (SELECT census.sex AS sex,
+          sum(census.pop2000) AS pop2000
    FROM census
    WHERE census.state = 'Vermont'
    GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
 LEFT OUTER JOIN
   (SELECT sum(census.pop2000) AS pop2000
    FROM census) AS anon_2 ON 1=1
-GROUP BY census.state,
-         census.sex
+GROUP BY census.sex,
+         census.state
 ORDER BY census.sex,
          census.state"""
 
@@ -528,14 +527,13 @@ class TestBlendRecipeExtension(object):
                          join_blend='sex')
 
         assert len(r.all()) == 2
-        print r.to_sql()
-        assert r.to_sql() == """SELECT sum(census.pop2000) AS pop2000,
-       census.sex AS sex,
+        assert r.to_sql() == """SELECT census.sex AS sex,
+       sum(census.pop2000) AS pop2000,
        anon_1.pop2008 AS pop2008
 FROM census
 LEFT OUTER JOIN
-  (SELECT sum(census.pop2008) AS pop2008,
-          census.sex AS sex
+  (SELECT census.sex AS sex,
+          sum(census.pop2008) AS pop2008
    FROM census
    WHERE census.sex = 'F'
    GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
@@ -565,8 +563,8 @@ ORDER BY census.sex"""
         r = r.blend(blend_recipe, join_base='state',
                     join_blend='state')
 
-        assert r.to_sql() == """SELECT sum(census.pop2000) AS pop2000,
-       census.state AS state,
+        assert r.to_sql() == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000,
        anon_1.abbreviation AS abbreviation
 FROM census
 JOIN

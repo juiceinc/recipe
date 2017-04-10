@@ -48,10 +48,30 @@ class Shelf(AttrDict):
         ingredient_copy.anonymize = self.Meta.anonymize
         super(Shelf, self).__setitem__(key, ingredient_copy)
 
+    def ingredients(self):
+        """ Return the ingredients in this shelf in a deterministic order """
+        def ordering(x):
+            # Sort by Dimension,Metric,Filter then by id
+            if isinstance(x, Dimension):
+                return (0, x.id)
+            elif isinstance(x, Metric):
+                return (1, x.id)
+            elif isinstance(x, Filter):
+                return (2, x.id)
+            elif isinstance(x, Having):
+                return (3, x.id)
+            else:
+                return (4, x.id)
+
+        values = self.values()
+        values.sort(cmp, key=ordering)
+        return values
+
     def __repr__(self):
         """ A string representation of the ingredients used in a recipe
         ordered by Dimensions, Metrics, Filters, then Havings
         """
+
         def ordering(x):
             # Sort by Dimension,Metric,Filter then by id
             if isinstance(x, Dimension):
@@ -67,8 +87,7 @@ class Shelf(AttrDict):
 
         lines = []
         # sort the ingredients by type
-        for ingredient in sorted(self.values(), cmp,
-                                 key=ordering):
+        for ingredient in self.ingredients():
             lines.append(ingredient.describe())
         return '\n'.join(lines)
 
@@ -129,7 +148,7 @@ class Shelf(AttrDict):
         """ Make columns, group_bys, filters, havings
         """
         columns, group_bys, filters, havings = [], [], set(), set()
-        for ingredient in self.itervalues():
+        for ingredient in self.ingredients():
             if ingredient.query_columns:
                 columns.extend(ingredient.query_columns)
             if ingredient.group_by:

@@ -62,6 +62,23 @@ setup(
         # eg: 'keyword1', 'keyword2', 'keyword3',
     ],
     install_requires=[
+        # 'appdirs==1.4.0',
+        # 'dogpile==0.2.2',
+        # 'dogpile.cache==0.6.2',
+        # 'gevent==1.2.1',
+        # 'greenlet==0.4.12',
+        'orderedset==2.0',
+        'packaging==16.8',
+        'psycopg2==2.7.1',
+        'py==1.4.32',
+        'pyparsing==2.1.10',
+        'pytest==3.0.6',
+        'pytest-cov==2.4.0',
+        'six==1.10.0',
+        'SQLAlchemy==1.1.9',
+        'sqlparse==0.2.2',
+
+
         # eg: 'aspectlib==1.1.1', 'six>=1.7',
     ],
     extras_require={
