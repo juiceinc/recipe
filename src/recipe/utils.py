@@ -6,11 +6,7 @@ import sqlparse
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql.sqltypes import String, DateTime, Date, NullType
 
-# python2/3 compatible.
-PY3 = str is not bytes
-text = str if PY3 else unicode
-int_type = int if PY3 else (int, long)
-str_type = str if PY3 else (str, unicode)
+from recipe.compat import str, basestring, integer_types
 
 # only expose the printing sql function
 __all__ = ['prettyprintable_sql', 'clean_unicode']
@@ -23,10 +19,10 @@ class StringLiteral(String):
         super_processor = super(StringLiteral, self).literal_processor(dialect)
 
         def process(value):
-            if isinstance(value, int_type):
-                return text(value)
-            if not isinstance(value, str_type):
-                value = text(value)
+            if isinstance(value, integer_types):
+                return str(value)
+            if not isinstance(value, basestring):
+                value = str(value)
             result = super_processor(value)
             if isinstance(result, bytes):
                 result = result.decode(dialect.encoding)
@@ -68,7 +64,7 @@ def prettyprintable_sql(statement, dialect=None, reindent=True):
 
     compiled = statement.compile(dialect=LiteralDialect(),
                                  compile_kwargs={'literal_binds': True})
-    return sqlparse.format(unicode(compiled), reindent=reindent)
+    return sqlparse.format(str(compiled), reindent=reindent)
 
 
 WHITESPACE_RE = re.compile('\s+', flags=re.DOTALL | re.MULTILINE)
@@ -94,6 +90,3 @@ class AttrDict(dict):
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
-
-    class Meta:
-        anonymize = True

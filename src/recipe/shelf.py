@@ -10,6 +10,7 @@ from recipe import Dimension
 from recipe import Filter
 from recipe import Having
 from recipe import Metric
+from recipe.compat import basestring
 from recipe.utils import AttrDict
 
 
@@ -22,7 +23,7 @@ class Shelf(AttrDict):
         super(Shelf, self).__init__(*args, **kwargs)
 
         # Set the ids of all ingredients on the shelf to the key
-        for k, ingredient in self.iteritems():
+        for k, ingredient in self.items():
             ingredient.id = k
 
     def get(self, k, d=None):
@@ -50,22 +51,7 @@ class Shelf(AttrDict):
 
     def ingredients(self):
         """ Return the ingredients in this shelf in a deterministic order """
-        def ordering(x):
-            # Sort by Dimension,Metric,Filter then by id
-            if isinstance(x, Dimension):
-                return (0, x.id)
-            elif isinstance(x, Metric):
-                return (1, x.id)
-            elif isinstance(x, Filter):
-                return (2, x.id)
-            elif isinstance(x, Having):
-                return (3, x.id)
-            else:
-                return (4, x.id)
-
-        values = self.values()
-        values.sort(cmp, key=ordering)
-        return values
+        return sorted(list(self.values()))
 
     def __repr__(self):
         """ A string representation of the ingredients used in a recipe
@@ -177,7 +163,7 @@ class Shelf(AttrDict):
             # With extra callables
             extra_fields, extra_callables = [], []
 
-            for ingredient in self.itervalues():
+            for ingredient in self.values():
                 if not isinstance(ingredient, (Dimension, Metric)):
                     continue
                 if cache_context:

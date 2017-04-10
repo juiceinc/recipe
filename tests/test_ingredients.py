@@ -5,6 +5,7 @@ from sqlalchemy import func
 
 from recipe import *
 from .test_base import *
+from recipe.compat import str
 
 
 class TestIngredients(object):
@@ -17,7 +18,7 @@ class TestIngredients(object):
         assert len(ingr.id) == 12
         assert isinstance(ingr.columns, list)
 
-        # Ids can be unicode
+        # Ids can be str
         ingr = Ingredient(id=u'ვეპხის')
 
         # Extra properties are stored in a AttrDict
@@ -85,23 +86,23 @@ class TestIngredientBuildFilter(object):
 
         # Test building scalar filters
         filt = d.build_filter('moo')
-        assert unicode(filt.filters[0]) == 'foo.first = :first_1'
+        assert str(filt.filters[0]) == 'foo.first = :first_1'
         filt = d.build_filter('moo', 'eq')
-        assert unicode(filt.filters[0]) == 'foo.first = :first_1'
+        assert str(filt.filters[0]) == 'foo.first = :first_1'
         filt = d.build_filter('moo', 'ne')
-        assert unicode(filt.filters[0]) == 'foo.first != :first_1'
+        assert str(filt.filters[0]) == 'foo.first != :first_1'
         filt = d.build_filter('moo', 'lt')
-        assert unicode(filt.filters[0]) == 'foo.first < :first_1'
+        assert str(filt.filters[0]) == 'foo.first < :first_1'
         filt = d.build_filter('moo', 'lte')
-        assert unicode(filt.filters[0]) == 'foo.first <= :first_1'
+        assert str(filt.filters[0]) == 'foo.first <= :first_1'
         filt = d.build_filter('moo', 'gt')
-        assert unicode(filt.filters[0]) == 'foo.first > :first_1'
+        assert str(filt.filters[0]) == 'foo.first > :first_1'
         filt = d.build_filter('moo', 'gte')
-        assert unicode(filt.filters[0]) == 'foo.first >= :first_1'
+        assert str(filt.filters[0]) == 'foo.first >= :first_1'
 
-        # Unicode filter values are acceptable
+        # str filter values are acceptable
         filt = d.build_filter(u'Τη γλώσ')
-        assert unicode(filt.filters[0]) == 'foo.first = :first_1'
+        assert str(filt.filters[0]) == 'foo.first = :first_1'
 
         # operator must agree with value
         with pytest.raises(ValueError):
@@ -114,15 +115,15 @@ class TestIngredientBuildFilter(object):
 
         # Test building scalar filters
         filt = d.build_filter(['moo'])
-        assert unicode(filt.filters[0]) == 'foo.first IN (:first_1)'
+        assert str(filt.filters[0]) == 'foo.first IN (:first_1)'
         filt = d.build_filter(['moo', 'foo'])
-        assert unicode(filt.filters[0]) == 'foo.first IN (:first_1, :first_2)'
+        assert str(filt.filters[0]) == 'foo.first IN (:first_1, :first_2)'
         filt = d.build_filter(['moo'], operator='in')
-        assert unicode(filt.filters[0]) == 'foo.first IN (:first_1)'
+        assert str(filt.filters[0]) == 'foo.first IN (:first_1)'
         filt = d.build_filter(['moo'], operator='notin')
-        assert unicode(filt.filters[0]) == 'foo.first NOT IN (:first_1)'
+        assert str(filt.filters[0]) == 'foo.first NOT IN (:first_1)'
         filt = d.build_filter(['moo', 'foo'], operator='between')
-        assert unicode(
+        assert str(
             filt.filters[0]) == 'foo.first BETWEEN :first_1 AND :first_2'
 
         with pytest.raises(ValueError):
@@ -141,14 +142,12 @@ class TestFilter(object):
         f1 = Filter(MyTable.first == 'moo')
         f2 = Filter(MyTable.first == 'foo')
 
-        # These two filters compare equally
-        assert f1 == f2
-        assert not f1 is f2
         filters.add(f1)
         filters.add(f2)
         assert len(filters) == 2
 
-        assert unicode(f1) == "[u'foo.first = :first_1']"
+        assert str(f1) in ("[u'foo.first = :first_1']",
+                           "['foo.first = :first_1']")
 
     def test_expression(self):
         f = Filter(MyTable.first == 'foo')
@@ -161,7 +160,8 @@ class TestFilter(object):
 
     def test_filter_describe(self):
         f1 = Filter(MyTable.first == 'moo', id='moo')
-        assert f1.describe() == u'(Filter)moo [u\'foo.first = :first_1\']'
+        assert f1.describe() in (u'(Filter)moo [u\'foo.first = :first_1\']',
+                                 '(Filter)moo [\'foo.first = :first_1\']')
 
 
 class TestHaving(object):
@@ -171,14 +171,12 @@ class TestHaving(object):
         f1 = Having(func.sum(MyTable.age) > 2)
         f2 = Having(func.sum(MyTable.age) > 3)
 
-        # These two filters compare equally
-        assert f1 == f2
-        assert not f1 is f2
         havings.add(f1)
         havings.add(f2)
         assert len(havings) == 2
 
-        assert unicode(f1) == u'[u\'sum(foo.age) > :sum_1\']'
+        assert str(f1) in (u'[u\'sum(foo.age) > :sum_1\']',
+                           u'[\'sum(foo.age) > :sum_1\']')
 
     def test_expression(self):
         h = Having(func.sum(MyTable.age) > 2)
@@ -193,8 +191,8 @@ class TestHaving(object):
 
     def test_having_describe(self):
         f1 = Having(func.sum(MyTable.age) > 2, id='moo')
-        print f1.describe()
-        assert f1.describe() == u'(Having)moo [u\'sum(foo.age) > :sum_1\']'
+        assert f1.describe() in (u'(Having)moo [u\'sum(foo.age) > :sum_1\']',
+                                 '(Having)moo [\'sum(foo.age) > :sum_1\']')
 
 
 class TestDimension(object):
@@ -318,7 +316,7 @@ class TestDivideMetric(object):
         assert len(d.filters) == 0
 
         # Generate numerator / (denominator+epsilon) by default
-        assert unicode(d.columns[0]) == 'CAST(sum(foo.age) AS FLOAT) / (' \
+        assert str(d.columns[0]) == 'CAST(sum(foo.age) AS FLOAT) / (' \
                                         'coalesce(' \
                                         'CAST(sum(foo.age) AS FLOAT), ' \
                                         ':coalesce_1) + :coalesce_2)'
@@ -326,7 +324,7 @@ class TestDivideMetric(object):
         # Generate if denominator == 0 then 'zero' else numerator / denominator
         d = DivideMetric(func.sum(MyTable.age), func.sum(MyTable.age),
                          ifzero='zero')
-        assert unicode(d.columns[0]) == \
+        assert str(d.columns[0]) == \
                'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
                ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
                'CAST(sum(foo.age) AS FLOAT) END'
@@ -347,7 +345,7 @@ class TestSumIfMetric(object):
         assert len(d.filters) == 0
 
         # Generate numerator / (denominator+epsilon) by default
-        assert unicode(d.columns[0]) == \
+        assert str(d.columns[0]) == \
                'sum(CASE WHEN (foo.age > :age_1) THEN sum(foo.age) END)'
 
 
@@ -366,7 +364,7 @@ class TestCountIfMetric(object):
         assert len(d.filters) == 0
 
         # Generate numerator / (denominator+epsilon) by default
-        assert unicode(d.columns[0]) == \
+        assert str(d.columns[0]) == \
                'count(DISTINCT CASE WHEN (foo.age > :age_1) THEN foo.first END)'
 
         d = CountIfMetric(MyTable.age > 5, MyTable.first, count_distinct=False)
@@ -375,5 +373,5 @@ class TestCountIfMetric(object):
         assert len(d.filters) == 0
 
         # Generate numerator / (denominator+epsilon) by default
-        assert unicode(d.columns[0]) == \
+        assert str(d.columns[0]) == \
                'count(CASE WHEN (foo.age > :age_1) THEN foo.first END)'

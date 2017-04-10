@@ -1,10 +1,12 @@
+from functools import total_ordering
 from uuid import uuid4
 
 from sqlalchemy import Float, between, case, cast, distinct, func
 
-from recipe.compat import basestring
+from recipe.compat import basestring, str
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict
+
 
 
 # TODO: How do we avoid attaching significance to particular
@@ -12,7 +14,7 @@ from recipe.utils import AttrDict
 
 # Should dimensions having ids be an extension to recipe?
 
-
+@total_ordering
 class Ingredient(object):
     """ Ingredients combine to make a SQLAlchemy query.
     """
@@ -58,10 +60,16 @@ class Ingredient(object):
         # Any remaining passed properties are available in self.meta
         self.meta = AttrDict(kwargs)
 
+    def __hash__(self):
+        return hash(self.describe())
+
+    def __repr__(self):
+        return self.describe()
+
     def describe(self):
         return u'({}){} {}'.format(self.__class__.__name__, self.id,
                                    ' '.join(
-                                       unicode(col) for col in self.columns))
+                                       str(col) for col in self.columns))
 
     def _format_value(self, value):
         """ Formats value using any stored formatters
@@ -107,10 +115,32 @@ class Ingredient(object):
             yield self.id, lambda row: \
                 self._format_value(getattr(row, raw_property))
 
-    def __cmp__(self, other):
+    def _order(self):
+            if isinstance(self, Dimension):
+                return (0, self.id)
+            elif isinstance(self, Metric):
+                return (1, self.id)
+            elif isinstance(self, Filter):
+                return (2, self.id)
+            elif isinstance(self, Having):
+                return (3, self.id)
+            else:
+                return (4, self.id)
+
+    def __lt__(self, other):
         """ Make ingredients sortable.
         """
-        return cmp(self.id, other.id)
+        return self._order() < other._order()
+
+    def __eq__(self, other):
+        """ Make ingredients sortable.
+        """
+        return self._order() == other._order()
+
+    def __ne__(self, other):
+        """ Make ingredients sortable.
+        """
+        return not (self._order() == other._order())
 
     def build_filter(self, value, operator=None):
         """ Builds a filter based on a supplied value and optional operator. If
@@ -179,16 +209,16 @@ class Filter(Ingredient):
         self.filters = [expression]
 
     def __cmp__(self, other):
-        return cmp(unicode(self.filters[0]), unicode(other.filters[0]))
+        return cmp(str(self.filters[0]), str(other.filters[0]))
 
     def __repr__(self):
-        return '{}'.format([unicode(f) for f in self.filters])
+        return '{}'.format([str(f) for f in self.filters])
 
     def describe(self):
         """ Stringify this ingredient to help in debugging. """
         return u'({}){} {}'.format(self.__class__.__name__,
                                    self.id,
-                                   unicode(self))
+                                   str(self))
 
     @property
     def expression(self):
@@ -209,16 +239,16 @@ class Having(Ingredient):
         self.havings = [expression]
 
     def __cmp__(self, other):
-        return cmp(unicode(self.havings[0]), unicode(other.havings[0]))
+        return cmp(str(self.havings[0]), str(other.havings[0]))
 
     def __repr__(self):
-        return u'{}'.format([unicode(f) for f in self.havings])
+        return u'{}'.format([str(f) for f in self.havings])
 
     def describe(self):
         """ Stringify this ingredient to help in debugging. """
         return u'({}){} {}'.format(self.__class__.__name__,
                                    self.id,
-                                   unicode(self))
+                                   str(self))
 
     @property
     def expression(self):

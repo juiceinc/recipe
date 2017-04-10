@@ -72,7 +72,6 @@ ORDER BY foo.last"""
         hv = Having(func.sum(MyTable.age) < 10)
         recipe = self.recipe().metrics('age').dimensions(
             'last').filters(MyTable.age > 2).filters(hv).order_by('last')
-        print recipe.to_sql()
         assert recipe.to_sql() == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo

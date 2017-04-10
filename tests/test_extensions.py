@@ -277,7 +277,6 @@ ORDER BY foo.last"""
 
         recipe = self.recipe().metrics('age').dimensions(
             'last').order_by('last').anonymize(True)
-        print recipe.to_sql()
         assert recipe.to_sql() == """SELECT foo.last AS last_raw,
        sum(foo.age) AS age
 FROM foo

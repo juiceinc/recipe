@@ -151,7 +151,7 @@ class AutomaticFilters(RecipeExtension):
 
     def add_ingredients(self):
         if self.apply:
-            for dim, values in self._automatic_filters.iteritems():
+            for dim, values in self._automatic_filters.items():
                 operator = None
                 if '__' in dim:
                     dim, operator = dim.split('__')

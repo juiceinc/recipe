@@ -3,6 +3,8 @@ import time
 import warnings
 from uuid import uuid4
 
+import six
+import tablib
 from orderedset import OrderedSet
 from sqlalchemy import (alias)
 from sqlalchemy.sql.elements import BinaryExpression
@@ -18,6 +20,15 @@ ALLOW_QUERY_CACHING = True
 warnings.simplefilter('always', DeprecationWarning)
 
 logger = logging.getLogger(__name__)
+
+
+
+__title__ = 'recipe'
+__version__ = '0.1.0'
+__author__ = 'Chris Gemignani'
+__license__ = 'MIT'
+__copyright__ = 'Copyright 2017 Chris Gemignani'
+__docformat__ = 'restructuredtext'
 
 
 # TODO mixin approach
@@ -69,7 +80,23 @@ class Stats(object):
         return self._get_value('_from_cache')
 
 
-class Recipe(object):
+class RecipeBase(type):
+    def __new__(cls, name, bases, attrs):
+        super_new = super(RecipeBase, cls).__new__
+
+        # Also ensure initialization is only performed for subclasses of Model
+        # (excluding Model class itself).
+        parents = [b for b in bases if isinstance(b, RecipeBase)]
+        if not parents:
+            return super_new(cls, name, bases, attrs)
+
+        # Create the class.
+        module = attrs.pop('__module__')
+        new_class = super_new(cls, name, bases, {'__module__': module})
+        attr_meta = attrs.pop('Meta', None)
+        return new_class
+
+class Recipe(six.with_metaclass(RecipeBase)):
     """ Builds a query using Ingredients.
 
     recipe generates a query in the following way
@@ -117,7 +144,6 @@ class Recipe(object):
                  dimensions=None,
                  filters=None,
                  order_by=None,
-                 automatic_filters=None,
                  session=None,
                  extension_classes=None):
         """
@@ -170,6 +196,14 @@ class Recipe(object):
             # Create all the extension instances, passing them a reference to
             # this recipe
             self.recipe_extensions.append(ExtensionClass(self))
+
+        self._register_formats()
+
+    # @classmethod
+    def _register_formats(cls):
+        """Adds format properties."""
+        extensions = getattr(cls, 'extensions')
+
 
     # -------
     # Builder for parts of the recipe.
@@ -374,7 +408,7 @@ class Recipe(object):
                     columns = ingredient.columns
                 for c in columns:
                     order_by = c.desc() if ingredient.ordering == 'desc' else c
-                    if unicode(order_by) not in [unicode(o) for o in order_bys]:
+                    if str(order_by) not in [str(o) for o in order_bys]:
                         order_bys.add(order_by)
 
         return list(order_bys)
