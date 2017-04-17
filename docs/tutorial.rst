@@ -92,11 +92,44 @@ List of ingredients
 Dimension
 ~~~~~~~~~
 
+Dimensions are groupings that exist in your data.
+
+.. code-block:: python
+
+    # A simple dimension
+    self.shelf['state'] = Dimension(Census.state)
+
 IdValueDimension
 ~~~~~~~~~~~~~~~~
 
+IdValueDimensions support separate properties for ids and values. Consider a
+table of employees with an ``employee_id`` and a ``full_name``. If you had
+two employees with the same name you need to be able to distinguish between
+them.
+
+.. code-block:: python
+
+    # Support an id and a label
+    self.shelf['employee']: IdValueDimension(Employee.id, Employee.full_name)
+
+The id is accessible as ``employee_id`` in each row and their full name is
+available as ``employee``.
+
 LookupDimension
 ~~~~~~~~~~~~~~~
+
+Lookup dimension maps values in your data to descriptive names. The ``_id``
+property of your dimension contains the original value.
+
+.. code-block:: python
+
+    # Convert M/F into Male/Female
+    self.shelf['gender']: LookupDimension(Census.sex, {'M': 'Male',
+        'F': 'Female'}, default='Unknown')
+
+If you use the gender dimension, there will be a ``gender_id`` in each row
+that will be "M" or "F" and a ``gender`` in each row that will be "Male" or
+"Female".
 
 Metric
 ~~~~~~
