@@ -20,8 +20,8 @@ import logging
 
 from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.ingredients import Ingredient, Dimension, LookupDimension, \
-    IdValueDimension, Metric, DivideMetric, CountIfMetric, SumIfMetric, \
-    Filter, Having
+    IdValueDimension, Metric, DivideMetric, WtdAvgMetric, CountIfMetric, \
+    SumIfMetric, Filter, Having
 from recipe.core import Recipe
 from recipe.shelf import Shelf, AutomaticShelf
 

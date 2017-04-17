@@ -8,7 +8,6 @@ from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict
 
 
-
 # TODO: How do we avoid attaching significance to particular
 # indices in columns
 
@@ -116,16 +115,16 @@ class Ingredient(object):
                 self._format_value(getattr(row, raw_property))
 
     def _order(self):
-            if isinstance(self, Dimension):
-                return (0, self.id)
-            elif isinstance(self, Metric):
-                return (1, self.id)
-            elif isinstance(self, Filter):
-                return (2, self.id)
-            elif isinstance(self, Having):
-                return (3, self.id)
-            else:
-                return (4, self.id)
+        if isinstance(self, Dimension):
+            return (0, self.id)
+        elif isinstance(self, Metric):
+            return (1, self.id)
+        elif isinstance(self, Filter):
+            return (2, self.id)
+        elif isinstance(self, Having):
+            return (3, self.id)
+        else:
+            return (4, self.id)
 
     def __lt__(self, other):
         """ Make ingredients sortable.
@@ -354,6 +353,16 @@ class DivideMetric(Metric):
                 ((cast(denominator, Float) == 0.0, ifzero),),
                 else_=cast(numerator, Float) / cast(denominator, Float))
         super(DivideMetric, self).__init__(expression, **kwargs)
+
+
+class WtdAvgMetric(DivideMetric):
+    """ A metric that generates the weighted average of a metric by a weight.
+    """
+
+    def __init__(self, expression, weight_expression, **kwargs):
+        numerator = func.sum(expression * weight_expression)
+        denominator = func.sum(weight_expression)
+        super(WtdAvgMetric, self).__init__(numerator, denominator, **kwargs)
 
 
 class SumIfMetric(Metric):

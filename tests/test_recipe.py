@@ -80,6 +80,20 @@ GROUP BY foo.last
 HAVING sum(foo.age) < 10
 ORDER BY foo.last"""
 
+    def test_wtdavg(self):
+        census_shelf
+        recipe = self.recipe().shelf(census_shelf)\
+            .metrics('avgage').dimensions('state').order_by('-avgage')
+
+        assert recipe.to_sql() == """SELECT census.state AS state,
+       CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS avgage
+FROM census
+GROUP BY census.state
+ORDER BY CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) DESC"""
+
+        print recipe.dataset.csv
+        assert recipe.dataset.csv == 'foo'
+
 
 class TestStats(object):
     def setup(self):
