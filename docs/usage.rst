@@ -1,6 +1,6 @@
-=====
-Usage
-=====
+========
+Tutorial
+========
 
 To use Recipe in a project::
 
