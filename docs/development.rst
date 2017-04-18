@@ -3,12 +3,12 @@
 Development
 ===========
 
-Tablib is under active development, and contributors are welcome.
+Recipe is under active development, and contributors are welcome.
 
 If you have a feature request, suggestion, or bug report, please open a new
 issue on GitHub_. To submit patches, please send a pull request on GitHub_.
 
-.. _GitHub: http://github.com/kennethreitz/tablib/
+.. _GitHub: http://github.com/juiceinc/recipe/
 
 
 
@@ -30,7 +30,7 @@ Source Control
 --------------
 
 
-Tablib source is controlled with Git_, the lean, mean, distributed source
+Recipe source is controlled with Git_, the lean, mean, distributed source
 control machine.
 
 The repository is publicly accessible.
@@ -68,8 +68,6 @@ Adding New Extensions
 
 Recipe welcomes new extensions.
 
-* MySQL Dump
-
 
 Building Extensions
 ~~~~~~~~~~~~~~~~~~~
@@ -89,9 +87,39 @@ that require another recipe should have a classname that ends with **Recipe**.
 * CompareRecipe
 * BlendRecipe
 
+A checklist of adding an extension.
+
+- [] Add extension to src/extensions.py
+- [] Add tests to tests/test_extensions.py, cover 100% of extension function
+     and test that the extension doesn't interfere with other extensions
+- [] Make sure your extension code passes flake8
+- [] Add extension description to docs/tutorial.py
+- [] Submit a PR!
+
+----------------------
+Adding New Ingredients
+----------------------
+
+Recipe welcomes new ingredients, particularly metrics and dimensions that
+cover common patterns of data aggregation.
 
 
+Building Ingredients
+~~~~~~~~~~~~~~~~~~~~
 
+Subclass the appropriate ingredient and don't duplicate something that a
+superclass does. For instance ``WtdAvgMetric`` is a subclass of
+``DivideMetric`` that generates it's expressions differently.
+
+Extra functionality can be added by using Ingredient.meta in structured ways.
+
+A checklist of adding an extension.
+
+- [] Add extension to src/ingredients.py
+- [] Add tests to tests/test_ingredients.py, cover 100% of ingredient
+     parameters.
+- [] Make sure your ingredient passes flake8
+- [] Submit a PR!
 
 
 .. _testing:
@@ -130,7 +158,7 @@ Anyone may view the build status and history at any time.
     https://travis-ci.org/juiceinc/tablib
 
 Additional reports will also be included here in the future, including :pep:`8`
-    checks and stress reports for extremely large datasets.
+        checks and stress reports for extremely large datasets.
 
 .. _`Jenkins CI`: https://travis-ci.org/
 
