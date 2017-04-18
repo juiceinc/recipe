@@ -18,10 +18,11 @@ Release v\ |version|. (:ref:`Installation <install>`)
 .. * :ref:`search`
 
 
-Recipe is an :ref:`MIT Licensed <mit>` cross-database querying library, written
-in Python. It allows you to reuse SQL fragments to answer build consistent data
-stories. Extension classes allow you to support data anonymization, automatic
-generation of where clauses, subselects, and response formatting.
+Recipe is an :ref:`MIT licensed <mit>` cross-database querying library, written
+in Python. It allows you to reuse SQL fragments to answer data questions
+consistently. Extension classes allow you to support data anonymization,
+automatic generation of where clauses, user permissioning to data, subselects,
+and response formatting.
 
 .. code-block:: python
 
@@ -47,9 +48,8 @@ generation of where clauses, subselects, and response formatting.
 User's Guide
 ------------
 
-This part of the documentation, which is mostly prose, begins with some
-background information about Tablib, then focuses on step-by-step instructions
-for getting the most out of your datasets.
+This guide covers installation, the core concepts to get you started,
+available extensions, connecting to databases and caching.
 
 .. toctree::
    :maxdepth: 2

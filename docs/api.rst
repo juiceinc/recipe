@@ -38,7 +38,7 @@ Ingredient Object
 -----------------
 
 
-.. autoclass:: Shelf
+.. autoclass:: Ingredient
    :inherited-members:
 
 
@@ -58,19 +58,14 @@ Exceptions
 ----------
 
 
-.. class:: InvalidDatasetType
+.. class:: BadIngredient
 
-    You're trying to add something that doesn't quite look right.
-
-
-.. class:: InvalidDimensions
-
-    You're trying to add something that doesn't quite fit right.
+    You can't build an ingredient this way.
 
 
-.. class:: UnsupportedFormat
+.. class:: BadRecipe
 
-    You're trying to add something that doesn't quite taste right.
+    You can't build a recipe this way.
 
 
-Now, go start some :ref:`Tablib Development <development>`.
+Now, go start some :ref:`Recipe Development <development>`.

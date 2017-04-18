@@ -5,8 +5,8 @@ import pytest
 from recipe import BadRecipe
 from recipe import Recipe
 from recipe.extensions import RecipeExtension, AutomaticFilters, \
-    AnonymizeRecipe, \
-    SummarizeOverRecipe, CompareRecipe, BlendRecipe
+    Anonymize, \
+    SummarizeOver, CompareRecipe, BlendRecipe
 from .test_base import *
 
 
@@ -248,7 +248,7 @@ class TestAnonymizeRecipeExtension(object):
                               anonymizer=lambda value: value[::-1]),
             'age': Metric(func.sum(MyTable.age))
         })
-        self.extension_classes = [AnonymizeRecipe]
+        self.extension_classes = [Anonymize]
 
     def recipe(self):
         return Recipe(shelf=self.shelf, session=self.session,
@@ -327,7 +327,7 @@ class TestSummarizeOverExtension(object):
                               anonymizer=lambda value: value[::-1]),
             'age': Metric(func.sum(MyTable.age))
         })
-        self.extension_classes = [SummarizeOverRecipe]
+        self.extension_classes = [SummarizeOver]
 
     def recipe(self):
         return Recipe(shelf=self.shelf, session=self.session,

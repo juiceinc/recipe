@@ -14,22 +14,14 @@ issue on GitHub_. To submit patches, please send a pull request on GitHub_.
 
 .. _design:
 
----------------------
-Design Considerations
----------------------
+-----------
+Conventions
+-----------
 
-Tablib was developed with a few :pep:`20` idioms in mind.
+Recipe code wraps at 79 characters and passes flake8. Strings should single
+quoted unless double quoting leads to less escaping. Add tests to achieve
+100% code coverage.
 
-#. Beautiful is better than ugly.
-#. Explicit is better than implicit.
-#. Simple is better than complex.
-#. Complex is better than complicated.
-#. Readability counts.
-
-A few other things to keep in mind:
-
-#. Keep your code DRY.
-#. Strive to be as simple (to use) as possible.
 
 .. _scm:
 
@@ -43,19 +35,18 @@ control machine.
 
 The repository is publicly accessible.
 
-    ``git clone git://github.com/kennethreitz/tablib.git``
+    ``git clone git://github.com/juiceinc/recipe.git``
 
 The project is hosted on **GitHub**.
 
 
     GitHub:
-        http://github.com/kennethreitz/tablib
+        http://github.com/juiceinc/recipe
 
 
 Git Branch Structure
 ++++++++++++++++++++
 
-Feature / Hotfix / Release branches follow a `Successful Git Branching Model`_ . Git-flow_ is a great tool for managing the repository. I highly recommend it.
 
 ``develop``
     The "next release" branch. Likely unstable.
@@ -64,98 +55,63 @@ Feature / Hotfix / Release branches follow a `Successful Git Branching Model`_ .
 
 Each release is tagged.
 
-When submitting patches, please place your feature/change in its own branch prior to opening a pull request on GitHub_.
+When submitting patches, please place your feature/change in its own branch
+prior to opening a pull request on GitHub_.
 
 
-.. _Git: http://git-scm.org
-.. _`Successful Git Branching Model`: http://nvie.com/posts/a-successful-git-branching-model/
-.. _git-flow: http://github.com/nvie/gitflow
 
-
-.. _newformats:
+.. _newextensions:
 
 ------------------
-Adding New Formats
+Adding New Extensions
 ------------------
 
-Tablib welcomes new format additions! Format suggestions include:
+Recipe welcomes new extensions.
 
 * MySQL Dump
 
 
-Coding by Convention
-++++++++++++++++++++
+Building Extensions
+~~~~~~~~~~~~~~~~~~~
 
-Tablib features a micro-framework for adding format support. The easiest way to understand it is to use it. So, let's define our own format, named *xxx*.
+Extensions subclass RecipeExtension and plug into the base recipe's ``.query()``
+method which builds a SQLAlchemy query. Extensions can either modify the base
+recipe like these do.
 
-1. Write a new format interface.
-
-    :class:`tablib.core` follows a simple pattern for automatically utilizing your format throughout Tablib. Function names are crucial.
-
-    Example **tablib/formats/_xxx.py**: ::
-
-        title = 'xxx'
-
-        def export_set(dset):
-            ....
-            # returns string representation of given dataset
-
-        def export_book(dbook):
-            ....
-            # returns string representation of given databook
-
-        def import_set(dset, in_stream):
-            ...
-            # populates given Dataset with given datastream
-
-        def import_book(dbook, in_stream):
-            ...
-            # returns Databook instance
-
-        def detect(stream):
-            ...
-            # returns True if given stream is parsable as xxx
-
-.. admonition:: Excluding Support
+* AutomaticFilters
+* Anonymize
+* SummarizeOver
 
 
-    If the format excludes support for an import/export mechanism (*eg.* :class:`csv <tablib.Dataset.csv>` excludes :class:`Databook <tablib.Databook>` support), simply don't define the respective functions. Appropriate errors will be raised.
+Or extensions can merge one or more recipes into the base recipe. Extensions
+that require another recipe should have a classname that ends with **Recipe**.
 
-2.
+* CompareRecipe
+* BlendRecipe
 
-    Add your new format module to the :class:`tablib.formats.available` tuple.
 
-3.
-    Add a mock property to the :class:`Dataset <tablib.Dataset>` class with verbose `reStructured Text`_ docstring. This alleviates IDE confusion, and allows for pretty auto-generated Sphinx_ documentation.
 
-4. Write respective :ref:`tests <testing>`.
+
+
 
 .. _testing:
 
 --------------
-Testing Tablib
+Testing Recipe
 --------------
 
-Testing is crucial to Tablib's stability. This stable project is used in production by many companies and developers, so it is important to be certain that every version released is fully operational. When developing a new feature for Tablib, be sure to write proper tests for it as well.
+Testing is crucial to confident development and stability. This stable
+project is used in production by many companies and developers, so it is
+important to be certain that every version released is fully operational.
+When developing a new feature for Recipe, be sure to write proper tests for it
+ as well.
 
-When developing a feature for Tablib, the easiest way to test your changes for potential issues is to simply run the test suite directly. ::
+When developing a feature for Recipe, the easiest way to test your changes for
+potential issues is to simply run the test suite directly. ::
 
-	$ ./test_tablib.py
+	$ make tests
 
-
-`Jenkins CI`_, amongst other tools, supports Java's xUnit testing report format. Nose_ allows us to generate our own xUnit reports.
-
-Installing nose is simple. ::
-
-	$ pip install nose
-
-Once installed, we can generate our xUnit report with a single command. ::
-
-	$ nosetests test_tablib.py --with-xunit
-
-This will generate a **nosetests.xml** file, which can then be analyzed.
-
-.. _Nose: http://somethingaboutorange.com/mrl/projects/nose/
+This will run tests under pytest and show code coverage data.
 
 
 
@@ -165,13 +121,16 @@ This will generate a **nosetests.xml** file, which can then be analyzed.
 Continuous Integration
 ----------------------
 
-Every commit made to the **develop** branch is automatically tested and inspected upon receipt with `Travis CI`_. If you have access to the main repository and broke the build, you will receive an email accordingly.
+Every commit made to the **develop** branch is automatically tested and
+inspected upon receipt with `Travis CI`_. If you have access to the main
+repository and broke the build, you will receive an email accordingly.
 
 Anyone may view the build status and history at any time.
 
-    https://travis-ci.org/kennethreitz/tablib
+    https://travis-ci.org/juiceinc/tablib
 
-Additional reports will also be included here in the future, including :pep:`8` checks and stress reports for extremely large datasets.
+Additional reports will also be included here in the future, including :pep:`8`
+    checks and stress reports for extremely large datasets.
 
 .. _`Jenkins CI`: https://travis-ci.org/
 
@@ -182,26 +141,26 @@ Additional reports will also be included here in the future, including :pep:`8` 
 Building the Docs
 -----------------
 
-Documentation is written in the powerful, flexible, and standard Python documentation format, `reStructured Text`_.
-Documentation builds are powered by the powerful Pocoo project, Sphinx_. The :ref:`API Documentation <api>` is mostly documented inline throughout the module.
+Documentation in `reStructured Text`_ and powered by Sphinx_.
 
-The Docs live in ``tablib/docs``. In order to build them, you will first need to install Sphinx. ::
+The Docs live in ``recipe/docs``. In order to build them, you will first need
+ to install Sphinx. ::
 
 	$ pip install sphinx
 
 
-Then, to build an HTML version of the docs, simply run the following from the **docs** directory: ::
+To build an HTML version of the docs, simply run the following from the
+**docs** directory: ::
 
 	$ make html
 
-Your ``docs/_build/html`` directory will then contain an HTML representation of the documentation, ready for publication on most web servers.
-
-You can also generate the documentation in **epub**, **latex**, **json**, *&c* similarly.
+Your ``docs/_build/html`` directory will then contain the fully build
+documentation, ready for publishing. You can also generate the documentation
+in tons of other formats.
 
 .. _`reStructured Text`: http://docutils.sourceforge.net/rst.html
 .. _Sphinx: http://sphinx.pocoo.org
-.. _`GitHub Pages`: http://pages.github.com
 
 ----------
 
-Make sure to check out the :ref:`API Documentation <api>`.
+If you want to learn more, check out the :ref:`API Documentation <api>`.

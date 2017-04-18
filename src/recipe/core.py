@@ -414,8 +414,10 @@ class Recipe(six.with_metaclass(RecipeBase)):
         return list(order_bys)
 
     def query(self):
-        """ Generates a query using the Dimension, Measure, and Filter
-        ingredients supplied by the recipe.
+        """
+        Generates a query using the ingredients supplied by the recipe.
+
+        :return: A SQLAlchemy query
         """
         if not self.dirty and self._query:
             return self._query

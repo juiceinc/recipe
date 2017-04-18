@@ -17,9 +17,6 @@ class RecipeExtension(object):
     Recipe extensions plug into the recipe builder pattern and can modify the
     generated query.
 
-    Methods marked with the decorator ``@recipebuilder`` connect to Recipe's
-    builder pattern and parameterize the extension.
-
     The extension should mark itself as ``dirty`` if it has changes which
     change the current recipe results.
 
@@ -69,8 +66,6 @@ class RecipeExtension(object):
         results.
 
     """
-    recipeextensions = []
-
     def __init__(self, recipe):
         self.dirty = True
         self.recipe = recipe
@@ -197,6 +192,118 @@ class UserFilters(RecipeExtension):
 
     def __init__(self, *args, **kwargs):
         super(UserFilters, self).__init__(*args, **kwargs)
+
+
+class SummarizeOver(RecipeExtension):
+    def __init__(self, *args, **kwargs):
+        super(SummarizeOver, self).__init__(*args, **kwargs)
+        self._summarize_over = None
+        self.active = True
+
+    def summarize_over(self, dimension_key):
+        self.dirty = True
+        self._summarize_over = dimension_key
+        return self.recipe
+
+    def add_ingredients(self):
+        """
+        Take a recipe that has dimensions
+        Resummarize it over one of the dimensions returning averages of the
+        metrics.
+        """
+        if self._summarize_over is None:
+            return
+
+        if not self.active:
+            return
+
+        assert self._summarize_over in self.recipe.dimension_ids
+
+        # Deactivate this summarization to get a clean query
+        self.active = False
+        base_table = self.recipe.as_table(name='summarized')
+        self.active = True
+
+        summmarize_over_dim = self.recipe._cauldron[self._summarize_over]
+
+        # Construct a class dynamically so we can give it a dynamic name
+        T = type('T', (Base,), {
+            '__table__': base_table,
+            '__mapper_args__': {'primary_key': base_table.c.first}
+        })
+
+        metrics = []
+        for m in self.recipe.metric_ids:
+            # Replace the base metric with an averaged version of it
+            # targetted to the new table
+            base_metric = self.recipe._cauldron[m]
+
+            summarized_metric = copy(base_metric)
+            summarized_metric.columns = [func.avg(getattr(T, base_metric.id))]
+            metrics.append(summarized_metric)
+
+        dimensions = []
+        for dim in self.recipe.dimension_ids:
+            if dim != self._summarize_over:
+                # Replace the base dimension with a version of it targetted
+                # to the new table
+                base_dim = self.recipe._cauldron[dim]
+                summarized_dim = copy(base_dim)
+                summarized_dim.columns = []
+                summarized_dim.group_by = []
+                for col in base_dim.columns:
+                    newcol = getattr(T, col.name)
+                    summarized_dim.columns.append(newcol)
+                    summarized_dim.group_by.append(newcol)
+                dimensions.append(summarized_dim)
+
+        # Rebuild the cauldron using only the dimensions and metrics
+        self.recipe._cauldron.clear()
+        for met in metrics:
+            self.recipe._cauldron.use(met)
+        for dim in dimensions:
+            self.recipe._cauldron.use(dim)
+
+
+class Metadata(RecipeExtension):
+    pass
+
+
+class CacheRecipe(RecipeExtension):
+    pass
+
+
+class Anonymize(RecipeExtension):
+    """ Allows recipes to be anonymized by adding an anonymize property
+    This flips the anonymize flag on all Ingredients used in the recipe.
+
+    Injects an ingredient.meta._anonymize boolean property on each used
+    ingredient.
+
+    AnonymizeRecipe should occur last
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(Anonymize, self).__init__(*args, **kwargs)
+        self._anonymize = False
+
+    def anonymize(self, value):
+        """ Should this recipe be anonymized"""
+        assert isinstance(value, bool)
+
+        if self._anonymize != value:
+            self.dirty = True
+            self._anonymize = value
+
+        # Builder pattern must return the recipe
+        return self.recipe
+
+    def add_ingredients(self):
+        """ Put the anonymizers in the last position of formatters """
+        for ingredient in self.recipe._cauldron.values():
+            if hasattr(ingredient.meta, 'anonymizer') and self._anonymize:
+                if ingredient.meta.anonymizer not in ingredient.formatters:
+                    ingredient.formatters.append(ingredient.meta.anonymizer)
 
 
 class BlendRecipe(RecipeExtension):
@@ -394,115 +501,3 @@ class CompareRecipe(RecipeExtension):
                 .outerjoin(comparison_subq, join_clause)
 
         return postquery_parts
-
-
-class AnonymizeRecipe(RecipeExtension):
-    """ Allows recipes to be anonymized by adding an anonymize property
-    This flips the anonymize flag on all Ingredients used in the recipe.
-
-    Injects an ingredient.meta._anonymize boolean property on each used
-    ingredient.
-
-    AnonymizeRecipe should occur last
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(AnonymizeRecipe, self).__init__(*args, **kwargs)
-        self._anonymize = False
-
-    def anonymize(self, value):
-        """ Should this recipe be anonymized"""
-        assert isinstance(value, bool)
-
-        if self._anonymize != value:
-            self.dirty = True
-            self._anonymize = value
-
-        # Builder pattern must return the recipe
-        return self.recipe
-
-    def add_ingredients(self):
-        """ Put the anonymizers in the last position of formatters """
-        for ingredient in self.recipe._cauldron.values():
-            if hasattr(ingredient.meta, 'anonymizer') and self._anonymize:
-                if ingredient.meta.anonymizer not in ingredient.formatters:
-                    ingredient.formatters.append(ingredient.meta.anonymizer)
-
-
-class SummarizeOverRecipe(RecipeExtension):
-    def __init__(self, *args, **kwargs):
-        super(SummarizeOverRecipe, self).__init__(*args, **kwargs)
-        self._summarize_over = None
-        self.active = True
-
-    def summarize_over(self, dimension_key):
-        self.dirty = True
-        self._summarize_over = dimension_key
-        return self.recipe
-
-    def add_ingredients(self):
-        """
-        Take a recipe that has dimensions
-        Resummarize it over one of the dimensions returning averages of the
-        metrics.
-        """
-        if self._summarize_over is None:
-            return
-
-        if not self.active:
-            return
-
-        assert self._summarize_over in self.recipe.dimension_ids
-
-        # Deactivate this summarization to get a clean query
-        self.active = False
-        base_table = self.recipe.as_table(name='summarized')
-        self.active = True
-
-        summmarize_over_dim = self.recipe._cauldron[self._summarize_over]
-
-        # Construct a class dynamically so we can give it a dynamic name
-        T = type('T', (Base,), {
-            '__table__': base_table,
-            '__mapper_args__': {'primary_key': base_table.c.first}
-        })
-
-        metrics = []
-        for m in self.recipe.metric_ids:
-            # Replace the base metric with an averaged version of it
-            # targetted to the new table
-            base_metric = self.recipe._cauldron[m]
-
-            summarized_metric = copy(base_metric)
-            summarized_metric.columns = [func.avg(getattr(T, base_metric.id))]
-            metrics.append(summarized_metric)
-
-        dimensions = []
-        for dim in self.recipe.dimension_ids:
-            if dim != self._summarize_over:
-                # Replace the base dimension with a version of it targetted
-                # to the new table
-                base_dim = self.recipe._cauldron[dim]
-                summarized_dim = copy(base_dim)
-                summarized_dim.columns = []
-                summarized_dim.group_by = []
-                for col in base_dim.columns:
-                    newcol = getattr(T, col.name)
-                    summarized_dim.columns.append(newcol)
-                    summarized_dim.group_by.append(newcol)
-                dimensions.append(summarized_dim)
-
-        # Rebuild the cauldron using only the dimensions and metrics
-        self.recipe._cauldron.clear()
-        for met in metrics:
-            self.recipe._cauldron.use(met)
-        for dim in dimensions:
-            self.recipe._cauldron.use(dim)
-
-
-class Metadata(RecipeExtension):
-    pass
-
-
-class CacheRecipe(RecipeExtension):
-    pass
