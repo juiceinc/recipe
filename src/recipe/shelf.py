@@ -106,7 +106,8 @@ class Shelf(AttrDict):
                     obj = obj[1:]
             if obj not in self:
                 if raise_if_invalid:
-                    raise BadRecipe("{} doesn't exist on the shelf".format(obj))
+                    raise BadRecipe(
+                        "{} doesn't exist on the shelf".format(obj))
                 else:
                     return obj
 

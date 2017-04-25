@@ -22,7 +22,6 @@ warnings.simplefilter('always', DeprecationWarning)
 logger = logging.getLogger(__name__)
 
 
-
 __title__ = 'recipe'
 __version__ = '0.1.0'
 __author__ = 'Chris Gemignani'
@@ -95,6 +94,7 @@ class RecipeBase(type):
         new_class = super_new(cls, name, bases, {'__module__': module})
         attr_meta = attrs.pop('Meta', None)
         return new_class
+
 
 class Recipe(six.with_metaclass(RecipeBase)):
     """ Builds a query using Ingredients.
@@ -203,7 +203,6 @@ class Recipe(six.with_metaclass(RecipeBase)):
     def _register_formats(cls):
         """Adds format properties."""
         extensions = getattr(cls, 'extensions')
-
 
     # -------
     # Builder for parts of the recipe.
@@ -388,7 +387,7 @@ class Recipe(six.with_metaclass(RecipeBase)):
             try:
                 dialect = self.session.bind.engine.name
                 if 'redshift' in dialect or 'postg' in dialect or 'pg' in \
-                    dialect:
+                        dialect:
                     is_postgres_engine = True
             except:
                 pass
@@ -610,8 +609,7 @@ class Recipe(six.with_metaclass(RecipeBase)):
             first_row = rows[0]
             return tablib.Dataset(*rows, headers=first_row._fields)
         else:
-            return  tablib.Dataset([], headers=[])
-
+            return tablib.Dataset([], headers=[])
 
     def first(self):
         """ Return the first element on the result

@@ -66,6 +66,7 @@ class RecipeExtension(object):
         results.
 
     """
+
     def __init__(self, recipe):
         self.dirty = True
         self.recipe = recipe
@@ -377,7 +378,7 @@ class BlendRecipe(RecipeExtension):
                     else:
                         raise BadRecipe('{} could not be found in .blend() '
                                         'recipe subquery'.format(
-                            id + suffix))
+                                            id + suffix))
 
             # For all dimensions in the blend recipe
             # Use the dimension in the base recipe and
@@ -398,7 +399,7 @@ class BlendRecipe(RecipeExtension):
                     else:
                         raise BadRecipe('{} could not be found in .blend() '
                                         'recipe subquery'.format(
-                            id + suffix))
+                                            id + suffix))
 
             base_dim = self.recipe._cauldron[join_base]
             blend_dim = blend_recipe._cauldron[join_blend]
@@ -475,7 +476,7 @@ class CompareRecipe(RecipeExtension):
                     else:
                         raise BadRecipe('{} could not be found in .compare() '
                                         'recipe subquery'.format(
-                            id + suffix))
+                                            id + suffix))
 
             join_conditions = []
             for dim in compare_recipe.dimension_ids:
