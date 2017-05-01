@@ -128,7 +128,12 @@ class Shelf(AttrDict):
             if ingredient.havings:
                 havings.update(ingredient.havings)
 
-        return columns, group_bys, filters, havings
+        return {
+            "columns": columns,
+            "group_bys": group_bys,
+            "filters": filters,
+            "havings": havings,
+        }
 
     def enchant(self, list, cache_context=None):
         """ Add any calculated values to each row of a resultset generating a

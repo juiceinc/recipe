@@ -60,11 +60,11 @@ class TestShelf(object):
 (Metric)age sum(foo.age)"""
 
     def test_brew(self):
-        columns, group_bys, filters, havings = self.shelf.brew_query_parts()
-        assert len(columns) == 3
-        assert len(group_bys) == 2
-        assert len(filters) == 0
-        assert len(havings) == 0
+        recipe_parts = self.shelf.brew_query_parts()
+        assert len(recipe_parts['columns']) == 3
+        assert len(recipe_parts['group_bys']) == 2
+        assert len(recipe_parts['filters']) == 0
+        assert len(recipe_parts['havings']) == 0
 
     def test_anonymize(self):
         """ We can save and store anonymization context """

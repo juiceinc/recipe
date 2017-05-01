@@ -17,18 +17,18 @@ class TestRecipeIngredients(object):
         self.session = Session()
         self.shelf = mytable_shelf
 
-    def recipe(self):
-        return Recipe(shelf=self.shelf, session=self.session)
+    def recipe(self, **kwargs):
+        return Recipe(shelf=self.shelf, session=self.session, **kwargs)
 
-        def test_dimension(self):
-            recipe = self.recipe().metrics('age').dimensions('first')
-            assert recipe.to_sql() == """SELECT foo.first AS first,
-           sum(foo.age) AS age
-    FROM foo
-    GROUP BY foo.first"""
-            assert recipe.all()[0].first == 'hi'
-            assert recipe.all()[0].age == 15
-            assert recipe.stats.rows == 1
+    def test_dimension(self):
+        recipe = self.recipe().metrics('age').dimensions('first')
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first"""
+        assert recipe.all()[0].first == 'hi'
+        assert recipe.all()[0].age == 15
+        assert recipe.stats.rows == 1
 
     def test_dataset(self):
         recipe = self.recipe().metrics('age').dimensions('first')
@@ -45,6 +45,18 @@ hi\t15\thi\r
 
     def test_dimension2(self):
         recipe = self.recipe().metrics('age').dimensions('last').order_by(
+            'last')
+        assert recipe.to_sql() == """SELECT foo.last AS last,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.last
+ORDER BY foo.last"""
+        assert recipe.all()[0].last == 'fred'
+        assert recipe.all()[0].age == 10
+        assert recipe.stats.rows == 2
+
+    def test_recipe_init(self):
+        recipe = self.recipe(metrics=('age',), dimensions=('last',)).order_by(
             'last')
         assert recipe.to_sql() == """SELECT foo.last AS last,
        sum(foo.age) AS age
@@ -168,6 +180,8 @@ class TestStats(object):
         # Stats are ready after the recipe is run
         assert recipe.stats.ready == True
         assert recipe.stats.rows == 2
+        assert recipe.stats.dbtime < 1.0
+        assert recipe.stats.from_cache == False
 
 
 class TestCacheContext(object):

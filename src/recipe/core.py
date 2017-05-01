@@ -422,79 +422,50 @@ class Recipe(six.with_metaclass(RecipeBase)):
         for extension in self.recipe_extensions:
             extension.add_ingredients()
 
-        order_bys = self._prepare_order_bys()
-
         # Step 2: Build the query (now that it has all the filters
         # and apply any blend recipes
 
         # Get the parts of the query from the cauldron
         # We don't need to regather order_bys
-        columns, group_bys, filters, havings = self._cauldron.brew_query_parts()
-
-        recipe_parts = {
-            "columns": columns,
-            "group_bys": group_bys,
-            "filters": filters,
-            "havings": havings,
-            "order_bys": order_bys,
-        }
+        recipe_parts = self._cauldron.brew_query_parts()
+        recipe_parts['order_bys'] = self._prepare_order_bys()
 
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_recipe_parts(recipe_parts)
 
         # Start building the query
-        query = self._session.query(*recipe_parts['columns'])
-        # TODO: .options(FromCache("default"))
-
-        # Only add group_bys at this point because using blend queries
-        # may have added more group_bys
-        query = query.group_by(*recipe_parts['group_bys']) \
+        recipe_parts['query'] = self._session.query(*recipe_parts['columns'])\
+            .group_by(*recipe_parts['group_bys']) \
             .order_by(*recipe_parts['order_bys']) \
             .filter(*recipe_parts['filters'])
-        if havings:
+        if recipe_parts['havings']:
             for having in recipe_parts['havings']:
-                query = query.having(having)
+                recipe_parts['query'] = recipe_parts['query'].having(having)
 
-        prequery_parts = {
-            "query": query,
-            "group_bys": group_bys,
-            "filters": filters,
-            "havings": havings,
-            "order_bys": order_bys,
-        }
         for extension in self.recipe_extensions:
-            prequery_parts = extension.modify_prequery_parts(prequery_parts)
-        query = prequery_parts['query']
+            recipe_parts = extension.modify_prequery_parts(recipe_parts)
 
-        if len(query.selectable.froms) != 1:
+        if len(recipe_parts['query'].selectable.froms) != 1:
             raise BadRecipe("Recipes must use ingredients that all come from "
                             "the same table. \nDetails on this recipe:\n{"
                             "}".format(str(self._cauldron)))
 
-        postquery_parts = {
-            "query": query,
-            "group_bys": group_bys,
-            "filters": filters,
-            "havings": havings,
-            "order_bys": order_bys,
-        }
         for extension in self.recipe_extensions:
-            postquery_parts = extension.modify_postquery_parts(postquery_parts)
-        query = postquery_parts['query']
+            recipe_parts = extension.modify_postquery_parts(recipe_parts)
 
         # Apply limit on the outermost query
         # This happens after building the comparison recipe
         if self._limit and self._limit > 0:
-            query = query.limit(self._limit)
+            recipe_parts['query'] = recipe_parts['query'].limit(self._limit)
 
         if self._offset and self._offset > 0:
-            query = query.offset(self._offset)
+            recipe_parts['query'] = recipe_parts['query'].offset(self._offset)
 
         # Step 5:  Clear the dirty flag,
         # Patch the query if there's a comparison query
         # cache results
 
-        self._query = query
+        self._query = recipe_parts['query']
         self.dirty = False
         return self._query
 
