@@ -57,23 +57,9 @@ class Shelf(AttrDict):
         """ A string representation of the ingredients used in a recipe
         ordered by Dimensions, Metrics, Filters, then Havings
         """
-
-        def ordering(x):
-            # Sort by Dimension,Metric,Filter then by id
-            if isinstance(x, Dimension):
-                return (0, x.id)
-            elif isinstance(x, Metric):
-                return (1, x.id)
-            elif isinstance(x, Filter):
-                return (2, x.id)
-            elif isinstance(x, Having):
-                return (3, x.id)
-            else:
-                return (4, x.id)
-
         lines = []
         # sort the ingredients by type
-        for ingredient in self.ingredients():
+        for ingredient in sorted(self.values()):
             lines.append(ingredient.describe())
         return '\n'.join(lines)
 
@@ -81,29 +67,26 @@ class Shelf(AttrDict):
         self[ingredient.id] = ingredient
 
     def find(self, obj, filter_to_class, constructor=None,
-             raise_if_invalid=True, apply_sort_order=False):
+             raise_if_invalid=True):
         """
         Find an Ingredient, optionally using the shelf.
 
         :param obj: A string or Ingredient
         :param filter_to_class: The Ingredient subclass that obj must be an
-        instance of
+         instance of
         :param constructor: An optional callable for building Ingredients
-        from obj
+         from obj
         :param raise_if_invalid: Raise an exception if obj is the wrong type
-        :param apply_sort_order: If obj is a string prefixed by '-' set the
-          found ingredient sort order to descending
         :return: An Ingredient of subclass must_be_type
         """
         if callable(constructor):
             obj = constructor(obj, shelf=self)
 
         if isinstance(obj, basestring):
-            set_descending = False
-            if apply_sort_order:
-                if obj.startswith('-'):
-                    set_descending = True
-                    obj = obj[1:]
+            set_descending = obj.startswith('-')
+            if set_descending:
+                obj = obj[1:]
+
             if obj not in self:
                 if raise_if_invalid:
                     raise BadRecipe(
@@ -168,7 +151,7 @@ class Shelf(AttrDict):
                 if not isinstance(ingredient, (Dimension, Metric)):
                     continue
                 if cache_context:
-                    ingredient.cache_context = cache_context
+                    ingredient.cache_context += str(cache_context)
                 for extra_field, extra_callable in ingredient.cauldron_extras:
                     extra_fields.append(extra_field)
                     extra_callables.append(extra_callable)

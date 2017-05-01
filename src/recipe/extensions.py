@@ -225,8 +225,6 @@ class SummarizeOver(RecipeExtension):
         base_table = self.recipe.as_table(name='summarized')
         self.active = True
 
-        summmarize_over_dim = self.recipe._cauldron[self._summarize_over]
-
         # Construct a class dynamically so we can give it a dynamic name
         T = type('T', (Base,), {
             '__table__': base_table,
@@ -357,9 +355,10 @@ class BlendRecipe(RecipeExtension):
         if not self.blend_recipes:
             return postquery_parts
 
-        for blend_recipe, blend_type, blend_criteria in zip(self.blend_recipes,
-                                                            self.blend_types,
-                                                            self.blend_criteria):
+        for blend_recipe, blend_type, blend_criteria in \
+            zip(self.blend_recipes,
+                self.blend_types,
+                self.blend_criteria):
             join_base, join_blend = blend_criteria
 
             blend_subq = blend_recipe.subquery()

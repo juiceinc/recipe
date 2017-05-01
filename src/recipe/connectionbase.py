@@ -24,7 +24,8 @@
 #     disconnected
 #     See https://juiceanalytics.atlassian.net/browse/JB-606 for more details
 #
-#     http://docs.sqlalchemy.org/en/latest/core/pooling.html#disconnect-handling-pessimistic
+#     http://docs.sqlalchemy.org/en/latest/core/
+#        pooling.html#disconnect-handling-pessimistic
 #
 #     :param connection:
 #     :param branch:
@@ -48,9 +49,9 @@
 #         # by the dialect in use.
 #         if err.connection_invalidated:
 #             # run the same SELECT again - the connection will re-validate
-#             # itself and establish a new connection.  The disconnect detection
-#             # here also causes the whole connection pool to be invalidated
-#             # so that all stale connections are discarded.
+#             # itself and establish a new connection.  The disconnect
+#             # detection here also causes the whole connection pool to be
+#             # invalidated so that all stale connections are discarded.
 #             connection.scalar(select([1]))
 #         else:
 #             raise
@@ -79,7 +80,8 @@
 #
 #     engine = create_engine(connection_str, **connection_settings)
 #
-#     # Add a handler to pessimistically check each time a connection is checked out
+#     # Add a handler to pessimistically check each time a connection is
+#     # checked out
 #     event.listen(engine, "engine_connect", ping_connection)
 #
 #     return engine
@@ -129,10 +131,11 @@
 # # redis_host, redis_port = settings.CACHES['default']['LOCATION'].split(':')
 # # regions = {}
 # #
-# # regions['default'] = make_region(async_creation_runner=async_creation_runner,
-# #                                  key_mangler=lambda
-# #                                  key: "fruition:dogpile:" + sha1_mangle_key(
-# #                                  key)).configure(
+# # regions['default'] = make_region(
+# #        async_creation_runner=async_creation_runner,
+# #       key_mangler=lambda
+# #        key: "fruition:dogpile:" + sha1_mangle_key(
+# #        key)).configure(
 # #     'dogpile.cache.redis',
 # #     arguments={
 # #         'host': redis_host,
@@ -148,8 +151,8 @@
 # # regions['anonymizer'] = make_region(
 # # async_creation_runner=async_creation_runner,
 # #                                     key_mangler=lambda
-# #                                         key: "anonymizer:" + sha1_mangle_key(
-# #                                         key)).configure(
+# #                                         key: "anonymizer:" +
+#                             sha1_mangle_key(key)).configure(
 # #     'dogpile.cache.redis',
 # #     arguments={
 # #         'host': redis_host,
@@ -195,8 +198,8 @@
 #         # Do name replacement
 #         new_params = {}
 #         for k, v in params.iteritems():
-#             if isinstance(v, basestring) and len(v) > 0 and v[0] != "'" and v[
-#                 -1] != "'":
+#             if isinstance(v, basestring) and len(v) > 0 and v[0] != "'" and
+#                 v[-1] != "'":
 #                 new_params[k] = "'" + v + "'"
 #             elif isinstance(v, date):
 #                 # Encode dates as strings

@@ -48,9 +48,6 @@ Functions
 ---------
 
 
-.. autofunction:: detect
-
-.. autofunction:: import_set
 
 
 ----------

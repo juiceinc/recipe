@@ -38,7 +38,8 @@
 #     The CachingQuery optionally stores additional state that allows it to
 #     consult a dogpile.cache cache before accessing the database, in the form
 #     of a FromCache or RelationshipCache object.   Each of these objects
-#     refer to the name of a :class:`dogpile.cache.Region` that's been configured
+#     refer to the name of a :class:`dogpile.cache.Region` that's been
+#     configured
 #     and stored in a lookup dictionary.  When such an object has associated
 #     itself with the CachingQuery, the corresponding dogpile.cache.Region
 #     is used to locate a cached result.  If none is present, then the
@@ -60,7 +61,8 @@
 #
 #            Note that this approach does *not* detach the loaded objects from
 #            the current session. If the cache backend is an in-process cache
-#            (like "memory") and lives beyond the scope of the current session's
+#            (like "memory") and lives beyond the scope of the current
+#            session's
 #            transaction, those objects may be expired. The method here can be
 #            modified to first expunge() each loaded item from the current
 #            session before returning the list of items, so that the items

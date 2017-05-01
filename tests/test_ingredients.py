@@ -55,6 +55,11 @@ class TestIngredients(object):
         ingr = Dimension(MyTable.first, formatters=[lambda x: x + 'foo'])
         assert ingr.make_column_suffixes() == ('_raw',)
 
+    def test_cache_context(self):
+        # Cache context is saved
+        ingr = Ingredient(cache_context='foo')
+        assert ingr.cache_context == 'foo'
+
     def test_ingredient_describe(self):
         # .describe()
         ingr = Ingredient(id='foo', columns=[MyTable.first, MyTable.last])

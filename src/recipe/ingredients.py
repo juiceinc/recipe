@@ -22,17 +22,19 @@ class Ingredient(object):
         """ Initializing an instance of the Ingredient Class
 
         :param columns: A list of SQLAlchemy columns to use in a query.
-        :type *ColumnElement: list
+        :type ColumnElement: list
         :param filters: A list of SQLAlchemy BinaryExpressions to use in the
                         .filter() clause of a query.
-        :type *BinaryExpressions: list
+        :type BinaryExpressions: list
         :param havings: A list of SQLAlchemy BinaryExpressions to use in the
                         .filter() clause of a query.
-        :type *BinaryExpressions: list
+        :type BinaryExpressions: list
         :param group_by: A list of SQLAlchemy columns to use in the group_by
                         clause of a query
         :param formatters: A list of callables to apply to the result values
-        :type *callables: list
+        :type callables: list
+        :param cache_context: Extra context when caching this ingredient
+        :type cache_context: string
         :param ordering: The default ordering of this ingredient if it is
         used in a ``recipe.order_by``
         """
@@ -43,6 +45,7 @@ class Ingredient(object):
         self.group_by = kwargs.pop('group_by', [])
         self.formatters = kwargs.pop('formatters', [])
         self.column_suffixes = kwargs.pop('column_suffixes', None)
+        self.cache_context = kwargs.pop('cache_context', '')
         self.anonymize = False
         # What order should this be in
         self.ordering = kwargs.pop('ordering', 'asc')
@@ -115,6 +118,7 @@ class Ingredient(object):
                 self._format_value(getattr(row, raw_property))
 
     def _order(self):
+        """ Ingredients are sorted by subclass then by id """
         if isinstance(self, Dimension):
             return (0, self.id)
         elif isinstance(self, Metric):

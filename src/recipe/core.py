@@ -92,7 +92,7 @@ class RecipeBase(type):
         # Create the class.
         module = attrs.pop('__module__')
         new_class = super_new(cls, name, bases, {'__module__': module})
-        attr_meta = attrs.pop('Meta', None)
+        # attr_meta = attrs.pop('Meta', None)
         return new_class
 
 
@@ -148,11 +148,12 @@ class Recipe(six.with_metaclass(RecipeBase)):
                  extension_classes=None):
         """
         :param shelf: A shelf to use for looking up
-        :param metrics:
-        :param dimensions:
-        :param filters:
-        :param order_by:
-        :param session:
+        :param metrics: A list of metric keys or Metrics to use
+        :param dimensions: A list of dimension keys or Dimensions to use
+        :param filters: A list of filter keys or Filters to use
+        :param order_by: A list of metric or dimension keys to use for
+          ordering.
+        :param session: A database session.
         """
 
         self._id = str(uuid4())[:8]
@@ -197,12 +198,6 @@ class Recipe(six.with_metaclass(RecipeBase)):
             # this recipe
             self.recipe_extensions.append(ExtensionClass(self))
 
-        self._register_formats()
-
-    # @classmethod
-    def _register_formats(cls):
-        """Adds format properties."""
-        extensions = getattr(cls, 'extensions')
 
     # -------
     # Builder for parts of the recipe.
@@ -254,10 +249,10 @@ class Recipe(six.with_metaclass(RecipeBase)):
         The Metric expression will be added to the query's select statement.
         The metric value is a property of each row of the result.
 
-        :param *metrics: Metrics to add to the recipe. Metrics can
+        :param metrics: Metrics to add to the recipe. Metrics can
                          either be keys on the ``shelf`` or
                          Metric objects
-        :type *metrics: list
+        :type metrics: list
         """
         for m in metrics:
             self._cauldron.use(self._shelf.find(m, Metric))
@@ -275,10 +270,10 @@ class Recipe(six.with_metaclass(RecipeBase)):
         The Dimension expression will be added to the query's select statement
         and to the group_by.
 
-        :param *dimensions: Dimensions to add to the recipe. Dimensions can
+        :param dimensions: Dimensions to add to the recipe. Dimensions can
                          either be keys on the ``shelf`` or
                          Dimension objects
-        :type *dimensions: list
+        :type dimensions: list
         """
         for d in dimensions:
             self._cauldron.use(self._shelf.find(d, Dimension))
@@ -288,7 +283,8 @@ class Recipe(six.with_metaclass(RecipeBase)):
 
     @property
     def dimension_ids(self):
-        return (d.id for d in self._cauldron.values() if isinstance(d, Dimension))
+        return (d.id for d in self._cauldron.values() if
+                isinstance(d, Dimension))
 
     def filters(self, *filters):
         """
@@ -299,10 +295,10 @@ class Recipe(six.with_metaclass(RecipeBase)):
 
         The Filter expression will be added to the query's where clause
 
-        :param *filters: Filters to add to the recipe. Filters can
+        :param filters: Filters to add to the recipe. Filters can
                          either be keys on the ``shelf`` or
                          Filter objects
-        :type *filters: list
+        :type filters: list
         """
 
         def filter_constructor(f, shelf=None):
@@ -329,19 +325,18 @@ class Recipe(six.with_metaclass(RecipeBase)):
 
         The Order_by expression will be added to the query's order_by statement
 
-        :param *order_bys: Order_bys to add to the recipe. Order_bys can
+        :param order_bys: Order_bys to add to the recipe. Order_bys can
                          either be keys on the ``shelf`` or
                          Dimension or Metric objects. If the
                          key is prefixed by "-" the ordering will be
                          descending.
-        :type *order_bys: list
+        :type order_bys: list
         """
 
         # Order bys shouldn't be added to the _cauldron
         self._order_bys = []
         for ingr in order_bys:
-            order_by = self._shelf.find(ingr, (Dimension, Metric),
-                                        apply_sort_order=True)
+            order_by = self._shelf.find(ingr, (Dimension, Metric))
             self._order_bys.append(order_by)
 
         self.dirty = True

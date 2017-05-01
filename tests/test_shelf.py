@@ -72,7 +72,6 @@ class TestShelf(object):
         self.shelf.Meta.anonymize = True
         assert self.shelf.Meta.anonymize == True
 
-
     def test_get(self):
         """ Find ingredients on the shelf """
         ingredient = self.shelf.first

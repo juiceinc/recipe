@@ -81,7 +81,7 @@ HAVING sum(foo.age) < 10
 ORDER BY foo.last"""
 
     def test_wtdavg(self):
-        recipe = self.recipe().shelf(census_shelf)\
+        recipe = self.recipe().shelf(census_shelf) \
             .metrics('avgage').dimensions('state').order_by('-avgage')
 
         assert recipe.to_sql() == """SELECT census.state AS state,
@@ -90,8 +90,8 @@ FROM census
 GROUP BY census.state
 ORDER BY CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) DESC"""
 
-        assert recipe.dataset.csv.replace('\r\n', '\n') ==\
-        """state,avgage,state_id
+        assert recipe.dataset.csv.replace('\r\n', '\n') == \
+               """state,avgage,state_id
 Florida,39.08283934000634,Florida
 West Virginia,38.555058651148165,West Virginia
 Maine,38.10118393261269,Maine
@@ -168,3 +168,21 @@ class TestStats(object):
         # Stats are ready after the recipe is run
         assert recipe.stats.ready == True
         assert recipe.stats.rows == 2
+
+
+class TestCacheContext(object):
+    def setup(self):
+        # create a Session
+        self.session = Session()
+        self.shelf = mytable_shelf
+
+    def recipe(self):
+        return Recipe(shelf=self.shelf, session=self.session)
+
+    def test_cachec_context(self):
+        recipe = self.recipe().metrics('age').dimensions(
+            'last')
+        recipe.cache_context = 'foo'
+
+        assert len(recipe.all()) == 2
+        assert recipe._cauldron['last'].cache_context == 'foo'

@@ -10,7 +10,8 @@
 #
 #
 # class RecipePool(object):
-#     def __init__(self, recipes, silence_error=settings.RECIPEPOOL_SILENT_FAIL):
+#     def __init__(self, recipes,
+#          silence_error=settings.RECIPEPOOL_SILENT_FAIL):
 #         self.recipes = recipes
 #         self.POOL_MAX = 5
 #         self.tasks = JoinableQueue()

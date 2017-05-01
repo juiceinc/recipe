@@ -18,7 +18,7 @@ Release v\ |version|. (:ref:`Installation <install>`)
 .. * :ref:`search`
 
 
-Recipe is an :ref:`MIT licensed <mit>` cross-database querying library, written
+Recipe is an MIT licensed cross-database querying library, written
 in Python. It allows you to reuse SQL fragments to answer data questions
 consistently. Extension classes allow you to support data anonymization,
 automatic generation of where clauses, user permissioning to data, subselects,
