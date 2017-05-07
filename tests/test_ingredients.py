@@ -372,7 +372,7 @@ class TestCountIfMetric(object):
         assert str(d.columns[0]) == \
                'count(DISTINCT CASE WHEN (foo.age > :age_1) THEN foo.first END)'
 
-        d = CountIfMetric(MyTable.age > 5, MyTable.first, count_distinct=False)
+        d = CountIfMetric(MyTable.age > 5, MyTable.first, distinct=False)
         assert len(d.columns) == 1
         assert len(d.group_by) == 0
         assert len(d.filters) == 0

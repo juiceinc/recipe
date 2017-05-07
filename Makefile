@@ -9,7 +9,7 @@ autodocs:
 	sphinx-autobuild docs docs/_build/html/ --port 8001
 
 flake8:
-	flake8 src/recipe --exit-zero --max-complexity 10 --exclude=__init__.py
+	flake8 src/recipe --exit-zero --max-complexity 12 --exclude=__init__.py
 
 tests:
 	py.test --cov-config .coveragerc --cov=recipe tests/

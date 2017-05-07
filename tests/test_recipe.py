@@ -158,6 +158,54 @@ Utah,30.63622231900565,Utah
 """
 
 
+
+class TestDeferredMetrics(object):
+    def setup(self):
+        # create a Session
+        self.session = Session()
+        self.shelf = Shelf({
+            'state': Dimension(Census.state),
+            'sex': Dimension(Census.sex),
+            'age': Dimension(Census.age),
+            'avgage': WtdAvgMetric('age', '`pop2000'),
+            'avgage2': WtdAvgMetric(Census.age, Census.pop2000),
+            'pop2000': Metric(func.sum(Census.pop2000)),
+            'pop2008': Metric(func.sum(Census.pop2008)),
+            'div': DivideMetric('pop2000', 'pop2008'),
+        })
+
+    def recipe(self, **kwargs):
+        return Recipe(shelf=self.shelf, session=self.session, **kwargs)
+
+    def test_deferred_metric(self):
+        recipe = self.recipe().metrics('div').dimensions('state')
+
+        assert recipe.to_sql() == """SELECT census.state AS state,
+       CAST(sum(census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS div
+FROM census
+GROUP BY census.state"""
+        print recipe.all()[0]
+        assert recipe.all()[0].state == 'Alabama'
+        assert abs(recipe.all()[0].div - 0.9546587739793394) < 0.000000001
+        assert recipe.stats.rows == 51
+
+    def test_deferred_avgage(self):
+        """ A deferred metric that uses disaggregate """
+        recipe = self.recipe().metrics('avgage', 'avgage2').dimensions('state')
+
+        assert recipe.to_sql() == """SELECT census.state AS state,
+       CAST(sum(census.age * (census.pop2000)) AS FLOAT) / (coalesce(CAST(sum((census.pop2000)) AS FLOAT), 0.0) + 1e-09) AS avgage,
+       CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS avgage2
+FROM census
+GROUP BY census.state"""
+        print recipe.all()[0]
+        assert recipe.all()[0].state == 'Alabama'
+        assert abs(recipe.all()[0].avgage - 36.27787892421841) < 0.000000001
+        assert abs(recipe.all()[0].avgage2 - 36.27787892421841) < 0.000000001
+        assert recipe.stats.rows == 51
+
+
+
 class TestStats(object):
     def setup(self):
         # create a Session

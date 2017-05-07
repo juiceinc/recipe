@@ -7,8 +7,6 @@ from sqlalchemy.util import lightweight_named_tuple
 
 from recipe import BadRecipe, Ingredient
 from recipe import Dimension
-from recipe import Filter
-from recipe import Having
 from recipe import Metric
 from recipe.compat import basestring
 from recipe.utils import AttrDict
@@ -95,17 +93,20 @@ class Shelf(AttrDict):
                     return obj
 
             ingredient = self[obj]
-            if set_descending:
-                ingredient.ordering = 'desc'
-
             if not isinstance(ingredient, filter_to_class):
                 if raise_if_invalid:
                     raise BadRecipe("{} is not a {}".format(
                         obj, type(filter_to_class)))
                 else:
                     return obj
+
+            ingredient.resolve(self)
+            if set_descending:
+                ingredient.ordering = 'desc'
+
             return ingredient
         elif isinstance(obj, filter_to_class):
+            obj.resolve(self)
             return obj
         else:
             if raise_if_invalid:

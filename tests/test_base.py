@@ -7,6 +7,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from recipe import Dimension
+from recipe import DivideMetric
 from recipe import Metric
 from recipe import Shelf
 from recipe import WtdAvgMetric
@@ -4658,6 +4659,17 @@ census_shelf = Shelf({
     'avgage': WtdAvgMetric(Census.age, Census.pop2000),
     'pop2000': Metric(func.sum(Census.pop2000)),
     'pop2008': Metric(func.sum(Census.pop2008)),
+})
+
+
+deferred_shelf = Shelf({
+    'state': Dimension(Census.state),
+    'sex': Dimension(Census.sex),
+    'age': Dimension(Census.age),
+    'avgage': WtdAvgMetric(Census.age, Census.pop2000),
+    'pop2000': Metric(func.sum(Census.pop2000)),
+    'pop2008': Metric(func.sum(Census.pop2008)),
+    'div': DivideMetric('pop2000', 'pop2008'),
 })
 
 

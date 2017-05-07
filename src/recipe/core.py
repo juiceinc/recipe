@@ -9,7 +9,7 @@ from orderedset import OrderedSet
 from sqlalchemy import (alias)
 from sqlalchemy.sql.elements import BinaryExpression
 
-from recipe.compat import *
+from recipe.compat import str
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Metric, Filter, Having
 from recipe.shelf import Shelf
@@ -197,7 +197,6 @@ class Recipe(six.with_metaclass(RecipeBase)):
             # Create all the extension instances, passing them a reference to
             # this recipe
             self.recipe_extensions.append(ExtensionClass(self))
-
 
     # -------
     # Builder for parts of the recipe.
