@@ -49,7 +49,7 @@ Staying Updated
 The latest version of Recipe will always be available here:
 
 * PyPi: http://pypi.python.org/pypi/recipe/
-* GitHub: http://github.com/juiceinc/tablib/
+* GitHub: http://github.com/juiceinc/recipe/
 
 When a new version is available, upgrading is simple::
 

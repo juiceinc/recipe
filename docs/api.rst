@@ -7,9 +7,7 @@ API
 
 .. module:: recipe
 
-This part of the documentation covers all the interfaces of Tablib.  For
-parts where Tablib depends on external libraries, we document the most
-important right here and provide links to the canonical documentation.
+This part of the documentation covers all the interfaces of Recipe.
 
 
 --------------
@@ -21,9 +19,9 @@ Recipe Object
    :inherited-members:
 
 
----------------
+------------
 Shelf Object
----------------
+------------
 
 
 .. autoclass:: Shelf
@@ -33,12 +31,18 @@ Shelf Object
    :inherited-members:
 
 
------------------
-Ingredient Object
------------------
+-----------
+Ingredients
+-----------
 
 
 .. autoclass:: Ingredient
+   :inherited-members:
+
+.. autoclass:: Dimension
+   :inherited-members:
+
+.. autoclass:: Metric
    :inherited-members:
 
 

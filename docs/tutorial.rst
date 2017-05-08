@@ -36,8 +36,9 @@ ot a query.
 It's a safe bet that you won't have to construct an Ingredient
 with all these parts directly because Recipe contains convenience classes
 that help you build the most common SQL fragments. The two most common
-Ingredient subclasses are Dimensions which supply both a column and a
-grouping on that column and Metrics which supply a column aggregation.
+Ingredient subclasses are :class:`Dimensions <recipe.Dimension>` which supply
+both a column and a grouping on that column and
+:class:`Metrics <recipe.Metric>` which supply a column aggregation.
 
 You can think of a Shelf as a dictionary. The keys are strings and the
 values are Ingredients. The keys are a shortcut name for the

@@ -160,17 +160,14 @@ class Ingredient(object):
         :param operator: An operator to override the default interaction
         :type operator: str
         """
-        scalar_ops = ['ne', 'lt', 'lte', 'gt', 'gte', 'eq']
-        non_scalar_ops = ['notin', 'between', 'in']
+        scalar_ops = ['ne', 'lt', 'lte', 'gt', 'gte', 'eq', None]
+        non_scalar_ops = ['notin', 'between', 'in', None]
 
         is_scalar = isinstance(value, (int, basestring))
 
         filter_column = self.columns[0]
 
-        if is_scalar:
-            if operator not in scalar_ops and operator is not None:
-                raise ValueError('This is not a valid operator for the '
-                                 'supplied value')
+        if is_scalar and operator in scalar_ops:
             if operator == 'ne':
                 return Filter(filter_column != value)
             elif operator == 'lt':
@@ -182,10 +179,7 @@ class Ingredient(object):
             elif operator == 'gte':
                 return Filter(filter_column >= value)
             return Filter(filter_column == value)
-        else:
-            if operator not in non_scalar_ops and operator is not None:
-                raise ValueError('This is not a valid operator for the '
-                                 'supplied value.')
+        elif not is_scalar and operator in non_scalar_ops:
             if operator == 'notin':
                 return Filter(filter_column.notin_(value))
             elif operator == 'between':
@@ -196,6 +190,9 @@ class Ingredient(object):
                 return Filter(between(filter_column, lower_bound,
                                       upper_bound))
             return Filter(filter_column.in_(value))
+        else:
+            raise ValueError('{} is not a valid operator for the '
+                             'supplied value'.format(operator))
 
     @property
     def expression(self):
