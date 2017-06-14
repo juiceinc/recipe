@@ -97,45 +97,30 @@ class RecipeBase(type):
 
 
 class Recipe(six.with_metaclass(RecipeBase)):
-    """ Builds a query using Ingredients.
+    """ A tool for getting data.
 
-    recipe generates a query in the following way
+    Args:
 
-        (RECIPE) recipe checks its dirty state and all extension dirty states to
-        determine if the cached query needs to be regenerated
+        shelf (Shelf): A shelf to use for shared metrics
+        metrics (:obj:`list` of :obj:`str`)
+          A list of metrics to use from
+          the shelf. These can also be :obj:`Metric` objects.
+        dimensions (:obj:`list` of :obj:`str`)
+          A list of dimensions to use
+          from the shelf. These can also be :obj:`Dimension` objects.
+        filters (:obj:`list` of :obj:`str`)
+          A list of filters to use from
+          the shelf. These can also be :obj:`Filter` objects.
+        order_by (:obj:`list` of :obj:`str`)
+          A list of dimension or
+          metric keys from the shelf to use for ordering. If prefixed by '-'
+          the ordering will be descending.
+        session (:obj:`Session`) A SQLAlchemy database session.
+        extension_classes (:obj:`list` of :obj:`RecipeExtension`)
+          Extensions to apply to this recipe.
 
-        (EXTENSIONS) all extension ``add_ingredients`` run to inject
-        ingredients directly on the recipe
-
-        (RECIPE) recipe runs gather_all_ingredients_into_cauldron to build a
-        global lookup for ingredients
-
-        (RECIPE) recipe runs cauldron.brew_query_parts to gather sqlalchemy
-        columns, group_bys and filters
-
-        (EXTENSIONS) all extension ``modify_sqlalchemy(columns,
-        group_bys, filters)`` run to directly modify the collected
-        sqlalchemy columns, group_bys or filters
-
-        (RECIPE) recipe builds a preliminary query with columns
-
-        (EXTENSIONS) all extension ``modify_sqlalchemy_prequery(query,
-        columns, group_bys, filters)`` run to modify the query
-
-        (RECIPE) recipe builds a full query with group_bys, order_bys,
-        and filters.
-
-        (RECIPE) recipe tests that this query only uses a single from
-
-        (EXTENSIONS) all extension ``modify_sqlalchemy_postquery(query,
-        columns, group_bys, order_bys filters)`` run to modify the query
-
-        (RECIPE) recipe applies limits and offsets on the query
-
-        (RECIPE) recipe caches completed query and sets all dirty flags to
-        False.
-
-
+    Returns:
+        A Recipe object.
     """
 
     def __init__(self,
@@ -146,15 +131,6 @@ class Recipe(six.with_metaclass(RecipeBase)):
                  order_by=None,
                  session=None,
                  extension_classes=None):
-        """
-        :param shelf: A shelf to use for looking up
-        :param metrics: A list of metric keys or Metrics to use
-        :param dimensions: A list of dimension keys or Dimensions to use
-        :param filters: A list of filter keys or Filters to use
-        :param order_by: A list of metric or dimension keys to use for
-          ordering.
-        :param session: A database session.
-        """
 
         self._id = str(uuid4())[:8]
         self.shelf(shelf)
@@ -260,7 +236,7 @@ class Recipe(six.with_metaclass(RecipeBase)):
 
     @property
     def metric_ids(self):
-        return (m.id for m in self._cauldron.values() if isinstance(m, Metric))
+        return self._cauldron.metric_ids
 
     def dimensions(self, *dimensions):
         """ Add a list of Dimension ingredients to the query. These can either be
@@ -282,8 +258,7 @@ class Recipe(six.with_metaclass(RecipeBase)):
 
     @property
     def dimension_ids(self):
-        return (d.id for d in self._cauldron.values() if
-                isinstance(d, Dimension))
+        return self._cauldron.dimension_ids
 
     def filters(self, *filters):
         """
@@ -580,3 +555,5 @@ class Recipe(six.with_metaclass(RecipeBase)):
         """ Return the first element on the result
         """
         return self.one()
+
+

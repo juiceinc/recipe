@@ -52,4 +52,4 @@ At this time, the following Python platforms are officially supported:
 Support for other Pythons will be rolled out soon.
 
 
-Now, go :ref:`Install Recipe <install>`.
+Now, go :ref:`Installing Recipe <install>`.

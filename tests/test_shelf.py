@@ -31,22 +31,20 @@ class TestShelf(object):
         with pytest.raises(BadRecipe):
             ingredient = self.shelf.find(2.0, Dimension)
 
-        # We can choose not to raise
-        ingredient = self.shelf.find('foo', Dimension, raise_if_invalid=False)
-        assert ingredient == 'foo'
+        with pytest.raises(BadRecipe):
+            ingredient = self.shelf.find('foo', Dimension)
 
-        ingredient = self.shelf.find(2.0, Dimension, raise_if_invalid=False)
-        assert ingredient == 2.0
+        with pytest.raises(BadRecipe):
+            ingredient = self.shelf.find(2.0, Dimension)
 
-        ingredient = self.shelf.find('first', Metric, raise_if_invalid=False)
-        assert ingredient == 'first'
+        with pytest.raises(BadRecipe):
+            ingredient = self.shelf.find('first')
 
         with pytest.raises(BadRecipe):
             ingredient = self.shelf.find('foo', Dimension)
 
-        # We can choose not to raise
-        ingredient = self.shelf.find('foo', Dimension, raise_if_invalid=False)
-        assert ingredient == 'foo'
+        with pytest.raises(BadRecipe):
+            ingredient = self.shelf.find('foo', Dimension)
 
         self.shelf['foo'] = Dimension(MyTable.last)
         ingredient = self.shelf.find('last', Dimension)

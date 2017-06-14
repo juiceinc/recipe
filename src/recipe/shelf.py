@@ -13,7 +13,14 @@ from recipe.utils import AttrDict
 
 
 class Shelf(AttrDict):
-    """ Holds ingredients used by a recipe """
+    """ Holds ingredients used by a recipe
+
+    Args:
+
+
+    Returns:
+        A Shelf object
+    """
     class Meta:
         anonymize = False
 
@@ -51,6 +58,16 @@ class Shelf(AttrDict):
         """ Return the ingredients in this shelf in a deterministic order """
         return sorted(list(self.values()))
 
+    @property
+    def dimension_ids(self):
+        return tuple(d.id for d in self.values() if
+                isinstance(d, Dimension))
+
+    @property
+    def metric_ids(self):
+        return tuple(d.id for d in self.values() if
+                isinstance(d, Metric))
+
     def __repr__(self):
         """ A string representation of the ingredients used in a recipe
         ordered by Dimensions, Metrics, Filters, then Havings
@@ -64,8 +81,7 @@ class Shelf(AttrDict):
     def use(self, ingredient):
         self[ingredient.id] = ingredient
 
-    def find(self, obj, filter_to_class, constructor=None,
-             raise_if_invalid=True):
+    def find(self, obj, filter_to_class=Ingredient, constructor=None):
         """
         Find an Ingredient, optionally using the shelf.
 
@@ -74,8 +90,7 @@ class Shelf(AttrDict):
          instance of
         :param constructor: An optional callable for building Ingredients
          from obj
-        :param raise_if_invalid: Raise an exception if obj is the wrong type
-        :return: An Ingredient of subclass must_be_type
+        :return: An Ingredient of subclass `filter_to_class`
         """
         if callable(constructor):
             obj = constructor(obj, shelf=self)
@@ -86,19 +101,13 @@ class Shelf(AttrDict):
                 obj = obj[1:]
 
             if obj not in self:
-                if raise_if_invalid:
-                    raise BadRecipe(
-                        "{} doesn't exist on the shelf".format(obj))
-                else:
-                    return obj
+                raise BadRecipe(
+                    "{} doesn't exist on the shelf".format(obj))
 
             ingredient = self[obj]
             if not isinstance(ingredient, filter_to_class):
-                if raise_if_invalid:
-                    raise BadRecipe("{} is not a {}".format(
-                        obj, type(filter_to_class)))
-                else:
-                    return obj
+                raise BadRecipe("{} is not a {}".format(
+                    obj, type(filter_to_class)))
 
             ingredient.resolve(self)
             if set_descending:
@@ -109,11 +118,8 @@ class Shelf(AttrDict):
             obj.resolve(self)
             return obj
         else:
-            if raise_if_invalid:
-                raise BadRecipe("{} is not a {}".format(obj,
-                                                        type(filter_to_class)))
-            else:
-                return obj
+            raise BadRecipe("{} is not a {}".format(obj,
+                                                    type(filter_to_class)))
 
     def brew_query_parts(self):
         """ Make columns, group_bys, filters, havings

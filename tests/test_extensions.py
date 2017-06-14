@@ -5,8 +5,7 @@ import pytest
 from recipe import BadRecipe
 from recipe import Recipe
 from recipe.extensions import RecipeExtension, AutomaticFilters, \
-    Anonymize, \
-    SummarizeOver, CompareRecipe, BlendRecipe
+    Anonymize, SummarizeOver, CompareRecipe, BlendRecipe
 from .test_base import *
 
 

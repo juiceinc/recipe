@@ -4,12 +4,12 @@ from copy import copy
 from sqlalchemy import and_
 from sqlalchemy import func
 from sqlalchemy import text
+from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import BadRecipe
-from recipe import Dimension
-from recipe import Recipe
+from recipe import BadRecipe, Dimension, Recipe
 from recipe.compat import basestring
-from tests.test_base import Base
+
+Base = declarative_base()
 
 
 class RecipeExtension(object):
