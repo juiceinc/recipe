@@ -38,9 +38,6 @@ class TestShelf(object):
             ingredient = self.shelf.find(2.0, Dimension)
 
         with pytest.raises(BadRecipe):
-            ingredient = self.shelf.find('first')
-
-        with pytest.raises(BadRecipe):
             ingredient = self.shelf.find('foo', Dimension)
 
         with pytest.raises(BadRecipe):
@@ -86,10 +83,6 @@ class TestShelf(object):
         with pytest.raises(BadRecipe):
             ingredient = self.shelf.find('foo', Dimension)
 
-        # We can choose not to raise
-        ingredient = self.shelf.find('foo', Dimension, raise_if_invalid=False)
-        assert ingredient == 'foo'
-
         self.shelf['foo'] = Dimension(MyTable.last)
         ingredient = self.shelf.find('last', Dimension)
         assert ingredient.id == 'last'
@@ -121,14 +114,14 @@ class TestAutomaticShelf(object):
             ingredient = self.shelf.find(2.0, Dimension)
 
         # We can choose not to raise
-        ingredient = self.shelf.find('foo', Dimension, raise_if_invalid=False)
-        assert ingredient == 'foo'
-
-        ingredient = self.shelf.find(2.0, Dimension, raise_if_invalid=False)
-        assert ingredient == 2.0
-
-        ingredient = self.shelf.find('first', Metric, raise_if_invalid=False)
-        assert ingredient == 'first'
+        # ingredient = self.shelf.find('foo', Dimension)
+        # assert ingredient == 'foo'
+        #
+        # ingredient = self.shelf.find(2.0, Dimension)
+        # assert ingredient == 2.0
+        #
+        # ingredient = self.shelf.find('first', Metric)
+        # assert ingredient == 'first'
 
     def test_get(self):
         """ Find ingredients on the shelf """

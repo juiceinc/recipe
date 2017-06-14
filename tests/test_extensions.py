@@ -320,13 +320,13 @@ class TestSummarizeOverExtension(object):
         self.session = Session()
 
         self.shelf = Shelf({
-            'first': Dimension(MyTable.first),
+            'first': Dimension(MyTable.first,
+                               anonymizer=lambda value: value[::-1]),
             'last': Dimension(MyTable.last,
-                              # formatters=[lambda value: value[::-1]]),
                               anonymizer=lambda value: value[::-1]),
             'age': Metric(func.sum(MyTable.age))
         })
-        self.extension_classes = [SummarizeOver]
+        self.extension_classes = [SummarizeOver, Anonymize]
 
     def recipe(self):
         return Recipe(shelf=self.shelf, session=self.session,
@@ -349,6 +349,26 @@ GROUP BY summarized.first"""
         assert len(recipe.all()) == 1
         assert recipe.one().first == 'hi'
         assert recipe.one().age == 7.5
+
+    def test_summarize_over_anonymize(self):
+        """ Anonymize requires ingredients to have an anonymizer """
+        recipe = self.recipe().metrics('age').dimensions(
+            'first', 'last').summarize_over('last').anonymize(True)
+        print recipe.to_sql()
+        assert recipe.to_sql() == """SELECT summarized.first AS first,
+       avg(summarized.age) AS age
+FROM
+  (SELECT foo.first AS first,
+          foo.last AS last,
+          sum(foo.age) AS age
+   FROM foo
+   GROUP BY foo.first,
+            foo.last) AS summarized
+GROUP BY summarized.first"""
+        assert len(recipe.all()) == 1
+        assert recipe.one().first == 'hi'
+        assert recipe.one().age == 7.5
+
 
 
 class TestCompareRecipeExtension(object):

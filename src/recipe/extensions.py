@@ -264,10 +264,6 @@ class SummarizeOver(RecipeExtension):
             self.recipe._cauldron.use(dim)
 
 
-class Metadata(RecipeExtension):
-    pass
-
-
 class CacheRecipe(RecipeExtension):
     pass
 
