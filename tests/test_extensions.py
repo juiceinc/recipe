@@ -1,4 +1,4 @@
-from copy import copy
+from copy import copy, deepcopy
 
 import pytest
 
@@ -315,18 +315,18 @@ ORDER BY foo.first"""
 
 
 class TestSummarizeOverExtension(object):
-    def setup(self):
-        # create a Session
-        self.session = Session()
-
-        self.shelf = Shelf({
+    anonymized_foo_shelf = Shelf({
             'first': Dimension(MyTable.first,
                                anonymizer=lambda value: value[::-1]),
             'last': Dimension(MyTable.last,
                               anonymizer=lambda value: value[::-1]),
             'age': Metric(func.sum(MyTable.age))
         })
-        self.extension_classes = [SummarizeOver, Anonymize]
+
+    def setup(self):
+        # create a Session
+        self.session = Session()
+        self.extension_classes = [SummarizeOver, Anonymize, AutomaticFilters]
 
     def recipe(self):
         return Recipe(shelf=self.shelf, session=self.session,
@@ -334,41 +334,244 @@ class TestSummarizeOverExtension(object):
 
     def test_summarize_over(self):
         """ Anonymize requires ingredients to have an anonymizer """
+        self.shelf = self.anonymized_foo_shelf
         recipe = self.recipe().metrics('age').dimensions(
             'first', 'last').summarize_over('last')
-        assert recipe.to_sql() == """SELECT summarized.first AS first,
-       avg(summarized.age) AS age
+        assert recipe.to_sql() == """SELECT summarize.first,
+       sum(summarize.age) AS age
 FROM
   (SELECT foo.first AS first,
           foo.last AS last,
           sum(foo.age) AS age
    FROM foo
    GROUP BY foo.first,
-            foo.last) AS summarized
-GROUP BY summarized.first"""
+            foo.last) AS summarize
+GROUP BY summarize.first"""
         assert len(recipe.all()) == 1
         assert recipe.one().first == 'hi'
-        assert recipe.one().age == 7.5
+        assert recipe.one().age == 15
 
     def test_summarize_over_anonymize(self):
         """ Anonymize requires ingredients to have an anonymizer """
+        self.shelf = self.anonymized_foo_shelf
         recipe = self.recipe().metrics('age').dimensions(
             'first', 'last').summarize_over('last').anonymize(True)
-        print recipe.to_sql()
-        assert recipe.to_sql() == """SELECT summarized.first AS first,
-       avg(summarized.age) AS age
+        assert recipe.to_sql() == """SELECT summarize.first_raw,
+       sum(summarize.age) AS age
 FROM
-  (SELECT foo.first AS first,
-          foo.last AS last,
+  (SELECT foo.first AS first_raw,
+          foo.last AS last_raw,
           sum(foo.age) AS age
    FROM foo
    GROUP BY foo.first,
-            foo.last) AS summarized
-GROUP BY summarized.first"""
+            foo.last) AS summarize
+GROUP BY summarize.first_raw"""
         assert len(recipe.all()) == 1
-        assert recipe.one().first == 'hi'
-        assert recipe.one().age == 7.5
+        assert recipe.one().first == 'ih'
+        assert recipe.one().age == 15
 
+    ####
+    # Scores is a dataset containing multiple tests that each user
+    # has taken, we want to show the average USER score by department
+    ####
+
+    def test_summarize_over_scores(self):
+        """ Test a dataset that has multiple rows per user """
+        self.shelf = scores_shelf
+        recipe = self.recipe().metrics('score').dimensions(
+            'department','username').summarize_over('username')
+        assert recipe.to_sql() == """SELECT summarize.department,
+       avg(summarize.score) AS score
+FROM
+  (SELECT scores.department AS department,
+          scores.username AS username,
+          avg(scores.score) AS score
+   FROM scores
+   GROUP BY scores.department,
+            scores.username) AS summarize
+GROUP BY summarize.department"""
+        ops_row, sales_row = recipe.all()
+        assert ops_row.department == 'ops'
+        assert ops_row.score == 87.5
+        assert sales_row.department == 'sales'
+        assert sales_row.score == 80.0
+
+    def test_summarize_over_scores_limit(self):
+        """ Test that limits and offsets work """
+        self.shelf = scores_shelf
+
+        recipe = self.recipe().metrics('score').dimensions(
+            'department','username').summarize_over('username').limit(2)
+
+        assert recipe.to_sql() == """SELECT summarize.department,
+       avg(summarize.score) AS score
+FROM
+  (SELECT scores.department AS department,
+          scores.username AS username,
+          avg(scores.score) AS score
+   FROM scores
+   GROUP BY scores.department,
+            scores.username) AS summarize
+GROUP BY summarize.department LIMIT 2
+OFFSET 0"""
+        ops_row, sales_row = recipe.all()
+        assert ops_row.department == 'ops'
+        assert ops_row.score == 87.5
+        assert sales_row.department == 'sales'
+        assert sales_row.score == 80.0
+
+        def test_summarize_over_scores_order(self):
+            """ Order bys are hoisted to the outer query """
+            self.shelf = scores_shelf
+
+            recipe = self.recipe().metrics('score').dimensions(
+                'department', 'username').summarize_over('username').order_by(
+                'department')
+
+            assert recipe.to_sql() == """SELECT summarize.department,
+           avg(summarize.score) AS score
+    FROM
+      (SELECT scores.department AS department,
+              scores.username AS username,
+              avg(scores.score) AS score
+       FROM scores
+       GROUP BY scores.department,
+                scores.username
+       ORDER BY scores.department) AS summarize
+    GROUP BY summarize.department
+    ORDER BY summarize.department"""
+            ops_row, sales_row = recipe.all()
+            assert ops_row.department == 'ops'
+            assert ops_row.score == 87.5
+            assert sales_row.department == 'sales'
+            assert sales_row.score == 80.0
+
+    def test_summarize_over_scores_order_anonymize(self):
+        """ Order bys are hoisted to the outer query """
+        self.shelf = scores_shelf
+
+        recipe = self.recipe().metrics('score').dimensions(
+            'department', 'username').summarize_over('username').order_by(
+            'department').anonymize(True)
+
+        assert recipe.to_sql() == """SELECT summarize.department_raw,
+       avg(summarize.score) AS score
+FROM
+  (SELECT scores.department AS department_raw,
+          scores.username AS username,
+          avg(scores.score) AS score
+   FROM scores
+   GROUP BY scores.department,
+            scores.username
+   ORDER BY scores.department) AS summarize
+GROUP BY summarize.department_raw
+ORDER BY summarize.department_raw"""
+        ops_row, sales_row = recipe.all()
+        assert ops_row.department == 'spo'
+        assert ops_row.score == 87.5
+        assert sales_row.department == 'selas'
+        assert sales_row.score == 80.0
+
+    def test_summarize_over_scores_automatic_filters(self):
+        """ Test that automatic filters take place in the subquery """
+        self.shelf = scores_shelf
+
+        recipe = self.recipe().metrics('score').dimensions(
+            'department', 'username').automatic_filters({
+            'department': 'ops'
+        }).summarize_over('username').anonymize(False)
+
+        print recipe.to_sql()
+        assert recipe.to_sql() == """SELECT summarize.department,
+       avg(summarize.score) AS score
+FROM
+  (SELECT scores.department AS department,
+          scores.username AS username,
+          avg(scores.score) AS score
+   FROM scores
+   WHERE scores.department = 'ops'
+   GROUP BY scores.department,
+            scores.username) AS summarize
+GROUP BY summarize.department"""
+        ops_row = recipe.one()
+        assert ops_row.department == 'ops'
+        assert ops_row.score == 87.5
+
+
+    ####
+    # TagScores is a dataset containing multiple tests that each user
+    # has taken, we want to show the average USER score by department
+    # Users also have tags that we may want to limit to
+    ####
+
+
+    def test_summarize_over_tagscores(self):
+        """ Test a dataset that has multiple rows per user """
+        self.shelf = tagscores_shelf
+        recipe = self.recipe().metrics('score').dimensions(
+            'department','username').summarize_over('username')
+
+        assert recipe.to_sql() == """SELECT summarize.department,
+       sum(summarize.score) AS score
+FROM
+  (SELECT tagscores.department AS department,
+          tagscores.username AS username,
+          avg(tagscores.score) AS score
+   FROM tagscores
+   GROUP BY tagscores.department,
+            tagscores.username) AS summarize
+GROUP BY summarize.department"""
+        ops_row, sales_row = recipe.all()
+        assert ops_row.department == 'ops'
+        assert ops_row.score == 175.0
+        assert sales_row.department == 'sales'
+        assert sales_row.score == 80.0
+
+    def test_summarize_over_tagscores_automatic_filters(self):
+        """ Test a dataset that has multiple rows per user """
+        self.shelf = tagscores_shelf
+        recipe = self.recipe().metrics('score').dimensions(
+            'department','username').automatic_filters({
+            'tag': 'musician'
+        }).summarize_over(
+            'username')
+
+        assert recipe.to_sql() == """SELECT summarize.department,
+       sum(summarize.score) AS score
+FROM
+  (SELECT tagscores.department AS department,
+          tagscores.username AS username,
+          avg(tagscores.score) AS score
+   FROM tagscores
+   WHERE tagscores.tag = 'musician'
+   GROUP BY tagscores.department,
+            tagscores.username) AS summarize
+GROUP BY summarize.department"""
+        row = recipe.one()
+        assert row.department == 'ops'
+        assert row.score == 90
+
+    def test_summarize_over_tagscores_test_cnt(self):
+        """ Test a dataset that has multiple rows per user """
+        self.shelf = tagscores_shelf
+        recipe = self.recipe().metrics('test_cnt').dimensions(
+            'department', 'username').summarize_over('username')
+
+        assert recipe.to_sql() == """SELECT summarize.department,
+       sum(summarize.test_cnt) AS test_cnt
+FROM
+  (SELECT tagscores.department AS department,
+          tagscores.username AS username,
+          count(DISTINCT tagscores.testid) AS test_cnt
+   FROM tagscores
+   GROUP BY tagscores.department,
+            tagscores.username) AS summarize
+GROUP BY summarize.department"""
+        ops_row, sales_row = recipe.all()
+        assert ops_row.department == 'ops'
+        assert ops_row.test_cnt == 5
+        assert sales_row.department == 'sales'
+        assert sales_row.test_cnt == 1
 
 
 class TestCompareRecipeExtension(object):

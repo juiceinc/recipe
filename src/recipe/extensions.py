@@ -6,7 +6,7 @@ from sqlalchemy import func
 from sqlalchemy import text
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import BadRecipe, Dimension, Recipe
+from recipe import BadRecipe, Dimension, Recipe, Metric
 from recipe.compat import basestring
 
 Base = declarative_base()
@@ -34,22 +34,21 @@ class RecipeExtension(object):
         (RECIPE) recipe runs cauldron.brew_query_parts to gather sqlalchemy
         columns, group_bys and filters
 
-        (EXTENSIONS) all extension ``modify_sqlalchemy(columns,
-        group_bys, filters)`` run to directly modify the collected
-        sqlalchemy columns, group_bys or filters
+        (EXTENSIONS) all extension ``modify_recipe_parts(recipeparts)`` run to
+        directly modify the collected sqlalchemy columns, group_bys or filters
 
         (RECIPE) recipe builds a preliminary query with columns
 
-        (EXTENSIONS) all extension ``modify_sqlalchemy_prequery(query,
-        columns, group_bys, filters)`` run to modify the query
+        (EXTENSIONS) all extension ``modify_prequery_parts(prequery_parts)``
+        run to modify the query
 
         (RECIPE) recipe builds a full query with group_bys, order_bys,
         and filters.
 
         (RECIPE) recipe tests that this query only uses a single from
 
-        (EXTENSIONS) all extension ``modify_sqlalchemy_postquery(query,
-        columns, group_bys, order_bys filters)`` run to modify the query
+        (EXTENSIONS) all extension ``modify_postquery_parts(
+        postquery_parts)`` run to modify the query
 
         (RECIPE) recipe applies limits and offsets on the query
 
@@ -199,69 +198,78 @@ class SummarizeOver(RecipeExtension):
     def __init__(self, *args, **kwargs):
         super(SummarizeOver, self).__init__(*args, **kwargs)
         self._summarize_over = None
-        self.active = True
 
     def summarize_over(self, dimension_key):
         self.dirty = True
         self._summarize_over = dimension_key
         return self.recipe
 
-    def add_ingredients(self):
+    def modify_postquery_parts(self, postquery_parts):
         """
         Take a recipe that has dimensions
         Resummarize it over one of the dimensions returning averages of the
         metrics.
         """
         if self._summarize_over is None:
-            return
-
-        if not self.active:
-            return
-
+            return postquery_parts
         assert self._summarize_over in self.recipe.dimension_ids
 
-        # Deactivate this summarization to get a clean query
-        self.active = False
-        base_table = self.recipe.as_table(name='summarized')
-        self.active = True
+        # Start with a subquery
+        subq = postquery_parts['query'].subquery(name='summarize')
 
-        # Construct a class dynamically so we can give it a dynamic name
-        T = type('T', (Base,), {
-            '__table__': base_table,
-            '__mapper_args__': {'primary_key': base_table.c.first}
-        })
+        summarize_over_dim = set((self._summarize_over,
+                                 self._summarize_over + '_id',
+                                 self._summarize_over + '_raw'))
+        dim_column_names = set(dim for dim in self.recipe.dimension_ids).union(
+            set(dim + '_id' for dim in self.recipe.dimension_ids)).union(
+            set(dim + '_raw' for dim in self.recipe.dimension_ids))
+        used_dim_column_names = dim_column_names - summarize_over_dim
 
-        metrics = []
-        for m in self.recipe.metric_ids:
-            # Replace the base metric with an averaged version of it
-            # targetted to the new table
-            base_metric = self.recipe._cauldron[m]
+        # Build a new query around the subquery
+        group_by_columns = [col for col in subq.c
+                            if col.name in used_dim_column_names]
 
-            summarized_metric = copy(base_metric)
-            summarized_metric.columns = [func.avg(getattr(T, base_metric.id))]
-            metrics.append(summarized_metric)
+        # Generate columns for the metric, remapping the aggregation function
+        # count -> sum
+        # sum -> sum
+        # avg -> avg
+        # Metrics can override the summary aggregation by providing a
+        # metric.meta.summary_aggregation callable parameter
+        metric_columns = []
+        for col in subq.c:
+            if col.name not in dim_column_names:
+                met = self.recipe._cauldron.find(col.name, Metric)
+                summary_aggregation = met.meta.get('summary_aggregation', None)
+                if summary_aggregation is None:
+                    if unicode(met.expression).startswith(u'avg'):
+                        summary_aggregation = func.avg
+                    elif unicode(met.expression).startswith(u'count'):
+                        summary_aggregation = func.sum
+                    elif unicode(met.expression).startswith(u'sum'):
+                        summary_aggregation = func.sum
 
-        dimensions = []
-        for dim in self.recipe.dimension_ids:
-            if dim != self._summarize_over:
-                # Replace the base dimension with a version of it targetted
-                # to the new table
-                base_dim = self.recipe._cauldron[dim]
-                summarized_dim = copy(base_dim)
-                summarized_dim.columns = []
-                summarized_dim.group_by = []
-                for col in base_dim.columns:
-                    newcol = getattr(T, col.name)
-                    summarized_dim.columns.append(newcol)
-                    summarized_dim.group_by.append(newcol)
-                dimensions.append(summarized_dim)
+                if summary_aggregation is None:
+                    # We don't know how to aggregate this metric in a summary
+                    raise BadRecipe(u'Provide a summary_aggregation for metric'
+                                    u' {}'.format(col.name))
+                metric_columns.append(summary_aggregation(col).label(col.name))
 
-        # Rebuild the cauldron using only the dimensions and metrics
-        self.recipe._cauldron.clear()
-        for met in metrics:
-            self.recipe._cauldron.use(met)
-        for dim in dimensions:
-            self.recipe._cauldron.use(dim)
+        # Find the ordering columns and apply them to the new query
+        order_by_columns = []
+        for col in postquery_parts['query']._order_by:
+            subq_col = getattr(subq.c, col.name, getattr(subq.c, col.name +
+                                                         '_raw', None))
+            if subq_col is not None:
+                order_by_columns.append(subq_col)
+
+        postquery_parts['query'] = self.recipe._session.query(*(group_by_columns +
+                                             metric_columns)).group_by(
+            *group_by_columns).order_by(*order_by_columns)
+
+        # Remove the summarized dimension
+        self.recipe._cauldron.pop(self._summarize_over, None)
+        return postquery_parts
+
 
 
 class CacheRecipe(RecipeExtension):
@@ -296,9 +304,13 @@ class Anonymize(RecipeExtension):
     def add_ingredients(self):
         """ Put the anonymizers in the last position of formatters """
         for ingredient in self.recipe._cauldron.values():
-            if hasattr(ingredient.meta, 'anonymizer') and self._anonymize:
-                if ingredient.meta.anonymizer not in ingredient.formatters:
+            if hasattr(ingredient.meta, 'anonymizer'):
+                if ingredient.meta.anonymizer not in ingredient.formatters \
+                    and self._anonymize:
                     ingredient.formatters.append(ingredient.meta.anonymizer)
+                if ingredient.meta.anonymizer in ingredient.formatters \
+                    and not self._anonymize:
+                    ingredient.formatters.remove(ingredient.meta.anonymizer)
 
 
 class BlendRecipe(RecipeExtension):

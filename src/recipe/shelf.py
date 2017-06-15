@@ -107,7 +107,7 @@ class Shelf(AttrDict):
             ingredient = self[obj]
             if not isinstance(ingredient, filter_to_class):
                 raise BadRecipe("{} is not a {}".format(
-                    obj, type(filter_to_class)))
+                    obj, filter_to_class))
 
             ingredient.resolve(self)
             if set_descending:

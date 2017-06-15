@@ -1,4 +1,4 @@
-from sqlalchemy import Column
+from sqlalchemy import Column, Float, distinct
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import create_engine
@@ -28,6 +28,55 @@ Session = sessionmaker(bind=engine)
 engine.execute(TABLEDEF)
 engine.execute(
     "insert into foo values ('hi', 'there', 5), ('hi', 'fred', 10)")
+
+
+# Create a table for testing summarization
+TABLEDEF = '''
+        CREATE TABLE IF NOT EXISTS scores
+        (username text,
+         department text,
+         testid text,
+         score float);
+'''
+
+engine.execute(TABLEDEF)
+engine.execute(
+    """insert into scores values 
+('chris', 'sales', '1', 80), 
+('chip', 'ops', '2', 80), 
+('chip', 'ops', '3', 90), 
+('chip', 'ops', '4', 100), 
+('annika', 'ops', '5', 80), 
+('annika', 'ops', '6', 90)
+""")
+
+
+# Create a table for denormalized tables with tags
+TABLEDEF = '''
+        CREATE TABLE IF NOT EXISTS tagscores
+        (username text,
+         tag text,
+         department text,
+         testid text,
+         score float);
+'''
+
+# create a configured "Session" class
+engine.execute(TABLEDEF)
+engine.execute(
+    """insert into tagscores values 
+('chris', 'individual', 'sales', '1', 80), 
+('chris', 'manager', 'sales', '1', 80), 
+('chip', 'individual', 'ops', '2', 80), 
+('chip', 'individual', 'ops', '3', 90), 
+('chip', 'individual', 'ops', '4', 100), 
+('chip', 'musician', 'ops', '2', 80), 
+('chip', 'musician', 'ops', '3', 90), 
+('chip', 'musician', 'ops', '4', 100), 
+('annika', 'individual', 'ops', '5', 80), 
+('annika', 'individual', 'ops', '6', 90)
+""")
+
 
 engine.execute("""CREATE TABLE IF NOT EXISTS census
 (state text, sex text, age integer, pop2000 integer, pop2008 integer);""")
@@ -4612,6 +4661,27 @@ class MyTable(Base):
     __table_args__ = {'extend_existing': True}
 
 
+class Scores(Base):
+    username = Column('username', String(), primary_key=True)
+    department = Column('department', String())
+    testid = Column('testid', String())
+    score = Column('score', Float())
+
+    __tablename__ = 'scores'
+    __table_args__ = {'extend_existing': True}
+
+
+class TagScores(Base):
+    username = Column('username', String(), primary_key=True)
+    department = Column('department', String())
+    tag = Column('tag', String())
+    testid = Column('testid', String())
+    score = Column('score', Float())
+
+    __tablename__ = 'tagscores'
+    __table_args__ = {'extend_existing': True}
+
+
 class Census(Base):
     state = Column('state', String(), primary_key=True)
     sex = Column('sex', String())
@@ -4651,6 +4721,26 @@ mytable_shelf = Shelf({
     'last': Dimension(MyTable.last),
     'age': Metric(func.sum(MyTable.age))
 })
+
+
+scores_shelf = Shelf({
+    'username': Dimension(Scores.username),
+    'department': Dimension(Scores.department, anonymizer=lambda value: value[::-1]),
+    'testid': Dimension(Scores.testid),
+    'test_cnt': Metric(func.count(distinct(TagScores.testid))),
+    'score': Metric(func.avg(Scores.score))
+})
+
+
+tagscores_shelf = Shelf({
+    'username': Dimension(TagScores.username),
+    'department': Dimension(TagScores.department),
+    'testid': Dimension(TagScores.testid),
+    'tag': Dimension(TagScores.tag),
+    'test_cnt': Metric(func.count(distinct(TagScores.testid))),
+    'score': Metric(func.avg(TagScores.score), summary_aggregation=func.sum)
+})
+
 
 census_shelf = Shelf({
     'state': Dimension(Census.state),
