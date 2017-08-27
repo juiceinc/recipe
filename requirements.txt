@@ -1,5 +1,5 @@
-dogpile==0.2.2
-dogpile.cache==0.6.2
+dogpile.core==0.4.1
+dogpile.cache==0.6.4
 gevent==1.2.1
 greenlet==0.4.12
 orderedset==2.0
@@ -7,7 +7,7 @@ packaging==16.8
 psycopg2==2.7.1
 py==1.4.32
 pyparsing==2.1.10
--e git+git@github.com:juiceinc/recipe.git@49e1f1748148b17a907811d073f0d2198bd31c25#egg=recipe
+-e .
 six==1.10.0
 SQLAlchemy==1.1.9
 sqlparse==0.2.2
