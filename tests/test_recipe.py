@@ -103,7 +103,7 @@ GROUP BY census.state
 ORDER BY CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) DESC"""
 
         assert recipe.dataset.csv.replace('\r\n', '\n') == \
-               """state,avgage,state_id
+            """state,avgage,state_id
 Florida,39.08283934000634,Florida
 West Virginia,38.555058651148165,West Virginia
 Maine,38.10118393261269,Maine
@@ -158,7 +158,6 @@ Utah,30.63622231900565,Utah
 """
 
 
-
 class TestDeferredMetrics(object):
     def setup(self):
         # create a Session
@@ -203,7 +202,6 @@ GROUP BY census.state"""
         assert abs(recipe.all()[0].avgage - 36.27787892421841) < 0.000000001
         assert abs(recipe.all()[0].avgage2 - 36.27787892421841) < 0.000000001
         assert recipe.stats.rows == 51
-
 
 
 class TestStats(object):

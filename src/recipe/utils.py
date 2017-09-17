@@ -82,7 +82,7 @@ def clean_unicode(value):
         cleaned_value = unicodedata.normalize('NFKD', value).encode(
             'ascii', 'ignore')
         if not cleaned_value:
-            raise ValueError("Could not find useful chars in the string")
+            raise ValueError('Could not find useful chars in the string')
     return cleaned_value
 
 

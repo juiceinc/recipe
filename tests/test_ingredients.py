@@ -73,7 +73,8 @@ class TestIngredients(object):
         extras = list(ingr.cauldron_extras)
         assert len(extras) == 0
 
-        ingr = Metric(MyTable.first, id='foo', formatters=[lambda x: x + 'foo'])
+        ingr = Metric(MyTable.first, id='foo',
+                      formatters=[lambda x: x + 'foo'])
         extras = list(ingr.cauldron_extras)
         assert extras[0][0] == 'foo'
         assert len(extras) == 1
@@ -218,7 +219,8 @@ class TestDimension(object):
         # id gets injected in the response
         assert extras[0][0] == 'moo_id'
 
-        d = Dimension(MyTable.first, id='moo', formatters=[lambda x: x + 'moo'])
+        d = Dimension(MyTable.first, id='moo',
+                      formatters=[lambda x: x + 'moo'])
         extras = list(d.cauldron_extras)
         assert len(extras) == 2
         # formatted value and id gets injected in the response
@@ -260,7 +262,7 @@ class TestLookupDimension(object):
 
         # IdValueDimension lookup should be a dict
         with pytest.raises(BadIngredient):
-            d = LookupDimension(MyTable.first, lookup="mouse")
+            d = LookupDimension(MyTable.first, lookup='mouse')
 
         # Lookup dimension injects a formatter in the first position
         d = LookupDimension(MyTable.first, lookup={'hi': 'there'})
@@ -322,17 +324,17 @@ class TestDivideMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == 'CAST(sum(foo.age) AS FLOAT) / (' \
-                                        'coalesce(' \
-                                        'CAST(sum(foo.age) AS FLOAT), ' \
-                                        ':coalesce_1) + :coalesce_2)'
+            'coalesce(' \
+            'CAST(sum(foo.age) AS FLOAT), ' \
+            ':coalesce_1) + :coalesce_2)'
 
         # Generate if denominator == 0 then 'zero' else numerator / denominator
         d = DivideMetric(func.sum(MyTable.age), func.sum(MyTable.age),
                          ifzero='zero')
         assert str(d.columns[0]) == \
-               'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
-               ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
-               'CAST(sum(foo.age) AS FLOAT) END'
+            'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
+            ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
+            'CAST(sum(foo.age) AS FLOAT) END'
 
 
 class TestSumIfMetric(object):
@@ -351,7 +353,7 @@ class TestSumIfMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == \
-               'sum(CASE WHEN (foo.age > :age_1) THEN sum(foo.age) END)'
+            'sum(CASE WHEN (foo.age > :age_1) THEN sum(foo.age) END)'
 
 
 class TestCountIfMetric(object):
@@ -370,7 +372,7 @@ class TestCountIfMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == \
-               'count(DISTINCT CASE WHEN (foo.age > :age_1) THEN foo.first END)'
+            'count(DISTINCT CASE WHEN (foo.age > :age_1) THEN foo.first END)'
 
         d = CountIfMetric(MyTable.age > 5, MyTable.first, distinct=False)
         assert len(d.columns) == 1
@@ -379,4 +381,4 @@ class TestCountIfMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == \
-               'count(CASE WHEN (foo.age > :age_1) THEN foo.first END)'
+            'count(CASE WHEN (foo.age > :age_1) THEN foo.first END)'

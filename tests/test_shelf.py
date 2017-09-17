@@ -47,7 +47,6 @@ class TestShelf(object):
         ingredient = self.shelf.find('last', Dimension)
         assert ingredient.id == 'last'
 
-
     def test_repr(self):
         """ Find ingredients on the shelf """
         assert self.shelf.__repr__() == """(Dimension)first MyTable.first
@@ -91,6 +90,7 @@ class TestShelf(object):
         assert len(self.shelf) == 3
         self.shelf.clear()
         assert len(self.shelf) == 0
+
 
 class TestAutomaticShelf(object):
     def setup(self):

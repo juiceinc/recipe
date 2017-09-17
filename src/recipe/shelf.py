@@ -61,12 +61,12 @@ class Shelf(AttrDict):
     @property
     def dimension_ids(self):
         return tuple(d.id for d in self.values() if
-                isinstance(d, Dimension))
+                     isinstance(d, Dimension))
 
     @property
     def metric_ids(self):
         return tuple(d.id for d in self.values() if
-                isinstance(d, Metric))
+                     isinstance(d, Metric))
 
     def __repr__(self):
         """ A string representation of the ingredients used in a recipe
@@ -106,7 +106,7 @@ class Shelf(AttrDict):
 
             ingredient = self[obj]
             if not isinstance(ingredient, filter_to_class):
-                raise BadRecipe("{} is not a {}".format(
+                raise BadRecipe('{} is not a {}'.format(
                     obj, filter_to_class))
 
             ingredient.resolve(self)
@@ -118,7 +118,7 @@ class Shelf(AttrDict):
             obj.resolve(self)
             return obj
         else:
-            raise BadRecipe("{} is not a {}".format(obj,
+            raise BadRecipe('{} is not a {}'.format(obj,
                                                     type(filter_to_class)))
 
     def brew_query_parts(self):
@@ -136,10 +136,10 @@ class Shelf(AttrDict):
                 havings.update(ingredient.havings)
 
         return {
-            "columns": columns,
-            "group_bys": group_bys,
-            "filters": filters,
-            "havings": havings,
+            'columns': columns,
+            'group_bys': group_bys,
+            'filters': filters,
+            'havings': havings,
         }
 
     def enchant(self, list, cache_context=None):

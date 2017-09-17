@@ -88,4 +88,3 @@ To add features, extensions or ingredients to Recipe see our development guide.
    :maxdepth: 2
 
    development
-

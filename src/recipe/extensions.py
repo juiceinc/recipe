@@ -85,11 +85,11 @@ class RecipeExtension(object):
         group_bys, filters, and order_bys generated from collected
         ingredients. """
         return {
-            "columns": recipe_parts['columns'],
-            "group_bys": recipe_parts['group_bys'],
-            "filters": recipe_parts['filters'],
-            "havings": recipe_parts['havings'],
-            "order_bys": recipe_parts['order_bys'],
+            'columns': recipe_parts['columns'],
+            'group_bys': recipe_parts['group_bys'],
+            'filters': recipe_parts['filters'],
+            'havings': recipe_parts['havings'],
+            'order_bys': recipe_parts['order_bys'],
         }
 
     def modify_prequery_parts(self, prequery_parts):
@@ -98,11 +98,11 @@ class RecipeExtension(object):
         ingredients after a preliminary query using columns has been created.
         """
         return {
-            "query": prequery_parts['query'],
-            "group_bys": prequery_parts['group_bys'],
-            "filters": prequery_parts['filters'],
-            "havings": prequery_parts['havings'],
-            "order_bys": prequery_parts['order_bys'],
+            'query': prequery_parts['query'],
+            'group_bys': prequery_parts['group_bys'],
+            'filters': prequery_parts['filters'],
+            'havings': prequery_parts['havings'],
+            'order_bys': prequery_parts['order_bys'],
         }
 
     def modify_postquery_parts(self, postquery_parts):
@@ -111,11 +111,11 @@ class RecipeExtension(object):
         ingredients after a final query using columns has been created.
         """
         return {
-            "query": postquery_parts['query'],
-            "group_bys": postquery_parts['group_bys'],
-            "filters": postquery_parts['filters'],
-            "havings": postquery_parts['havings'],
-            "order_bys": postquery_parts['order_bys'],
+            'query': postquery_parts['query'],
+            'group_bys': postquery_parts['group_bys'],
+            'filters': postquery_parts['filters'],
+            'havings': postquery_parts['havings'],
+            'order_bys': postquery_parts['order_bys'],
         }
 
     def enchant_add_fields(self):
@@ -218,8 +218,8 @@ class SummarizeOver(RecipeExtension):
         subq = postquery_parts['query'].subquery(name='summarize')
 
         summarize_over_dim = set((self._summarize_over,
-                                 self._summarize_over + '_id',
-                                 self._summarize_over + '_raw'))
+                                  self._summarize_over + '_id',
+                                  self._summarize_over + '_raw'))
         dim_column_names = set(dim for dim in self.recipe.dimension_ids).union(
             set(dim + '_id' for dim in self.recipe.dimension_ids)).union(
             set(dim + '_raw' for dim in self.recipe.dimension_ids))
@@ -263,13 +263,12 @@ class SummarizeOver(RecipeExtension):
                 order_by_columns.append(subq_col)
 
         postquery_parts['query'] = self.recipe._session.query(*(group_by_columns +
-                                             metric_columns)).group_by(
+                                                                metric_columns)).group_by(
             *group_by_columns).order_by(*order_by_columns)
 
         # Remove the summarized dimension
         self.recipe._cauldron.pop(self._summarize_over, None)
         return postquery_parts
-
 
 
 class CacheRecipe(RecipeExtension):
@@ -306,10 +305,10 @@ class Anonymize(RecipeExtension):
         for ingredient in self.recipe._cauldron.values():
             if hasattr(ingredient.meta, 'anonymizer'):
                 if ingredient.meta.anonymizer not in ingredient.formatters \
-                    and self._anonymize:
+                        and self._anonymize:
                     ingredient.formatters.append(ingredient.meta.anonymizer)
                 if ingredient.meta.anonymizer in ingredient.formatters \
-                    and not self._anonymize:
+                        and not self._anonymize:
                     ingredient.formatters.remove(ingredient.meta.anonymizer)
 
 

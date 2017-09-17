@@ -41,12 +41,12 @@ TABLEDEF = '''
 
 engine.execute(TABLEDEF)
 engine.execute(
-    """insert into scores values 
-('chris', 'sales', '1', 80), 
-('chip', 'ops', '2', 80), 
-('chip', 'ops', '3', 90), 
-('chip', 'ops', '4', 100), 
-('annika', 'ops', '5', 80), 
+    """insert into scores values
+('chris', 'sales', '1', 80),
+('chip', 'ops', '2', 80),
+('chip', 'ops', '3', 90),
+('chip', 'ops', '4', 100),
+('annika', 'ops', '5', 80),
 ('annika', 'ops', '6', 90)
 """)
 
@@ -64,16 +64,16 @@ TABLEDEF = '''
 # create a configured "Session" class
 engine.execute(TABLEDEF)
 engine.execute(
-    """insert into tagscores values 
-('chris', 'individual', 'sales', '1', 80), 
-('chris', 'manager', 'sales', '1', 80), 
-('chip', 'individual', 'ops', '2', 80), 
-('chip', 'individual', 'ops', '3', 90), 
-('chip', 'individual', 'ops', '4', 100), 
-('chip', 'musician', 'ops', '2', 80), 
-('chip', 'musician', 'ops', '3', 90), 
-('chip', 'musician', 'ops', '4', 100), 
-('annika', 'individual', 'ops', '5', 80), 
+    """insert into tagscores values
+('chris', 'individual', 'sales', '1', 80),
+('chris', 'manager', 'sales', '1', 80),
+('chip', 'individual', 'ops', '2', 80),
+('chip', 'individual', 'ops', '3', 90),
+('chip', 'individual', 'ops', '4', 100),
+('chip', 'musician', 'ops', '2', 80),
+('chip', 'musician', 'ops', '3', 90),
+('chip', 'musician', 'ops', '4', 100),
+('annika', 'individual', 'ops', '5', 80),
 ('annika', 'individual', 'ops', '6', 90)
 """)
 
