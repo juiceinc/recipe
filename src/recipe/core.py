@@ -214,7 +214,7 @@ class Recipe(six.with_metaclass(RecipeBase)):
         elif isinstance(shelf, Shelf):
             self._shelf = shelf
         else:
-            raise BadRecipe("shelf must be a dict or recipe.shelf.Shelf")
+            raise BadRecipe('shelf must be a dict or recipe.shelf.Shelf')
         return self
 
     def metrics(self, *metrics):
@@ -420,9 +420,9 @@ class Recipe(six.with_metaclass(RecipeBase)):
             recipe_parts = extension.modify_prequery_parts(recipe_parts)
 
         if len(recipe_parts['query'].selectable.froms) != 1:
-            raise BadRecipe("Recipes must use ingredients that all come from "
-                            "the same table. \nDetails on this recipe:\n{"
-                            "}".format(str(self._cauldron)))
+            raise BadRecipe('Recipes must use ingredients that all come from '
+                            'the same table. \nDetails on this recipe:\n{'
+                            '}'.format(str(self._cauldron)))
 
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_postquery_parts(recipe_parts)
@@ -555,5 +555,3 @@ class Recipe(six.with_metaclass(RecipeBase)):
         """ Return the first element on the result
         """
         return self.one()
-
-

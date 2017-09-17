@@ -316,12 +316,12 @@ ORDER BY foo.first"""
 
 class TestSummarizeOverExtension(object):
     anonymized_foo_shelf = Shelf({
-            'first': Dimension(MyTable.first,
-                               anonymizer=lambda value: value[::-1]),
-            'last': Dimension(MyTable.last,
-                              anonymizer=lambda value: value[::-1]),
-            'age': Metric(func.sum(MyTable.age))
-        })
+        'first': Dimension(MyTable.first,
+                           anonymizer=lambda value: value[::-1]),
+        'last': Dimension(MyTable.last,
+                          anonymizer=lambda value: value[::-1]),
+        'age': Metric(func.sum(MyTable.age))
+    })
 
     def setup(self):
         # create a Session
@@ -379,7 +379,7 @@ GROUP BY summarize.first_raw"""
         """ Test a dataset that has multiple rows per user """
         self.shelf = scores_shelf
         recipe = self.recipe().metrics('score').dimensions(
-            'department','username').summarize_over('username')
+            'department', 'username').summarize_over('username')
         assert recipe.to_sql() == """SELECT summarize.department,
        avg(summarize.score) AS score
 FROM
@@ -401,7 +401,7 @@ GROUP BY summarize.department"""
         self.shelf = scores_shelf
 
         recipe = self.recipe().metrics('score').dimensions(
-            'department','username').summarize_over('username').limit(2)
+            'department', 'username').summarize_over('username').limit(2)
 
         assert recipe.to_sql() == """SELECT summarize.department,
        avg(summarize.score) AS score
@@ -478,8 +478,8 @@ ORDER BY summarize.department_raw"""
 
         recipe = self.recipe().metrics('score').dimensions(
             'department', 'username').automatic_filters({
-            'department': 'ops'
-        }).summarize_over('username').anonymize(False)
+                'department': 'ops'
+            }).summarize_over('username').anonymize(False)
 
         print recipe.to_sql()
         assert recipe.to_sql() == """SELECT summarize.department,
@@ -497,19 +497,17 @@ GROUP BY summarize.department"""
         assert ops_row.department == 'ops'
         assert ops_row.score == 87.5
 
-
     ####
     # TagScores is a dataset containing multiple tests that each user
     # has taken, we want to show the average USER score by department
     # Users also have tags that we may want to limit to
     ####
 
-
     def test_summarize_over_tagscores(self):
         """ Test a dataset that has multiple rows per user """
         self.shelf = tagscores_shelf
         recipe = self.recipe().metrics('score').dimensions(
-            'department','username').summarize_over('username')
+            'department', 'username').summarize_over('username')
 
         assert recipe.to_sql() == """SELECT summarize.department,
        sum(summarize.score) AS score
@@ -531,9 +529,9 @@ GROUP BY summarize.department"""
         """ Test a dataset that has multiple rows per user """
         self.shelf = tagscores_shelf
         recipe = self.recipe().metrics('score').dimensions(
-            'department','username').automatic_filters({
-            'tag': 'musician'
-        }).summarize_over(
+            'department', 'username').automatic_filters({
+                'tag': 'musician'
+            }).summarize_over(
             'username')
 
         assert recipe.to_sql() == """SELECT summarize.department,
@@ -595,7 +593,7 @@ class TestCompareRecipeExtension(object):
 
         r = self.recipe().metrics('pop2000').dimensions(
             'sex').order_by('sex')
-        r = r.compare(self.recipe() \
+        r = r.compare(self.recipe()
                       .metrics('pop2000')
                       .dimensions('sex')
                       .filters(Census.state == 'Vermont'))

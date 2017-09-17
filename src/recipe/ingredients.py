@@ -317,8 +317,8 @@ class LookupDimension(Dimension):
         super(LookupDimension, self).__init__(expression, **kwargs)
         self.lookup = lookup
         if not isinstance(lookup, dict):
-            raise BadIngredient("lookup for LookupDimension must be a "
-                                "dictionary")
+            raise BadIngredient('lookup for LookupDimension must be a '
+                                'dictionary')
         self.default = kwargs.pop('default', 'Not found')
         self.formatters.insert(0,
                                lambda value: self.lookup.get(value,
@@ -419,7 +419,8 @@ class WtdAvgMetric(DivideMetric):
             #  because we can't multiply an expression by a strong.
             numerator = func.sum(expression * weight_expression)
             denominator = func.sum(weight_expression)
-            super(WtdAvgMetric, self).__init__(numerator, denominator, **kwargs)
+            super(WtdAvgMetric, self).__init__(
+                numerator, denominator, **kwargs)
 
 
 class ConditionalMetric(Metric):

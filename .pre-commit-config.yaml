@@ -10,8 +10,3 @@ repos:
     -   id: end-of-file-fixer
     -   id: double-quote-string-fixer
     -   id: check-docstring-first
--   repo: git://github.com/FalconSocial/pre-commit-python-sorter
-    sha: master
-    hooks:
-    -   id: python-import-sorter
-        args: ['--silent-overwrite']
