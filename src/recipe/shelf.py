@@ -137,28 +137,21 @@ class Shelf(AttrDict):
                 raise BadRecipe('{} is not a {}'.format(
                     obj, filter_to_class))
 
-            ingredient.resolve(self)
             if set_descending:
                 ingredient.ordering = 'desc'
 
             return ingredient
         elif isinstance(obj, filter_to_class):
-            obj.resolve(self)
             return obj
         else:
             raise BadRecipe('{} is not a {}'.format(obj,
                                                     type(filter_to_class)))
-
-    def resolve(self):
-        for ingr in self.ingredients():
-            ingr.resolve(self)
 
     def brew_query_parts(self):
         """ Make columns, group_bys, filters, havings
         """
         columns, group_bys, filters, havings = [], [], set(), set()
         for ingredient in self.ingredients():
-            ingredient.resolve(self)
             if ingredient.query_columns:
                 columns.extend(ingredient.query_columns)
             if ingredient.group_by:

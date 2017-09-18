@@ -4752,17 +4752,6 @@ census_shelf = Shelf({
 })
 
 
-deferred_shelf = Shelf({
-    'state': Dimension(Census.state),
-    'sex': Dimension(Census.sex),
-    'age': Dimension(Census.age),
-    'avgage': WtdAvgMetric(Census.age, Census.pop2000),
-    'pop2000': Metric(func.sum(Census.pop2000)),
-    'pop2008': Metric(func.sum(Census.pop2008)),
-    'div': DivideMetric('pop2000', 'pop2008'),
-})
-
-
 statefact_shelf = Shelf({
     'state': Dimension(StateFact.name),
     'abbreviation': Dimension(StateFact.abbreviation),

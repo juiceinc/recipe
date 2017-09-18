@@ -172,7 +172,6 @@ age:
         assert self.shelf.__repr__() == """(Dimension)first MyTable.first
 (Dimension)last MyTable.last
 (Metric)age sum(foo.age)"""
-        self.shelf.resolve()
 
     def test_update(self):
         """ Shelves can be updated with other shelves """
