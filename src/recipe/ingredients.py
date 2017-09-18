@@ -93,6 +93,7 @@ class deferred:
 class Ingredient(object):
     """ Ingredients combine to make a SQLAlchemy query.
     """
+
     def __init__(self, **kwargs):
         """ Initializing an instance of the Ingredient Class
 
@@ -156,7 +157,7 @@ class Ingredient(object):
                 if isinstance(arg, basestring):
                     disaggregate = False
                     if getattr(self, 'shelf', None) and \
-                        getattr('table', self.shelf.Meta, None):
+                            getattr('table', self.shelf.Meta, None):
                         # Convert the argument to a sqlalchemy statement
                         statement = alchemify(arg, self.shelf.Meta.table)
                         arg = eval(statement)
@@ -436,6 +437,7 @@ class LookupDimension(Dimension):
 class Metric(Ingredient):
     """ A simple metric created from a single expression
     """
+
     def __init__(self, expression, **kwargs):
         super(Metric, self).__init__(**kwargs)
         self.columns = [expression]

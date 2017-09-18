@@ -338,9 +338,9 @@ class TestDivideMetric(object):
         d = DivideMetric(func.sum(MyTable.age), func.sum(MyTable.age),
                          ifzero='zero')
         assert str(d.columns[0]) == \
-               'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
-               ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
-               'CAST(sum(foo.age) AS FLOAT) END'
+            'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
+            ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
+            'CAST(sum(foo.age) AS FLOAT) END'
 
 
 class TestSumIfMetric(object):
@@ -359,7 +359,7 @@ class TestSumIfMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == \
-               'sum(CASE WHEN (foo.age > :age_1) THEN sum(foo.age) END)'
+            'sum(CASE WHEN (foo.age > :age_1) THEN sum(foo.age) END)'
 
 
 class TestCountIfMetric(object):
@@ -378,7 +378,7 @@ class TestCountIfMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == \
-               'count(DISTINCT CASE WHEN (foo.age > :age_1) THEN foo.first END)'
+            'count(DISTINCT CASE WHEN (foo.age > :age_1) THEN foo.first END)'
 
         d = CountIfMetric(MyTable.age > 5, MyTable.first, distinct=False)
         assert len(d.columns) == 1
@@ -387,7 +387,7 @@ class TestCountIfMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == \
-               'count(CASE WHEN (foo.age > :age_1) THEN foo.first END)'
+            'count(CASE WHEN (foo.age > :age_1) THEN foo.first END)'
 
 
 class TestIngredientFromObj(object):
@@ -458,4 +458,4 @@ class TestAlchemify(object):
         expression = eval(statement)
         assert isinstance(expression, (InstrumentedAttribute,
                                        FunctionElement, basestring))
-        assert unicode(expression) == unicode("squee")
+        assert unicode(expression) == unicode('squee')

@@ -305,10 +305,10 @@ class Anonymize(RecipeExtension):
         for ingredient in self.recipe._cauldron.values():
             if hasattr(ingredient.meta, 'anonymizer'):
                 if ingredient.meta.anonymizer not in ingredient.formatters \
-                    and self._anonymize:
+                        and self._anonymize:
                     ingredient.formatters.append(ingredient.meta.anonymizer)
                 if ingredient.meta.anonymizer in ingredient.formatters \
-                    and not self._anonymize:
+                        and not self._anonymize:
                     ingredient.formatters.remove(ingredient.meta.anonymizer)
 
 
@@ -384,7 +384,7 @@ class BlendRecipe(RecipeExtension):
                     else:
                         raise BadRecipe('{} could not be found in .blend() '
                                         'recipe subquery'.format(
-                            id + suffix))
+                                            id + suffix))
 
             # For all dimensions in the blend recipe
             # Use the dimension in the base recipe and
@@ -405,7 +405,7 @@ class BlendRecipe(RecipeExtension):
                     else:
                         raise BadRecipe('{} could not be found in .blend() '
                                         'recipe subquery'.format(
-                            id + suffix))
+                                            id + suffix))
 
             base_dim = self.recipe._cauldron[join_base]
             blend_dim = blend_recipe._cauldron[join_blend]
@@ -482,7 +482,7 @@ class CompareRecipe(RecipeExtension):
                     else:
                         raise BadRecipe('{} could not be found in .compare() '
                                         'recipe subquery'.format(
-                            id + suffix))
+                                            id + suffix))
 
             join_conditions = []
             for dim in compare_recipe.dimension_ids:
