@@ -1,6 +1,9 @@
 import pytest
 from copy import copy
 from sqlalchemy import func
+from yaml import safe_load
+
+from recipe.ingredients import alchemify, ingredient_from_dict
 from .test_base import *
 
 from recipe import BadRecipe
@@ -116,26 +119,19 @@ class TestShelf(object):
         assert len(self.shelf) == 0
 
 
-
-
 class TestShelfFromYaml(object):
     def setup(self):
-        # create a Session
         self.shelf = Shelf.from_yaml("""
 first:
     kind: Dimension
-    expression: {first}
+    expression: '{first}'
 last:
     kind: Dimension
-    expression: {last}
+    expression: '{last}'
 age:
     kind: Metric
     expression: sum({age})
-""", 'MyTable')
-        print(self.shelf)
-        print('%'*80)
-        # self.shelf = copy(mytable_shelf)
-        print(self.shelf)
+""", MyTable)
         self.shelf.Meta.anonymize = False
 
     def test_find(self):
@@ -173,16 +169,10 @@ age:
 
     def test_repr(self):
         """ Find ingredients on the shelf """
-        print('%'*80)
-        print('%'*80)
-        print(self.shelf.__repr__())
-        print('%'*80)
-        print('%'*80)
-        assert self.shelf.__repr__() == """(Dimension)first first
-(Dimension)last last
-(Metric)age sum({age})"""
+        assert self.shelf.__repr__() == """(Dimension)first MyTable.first
+(Dimension)last MyTable.last
+(Metric)age sum(foo.age)"""
         self.shelf.resolve()
-
 
     def test_update(self):
         """ Shelves can be updated with other shelves """
@@ -268,15 +258,15 @@ class TestAutomaticShelf(object):
         with pytest.raises(BadRecipe):
             ingredient = self.shelf.find(2.0, Dimension)
 
-        # We can choose not to raise
-        # ingredient = self.shelf.find('foo', Dimension)
-        # assert ingredient == 'foo'
-        #
-        # ingredient = self.shelf.find(2.0, Dimension)
-        # assert ingredient == 2.0
-        #
-        # ingredient = self.shelf.find('first', Metric)
-        # assert ingredient == 'first'
+            # We can choose not to raise
+            # ingredient = self.shelf.find('foo', Dimension)
+            # assert ingredient == 'foo'
+            #
+            # ingredient = self.shelf.find(2.0, Dimension)
+            # assert ingredient == 2.0
+            #
+            # ingredient = self.shelf.find('first', Metric)
+            # assert ingredient == 'first'
 
     def test_get(self):
         """ Find ingredients on the shelf """

@@ -33,7 +33,7 @@ def ingredient_from_dict(ingr_dict):
     if IngredientClass is None:
         raise BadIngredient('Bad ingredient kind')
     args = ingr_dict.pop('expression', None)
-    if isinstance(args, basestring):
+    if not isinstance(args, (list, tuple)):
         args = [args]
     if args is None:
         raise BadIngredient('expression is required')
@@ -436,7 +436,6 @@ class LookupDimension(Dimension):
 class Metric(Ingredient):
     """ A simple metric created from a single expression
     """
-    @deferred
     def __init__(self, expression, **kwargs):
         super(Metric, self).__init__(**kwargs)
         self.columns = [expression]

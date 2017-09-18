@@ -4,11 +4,13 @@ from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import func
 from sqlalchemy.util import lightweight_named_tuple
+from yaml import safe_load
 
-from recipe import BadRecipe, Ingredient
+from recipe import BadRecipe, Ingredient, BadIngredient
 from recipe import Dimension
 from recipe import Metric
 from recipe.compat import basestring
+from recipe.ingredients import ingredient_from_dict, alchemify
 from recipe.utils import AttrDict
 
 
@@ -85,6 +87,28 @@ class Shelf(AttrDict):
     def use(self, ingredient):
         self[ingredient.id] = ingredient
 
+    @classmethod
+    def from_yaml(cls, yaml_str, table):
+        obj = safe_load(yaml_str)
+        tablename = table.__name__
+        locals()[tablename] = table
+
+        d = {}
+        for k, v in obj.iteritems():
+            expr = v.get('expression')
+            if isinstance(expr, basestring):
+                v['expression'] = eval(alchemify(expr, tablename))
+            elif isinstance(expr, list):
+                v['expression'] = [eval(alchemify(stmt, tablename))
+                                   for stmt in expr]
+            else:
+                raise BadIngredient('expression must be a string or list')
+            d[k] = ingredient_from_dict(v)
+
+        shelf = cls(d)
+        shelf.Meta.table = tablename
+        return shelf
+
     def find(self, obj, filter_to_class=Ingredient, constructor=None):
         """
         Find an Ingredient, optionally using the shelf.
@@ -125,11 +149,16 @@ class Shelf(AttrDict):
             raise BadRecipe('{} is not a {}'.format(obj,
                                                     type(filter_to_class)))
 
+    def resolve(self):
+        for ingr in self.ingredients():
+            ingr.resolve(self)
+
     def brew_query_parts(self):
         """ Make columns, group_bys, filters, havings
         """
         columns, group_bys, filters, havings = [], [], set(), set()
         for ingredient in self.ingredients():
+            ingredient.resolve(self)
             if ingredient.query_columns:
                 columns.extend(ingredient.query_columns)
             if ingredient.group_by:
