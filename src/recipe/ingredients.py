@@ -70,11 +70,29 @@ def alchemify(statement, table):
         raise BadIngredient('Bad expression')
 
 
+class deferred:
+    """ If any of the arguments to a function is a string, we will resolve
+    it using a key on the shelf. """
+
+    def __call__(self, f):
+        @wraps(f)
+        def wrap(init_self, *args, **kwargs):
+            init_self._deferred = False
+            for arg in args:
+                if isinstance(arg, basestring):
+                    init_self._deferred = True
+                    init_self._original_args = copy(args)
+                    init_self._original_kwargs = copy(kwargs)
+
+            f(init_self, *args, **kwargs)
+
+        return wrap
+
+
 @total_ordering
 class Ingredient(object):
     """ Ingredients combine to make a SQLAlchemy query.
     """
-
     def __init__(self, **kwargs):
         """ Initializing an instance of the Ingredient Class
 
@@ -126,7 +144,42 @@ class Ingredient(object):
         return self.describe()
 
     def resolve(self, shelf):
-        return
+        """ Look up any deferred arguments and use their expressions in this
+        metric. Re-initialize with the new expressions. """
+        if getattr(self, '_deferred', False):
+            resolved_args = []
+            for arg in self._original_args:
+                # If an argument starts with a backtick, we will
+                # disaggregate the sqlalchemy expression. That is, if the
+                # expression is:
+                # `func.sum(Census.age)` we will use Census.age
+                if isinstance(arg, basestring):
+                    disaggregate = False
+                    if getattr(self, 'shelf', None) and \
+                        getattr('table', self.shelf.Meta, None):
+                        # Convert the argument to a sqlalchemy statement
+                        statement = alchemify(arg, self.shelf.Meta.table)
+                        arg = eval(statement)
+                        if not isinstance(arg, basestring):
+                            resolved_args.append(arg)
+                            continue
+
+                    if arg and arg[0] == '`':
+                        disaggregate = True
+                        arg = arg[1:]
+                    if arg and arg in shelf:
+                        expr = shelf[arg].expression
+                        if disaggregate:
+                            expr = self._disaggregate(expr)
+                        resolved_args.append(expr)
+                    else:
+                        raise BadIngredient('Can\'t find expression {'
+                                            '} in shelf'.format(arg))
+                else:
+                    resolved_args.append(arg)
+            self._deferred = False
+            self._original_kwargs['id'] = self.id
+            self.__init__(*resolved_args, **self._original_kwargs)
 
     def describe(self):
         return u'({}){} {}'.format(self.__class__.__name__, self.id,
@@ -380,29 +433,10 @@ class LookupDimension(Dimension):
                                                              self.default))
 
 
-class deferred:
-    """ If any of the arguments to a function is a string, we will resolve
-    it using a key on the shelf. """
-
-    def __call__(self, f):
-        @wraps(f)
-        def wrap(init_self, *args, **kwargs):
-            init_self._deferred = False
-            for arg in args:
-                if isinstance(arg, basestring):
-                    init_self._deferred = True
-                    init_self._original_args = copy(args)
-                    init_self._original_kwargs = copy(kwargs)
-
-            f(init_self, *args, **kwargs)
-
-        return wrap
-
-
 class Metric(Ingredient):
     """ A simple metric created from a single expression
     """
-
+    @deferred
     def __init__(self, expression, **kwargs):
         super(Metric, self).__init__(**kwargs)
         self.columns = [expression]
@@ -412,44 +446,6 @@ class Metric(Ingredient):
             return expr.clause_expr
         else:
             return expr
-
-    def resolve(self, shelf):
-        """ Look up any deferred arguments and use their expressions in this
-        metric. Re-initialize with the new expressions. """
-        if getattr(self, '_deferred', False):
-            resolved_args = []
-            for arg in self._original_args:
-                # If an argument starts with a backtick, we will
-                # disaggregate the sqlalchemy expression. That is, if the
-                # expression is:
-                # `func.sum(Census.age)` we will use Census.age
-                if isinstance(arg, basestring):
-                    disaggregate = False
-                    if getattr(self, 'shelf', None) and \
-                       getattr('table', self.shelf.Meta, None):
-                        # Convert the argument to a sqlalchemy statement
-                        statement = alchemify(arg, self.shelf.Meta.table)
-                        arg = eval(statement)
-                        if not isinstance(arg, basestring):
-                            resolved_args.append(arg)
-                            continue
-
-                    if arg and arg[0] == '`':
-                        disaggregate = True
-                        arg = arg[1:]
-                    if arg and arg in shelf:
-                        expr = shelf[arg].expression
-                        if disaggregate:
-                            expr = self._disaggregate(expr)
-                        resolved_args.append(expr)
-                    else:
-                        raise BadIngredient('Can\'t find expression {'
-                                            '} in shelf'.format(arg))
-                else:
-                    resolved_args.append(arg)
-            self._deferred = False
-            self._original_kwargs['id'] = self.id
-            self.__init__(*resolved_args, **self._original_kwargs)
 
 
 class DivideMetric(Metric):
