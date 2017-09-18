@@ -1,3 +1,5 @@
+import importlib
+import re
 from copy import copy
 from functools import total_ordering, wraps
 from uuid import uuid4
@@ -12,8 +14,61 @@ from recipe.utils import AttrDict
 
 # TODO: How do we avoid attaching significance to particular
 # indices in columns
-
 # Should dimensions having ids be an extension to recipe?
+
+def ingredient_class_for_name(class_name):
+    # load the module, will raise ImportError if module cannot be loaded
+    m = importlib.import_module('recipe.ingredients')
+    # get the class, will raise AttributeError if class cannot be found
+    c = getattr(m, class_name, None)
+    return c
+
+
+def ingredient_from_dict(ingr_dict):
+    """ Create an ingredient from an dictionary.
+
+    This object will be deserialized from yaml """
+    kind = ingr_dict.pop('kind', 'Metric')
+    IngredientClass = ingredient_class_for_name(kind)
+    if IngredientClass is None:
+        raise BadIngredient('Bad ingredient kind')
+    args = ingr_dict.pop('expression', None)
+    if isinstance(args, basestring):
+        args = [args]
+    if args is None:
+        raise BadIngredient('expression is required')
+    # Remaining properties in ingr_dict are treated as keyword args
+    return IngredientClass(*args, **ingr_dict)
+
+
+def alchemify(statement, table):
+    """ Converts an string into a statement that can be
+    evaluated into a sqlalchemy expression
+
+    >>> alchemify('{foo}', 'MyTable')
+    MyTable.foo
+
+    >>> alchemify('sum({foo}))', 'MyTable')
+    func.sum(MyTable.foo)
+
+    >>> alchemify('count(distinct({moo}))', 'MyTable')
+    func.count(distinct(MyTable.moo))
+
+    >>> alchemify('"squee"', 'MyTable')
+    "squee"
+    """
+
+    # sum({foo}) => func.sum({foo})
+    statement = re.sub(r'((count|sum|avg|min|max)\()', 'func.\g<0>', statement)
+    # func.sum({foo}) => func.sum(MyTable.foo)
+    statement = re.sub(r'{(.*?)}', table + '.\g<1>', statement)
+
+    if '__' not in statement:
+        return statement
+        # expression = eval(statement, {'__builtins__': {}})
+    else:
+        raise BadIngredient('Bad expression')
+
 
 @total_ordering
 class Ingredient(object):
@@ -326,6 +381,9 @@ class LookupDimension(Dimension):
 
 
 class deferred:
+    """ If any of the arguments to a function is a string, we will resolve
+    it using a key on the shelf. """
+
     def __call__(self, f):
         @wraps(f)
         def wrap(init_self, *args, **kwargs):
@@ -356,17 +414,30 @@ class Metric(Ingredient):
             return expr
 
     def resolve(self, shelf):
-        """ Look up any deferred metrics and use their expressions in this
+        """ Look up any deferred arguments and use their expressions in this
         metric. Re-initialize with the new expressions. """
         if getattr(self, '_deferred', False):
             resolved_args = []
             for arg in self._original_args:
+                # If an argument starts with a backtick, we will
+                # disaggregate the sqlalchemy expression. That is, if the
+                # expression is:
+                # `func.sum(Census.age)` we will use Census.age
                 if isinstance(arg, basestring):
                     disaggregate = False
+                    if getattr(self, 'shelf', None) and \
+                       getattr('table', self.shelf.Meta, None):
+                        # Convert the argument to a sqlalchemy statement
+                        statement = alchemify(arg, self.shelf.Meta.table)
+                        arg = eval(statement)
+                        if not isinstance(arg, basestring):
+                            resolved_args.append(arg)
+                            continue
+
                     if arg and arg[0] == '`':
                         disaggregate = True
                         arg = arg[1:]
-                    if arg in shelf:
+                    if arg and arg in shelf:
                         expr = shelf[arg].expression
                         if disaggregate:
                             expr = self._disaggregate(expr)

@@ -53,6 +53,30 @@ class TestShelf(object):
 (Dimension)last MyTable.last
 (Metric)age sum(foo.age)"""
 
+    def test_update(self):
+        """ Shelves can be updated with other shelves """
+        new_shelf = Shelf({
+            'squee': Dimension(MyTable.first),
+        })
+        assert len(self.shelf) == 3
+        self.shelf.update(new_shelf)
+        assert len(self.shelf) == 4
+
+    def test_update_key_value(self):
+        """ Shelves can be built with key_values and updated """
+        new_shelf = Shelf(squee=Dimension(MyTable.first))
+        assert len(self.shelf) == 3
+        self.shelf.update(new_shelf)
+        assert len(self.shelf) == 4
+        assert isinstance(self.shelf.get('squee'), Dimension)
+
+    def test_update_key_value_direct(self):
+        """ Shelves can be updated directly with key_value"""
+        assert len(self.shelf) == 3
+        self.shelf.update(squee=Dimension(MyTable.first))
+        assert len(self.shelf) == 4
+        assert isinstance(self.shelf.get('squee'), Dimension)
+
     def test_brew(self):
         recipe_parts = self.shelf.brew_query_parts()
         assert len(recipe_parts['columns']) == 3

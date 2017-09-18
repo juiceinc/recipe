@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import pytest
+from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.sql import ColumnElement
+from sqlalchemy.sql.functions import FunctionElement
+
+from recipe.ingredients import ingredient_from_dict, alchemify
+
 from sqlalchemy import func
 
 from recipe import *
@@ -324,17 +330,17 @@ class TestDivideMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == 'CAST(sum(foo.age) AS FLOAT) / (' \
-            'coalesce(' \
-            'CAST(sum(foo.age) AS FLOAT), ' \
-            ':coalesce_1) + :coalesce_2)'
+                                    'coalesce(' \
+                                    'CAST(sum(foo.age) AS FLOAT), ' \
+                                    ':coalesce_1) + :coalesce_2)'
 
         # Generate if denominator == 0 then 'zero' else numerator / denominator
         d = DivideMetric(func.sum(MyTable.age), func.sum(MyTable.age),
                          ifzero='zero')
         assert str(d.columns[0]) == \
-            'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
-            ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
-            'CAST(sum(foo.age) AS FLOAT) END'
+               'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
+               ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
+               'CAST(sum(foo.age) AS FLOAT) END'
 
 
 class TestSumIfMetric(object):
@@ -353,7 +359,7 @@ class TestSumIfMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == \
-            'sum(CASE WHEN (foo.age > :age_1) THEN sum(foo.age) END)'
+               'sum(CASE WHEN (foo.age > :age_1) THEN sum(foo.age) END)'
 
 
 class TestCountIfMetric(object):
@@ -372,7 +378,7 @@ class TestCountIfMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == \
-            'count(DISTINCT CASE WHEN (foo.age > :age_1) THEN foo.first END)'
+               'count(DISTINCT CASE WHEN (foo.age > :age_1) THEN foo.first END)'
 
         d = CountIfMetric(MyTable.age > 5, MyTable.first, distinct=False)
         assert len(d.columns) == 1
@@ -381,4 +387,75 @@ class TestCountIfMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == \
-            'count(CASE WHEN (foo.age > :age_1) THEN foo.first END)'
+               'count(CASE WHEN (foo.age > :age_1) THEN foo.first END)'
+
+
+class TestIngredientFromObj(object):
+    def test_ingredient_from_obj(self):
+        m = ingredient_from_dict({
+            'kind': 'Metric',
+            'expression': 'foo'
+        })
+        assert isinstance(m, Metric)
+
+        d = ingredient_from_dict({
+            'kind': 'Dimension',
+            'expression': 'foo'
+        })
+        assert isinstance(d, Dimension)
+
+    def test_ingredient_from_obj_with_meta(self):
+        m = ingredient_from_dict({
+            'kind': 'Metric',
+            'expression': 'foo',
+            'format': 'comma'
+        })
+        assert isinstance(m, Metric)
+        assert m.meta.format == 'comma'
+
+
+class TestAlchemify(object):
+    def test_alchemify(self):
+        """
+        >> > alchemify('{foo}', 'MyTable')
+        MyTable.foo
+
+        >> > alchemify('sum({foo}))', 'MyTable')
+        func.sum(MyTable.foo)
+
+        >> > alchemify('count(distinct({moo}))', 'MyTable')
+        func.count(distinct(MyTable.moo))
+
+        >> > alchemify('"squee"', 'MyTable')
+        "squee"
+        """
+        statement = alchemify('{first}', 'MyTable')
+        assert statement == 'MyTable.first'
+        # FIXME: control the globals and locals
+        # expression = eval(statement, {'__builtins__': {}})
+        expression = eval(statement)
+        assert isinstance(expression, (InstrumentedAttribute,
+                                       FunctionElement, basestring))
+        assert unicode(expression) == unicode(MyTable.first)
+
+        statement = alchemify('sum({age})', 'MyTable')
+        assert statement == 'func.sum(MyTable.age)'
+        expression = eval(statement)
+        assert isinstance(expression, (InstrumentedAttribute,
+                                       FunctionElement, basestring))
+        assert unicode(expression) == unicode(func.sum(MyTable.age))
+
+        statement = alchemify('count(distinct({last}))', 'MyTable')
+        assert statement == 'func.count(distinct(MyTable.last))'
+        expression = eval(statement)
+        assert isinstance(expression, (InstrumentedAttribute,
+                                       FunctionElement, basestring))
+        assert unicode(expression) == unicode(func.count(distinct(
+            MyTable.last)))
+
+        statement = alchemify('"squee"', 'MyTable')
+        assert statement == '"squee"'
+        expression = eval(statement)
+        assert isinstance(expression, (InstrumentedAttribute,
+                                       FunctionElement, basestring))
+        assert unicode(expression) == unicode("squee")

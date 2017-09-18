@@ -1,6 +1,4 @@
 # TODO ask jason about methods of doing this
-from copy import copy
-
 from sqlalchemy import and_
 from sqlalchemy import func
 from sqlalchemy import text
@@ -22,8 +20,8 @@ class RecipeExtension(object):
 
     recipe generates a query in the following way
 
-        (RECIPE) recipe checks its dirty state and all extension dirty states to
-        determine if the cached query needs to be regenerated
+        (RECIPE) recipe checks its dirty state and all extension dirty
+        states to determine if the cached query needs to be regenerated
 
         (EXTENSIONS) all extension ``add_ingredients`` run to inject
         ingredients directly on the recipe
@@ -59,7 +57,8 @@ class RecipeExtension(object):
     When the recipe fetches data the results will be ``enchanted`` to add
     fields to the result. ``RecipeExtensions`` can modify result rows with
 
-        enchant_add_fields: Return a tuple of field names to add to a result row
+        enchant_add_fields: Return a tuple of field names to add to a
+        result row
 
         enchant_row(row): Return a tuple of field values for each row in
         results.
@@ -262,8 +261,9 @@ class SummarizeOver(RecipeExtension):
             if subq_col is not None:
                 order_by_columns.append(subq_col)
 
-        postquery_parts['query'] = self.recipe._session.query(*(group_by_columns +
-                                                                metric_columns)).group_by(
+        postquery_parts['query'] = self.recipe._session.query(
+            *(group_by_columns +
+              metric_columns)).group_by(
             *group_by_columns).order_by(*order_by_columns)
 
         # Remove the summarized dimension
@@ -305,10 +305,10 @@ class Anonymize(RecipeExtension):
         for ingredient in self.recipe._cauldron.values():
             if hasattr(ingredient.meta, 'anonymizer'):
                 if ingredient.meta.anonymizer not in ingredient.formatters \
-                        and self._anonymize:
+                    and self._anonymize:
                     ingredient.formatters.append(ingredient.meta.anonymizer)
                 if ingredient.meta.anonymizer in ingredient.formatters \
-                        and not self._anonymize:
+                    and not self._anonymize:
                     ingredient.formatters.remove(ingredient.meta.anonymizer)
 
 
@@ -384,7 +384,7 @@ class BlendRecipe(RecipeExtension):
                     else:
                         raise BadRecipe('{} could not be found in .blend() '
                                         'recipe subquery'.format(
-                                            id + suffix))
+                            id + suffix))
 
             # For all dimensions in the blend recipe
             # Use the dimension in the base recipe and
@@ -405,7 +405,7 @@ class BlendRecipe(RecipeExtension):
                     else:
                         raise BadRecipe('{} could not be found in .blend() '
                                         'recipe subquery'.format(
-                                            id + suffix))
+                            id + suffix))
 
             base_dim = self.recipe._cauldron[join_base]
             blend_dim = blend_recipe._cauldron[join_blend]
@@ -482,7 +482,7 @@ class CompareRecipe(RecipeExtension):
                     else:
                         raise BadRecipe('{} could not be found in .compare() '
                                         'recipe subquery'.format(
-                                            id + suffix))
+                            id + suffix))
 
             join_conditions = []
             for dim in compare_recipe.dimension_ids:

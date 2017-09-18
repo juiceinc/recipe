@@ -21,11 +21,15 @@ class Shelf(AttrDict):
     Returns:
         A Shelf object
     """
+
     class Meta:
         anonymize = False
+        table = None
 
     def __init__(self, *args, **kwargs):
         super(Shelf, self).__init__(*args, **kwargs)
+
+        self.Meta.table = kwargs.pop('table', None)
 
         # Set the ids of all ingredients on the shelf to the key
         for k, ingredient in self.items():
