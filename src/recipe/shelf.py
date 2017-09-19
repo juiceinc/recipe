@@ -31,6 +31,7 @@ class Shelf(AttrDict):
     def __init__(self, *args, **kwargs):
         super(Shelf, self).__init__(*args, **kwargs)
 
+        self.Meta.ingredient_order = []
         self.Meta.table = kwargs.pop('table', None)
 
         # Set the ids of all ingredients on the shelf to the key
@@ -74,6 +75,32 @@ class Shelf(AttrDict):
         return tuple(d.id for d in self.values() if
                      isinstance(d, Metric))
 
+    @property
+    def dimension_ids(self):
+        """ Return the Dimensions on this shelf in the order in which
+        they were used."""
+        return tuple(
+            sorted(
+                [d.id for d in self.values()
+                 if isinstance(d, Dimension)],
+                key=lambda id: self.Meta.ingredient_order.index(id) \
+                    if id in self.Meta.ingredient_order else 9999
+            )
+        )
+
+    @property
+    def metric_ids(self):
+        """ Return the Metrics on this shelf in the order in which
+        they were used. """
+        return tuple(
+            sorted(
+                [d.id for d in self.values()
+                 if isinstance(d, Metric)],
+                key=lambda id: self.Meta.ingredient_order.index(id) \
+                    if id in self.Meta.ingredient_order else 9999
+            )
+        )
+
     def __repr__(self):
         """ A string representation of the ingredients used in a recipe
         ordered by Dimensions, Metrics, Filters, then Havings
@@ -85,6 +112,8 @@ class Shelf(AttrDict):
         return '\n'.join(lines)
 
     def use(self, ingredient):
+        # Track the order in which ingredients are added.
+        self.Meta.ingredient_order.append(ingredient.id)
         self[ingredient.id] = ingredient
 
     @classmethod
