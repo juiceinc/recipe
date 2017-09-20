@@ -23,6 +23,7 @@ from recipe.utils import AttrDict
 _distinct = distinct
 _case = case
 
+
 def ingredient_class_for_name(class_name):
     # load the module, will raise ImportError if module cannot be loaded
     m = importlib.import_module('recipe.ingredients')
@@ -56,6 +57,7 @@ def parse_condition(cond, table='', aggregated=False,
             raise BadIngredient('Bad condition')
 
         return condition_expression
+
 
 def tokenize(s):
     """ Tokenize a string by splitting it by + and -
@@ -284,8 +286,8 @@ class Shelf(AttrDict):
             sorted(
                 [d.id for d in self.values()
                  if isinstance(d, Dimension)],
-                key=lambda id: self.Meta.ingredient_order.index(id) \
-                    if id in self.Meta.ingredient_order else 9999
+                key=lambda id: self.Meta.ingredient_order.index(id)
+                if id in self.Meta.ingredient_order else 9999
             )
         )
 
@@ -297,8 +299,8 @@ class Shelf(AttrDict):
             sorted(
                 [d.id for d in self.values()
                  if isinstance(d, Metric)],
-                key=lambda id: self.Meta.ingredient_order.index(id) \
-                    if id in self.Meta.ingredient_order else 9999
+                key=lambda id: self.Meta.ingredient_order.index(id)
+                if id in self.Meta.ingredient_order else 9999
             )
         )
 
