@@ -182,6 +182,18 @@ def ingredient_from_dict(ingr_dict, table=''):
             'condition': 'condition'}),
     }
 
+    format_lookup = {
+        'comma': ',.0f',
+        'dollar': '$,.0f',
+        'percent': '.0%',
+        'comma1': ',.1f',
+        'dollar1': '$,.1f',
+        'percent1': '.1%',
+        'comma2': ',.2f',
+        'dollar2': '$,.2f',
+        'percent2': '.2%',
+    }
+
     kind = ingr_dict.pop('kind', 'Metric')
     IngredientClass = ingredient_class_for_name(kind)
 
@@ -214,6 +226,12 @@ def ingredient_from_dict(ingr_dict, table=''):
         # FIXME: Can we get away from this eval?
         args.append(eval(statement))
     # Remaining properties in ingr_dict are treated as keyword args
+
+    # If the format string exists in format_lookup, use the value otherwise
+    # use the original format
+    if 'format' in ingr_dict:
+        ingr_dict['format'] = format_lookup.get(ingr_dict['format'],
+                                                ingr_dict['format'])
     return IngredientClass(*args, **ingr_dict)
 
 

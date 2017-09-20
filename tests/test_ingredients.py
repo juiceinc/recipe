@@ -405,7 +405,16 @@ class TestIngredientFromObj(object):
             'format': 'comma'
         }, MyTable)
         assert isinstance(m, Metric)
-        assert m.meta.format == 'comma'
+        assert m.meta.format == ',.0f'
+
+    def test_ingredient_from_obj_with_missing_format_meta(self):
+        m = ingredient_from_dict({
+            'kind': 'Metric',
+            'field': 'age',
+            'format': 'foo'
+        }, MyTable)
+        assert isinstance(m, Metric)
+        assert m.meta.format == 'foo'
 
 
 class TestParse(object):
