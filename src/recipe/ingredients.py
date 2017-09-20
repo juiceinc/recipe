@@ -1,3 +1,6 @@
+import importlib
+import re
+from collections import OrderedDict
 from copy import copy
 from functools import total_ordering, wraps
 from uuid import uuid4
@@ -12,8 +15,8 @@ from recipe.utils import AttrDict
 
 # TODO: How do we avoid attaching significance to particular
 # indices in columns
-
 # Should dimensions having ids be an extension to recipe?
+
 
 @total_ordering
 class Ingredient(object):
@@ -69,9 +72,6 @@ class Ingredient(object):
 
     def __repr__(self):
         return self.describe()
-
-    def resolve(self, shelf):
-        return
 
     def describe(self):
         return u'({}){} {}'.format(self.__class__.__name__, self.id,
@@ -325,22 +325,6 @@ class LookupDimension(Dimension):
                                                              self.default))
 
 
-class deferred:
-    def __call__(self, f):
-        @wraps(f)
-        def wrap(init_self, *args, **kwargs):
-            init_self._deferred = False
-            for arg in args:
-                if isinstance(arg, basestring):
-                    init_self._deferred = True
-                    init_self._original_args = copy(args)
-                    init_self._original_kwargs = copy(kwargs)
-
-            f(init_self, *args, **kwargs)
-
-        return wrap
-
-
 class Metric(Ingredient):
     """ A simple metric created from a single expression
     """
@@ -355,31 +339,6 @@ class Metric(Ingredient):
         else:
             return expr
 
-    def resolve(self, shelf):
-        """ Look up any deferred metrics and use their expressions in this
-        metric. Re-initialize with the new expressions. """
-        if getattr(self, '_deferred', False):
-            resolved_args = []
-            for arg in self._original_args:
-                if isinstance(arg, basestring):
-                    disaggregate = False
-                    if arg and arg[0] == '`':
-                        disaggregate = True
-                        arg = arg[1:]
-                    if arg in shelf:
-                        expr = shelf[arg].expression
-                        if disaggregate:
-                            expr = self._disaggregate(expr)
-                        resolved_args.append(expr)
-                    else:
-                        raise BadIngredient('Can\'t find expression {'
-                                            '} in shelf'.format(arg))
-                else:
-                    resolved_args.append(arg)
-            self._deferred = False
-            self._original_kwargs['id'] = self.id
-            self.__init__(*resolved_args, **self._original_kwargs)
-
 
 class DivideMetric(Metric):
     """ A metric that divides a numerator by a denominator handling several
@@ -390,7 +349,6 @@ class DivideMetric(Metric):
     zero.
     """
 
-    @deferred()
     def __init__(self, numerator, denominator, **kwargs):
         ifzero = kwargs.pop('ifzero', 'epsilon')
         epsilon = kwargs.pop('epsilon', 0.000000001)
@@ -412,15 +370,11 @@ class WtdAvgMetric(DivideMetric):
     """ A metric that generates the weighted average of a metric by a weight.
     """
 
-    @deferred()
     def __init__(self, expression, weight_expression, **kwargs):
-        if not self._deferred:
-            # If weight expression is deferred, numerator will throw an error
-            #  because we can't multiply an expression by a strong.
-            numerator = func.sum(expression * weight_expression)
-            denominator = func.sum(weight_expression)
-            super(WtdAvgMetric, self).__init__(
-                numerator, denominator, **kwargs)
+        numerator = func.sum(expression * weight_expression)
+        denominator = func.sum(weight_expression)
+        super(WtdAvgMetric, self).__init__(
+            numerator, denominator, **kwargs)
 
 
 class ConditionalMetric(Metric):
@@ -428,7 +382,6 @@ class ConditionalMetric(Metric):
     condition is true
     """
 
-    @deferred()
     def __init__(self, condition, expression, **kwargs):
         fn = getattr(func, kwargs.pop('func', 'sum'))
         if kwargs.pop('distinct', False):
@@ -447,7 +400,6 @@ class SumIfMetric(ConditionalMetric):
     """ A metric that calculates a sum of an expression if a condition is true
     """
 
-    @deferred()
     def __init__(self, condition, expression, **kwargs):
         kwargs['func'] = 'sum'
         super(SumIfMetric, self).__init__(condition, expression, **kwargs)
@@ -458,7 +410,6 @@ class AvgIfMetric(ConditionalMetric):
     true
     """
 
-    @deferred()
     def __init__(self, condition, expression, **kwargs):
         kwargs['func'] = 'avg'
         super(AvgIfMetric, self).__init__(condition, expression, **kwargs)
@@ -468,7 +419,6 @@ class CountIfMetric(ConditionalMetric):
     """ A metric that calculates a sum of an expression if a condition is true
     """
 
-    @deferred()
     def __init__(self, condition, expression, **kwargs):
         """ Initializes an instance of a CountIfMetric
         :param distinct: Should the count include a distinct

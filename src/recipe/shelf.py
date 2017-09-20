@@ -1,15 +1,200 @@
+import importlib
+from collections import OrderedDict
 from copy import copy
 from sqlalchemy import Float
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import func
 from sqlalchemy.util import lightweight_named_tuple
+from yaml import safe_load
 
-from recipe import BadRecipe, Ingredient
+from recipe import BadRecipe, Ingredient, BadIngredient
 from recipe import Dimension
 from recipe import Metric
 from recipe.compat import basestring
 from recipe.utils import AttrDict
+
+
+def ingredient_class_for_name(class_name):
+    # load the module, will raise ImportError if module cannot be loaded
+    m = importlib.import_module('recipe.ingredients')
+    # get the class, will raise AttributeError if class cannot be found
+    c = getattr(m, class_name, None)
+    return c
+
+
+def parse_condition(cond, table='', aggregated=False,
+                    default_aggregation='sum'):
+    """ Create a format string from a condition """
+    if cond is None:
+        return None
+
+    else:
+        field = parse_field(cond['field'], table=table, aggregated=aggregated,
+                            default_aggregation=default_aggregation)
+        if 'in' in cond:
+            value = tuple(cond['in'])
+            condition_expression = '{field} in {value}'.format(**locals())
+        else:
+            raise BadIngredient('Bad condition')
+
+        return condition_expression
+
+
+def tokenize(s):
+    """ Tokenize a string by splitting it by + and -
+
+    >>> tokenize('this + that')
+    ['this', 'PLUS', 'that']
+
+    >>> tokenize('this+that')
+    ['this', 'PLUS', 'that']
+
+    >>> tokenize('this+that-other')
+    ['this', 'PLUS', 'that', 'SUB', 'other]
+    """
+
+    # Crude tokenization
+    s = s.replace('+', ' PLUS ').replace('-', ' MINUS ')
+    words = [w for w in s.split(' ') if w]
+    return words
+
+
+def parse_field(fld, table='', aggregated=True, default_aggregation='sum'):
+    """ Parse a field object from yaml into a sqlalchemy expression """
+    aggregation_lookup = {
+        'sum': ('func.sum(', ')'),
+        'min': ('func.min(', ')'),
+        'max': ('func.max(', ')'),
+        'count': ('func.count(', ')'),
+        'count_distinct': ('func.count(distinct(', '))'),
+        'avg': ('func.avg(', ')'),
+        None: ('', ''),
+    }
+
+    if aggregated:
+        initial = {
+            'aggregation': default_aggregation,
+            'condition': None
+        }
+    else:
+        initial = {
+            'aggregation': None,
+            'condition': None
+        }
+
+    if isinstance(fld, basestring):
+        fld = {
+            'value': fld,
+        }
+
+    initial.update(fld)
+    # Ensure that the dictionary contains:
+    # {
+    #     'value': str,
+    #     'aggregation': str|None,
+    #     'condition': dict|None
+    # }
+
+    value = initial['value']
+
+    field_parts = []
+    for word in tokenize(value):
+        if word == 'MINUS':
+            field_parts.append(' - ')
+        elif word == 'PLUS':
+            field_parts.append(' + ')
+        else:
+            field_parts.append('{}.{}'.format(table, word))
+
+    field_str = ''.join(field_parts)
+
+    aggregation_prefix, aggregation_suffix = aggregation_lookup[initial[
+        'aggregation']]
+
+    condition = parse_condition(initial.get('condition', None),
+                                table=table,
+                                aggregated=False,
+                                default_aggregation=default_aggregation)
+
+    if condition is None:
+        field = field_str
+    else:
+        field = 'case when {} then {} end'.format(condition, field_str)
+
+    return '{aggregation_prefix}{field}{aggregation_suffix}'.format(
+        **locals())
+
+
+def ingredient_from_dict(ingr_dict, table=''):
+    """ Create an ingredient from an dictionary.
+
+    This object will be deserialized from yaml """
+
+    # Describe the required params for each kind of ingredient
+    # The key is the parameter name, the value is one of
+    # field: A parse_field with aggregation=False
+    # aggregated_field: A parse_field with aggregation=True
+    # condition: A parse_condition
+    tablename = table.__name__
+    locals()[tablename] = table
+
+    params_lookup = {
+        'Dimension': {'field': 'field'},
+        'LookupDimension': {'field': 'field'},
+        'IdValueDimension': {'field': 'field'},
+        'Metric': {'field': 'aggregated_field'},
+        'DivideMetric': OrderedDict({
+            'numerator_field': 'aggregated_field',
+            'denominator_field': 'aggregated_field'}),
+        'WtdAvgMetric': OrderedDict({
+            'field': 'field',
+            'weight': 'field'}),
+        'ConditionalMetric': {'field': 'aggregated_field'},
+        'SumIfMetric': OrderedDict({
+            'field': 'field',
+            'condition': 'condition'}),
+        'AvgIfMetric': OrderedDict({
+            'field': 'field',
+            'condition': 'condition'}),
+        'CountIfMetric': OrderedDict({
+            'field': 'field',
+            'condition': 'condition'}),
+    }
+
+    kind = ingr_dict.pop('kind', 'Metric')
+    IngredientClass = ingredient_class_for_name(kind)
+
+    if IngredientClass is None:
+        raise BadIngredient('Bad ingredient kind')
+
+    params = params_lookup.get(kind, {'field': 'field'})
+
+    args = []
+    for k, v in params.iteritems():
+        # All the params must be in the dict
+        if k not in ingr_dict:
+            raise BadIngredient('{} must be defined to make a {}'.format(k,
+                                                                         kind))
+        if v == 'field':
+            statement = parse_field(ingr_dict.pop(k, None),
+                                    table=tablename,
+                                    aggregated=False)
+        elif v == 'aggregated_field':
+            statement = parse_field(ingr_dict.pop(k, None),
+                                    table=tablename,
+                                    aggregated=True)
+        elif v == 'condition':
+            statement = parse_condition(ingr_dict.pop(k, None),
+                                        table=tablename,
+                                        aggregated=True)
+        else:
+            raise BadIngredient('Do not know what this is')
+
+        # FIXME: Can we get away from this eval?
+        args.append(eval(statement))
+    # Remaining properties in ingr_dict are treated as keyword args
+    return IngredientClass(*args, **ingr_dict)
 
 
 class Shelf(AttrDict):
@@ -21,11 +206,16 @@ class Shelf(AttrDict):
     Returns:
         A Shelf object
     """
+
     class Meta:
         anonymize = False
+        table = None
 
     def __init__(self, *args, **kwargs):
         super(Shelf, self).__init__(*args, **kwargs)
+
+        self.Meta.ingredient_order = []
+        self.Meta.table = kwargs.pop('table', None)
 
         # Set the ids of all ingredients on the shelf to the key
         for k, ingredient in self.items():
@@ -68,6 +258,32 @@ class Shelf(AttrDict):
         return tuple(d.id for d in self.values() if
                      isinstance(d, Metric))
 
+    @property
+    def dimension_ids(self):
+        """ Return the Dimensions on this shelf in the order in which
+        they were used."""
+        return tuple(
+            sorted(
+                [d.id for d in self.values()
+                 if isinstance(d, Dimension)],
+                key=lambda id: self.Meta.ingredient_order.index(id) \
+                    if id in self.Meta.ingredient_order else 9999
+            )
+        )
+
+    @property
+    def metric_ids(self):
+        """ Return the Metrics on this shelf in the order in which
+        they were used. """
+        return tuple(
+            sorted(
+                [d.id for d in self.values()
+                 if isinstance(d, Metric)],
+                key=lambda id: self.Meta.ingredient_order.index(id) \
+                    if id in self.Meta.ingredient_order else 9999
+            )
+        )
+
     def __repr__(self):
         """ A string representation of the ingredients used in a recipe
         ordered by Dimensions, Metrics, Filters, then Havings
@@ -79,7 +295,23 @@ class Shelf(AttrDict):
         return '\n'.join(lines)
 
     def use(self, ingredient):
+        # Track the order in which ingredients are added.
+        self.Meta.ingredient_order.append(ingredient.id)
         self[ingredient.id] = ingredient
+
+    @classmethod
+    def from_yaml(cls, yaml_str, table):
+        obj = safe_load(yaml_str)
+        tablename = table.__name__
+        locals()[tablename] = table
+
+        d = {}
+        for k, v in obj.iteritems():
+            d[k] = ingredient_from_dict(v, table)
+
+        shelf = cls(d)
+        shelf.Meta.table = tablename
+        return shelf
 
     def find(self, obj, filter_to_class=Ingredient, constructor=None):
         """
@@ -109,13 +341,11 @@ class Shelf(AttrDict):
                 raise BadRecipe('{} is not a {}'.format(
                     obj, filter_to_class))
 
-            ingredient.resolve(self)
             if set_descending:
                 ingredient.ordering = 'desc'
 
             return ingredient
         elif isinstance(obj, filter_to_class):
-            obj.resolve(self)
             return obj
         else:
             raise BadRecipe('{} is not a {}'.format(obj,

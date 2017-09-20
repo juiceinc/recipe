@@ -9,6 +9,6 @@ py==1.4.32
 pyparsing==2.1.10
 -e .
 six==1.10.0
-SQLAlchemy==1.1.9
+SQLAlchemy==1.2.0b2
 sqlparse==0.2.2
 tablib==0.12.1

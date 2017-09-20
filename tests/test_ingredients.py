@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from sqlalchemy import func
 
 from recipe import *
-from .test_base import *
 from recipe.compat import str
+from recipe.shelf import parse_field, ingredient_from_dict
+from .test_base import *
 
 
 class TestIngredients(object):
@@ -324,17 +324,17 @@ class TestDivideMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == 'CAST(sum(foo.age) AS FLOAT) / (' \
-            'coalesce(' \
-            'CAST(sum(foo.age) AS FLOAT), ' \
-            ':coalesce_1) + :coalesce_2)'
+                                    'coalesce(' \
+                                    'CAST(sum(foo.age) AS FLOAT), ' \
+                                    ':coalesce_1) + :coalesce_2)'
 
         # Generate if denominator == 0 then 'zero' else numerator / denominator
         d = DivideMetric(func.sum(MyTable.age), func.sum(MyTable.age),
                          ifzero='zero')
         assert str(d.columns[0]) == \
-            'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
-            ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
-            'CAST(sum(foo.age) AS FLOAT) END'
+               'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
+               ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
+               'CAST(sum(foo.age) AS FLOAT) END'
 
 
 class TestSumIfMetric(object):
@@ -353,7 +353,7 @@ class TestSumIfMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == \
-            'sum(CASE WHEN (foo.age > :age_1) THEN sum(foo.age) END)'
+               'sum(CASE WHEN (foo.age > :age_1) THEN sum(foo.age) END)'
 
 
 class TestCountIfMetric(object):
@@ -372,7 +372,7 @@ class TestCountIfMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == \
-            'count(DISTINCT CASE WHEN (foo.age > :age_1) THEN foo.first END)'
+               'count(DISTINCT CASE WHEN (foo.age > :age_1) THEN foo.first END)'
 
         d = CountIfMetric(MyTable.age > 5, MyTable.first, distinct=False)
         assert len(d.columns) == 1
@@ -381,4 +381,96 @@ class TestCountIfMetric(object):
 
         # Generate numerator / (denominator+epsilon) by default
         assert str(d.columns[0]) == \
-            'count(CASE WHEN (foo.age > :age_1) THEN foo.first END)'
+               'count(CASE WHEN (foo.age > :age_1) THEN foo.first END)'
+
+
+class TestIngredientFromObj(object):
+    def test_ingredient_from_obj(self):
+        m = ingredient_from_dict({
+            'kind': 'Metric',
+            'field': 'age'
+        }, MyTable)
+        assert isinstance(m, Metric)
+
+        d = ingredient_from_dict({
+            'kind': 'Dimension',
+            'field': 'last'
+        }, MyTable)
+        assert isinstance(d, Dimension)
+
+    def test_ingredient_from_obj_with_meta(self):
+        m = ingredient_from_dict({
+            'kind': 'Metric',
+            'field': 'age',
+            'format': 'comma'
+        }, MyTable)
+        assert isinstance(m, Metric)
+        assert m.meta.format == 'comma'
+
+
+class TestParse(object):
+    def test_parse_field_aggregation(self):
+        data = [
+            # Basic fields
+            ('moo', 'func.sum(MyTable.moo)'),
+            ({'value': 'moo'}, 'func.sum(MyTable.moo)'),
+
+            # Aggregations
+            ({'value': 'moo',
+              'aggregation': 'max'}, 'func.max(MyTable.moo)'),
+            ({'value': 'moo',
+              'aggregation': 'sum'}, 'func.sum(MyTable.moo)'),
+            ({'value': 'moo',
+              'aggregation': 'min'}, 'func.min(MyTable.moo)'),
+            ({'value': 'moo',
+              'aggregation': 'avg'}, 'func.avg(MyTable.moo)'),
+            ({'value': 'moo',
+              'aggregation': 'count_distinct'},
+             'func.count(distinct(MyTable.moo))'),
+
+            # Conditions
+            ({'value': 'moo',
+              'condition': None}, 'func.sum(MyTable.moo)'),
+            ({'value': 'moo',
+              'condition': {
+                  'field': 'cow',
+                  'in': (1, 2)
+              }},
+             'func.sum(case when MyTable.cow in (1, 2) then MyTable.moo end)'),
+        ]
+        for input_field, expected_result in data:
+            result = parse_field(input_field, table='MyTable')
+            assert result == expected_result
+
+    def test_parse_field_add_subtract(self):
+        data = [
+            # Basic fields
+            ('moo+foo', 'func.sum(MyTable.moo + MyTable.foo)'),
+            ('moo-foo', 'func.sum(MyTable.moo - MyTable.foo)'),
+            ('moo-foo-sue', 'func.sum(MyTable.moo - MyTable.foo - '
+                            'MyTable.sue)'),
+        ]
+        for input_field, expected_result in data:
+            result = parse_field(input_field, table='MyTable')
+            assert result == expected_result
+
+    def test_parse_field_no_aggregations(self):
+        data = [
+            # Basic fields
+            ('moo', 'MyTable.moo'),
+            ({'value': 'moo'}, 'MyTable.moo'),
+
+            # Conditions
+            ({'value': 'moo',
+              'condition': None}, 'MyTable.moo'),
+            ({'value': 'moo',
+              'condition': {
+                  'field': 'cow',
+                  'in': (1, 2)
+              }},
+             'case when MyTable.cow in (1, 2) then MyTable.moo end'),
+        ]
+        for input_field, expected_result in data:
+            result = parse_field(input_field, table='MyTable',
+                                 aggregated=False)
+            assert result == expected_result
