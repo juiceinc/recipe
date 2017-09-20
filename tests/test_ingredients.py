@@ -437,6 +437,11 @@ class TestParse(object):
               'aggregation': 'count_distinct'},
              'func.count(distinct(MyTable.moo))'),
 
+            # Date trunc
+            ({'value': 'moo',
+              'aggregation': 'month'},
+             'func.date_trunc(\'month\', MyTable.moo)'),
+
             # Conditions
             ({'value': 'moo',
               'condition': None}, 'func.sum(MyTable.moo)'),

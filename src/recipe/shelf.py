@@ -87,6 +87,10 @@ def parse_field(fld, table='', aggregated=True, default_aggregation='sum'):
         'count': ('func.count(', ')'),
         'count_distinct': ('func.count(distinct(', '))'),
         'avg': ('func.avg(', ')'),
+        'month': ('func.date_trunc(\'month\', ', ')'),
+        'week': ('func.date_trunc(\'week\', ', ')'),
+        'year': ('func.date_trunc(\'year\', ', ')'),
+        'quarter': ('func.date_trunc(\'quarter\', ', ')'),
         None: ('', ''),
     }
 
