@@ -409,7 +409,7 @@ class TestIngredientFromObj(object):
 
 
 class TestParse(object):
-    def test_parse_field(self):
+    def test_parse_field_aggregation(self):
         data = [
             # Basic fields
             ('moo', 'func.sum(MyTable.moo)'),
@@ -437,6 +437,18 @@ class TestParse(object):
                   'in': (1, 2)
               }},
              'func.sum(case when MyTable.cow in (1, 2) then MyTable.moo end)'),
+        ]
+        for input_field, expected_result in data:
+            result = parse_field(input_field, table='MyTable')
+            assert result == expected_result
+
+    def test_parse_field_add_subtract(self):
+        data = [
+            # Basic fields
+            ('moo+foo', 'func.sum(MyTable.moo + MyTable.foo)'),
+            ('moo-foo', 'func.sum(MyTable.moo - MyTable.foo)'),
+            ('moo-foo-sue', 'func.sum(MyTable.moo - MyTable.foo - '
+                            'MyTable.sue)'),
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, table='MyTable')

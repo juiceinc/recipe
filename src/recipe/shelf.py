@@ -41,6 +41,25 @@ def parse_condition(cond, table='', aggregated=False,
         return condition_expression
 
 
+def tokenize(s):
+    """ Tokenize a string by splitting it by + and -
+
+    >>> tokenize('this + that')
+    ['this', 'PLUS', 'that']
+
+    >>> tokenize('this+that')
+    ['this', 'PLUS', 'that']
+
+    >>> tokenize('this+that-other')
+    ['this', 'PLUS', 'that', 'SUB', 'other]
+    """
+
+    # Crude tokenization
+    s = s.replace('+', ' PLUS ').replace('-', ' MINUS ')
+    words = [w for w in s.split(' ') if w]
+    return words
+
+
 def parse_field(fld, table='', aggregated=True, default_aggregation='sum'):
     """ Parse a field object from yaml into a sqlalchemy expression """
     aggregation_lookup = {
@@ -77,7 +96,18 @@ def parse_field(fld, table='', aggregated=True, default_aggregation='sum'):
     #     'condition': dict|None
     # }
 
-    field_str = '{}.{}'.format(table, initial['value'])
+    value = initial['value']
+
+    field_parts = []
+    for word in tokenize(value):
+        if word == 'MINUS':
+            field_parts.append(' - ')
+        elif word == 'PLUS':
+            field_parts.append(' + ')
+        else:
+            field_parts.append('{}.{}'.format(table, word))
+
+    field_str = ''.join(field_parts)
 
     aggregation_prefix, aggregation_suffix = aggregation_lookup[initial[
         'aggregation']]
