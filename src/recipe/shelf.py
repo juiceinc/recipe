@@ -5,7 +5,10 @@ from sqlalchemy import Float
 from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import func
+from sqlalchemy import distinct
+from sqlalchemy import case
 from sqlalchemy.util import lightweight_named_tuple
+
 from yaml import safe_load
 
 from recipe import BadRecipe, Ingredient, BadIngredient
@@ -13,6 +16,12 @@ from recipe import Dimension
 from recipe import Metric
 from recipe.compat import basestring
 from recipe.utils import AttrDict
+
+
+# Ensure case and distinct don't get reaped. We need it in scope for
+# creating Metrics
+_distinct = distinct
+_case = case
 
 
 def ingredient_class_for_name(class_name):
@@ -34,7 +43,16 @@ def parse_condition(cond, table='', aggregated=False,
                             default_aggregation=default_aggregation)
         if 'in' in cond:
             value = tuple(cond['in'])
-            condition_expression = '{field} in {value}'.format(**locals())
+            condition_expression = '{field}.in_({value})'.format(**locals())
+        elif 'gt' in cond:
+            value = cond['gt']
+            condition_expression = '{field} > {value}'.format(**locals())
+        elif 'lt' in cond:
+            value = cond['lt']
+            condition_expression = '{field} < {value}'.format(**locals())
+        elif 'eq' in cond:
+            value = cond['eq']
+            condition_expression = '{field} == {value}'.format(**locals())
         else:
             raise BadIngredient('Bad condition')
 
@@ -109,8 +127,10 @@ def parse_field(fld, table='', aggregated=True, default_aggregation='sum'):
 
     field_str = ''.join(field_parts)
 
-    aggregation_prefix, aggregation_suffix = aggregation_lookup[initial[
-        'aggregation']]
+    aggr = initial.get('aggregation', 'sum')
+    if aggr is not None:
+        aggr = aggr.strip()
+    aggregation_prefix, aggregation_suffix = aggregation_lookup[aggr]
 
     condition = parse_condition(initial.get('condition', None),
                                 table=table,
@@ -120,7 +140,7 @@ def parse_field(fld, table='', aggregated=True, default_aggregation='sum'):
     if condition is None:
         field = field_str
     else:
-        field = 'case when {} then {} end'.format(condition, field_str)
+        field = 'case([({}, {})])'.format(condition, field_str)
 
     return '{aggregation_prefix}{field}{aggregation_suffix}'.format(
         **locals())
@@ -266,8 +286,8 @@ class Shelf(AttrDict):
             sorted(
                 [d.id for d in self.values()
                  if isinstance(d, Dimension)],
-                key=lambda id: self.Meta.ingredient_order.index(id) \
-                    if id in self.Meta.ingredient_order else 9999
+                key=lambda id: self.Meta.ingredient_order.index(id)
+                if id in self.Meta.ingredient_order else 9999
             )
         )
 
@@ -279,8 +299,8 @@ class Shelf(AttrDict):
             sorted(
                 [d.id for d in self.values()
                  if isinstance(d, Metric)],
-                key=lambda id: self.Meta.ingredient_order.index(id) \
-                    if id in self.Meta.ingredient_order else 9999
+                key=lambda id: self.Meta.ingredient_order.index(id)
+                if id in self.Meta.ingredient_order else 9999
             )
         )
 
