@@ -436,7 +436,7 @@ class TestParse(object):
                   'field': 'cow',
                   'in': (1, 2)
               }},
-             'func.sum(case when MyTable.cow in (1, 2) then MyTable.moo end)'),
+             'func.sum(case([(MyTable.cow.in_((1, 2)), MyTable.moo)]))'),
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, table='MyTable')
@@ -468,7 +468,7 @@ class TestParse(object):
                   'field': 'cow',
                   'in': (1, 2)
               }},
-             'case when MyTable.cow in (1, 2) then MyTable.moo end'),
+             'case([(MyTable.cow.in_((1, 2)), MyTable.moo)])'),
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, table='MyTable',
