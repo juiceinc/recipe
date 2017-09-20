@@ -1,9 +1,5 @@
 import pytest
 from copy import copy
-from sqlalchemy import func
-from yaml import safe_load
-
-from recipe.ingredients import alchemify, ingredient_from_dict
 from .test_base import *
 
 from recipe import BadRecipe
@@ -124,13 +120,13 @@ class TestShelfFromYaml(object):
         self.shelf = Shelf.from_yaml("""
 first:
     kind: Dimension
-    expression: '{first}'
+    field: first
 last:
     kind: Dimension
-    expression: '{last}'
+    field: last
 age:
     kind: Metric
-    expression: sum({age})
+    field: age
 """, MyTable)
         self.shelf.Meta.anonymize = False
 

@@ -1,5 +1,6 @@
 import importlib
 import re
+from collections import OrderedDict
 from copy import copy
 from functools import total_ordering, wraps
 from uuid import uuid4
@@ -15,59 +16,6 @@ from recipe.utils import AttrDict
 # TODO: How do we avoid attaching significance to particular
 # indices in columns
 # Should dimensions having ids be an extension to recipe?
-
-def ingredient_class_for_name(class_name):
-    # load the module, will raise ImportError if module cannot be loaded
-    m = importlib.import_module('recipe.ingredients')
-    # get the class, will raise AttributeError if class cannot be found
-    c = getattr(m, class_name, None)
-    return c
-
-
-def ingredient_from_dict(ingr_dict):
-    """ Create an ingredient from an dictionary.
-
-    This object will be deserialized from yaml """
-    kind = ingr_dict.pop('kind', 'Metric')
-    IngredientClass = ingredient_class_for_name(kind)
-    if IngredientClass is None:
-        raise BadIngredient('Bad ingredient kind')
-    args = ingr_dict.pop('expression', None)
-    if not isinstance(args, (list, tuple)):
-        args = [args]
-    if args is None:
-        raise BadIngredient('expression is required')
-    # Remaining properties in ingr_dict are treated as keyword args
-    return IngredientClass(*args, **ingr_dict)
-
-
-def alchemify(statement, table):
-    """ Converts an string into a statement that can be
-    evaluated into a sqlalchemy expression
-
-    >>> alchemify('{foo}', 'MyTable')
-    MyTable.foo
-
-    >>> alchemify('sum({foo}))', 'MyTable')
-    func.sum(MyTable.foo)
-
-    >>> alchemify('count(distinct({moo}))', 'MyTable')
-    func.count(distinct(MyTable.moo))
-
-    >>> alchemify('"squee"', 'MyTable')
-    "squee"
-    """
-
-    # sum({foo}) => func.sum({foo})
-    statement = re.sub(r'((count|sum|avg|min|max)\()', 'func.\g<0>', statement)
-    # func.sum({foo}) => func.sum(MyTable.foo)
-    statement = re.sub(r'{(.*?)}', table + '.\g<1>', statement)
-
-    if '__' not in statement:
-        return statement
-        # expression = eval(statement, {'__builtins__': {}})
-    else:
-        raise BadIngredient('Bad expression')
 
 
 @total_ordering

@@ -1,3 +1,5 @@
+import importlib
+from collections import OrderedDict
 from copy import copy
 from sqlalchemy import Float
 from sqlalchemy import Integer
@@ -10,8 +12,159 @@ from recipe import BadRecipe, Ingredient, BadIngredient
 from recipe import Dimension
 from recipe import Metric
 from recipe.compat import basestring
-from recipe.ingredients import ingredient_from_dict, alchemify
 from recipe.utils import AttrDict
+
+
+def ingredient_class_for_name(class_name):
+    # load the module, will raise ImportError if module cannot be loaded
+    m = importlib.import_module('recipe.ingredients')
+    # get the class, will raise AttributeError if class cannot be found
+    c = getattr(m, class_name, None)
+    return c
+
+
+def parse_condition(cond, table='', aggregated=False,
+                    default_aggregation='sum'):
+    """ Create a format string from a condition """
+    if cond is None:
+        return None
+
+    else:
+        field = parse_field(cond['field'], table=table, aggregated=aggregated,
+                            default_aggregation=default_aggregation)
+        if 'in' in cond:
+            value = tuple(cond['in'])
+            condition_expression = '{field} in {value}'.format(**locals())
+        else:
+            raise BadIngredient('Bad condition')
+
+        return condition_expression
+
+
+def parse_field(fld, table='', aggregated=True, default_aggregation='sum'):
+    """ Parse a field object from yaml into a sqlalchemy expression """
+    aggregation_lookup = {
+        'sum': ('func.sum(', ')'),
+        'min': ('func.min(', ')'),
+        'max': ('func.max(', ')'),
+        'count': ('func.count(', ')'),
+        'count_distinct': ('func.count(distinct(', '))'),
+        'avg': ('func.avg(', ')'),
+        None: ('', ''),
+    }
+
+    if aggregated:
+        initial = {
+            'aggregation': default_aggregation,
+            'condition': None
+        }
+    else:
+        initial = {
+            'aggregation': None,
+            'condition': None
+        }
+
+    if isinstance(fld, basestring):
+        fld = {
+            'value': fld,
+        }
+
+    initial.update(fld)
+    # Ensure that the dictionary contains:
+    # {
+    #     'value': str,
+    #     'aggregation': str|None,
+    #     'condition': dict|None
+    # }
+
+    field_str = '{}.{}'.format(table, initial['value'])
+
+    aggregation_prefix, aggregation_suffix = aggregation_lookup[initial[
+        'aggregation']]
+
+    condition = parse_condition(initial.get('condition', None),
+                                table=table,
+                                aggregated=False,
+                                default_aggregation=default_aggregation)
+
+    if condition is None:
+        field = field_str
+    else:
+        field = 'case when {} then {} end'.format(condition, field_str)
+
+    return '{aggregation_prefix}{field}{aggregation_suffix}'.format(
+        **locals())
+
+
+def ingredient_from_dict(ingr_dict, table=''):
+    """ Create an ingredient from an dictionary.
+
+    This object will be deserialized from yaml """
+
+    # Describe the required params for each kind of ingredient
+    # The key is the parameter name, the value is one of
+    # field: A parse_field with aggregation=False
+    # aggregated_field: A parse_field with aggregation=True
+    # condition: A parse_condition
+    tablename = table.__name__
+    locals()[tablename] = table
+
+    params_lookup = {
+        'Dimension': {'field': 'field'},
+        'LookupDimension': {'field': 'field'},
+        'IdValueDimension': {'field': 'field'},
+        'Metric': {'field': 'aggregated_field'},
+        'DivideMetric': OrderedDict({
+            'numerator_field': 'aggregated_field',
+            'denominator_field': 'aggregated_field'}),
+        'WtdAvgMetric': OrderedDict({
+            'field': 'field',
+            'weight': 'field'}),
+        'ConditionalMetric': {'field': 'aggregated_field'},
+        'SumIfMetric': OrderedDict({
+            'field': 'field',
+            'condition': 'condition'}),
+        'AvgIfMetric': OrderedDict({
+            'field': 'field',
+            'condition': 'condition'}),
+        'CountIfMetric': OrderedDict({
+            'field': 'field',
+            'condition': 'condition'}),
+    }
+
+    kind = ingr_dict.pop('kind', 'Metric')
+    IngredientClass = ingredient_class_for_name(kind)
+
+    if IngredientClass is None:
+        raise BadIngredient('Bad ingredient kind')
+
+    params = params_lookup.get(kind, {'field': 'field'})
+
+    args = []
+    for k, v in params.iteritems():
+        # All the params must be in the dict
+        if k not in ingr_dict:
+            raise BadIngredient('{} must be defined to make a {}'.format(k,
+                                                                         kind))
+        if v == 'field':
+            statement = parse_field(ingr_dict.pop(k, None),
+                                    table=tablename,
+                                    aggregated=False)
+        elif v == 'aggregated_field':
+            statement = parse_field(ingr_dict.pop(k, None),
+                                    table=tablename,
+                                    aggregated=True)
+        elif v == 'condition':
+            statement = parse_condition(ingr_dict.pop(k, None),
+                                        table=tablename,
+                                        aggregated=True)
+        else:
+            raise BadIngredient('Do not know what this is')
+
+        # FIXME: Can we get away from this eval?
+        args.append(eval(statement))
+    # Remaining properties in ingr_dict are treated as keyword args
+    return IngredientClass(*args, **ingr_dict)
 
 
 class Shelf(AttrDict):
@@ -124,15 +277,7 @@ class Shelf(AttrDict):
 
         d = {}
         for k, v in obj.iteritems():
-            expr = v.get('expression')
-            if isinstance(expr, basestring):
-                v['expression'] = eval(alchemify(expr, tablename))
-            elif isinstance(expr, list):
-                v['expression'] = [eval(alchemify(stmt, tablename))
-                                   for stmt in expr]
-            else:
-                raise BadIngredient('expression must be a string or list')
-            d[k] = ingredient_from_dict(v)
+            d[k] = ingredient_from_dict(v, table)
 
         shelf = cls(d)
         shelf.Meta.table = tablename
