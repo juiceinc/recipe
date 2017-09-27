@@ -86,20 +86,6 @@ def tokenize(s):
 
 def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
     """ Parse a field object from yaml into a sqlalchemy expression """
-    aggregation_lookup = {
-        'sum': ('func.sum(', ')'),
-        'min': ('func.min(', ')'),
-        'max': ('func.max(', ')'),
-        'count': ('func.count(', ')'),
-        'count_distinct': ('func.count(distinct(', '))'),
-        'avg': ('func.avg(', ')'),
-        'month': ('func.date_trunc(\'month\', ', ')'),
-        'week': ('func.date_trunc(\'week\', ', ')'),
-        'year': ('func.date_trunc(\'year\', ', ')'),
-        'quarter': ('func.date_trunc(\'quarter\', ', ')'),
-        None: ('', ''),
-    }
-
     # An aggregation is a callable that takes a single field expression
     # None will perform no aggregation
     aggregation_lookup = {
