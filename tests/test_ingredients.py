@@ -470,21 +470,6 @@ class TestParse(object):
             result = parse_field(input_field, MyTable)
             assert unicode(result) == unicode(expected_result)
 
-        bad_data = ['first+',
-                    'first-',
-                    'first+last-',
-                    'foo']
-        bad_data = ['first+',
-                    'first-',
-                    'fir st-',
-                    'fir st',
-                    'first+last-',
-                    'sum(first)',
-                    'foo']
-        for input_field in bad_data:
-            with pytest.raises(BadIngredient):
-                result = parse_field(input_field, MyTable)
-
     def test_parse_field_no_aggregations(self):
         data = [
             # Basic fields
@@ -506,3 +491,31 @@ class TestParse(object):
             result = parse_field(input_field, table=MyTable,
                                  aggregated=False)
             assert unicode(result) == unicode(expected_result)
+
+    def test_bad_field_string_definitions(self):
+        bad_data = ['first+',
+                    'first-',
+                    'fir st-',
+                    'fir st',
+                    'first+last-',
+                    'sum(first)',
+                    'foo']
+        for input_field in bad_data:
+            with pytest.raises(BadIngredient):
+                result = parse_field(input_field, MyTable)
+
+    def test_bad_field_definitions(self):
+        bad_data = ['abb',
+                    {},
+                    [],
+                    ['abb'],
+                    ['age'],
+                    {'value': 'abb'},
+                    {'value': ['age']},
+                    {'condition': ['age']},
+                    {'condition': 'foo'},
+                    {'condition': []},
+                    ]
+        for input_field in bad_data:
+            with pytest.raises(BadIngredient):
+                result = parse_field(input_field, MyTable)

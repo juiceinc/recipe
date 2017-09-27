@@ -102,31 +102,43 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
         None: lambda fld: fld,
     }
 
-    if aggregated:
-        initial = {
-            'aggregation': default_aggregation,
-            'condition': None
-        }
-    else:
-        initial = {
-            'aggregation': None,
-            'condition': None
-        }
-
-    if isinstance(fld, basestring):
-        fld = {
-            'value': fld,
-        }
-
-    initial.update(fld)
     # Ensure that the dictionary contains:
     # {
     #     'value': str,
     #     'aggregation': str|None,
     #     'condition': dict|None
     # }
+    if isinstance(fld, basestring):
+        fld = {
+            'value': fld,
+        }
+    if not isinstance(fld, dict):
+        raise BadIngredient('fields must be a string or a dict')
+    if 'value' not in fld:
+        raise BadIngredient('fields must contain a value')
+    if not isinstance(fld['value'], basestring):
+        raise BadIngredient('field value must be a string')
 
-    value = initial['value']
+    # Ensure a condition
+    if 'condition' in fld:
+        if not isinstance(fld['condition'], dict) and \
+            not fld['condition'] is None:
+            raise BadIngredient('condition must be null or an object')
+    else:
+        fld['condition'] = None
+
+    # Ensure an aggregation
+    initial_aggregation = default_aggregation if aggregated else None
+    if 'aggregation' in fld:
+        if not isinstance(fld['aggregation'], basestring) and \
+            not fld['aggregation'] is None:
+            raise BadIngredient('aggregation must be null or an string')
+    else:
+        fld['aggregation'] = initial_aggregation
+
+    value = fld.get('value', None)
+    if value is None:
+        raise BadIngredient('field value is not defined')
 
     field_parts = []
     for word in tokenize(value):
@@ -160,7 +172,7 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
                 raise BadIngredient('Unknown operator {}'.format(operator))
 
     # Handle the aggregator
-    aggr = initial.get('aggregation', 'sum')
+    aggr = fld.get('aggregation', 'sum')
     if aggr is not None:
         aggr = aggr.strip()
 
@@ -169,7 +181,7 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
 
     aggregator = aggregation_lookup[aggr]
 
-    condition = parse_condition(initial.get('condition', None),
+    condition = parse_condition(fld.get('condition', None),
                                 table=table,
                                 aggregated=False,
                                 default_aggregation=default_aggregation)
