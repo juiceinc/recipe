@@ -253,16 +253,6 @@ class TestAutomaticShelf(object):
         with pytest.raises(BadRecipe):
             ingredient = self.shelf.find(2.0, Dimension)
 
-            # We can choose not to raise
-            # ingredient = self.shelf.find('foo', Dimension)
-            # assert ingredient == 'foo'
-            #
-            # ingredient = self.shelf.find(2.0, Dimension)
-            # assert ingredient == 2.0
-            #
-            # ingredient = self.shelf.find('first', Metric)
-            # assert ingredient == 'first'
-
     def test_get(self):
         """ Find ingredients on the shelf """
         ingredient = self.shelf.first

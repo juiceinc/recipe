@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import pytest
+from sqlalchemy import case
 
 from recipe import *
 from recipe.compat import str
@@ -421,70 +422,87 @@ class TestParse(object):
     def test_parse_field_aggregation(self):
         data = [
             # Basic fields
-            ('moo', 'func.sum(MyTable.moo)'),
-            ({'value': 'moo'}, 'func.sum(MyTable.moo)'),
+            ('age', func.sum(MyTable.age)),
+            ({'value': 'age'}, func.sum(MyTable.age)),
 
             # Aggregations
-            ({'value': 'moo',
-              'aggregation': 'max'}, 'func.max(MyTable.moo)'),
-            ({'value': 'moo',
-              'aggregation': 'sum'}, 'func.sum(MyTable.moo)'),
-            ({'value': 'moo',
-              'aggregation': 'min'}, 'func.min(MyTable.moo)'),
-            ({'value': 'moo',
-              'aggregation': 'avg'}, 'func.avg(MyTable.moo)'),
-            ({'value': 'moo',
+            ({'value': 'age',
+              'aggregation': 'max'}, func.max(MyTable.age)),
+            ({'value': 'age',
+              'aggregation': 'sum'}, func.sum(MyTable.age)),
+            ({'value': 'age',
+              'aggregation': 'min'}, func.min(MyTable.age)),
+            ({'value': 'age',
+              'aggregation': 'avg'}, func.avg(MyTable.age)),
+            ({'value': 'age',
               'aggregation': 'count_distinct'},
-             'func.count(distinct(MyTable.moo))'),
+             func.count(distinct(MyTable.age))),
 
             # Date trunc
-            ({'value': 'moo',
+            ({'value': 'age',
               'aggregation': 'month'},
-             'func.date_trunc(\'month\', MyTable.moo)'),
+             func.date_trunc('month', MyTable.age)),
 
             # Conditions
-            ({'value': 'moo',
-              'condition': None}, 'func.sum(MyTable.moo)'),
-            ({'value': 'moo',
+            ({'value': 'age',
+              'condition': None}, func.sum(MyTable.age)),
+            ({'value': 'age',
               'condition': {
-                  'field': 'cow',
-                  'in': (1, 2)
+                  'field': 'last',
+                  'in': ('Jones', 'Punjabi')
               }},
-             'func.sum(case([(MyTable.cow.in_((1, 2)), MyTable.moo)]))'),
+             func.sum(case([(MyTable.last.in_(('Jones', 'Punjabi')),
+                             MyTable.age)]))),
         ]
         for input_field, expected_result in data:
-            result = parse_field(input_field, table='MyTable')
-            assert result == expected_result
+            result = parse_field(input_field, MyTable)
+            assert unicode(result) == unicode(expected_result)
 
     def test_parse_field_add_subtract(self):
         data = [
             # Basic fields
-            ('moo+foo', 'func.sum(MyTable.moo + MyTable.foo)'),
-            ('moo-foo', 'func.sum(MyTable.moo - MyTable.foo)'),
-            ('moo-foo-sue', 'func.sum(MyTable.moo - MyTable.foo - '
-                            'MyTable.sue)'),
+            ('first+last', func.sum(MyTable.first + MyTable.last)),
+            ('first-last', func.sum(MyTable.first - MyTable.last)),
+            ('first-last-first', func.sum(MyTable.first - MyTable.last -
+                            MyTable.first)),
         ]
         for input_field, expected_result in data:
-            result = parse_field(input_field, table='MyTable')
-            assert result == expected_result
+            result = parse_field(input_field, MyTable)
+            assert unicode(result) == unicode(expected_result)
+
+        bad_data = ['first+',
+                    'first-',
+                    'first+last-',
+                    'foo']
+        bad_data = ['first+',
+                    'first-',
+                    'fir st-',
+                    'fir st',
+                    'first+last-',
+                    'sum(first)',
+                    'foo']
+        for input_field in bad_data:
+            with pytest.raises(BadIngredient):
+                result = parse_field(input_field, MyTable)
 
     def test_parse_field_no_aggregations(self):
         data = [
             # Basic fields
-            ('moo', 'MyTable.moo'),
-            ({'value': 'moo'}, 'MyTable.moo'),
+            ('age', MyTable.age),
+            ({'value': 'age'}, MyTable.age),
 
             # Conditions
-            ({'value': 'moo',
-              'condition': None}, 'MyTable.moo'),
-            ({'value': 'moo',
+            ({'value': 'age',
+              'condition': None}, MyTable.age),
+            ({'value': 'age',
               'condition': {
-                  'field': 'cow',
-                  'in': (1, 2)
+                  'field': 'last',
+                  'in': ('Jones', 'Punjabi')
               }},
-             'case([(MyTable.cow.in_((1, 2)), MyTable.moo)])'),
+             case([(MyTable.last.in_(('Jones', 'Punjabi')),
+                             MyTable.age)])),
         ]
         for input_field, expected_result in data:
-            result = parse_field(input_field, table='MyTable',
+            result = parse_field(input_field, table=MyTable,
                                  aggregated=False)
-            assert result == expected_result
+            assert unicode(result) == unicode(expected_result)
