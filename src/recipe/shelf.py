@@ -32,27 +32,33 @@ def ingredient_class_for_name(class_name):
     return c
 
 
-def parse_condition(cond, table='', aggregated=False,
+def parse_condition(cond, table, aggregated=False,
                     default_aggregation='sum'):
     """ Create a format string from a condition """
     if cond is None:
         return None
 
     else:
-        field = parse_field(cond['field'], table=table, aggregated=aggregated,
+        if 'field' not in cond:
+            raise BadIngredient('field must be defined in condition')
+        field = parse_field(cond['field'],
+                            table,
+                            aggregated=aggregated,
                             default_aggregation=default_aggregation)
         if 'in' in cond:
-            value = tuple(cond['in'])
-            condition_expression = '{field}.in_({value})'.format(**locals())
+            condition_expression = getattr(field, 'in_')(tuple(cond['in']))
         elif 'gt' in cond:
-            value = cond['gt']
-            condition_expression = '{field} > {value}'.format(**locals())
+            condition_expression = getattr(field, '__gt__')(cond['gt'])
+        elif 'gte' in cond:
+            condition_expression = getattr(field, '__gte__')(cond['gte'])
         elif 'lt' in cond:
-            value = cond['lt']
-            condition_expression = '{field} < {value}'.format(**locals())
+            condition_expression = getattr(field, '__lt__')(cond['lt'])
+        elif 'lte' in cond:
+            condition_expression = getattr(field, '__lte__')(cond['lte'])
         elif 'eq' in cond:
-            value = cond['eq']
-            condition_expression = '{field} == {value}'.format(**locals())
+            condition_expression = getattr(field, '__eq__')(cond['eq'])
+        elif 'ne' in cond:
+            condition_expression = getattr(field, '__ne__')(cond['ne'])
         else:
             raise BadIngredient('Bad condition')
 
@@ -78,76 +84,112 @@ def tokenize(s):
     return words
 
 
-def parse_field(fld, table='', aggregated=True, default_aggregation='sum'):
+def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
     """ Parse a field object from yaml into a sqlalchemy expression """
+    # An aggregation is a callable that takes a single field expression
+    # None will perform no aggregation
     aggregation_lookup = {
-        'sum': ('func.sum(', ')'),
-        'min': ('func.min(', ')'),
-        'max': ('func.max(', ')'),
-        'count': ('func.count(', ')'),
-        'count_distinct': ('func.count(distinct(', '))'),
-        'avg': ('func.avg(', ')'),
-        'month': ('func.date_trunc(\'month\', ', ')'),
-        'week': ('func.date_trunc(\'week\', ', ')'),
-        'year': ('func.date_trunc(\'year\', ', ')'),
-        'quarter': ('func.date_trunc(\'quarter\', ', ')'),
-        None: ('', ''),
+        'sum': func.sum,
+        'min': func.min,
+        'max': func.max,
+        'avg': func.avg,
+        'count': func.count,
+        'count_distinct': lambda fld: func.count(distinct(fld)),
+        'month': lambda fld: func.date_trunc('month', fld),
+        'week': lambda fld: func.date_trunc('week', fld),
+        'year': lambda fld: func.date_trunc('year', fld),
+        'quarter': lambda fld: func.date_trunc('quarter', fld),
+        None: lambda fld: fld,
     }
 
-    if aggregated:
-        initial = {
-            'aggregation': default_aggregation,
-            'condition': None
-        }
-    else:
-        initial = {
-            'aggregation': None,
-            'condition': None
-        }
-
-    if isinstance(fld, basestring):
-        fld = {
-            'value': fld,
-        }
-
-    initial.update(fld)
     # Ensure that the dictionary contains:
     # {
     #     'value': str,
     #     'aggregation': str|None,
     #     'condition': dict|None
     # }
+    if isinstance(fld, basestring):
+        fld = {
+            'value': fld,
+        }
+    if not isinstance(fld, dict):
+        raise BadIngredient('fields must be a string or a dict')
+    if 'value' not in fld:
+        raise BadIngredient('fields must contain a value')
+    if not isinstance(fld['value'], basestring):
+        raise BadIngredient('field value must be a string')
 
-    value = initial['value']
+    # Ensure a condition
+    if 'condition' in fld:
+        if not isinstance(fld['condition'], dict) and \
+            not fld['condition'] is None:
+            raise BadIngredient('condition must be null or an object')
+    else:
+        fld['condition'] = None
+
+    # Ensure an aggregation
+    initial_aggregation = default_aggregation if aggregated else None
+    if 'aggregation' in fld:
+        if not isinstance(fld['aggregation'], basestring) and \
+            not fld['aggregation'] is None:
+            raise BadIngredient('aggregation must be null or an string')
+    else:
+        fld['aggregation'] = initial_aggregation
+
+    value = fld.get('value', None)
+    if value is None:
+        raise BadIngredient('field value is not defined')
 
     field_parts = []
     for word in tokenize(value):
-        if word == 'MINUS':
-            field_parts.append(' - ')
-        elif word == 'PLUS':
-            field_parts.append(' + ')
+        if word in ('MINUS', 'PLUS'):
+            field_parts.append(word)
         else:
-            field_parts.append('{}.{}'.format(table, word))
+            if hasattr(table, word):
+                field_parts.append(getattr(table, word))
+            else:
+                raise BadIngredient('{} is not a field in {}'.format(word,
+                                                                     table.__name__))
+    if len(field_parts) is None:
+        raise BadIngredient('field is not defined.')
+    # Fields should have an odd number of parts
+    if len(field_parts) % 2 != 1:
+        raise BadIngredient('field does not have the right number of parts')
 
-    field_str = ''.join(field_parts)
+    field = field_parts[0]
+    if len(field_parts) > 1:
+        # if we need to add and subtract from the field
+        # join the field parts into pairs, for instance if field parts is
+        # [MyTable.first, 'MINUS', MyTable.second, 'PLUS', MyTable.third]
+        # we will get two pairs here
+        # [('MINUS', MyTable.second), ('PLUS', MyTable.third)]
+        for operator, other_field in zip(field_parts[1::2], field_parts[2::2]):
+            if operator == 'PLUS':
+                field = field.__add__(other_field)
+            elif operator == 'MINUS':
+                field = field.__sub__(other_field)
+            else:
+                raise BadIngredient('Unknown operator {}'.format(operator))
 
-    aggr = initial.get('aggregation', 'sum')
+    # Handle the aggregator
+    aggr = fld.get('aggregation', 'sum')
     if aggr is not None:
         aggr = aggr.strip()
-    aggregation_prefix, aggregation_suffix = aggregation_lookup[aggr]
 
-    condition = parse_condition(initial.get('condition', None),
+    if aggr not in aggregation_lookup:
+        raise BadIngredient('unknown aggregation {}'.format(aggr))
+
+    aggregator = aggregation_lookup[aggr]
+
+    condition = parse_condition(fld.get('condition', None),
                                 table=table,
                                 aggregated=False,
                                 default_aggregation=default_aggregation)
 
-    if condition is None:
-        field = field_str
-    else:
-        field = 'case([({}, {})])'.format(condition, field_str)
+    if condition is not None:
+        field = case([(condition, field)])
 
-    return '{aggregation_prefix}{field}{aggregation_suffix}'.format(
-        **locals())
+    return aggregator(field)
 
 
 def ingredient_from_dict(ingr_dict, table=''):
@@ -166,7 +208,7 @@ def ingredient_from_dict(ingr_dict, table=''):
     params_lookup = {
         'Dimension': {'field': 'field'},
         'LookupDimension': {'field': 'field'},
-        'IdValueDimension': {'field': 'field'},
+        'IdValueDimension': {'field': 'field', 'id_field': 'field'},
         'Metric': {'field': 'aggregated_field'},
         'DivideMetric': OrderedDict({
             'numerator_field': 'aggregated_field',
@@ -202,7 +244,7 @@ def ingredient_from_dict(ingr_dict, table=''):
     IngredientClass = ingredient_class_for_name(kind)
 
     if IngredientClass is None:
-        raise BadIngredient('Bad ingredient kind')
+        raise BadIngredient('Unknown ingredient kind')
 
     params = params_lookup.get(kind, {'field': 'field'})
 
@@ -214,21 +256,20 @@ def ingredient_from_dict(ingr_dict, table=''):
                                                                          kind))
         if v == 'field':
             statement = parse_field(ingr_dict.pop(k, None),
-                                    table=tablename,
+                                    table,
                                     aggregated=False)
         elif v == 'aggregated_field':
             statement = parse_field(ingr_dict.pop(k, None),
-                                    table=tablename,
+                                    table,
                                     aggregated=True)
         elif v == 'condition':
             statement = parse_condition(ingr_dict.pop(k, None),
-                                        table=tablename,
+                                        table,
                                         aggregated=True)
         else:
             raise BadIngredient('Do not know what this is')
 
-        # FIXME: Can we get away from this eval?
-        args.append(eval(statement))
+        args.append(statement)
     # Remaining properties in ingr_dict are treated as keyword args
 
     # If the format string exists in format_lookup, use the value otherwise
