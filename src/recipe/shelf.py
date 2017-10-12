@@ -1,6 +1,8 @@
 import importlib
 from collections import OrderedDict
 from copy import copy
+
+from six import iteritems
 from sqlalchemy import Float
 from sqlalchemy import Integer
 from sqlalchemy import String
@@ -249,7 +251,7 @@ def ingredient_from_dict(ingr_dict, table=''):
     params = params_lookup.get(kind, {'field': 'field'})
 
     args = []
-    for k, v in params.iteritems():
+    for k, v in iteritems(params):
         # All the params must be in the dict
         if k not in ingr_dict:
             raise BadIngredient('{} must be defined to make a {}'.format(k,
@@ -379,7 +381,7 @@ class Shelf(AttrDict):
         locals()[tablename] = table
 
         d = {}
-        for k, v in obj.iteritems():
+        for k, v in iteritems(obj):
             d[k] = ingredient_from_dict(v, table)
 
         shelf = cls(d)

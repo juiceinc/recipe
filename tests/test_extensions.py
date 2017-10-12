@@ -616,10 +616,10 @@ ORDER BY census.sex"""
         rowwomen, rowmen = r.all()[0], r.all()[1]
         # We should get the lookup values
         assert rowwomen.sex == 'F'
-        assert rowwomen.pop2000 == 143534804
+        assert rowwomen.pop2000 == 3234901
         assert rowwomen.pop2000_compare == 310948
         assert rowmen.sex == 'M'
-        assert rowmen.pop2000 == 137392517
+        assert rowmen.pop2000 == 3059809
         assert rowmen.pop2000_compare == 298532
 
     def test_compare_suffix(self):
@@ -650,11 +650,11 @@ ORDER BY census.sex"""
         rowwomen, rowmen = r.all()[0], r.all()[1]
         # The comparison metric is named with the suffix
         assert rowwomen.sex == 'F'
-        assert rowwomen.pop2000 == 143534804
+        assert rowwomen.pop2000 == 3234901
         assert rowwomen.pop2000_x == 310948
         assert not hasattr(rowwomen, 'pop2000_compare')
         assert rowmen.sex == 'M'
-        assert rowmen.pop2000 == 137392517
+        assert rowmen.pop2000 == 3059809
         assert rowmen.pop2000_x == 298532
         assert not hasattr(rowmen, 'pop2000_compare')
 
@@ -670,7 +670,7 @@ ORDER BY census.sex"""
         r = r.compare(self.recipe().metrics('pop2000'),
                       suffix='_total')
 
-        assert len(r.all()) == 102
+        assert len(r.all()) == 4
         assert r.to_sql() == """SELECT census.sex AS sex,
        census.state AS state,
        sum(census.pop2000) AS pop2000,
@@ -691,17 +691,17 @@ GROUP BY census.sex,
 ORDER BY census.sex,
          census.state"""
 
-        alabama_women, alaska_women = r.all()[0], r.all()[1]
-        assert alabama_women.sex == 'F'
-        assert alabama_women.pop2000 == 2300612
-        assert alabama_women.pop2000_vermont == 310948
-        assert alabama_women.pop2000_total == 280927321
-        assert not hasattr(alabama_women, 'pop2000_compare')
-        assert alaska_women.sex == 'F'
-        assert alaska_women.pop2000 == 300043
-        assert alaska_women.pop2000_vermont == 310948
-        assert alaska_women.pop2000_total == 280927321
-        assert not hasattr(alaska_women, 'pop2000_compare')
+        tennessee_women, vermont_women = r.all()[0], r.all()[1]
+        assert tennessee_women.sex == 'F'
+        assert tennessee_women.pop2000 == 2923953
+        assert tennessee_women.pop2000_vermont == 310948
+        assert tennessee_women.pop2000_total == 6294710
+        assert not hasattr(tennessee_women, 'pop2000_compare')
+        assert vermont_women.sex == 'F'
+        assert vermont_women.pop2000 == 310948
+        assert vermont_women.pop2000_vermont == 310948
+        assert vermont_women.pop2000_total == 6294710
+        assert not hasattr(vermont_women, 'pop2000_compare')
 
     def test_mismatched_dimensions_raises(self):
         """ Dimensions in the comparison recipe must be a subset of the
@@ -763,10 +763,10 @@ ORDER BY census.sex"""
         rowwomen, rowmen = r.all()[0], r.all()[1]
         # We should get the lookup values
         assert rowwomen.sex == 'F'
-        assert rowwomen.pop2000 == 143534804
-        assert rowwomen.pop2008 == 153959198
+        assert rowwomen.pop2000 == 3234901
+        assert rowwomen.pop2008 == 3499762
         assert rowmen.sex == 'M'
-        assert rowmen.pop2000 == 137392517
+        assert rowmen.pop2000 == 3059809
         assert rowmen.pop2008 is None
 
     def test_blend(self):
@@ -798,15 +798,17 @@ GROUP BY census.state,
          anon_1.abbreviation
 ORDER BY census.state"""
 
-        assert len(r.all()) == 50
-        alabamarow, alaskarow = r.all()[0], r.all()[1]
-        assert alabamarow.state == 'Alabama'
-        assert alabamarow.state_id == 'Alabama'
-        assert alabamarow.abbreviation == 'AL'
-        assert alabamarow.abbreviation_id == 'AL'
-        assert alabamarow.pop2000 == 4438559
-        assert alaskarow.state == 'Alaska'
-        assert alaskarow.state_id == 'Alaska'
-        assert alaskarow.abbreviation == 'AK'
-        assert alaskarow.abbreviation_id == 'AK'
-        assert alaskarow.pop2000 == 608588
+        assert len(r.all()) == 2
+        tennesseerow, vermontrow = r.all()[0], r.all()[1]
+        print(tennesseerow)
+        print(vermontrow)
+        assert tennesseerow.state == 'Tennessee'
+        assert tennesseerow.state_id == 'Tennessee'
+        assert tennesseerow.abbreviation == 'TN'
+        assert tennesseerow.abbreviation_id == 'TN'
+        assert tennesseerow.pop2000 == 5685230
+        assert vermontrow.state == 'Vermont'
+        assert vermontrow.state_id == 'Vermont'
+        assert vermontrow.abbreviation == 'VT'
+        assert vermontrow.abbreviation_id == 'VT'
+        assert vermontrow.pop2000 == 609480
