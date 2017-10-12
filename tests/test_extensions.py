@@ -1,4 +1,4 @@
-from copy import copy, deepcopy
+from copy import copy
 
 import pytest
 from sqlalchemy import func
@@ -91,8 +91,8 @@ class TestAutomaticFiltersExtension(object):
         recipe = self.recipe().metrics('age').dimensions('first')
         recipe = recipe.apply_automatic_filters(False)
 
-        assert recipe.recipe_extensions[0].apply == False
-        assert recipe.recipe_extensions[0].dirty == True
+        assert recipe.recipe_extensions[0].apply is False
+        assert recipe.recipe_extensions[0].dirty is True
 
         recipe = self.recipe().metrics('age').dimensions('first')
         recipe = recipe.include_automatic_filter_keys('first')
@@ -109,7 +109,7 @@ class TestAutomaticFiltersExtension(object):
         recipe = self.recipe().metrics('age').dimensions('first')
         recipe = recipe.apply_automatic_filters(False)
 
-        assert recipe.recipe_extensions[0].apply == False
+        assert recipe.recipe_extensions[0].apply is False
 
         assert recipe.to_sql() == """SELECT foo.first AS first,
        sum(foo.age) AS age
@@ -119,7 +119,7 @@ GROUP BY foo.first"""
         recipe = self.recipe().metrics('age').dimensions('first')
         recipe = recipe.apply_automatic_filters(True)
 
-        assert recipe.recipe_extensions[0].apply == True
+        assert recipe.recipe_extensions[0].apply is True
 
         assert recipe.to_sql() == """SELECT foo.first AS first,
        sum(foo.age) AS age
@@ -133,7 +133,7 @@ GROUP BY foo.first"""
             'first': ['foo']
         })
 
-        assert recipe.recipe_extensions[0].apply == True
+        assert recipe.recipe_extensions[0].apply is True
         assert recipe.to_sql() == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
@@ -149,7 +149,7 @@ GROUP BY foo.first"""
         recipe = recipe.automatic_filters({
             'first': ['foo']
         }).apply_automatic_filters(False)
-        assert recipe.recipe_extensions[0].dirty == True
+        assert recipe.recipe_extensions[0].dirty is True
         assert recipe.to_sql() == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
@@ -767,7 +767,7 @@ ORDER BY census.sex"""
         assert rowwomen.pop2008 == 153959198
         assert rowmen.sex == 'M'
         assert rowmen.pop2000 == 137392517
-        assert rowmen.pop2008 == None
+        assert rowmen.pop2008 is None
 
     def test_blend(self):
         """ A basic comparison recipe. The base recipe looks at all data, the

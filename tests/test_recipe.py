@@ -29,7 +29,8 @@ GROUP BY foo.first"""
 
     def test_dataset(self):
         recipe = self.recipe().metrics('age').dimensions('first')
-        assert recipe.dataset.json == '''[{"first": "hi", "age": 15, "first_id": "hi"}]'''
+        assert recipe.dataset.json == '[{"first": "hi", "age": 15, ' \
+                                      '"first_id": "hi"}]'
 
         # Line delimiter is \r\n
         assert recipe.dataset.csv == '''first,age,first_id\r
@@ -94,10 +95,12 @@ ORDER BY foo.last"""
             .metrics('avgage').dimensions('state').order_by('-avgage')
 
         assert recipe.to_sql() == """SELECT census.state AS state,
-       CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS avgage
+       CAST(sum(census.age * census.pop2000) AS FLOAT) / 
+       (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS avgage
 FROM census
 GROUP BY census.state
-ORDER BY CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) DESC"""
+ORDER BY CAST(sum(census.age * census.pop2000) AS FLOAT) / 
+(coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) DESC"""
 
         assert recipe.dataset.csv.replace('\r\n', '\n') == \
             """state,avgage,state_id

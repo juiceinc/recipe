@@ -504,7 +504,7 @@ class TestParse(object):
                     'foo']
         for input_field in bad_data:
             with pytest.raises(BadIngredient):
-                result = parse_field(input_field, MyTable)
+                parse_field(input_field, MyTable)
 
     def test_bad_field_definitions(self):
         bad_data = ['abb',
@@ -520,4 +520,4 @@ class TestParse(object):
                     ]
         for input_field in bad_data:
             with pytest.raises(BadIngredient):
-                result = parse_field(input_field, MyTable)
+                parse_field(input_field, MyTable)

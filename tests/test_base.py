@@ -4724,7 +4724,8 @@ mytable_shelf = Shelf({
 
 scores_shelf = Shelf({
     'username': Dimension(Scores.username),
-    'department': Dimension(Scores.department, anonymizer=lambda value: value[::-1]),
+    'department': Dimension(Scores.department,
+                            anonymizer=lambda value: value[::-1]),
     'testid': Dimension(Scores.testid),
     'test_cnt': Metric(func.count(distinct(TagScores.testid))),
     'score': Metric(func.avg(Scores.score))
