@@ -481,7 +481,6 @@ ORDER BY summarize.department_raw"""
                 'department': 'ops'
             }).summarize_over('username').anonymize(False)
 
-        print recipe.to_sql()
         assert recipe.to_sql() == """SELECT summarize.department,
        avg(summarize.score) AS score
 FROM
