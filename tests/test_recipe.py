@@ -98,7 +98,7 @@ ORDER BY foo.last"""
        CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS avgage
 FROM census
 GROUP BY census.state
-ORDER BY CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) DESC"""  #noqa: E501
+ORDER BY CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) DESC"""  # noqa: E501
 
         assert recipe.dataset.csv.replace('\r\n', '\n') == \
             """state,avgage,state_id

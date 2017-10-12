@@ -32,7 +32,7 @@ flake8 --output-file=flake8_errors.txt --exit-zero .'''
 #!/usr/bin/bash
 VENV=".venv"
 . "$VENV/bin/activate"
-py.test --cov-config .coveragerc --cov users --cov-report term-missing --cov-report xml --junitxml junit.xml
+py.test --cov-config .coveragerc --cov src --cov-report term-missing --cov-report xml --junitxml junit.xml
 deactivate
 tox'''
         }
