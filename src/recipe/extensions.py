@@ -240,11 +240,11 @@ class SummarizeOver(RecipeExtension):
                 met = self.recipe._cauldron.find(col.name, Metric)
                 summary_aggregation = met.meta.get('summary_aggregation', None)
                 if summary_aggregation is None:
-                    if unicode(met.expression).startswith(u'avg'):
+                    if str(met.expression).startswith(u'avg'):
                         summary_aggregation = func.avg
-                    elif unicode(met.expression).startswith(u'count'):
+                    elif str(met.expression).startswith(u'count'):
                         summary_aggregation = func.sum
-                    elif unicode(met.expression).startswith(u'sum'):
+                    elif str(met.expression).startswith(u'sum'):
                         summary_aggregation = func.sum
 
                 if summary_aggregation is None:
