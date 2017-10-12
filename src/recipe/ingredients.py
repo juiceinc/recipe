@@ -1,4 +1,4 @@
-from functools import total_ordering, wraps
+from functools import total_ordering
 from uuid import uuid4
 
 from sqlalchemy import Float, between, case, cast, distinct, func

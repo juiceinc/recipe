@@ -1,14 +1,9 @@
 import pytest
 
-import recipe
 from recipe import BadRecipe
 from recipe import Having
 from recipe import Recipe
 from .test_base import *
-
-
-def test_main():
-    assert recipe  # use your library here
 
 
 class TestRecipeIngredients(object):
