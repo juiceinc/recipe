@@ -1,12 +1,15 @@
 from copy import copy, deepcopy
 
 import pytest
+from sqlalchemy import func
 
 from recipe import BadRecipe
-from recipe import Recipe
-from recipe.extensions import RecipeExtension, AutomaticFilters, \
-    Anonymize, SummarizeOver, CompareRecipe, BlendRecipe
-from .test_base import *
+from recipe import Recipe, Shelf, Dimension, Metric
+from recipe.extensions import (RecipeExtension, AutomaticFilters, Anonymize,
+                               SummarizeOver, CompareRecipe, BlendRecipe)
+from tests.test_base import (Session, mytable_shelf, scores_shelf, MyTable,
+                             tagscores_shelf, census_shelf, Census,
+                             statefact_shelf)
 
 
 class DummyExtension(RecipeExtension):

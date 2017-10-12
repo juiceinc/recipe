@@ -1,9 +1,11 @@
 import pytest
 
+from sqlalchemy import func
+
 from recipe import BadRecipe
 from recipe import Having
 from recipe import Recipe
-from .test_base import *
+from tests.test_base import Session, mytable_shelf, MyTable, census_shelf
 
 
 class TestRecipeIngredients(object):
