@@ -33,10 +33,10 @@ is_py3 = (_ver[0] == 3)
 if is_py2:
     builtin_str = str
     bytes = str
-    str = unicode # noqa: F821
-    basestring = basestring # noqa: F821
-    numeric_types = (int, long, float) # noqa: F821
-    integer_types = (int, long) # noqa: F821
+    str = unicode  # noqa: F821
+    basestring = basestring  # noqa: F821
+    numeric_types = (int, long, float)  # noqa: F821
+    integer_types = (int, long)  # noqa: F821
 
 elif is_py3:
     builtin_str = str
