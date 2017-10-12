@@ -95,11 +95,11 @@ ORDER BY foo.last"""
             .metrics('avgage').dimensions('state').order_by('-avgage')
 
         assert recipe.to_sql() == """SELECT census.state AS state,
-       CAST(sum(census.age * census.pop2000) AS FLOAT) / 
+       CAST(sum(census.age * census.pop2000) AS FLOAT) /
        (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS avgage
 FROM census
 GROUP BY census.state
-ORDER BY CAST(sum(census.age * census.pop2000) AS FLOAT) / 
+ORDER BY CAST(sum(census.age * census.pop2000) AS FLOAT) /
 (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) DESC"""
 
         assert recipe.dataset.csv.replace('\r\n', '\n') == \
@@ -171,17 +171,17 @@ class TestStats(object):
         recipe = self.recipe().metrics('age').dimensions(
             'last')
 
-        assert recipe.stats.ready == False
+        assert recipe.stats.ready is False
         with pytest.raises(BadRecipe):
             assert recipe.stats.rows == 5
 
         recipe.all()
 
         # Stats are ready after the recipe is run
-        assert recipe.stats.ready == True
+        assert recipe.stats.ready is True
         assert recipe.stats.rows == 2
         assert recipe.stats.dbtime < 1.0
-        assert recipe.stats.from_cache == False
+        assert recipe.stats.from_cache is False
 
 
 class TestCacheContext(object):
