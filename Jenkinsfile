@@ -33,7 +33,7 @@ flake8 --output-file=flake8_errors.txt --exit-zero .'''
 VENV=".venv"
 . "$VENV/bin/activate"
 py.test --cov-config .coveragerc --cov src --cov-report term-missing --cov-report xml --junitxml junit.xml
-pip install tox
+pip3.6 install tox
 tox'''
         }
       }
