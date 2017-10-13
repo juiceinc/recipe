@@ -19,6 +19,7 @@ VENV=".venv"
 python3.6 -m venv $VENV
 . "$VENV/bin/activate"
 pip3.6 install -qq -r requirements_dev.txt
+pip3.6 install tox
 echo "flake8">> flake8_errors.txt
 flake8 --output-file=flake8_errors.txt --exit-zero .'''
         }
@@ -33,8 +34,7 @@ flake8 --output-file=flake8_errors.txt --exit-zero .'''
 VENV=".venv"
 . "$VENV/bin/activate"
 py.test --cov-config .coveragerc --cov src --cov-report term-missing --cov-report xml --junitxml junit.xml
-pip3.6 install tox
-tox'''
+tox --workdir=tox-work'''
         }
       }
     }
