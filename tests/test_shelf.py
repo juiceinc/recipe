@@ -1,7 +1,12 @@
 import pytest
 from copy import copy
 
-from recipe import BadRecipe
+from sqlalchemy import case
+
+from recipe.shelf import parse_field, parse_condition
+from .test_base import *
+
+from recipe import BadRecipe, BadIngredient
 from recipe import Dimension
 from recipe import Metric
 from recipe import Shelf, AutomaticShelf
@@ -113,6 +118,15 @@ class TestShelf(object):
         assert len(self.shelf) == 3
         self.shelf.clear()
         assert len(self.shelf) == 0
+
+    def test_dimension_ids(self):
+        assert len(self.shelf.dimension_ids) == 2
+        assert self.shelf.dimension_ids in (('last', 'first'),
+                                            ('first', 'last'))
+
+    def test_metric_ids(self):
+        assert len(self.shelf.metric_ids) == 1
+        assert self.shelf.metric_ids == ('age',)
 
 
 class TestShelfFromYaml(object):

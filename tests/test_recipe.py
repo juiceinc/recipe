@@ -1,8 +1,9 @@
 import pytest
-
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy import func
 
-from recipe import BadRecipe
+import recipe
+from recipe import BadRecipe, Filter
 from recipe import Having
 from recipe import Recipe
 from tests.test_base import Session, mytable_shelf, MyTable, census_shelf
@@ -54,6 +55,10 @@ ORDER BY foo.last"""
         assert recipe.stats.rows == 2
 
     def test_recipe_init(self):
+        recipe = self.recipe()
+        with pytest.raises(BadRecipe):
+            assert recipe.to_sql() == """foo"""
+
         recipe = self.recipe(metrics=('age',), dimensions=('last',)).order_by(
             'last')
         assert recipe.to_sql() == """SELECT foo.last AS last,
@@ -64,6 +69,20 @@ ORDER BY foo.last"""
         assert recipe.all()[0].last == 'fred'
         assert recipe.all()[0].age == 10
         assert recipe.stats.rows == 2
+
+        recipe = self.recipe(metrics=('age',), dimensions=('last',),
+                             filters=(Filter(MyTable.last == 'fred'),)
+                             ).order_by(
+            'last')
+        assert recipe.to_sql() == """SELECT foo.last AS last,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.last = 'fred'
+GROUP BY foo.last
+ORDER BY foo.last"""
+        assert recipe.all()[0].last == 'fred'
+        assert recipe.all()[0].age == 10
+        assert recipe.stats.rows == 1
 
     def test_filter(self):
         recipe = self.recipe().metrics('age').dimensions(

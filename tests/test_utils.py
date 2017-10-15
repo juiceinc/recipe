@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-from recipe.utils import replace_whitespace_with_space, AttrDict
+from sqlalchemy import func
+
+from recipe.utils import replace_whitespace_with_space, AttrDict, disaggregate
+from tests.test_base import MyTable
 
 
 class TestUtils(object):
@@ -16,3 +19,4 @@ class TestAttrDict(object):
         assert d['foo'] == 2
         d['bar'] = 3
         assert d.bar == 3
+
