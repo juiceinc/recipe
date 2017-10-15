@@ -331,12 +331,6 @@ class Metric(Ingredient):
         super(Metric, self).__init__(**kwargs)
         self.columns = [expression]
 
-    def _disaggregate(self, expr):
-        if isinstance(expr, FunctionElement):
-            return expr.clause_expr
-        else:
-            return expr
-
 
 class DivideMetric(Metric):
     """ A metric that divides a numerator by a denominator handling several
