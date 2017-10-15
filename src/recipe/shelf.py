@@ -81,7 +81,8 @@ def tokenize(s):
     """
 
     # Crude tokenization
-    s = s.replace('+', ' PLUS ').replace('-', ' MINUS ')
+    s = s.replace('+', ' PLUS ').replace('-', ' MINUS ') \
+        .replace('/', ' DIVIDE ').replace('*', ' MULTIPLY ')
     words = [w for w in s.split(' ') if w]
     return words
 
@@ -144,7 +145,7 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
 
     field_parts = []
     for word in tokenize(value):
-        if word in ('MINUS', 'PLUS'):
+        if word in ('MINUS', 'PLUS', 'DIVIDE', 'MULTIPLY'):
             field_parts.append(word)
         else:
             if hasattr(table, word):
@@ -170,6 +171,10 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
                 field = field.__add__(other_field)
             elif operator == 'MINUS':
                 field = field.__sub__(other_field)
+            elif operator == 'DIVIDE':
+                field = field.__div__(other_field)
+            elif operator == 'MULTIPLY':
+                field = field.__mul__(other_field)
             else:
                 raise BadIngredient('Unknown operator {}'.format(operator))
 
