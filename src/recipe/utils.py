@@ -67,7 +67,7 @@ def prettyprintable_sql(statement, dialect=None, reindent=True):
     return sqlparse.format(str(compiled), reindent=reindent)
 
 
-WHITESPACE_RE = re.compile('\s+', flags=re.DOTALL | re.MULTILINE)
+WHITESPACE_RE = re.compile(r'\s+', flags=re.DOTALL | re.MULTILINE)
 
 
 def replace_whitespace_with_space(s):

@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from sqlalchemy import case
+from sqlalchemy import case, func, distinct
 
-from recipe import *
+from recipe import (Dimension, Metric, Ingredient, BadIngredient, Filter,
+                    Having, IdValueDimension, LookupDimension, DivideMetric,
+                    SumIfMetric, CountIfMetric, )
 from recipe.compat import str
 from recipe.shelf import parse_field, ingredient_from_dict
-from .test_base import *
+from tests.test_base import mytable_shelf, MyTable
 
 
 class TestIngredients(object):
@@ -456,7 +458,7 @@ class TestParse(object):
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, MyTable)
-            assert unicode(result) == unicode(expected_result)
+            assert str(result) == str(expected_result)
 
     def test_parse_field_add_subtract(self):
         data = [
@@ -464,11 +466,11 @@ class TestParse(object):
             ('first+last', func.sum(MyTable.first + MyTable.last)),
             ('first-last', func.sum(MyTable.first - MyTable.last)),
             ('first-last-first', func.sum(MyTable.first - MyTable.last -
-                            MyTable.first)),
+                                          MyTable.first)),
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, MyTable)
-            assert unicode(result) == unicode(expected_result)
+            assert str(result) == str(expected_result)
 
     def test_parse_field_no_aggregations(self):
         data = [
@@ -485,12 +487,12 @@ class TestParse(object):
                   'in': ('Jones', 'Punjabi')
               }},
              case([(MyTable.last.in_(('Jones', 'Punjabi')),
-                             MyTable.age)])),
+                    MyTable.age)])),
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, table=MyTable,
                                  aggregated=False)
-            assert unicode(result) == unicode(expected_result)
+            assert str(result) == str(expected_result)
 
     def test_bad_field_string_definitions(self):
         bad_data = ['first+',
@@ -502,7 +504,7 @@ class TestParse(object):
                     'foo']
         for input_field in bad_data:
             with pytest.raises(BadIngredient):
-                result = parse_field(input_field, MyTable)
+                parse_field(input_field, MyTable)
 
     def test_bad_field_definitions(self):
         bad_data = ['abb',
@@ -518,4 +520,4 @@ class TestParse(object):
                     ]
         for input_field in bad_data:
             with pytest.raises(BadIngredient):
-                result = parse_field(input_field, MyTable)
+                parse_field(input_field, MyTable)

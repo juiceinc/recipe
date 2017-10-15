@@ -1,6 +1,8 @@
 import importlib
 from collections import OrderedDict
 from copy import copy
+
+from six import iteritems
 from sqlalchemy import Float
 from sqlalchemy import Integer
 from sqlalchemy import String
@@ -122,7 +124,7 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
     # Ensure a condition
     if 'condition' in fld:
         if not isinstance(fld['condition'], dict) and \
-            not fld['condition'] is None:
+                not fld['condition'] is None:
             raise BadIngredient('condition must be null or an object')
     else:
         fld['condition'] = None
@@ -131,7 +133,7 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
     initial_aggregation = default_aggregation if aggregated else None
     if 'aggregation' in fld:
         if not isinstance(fld['aggregation'], basestring) and \
-            not fld['aggregation'] is None:
+                not fld['aggregation'] is None:
             raise BadIngredient('aggregation must be null or an string')
     else:
         fld['aggregation'] = initial_aggregation
@@ -148,8 +150,8 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
             if hasattr(table, word):
                 field_parts.append(getattr(table, word))
             else:
-                raise BadIngredient('{} is not a field in {}'.format(word,
-                                                                     table.__name__))
+                raise BadIngredient('{} is not a field in {}'.format(
+                    word, table.__name__))
     if len(field_parts) is None:
         raise BadIngredient('field is not defined.')
     # Fields should have an odd number of parts
@@ -249,7 +251,7 @@ def ingredient_from_dict(ingr_dict, table=''):
     params = params_lookup.get(kind, {'field': 'field'})
 
     args = []
-    for k, v in params.iteritems():
+    for k, v in iteritems(params):
         # All the params must be in the dict
         if k not in ingr_dict:
             raise BadIngredient('{} must be defined to make a {}'.format(k,
@@ -333,16 +335,6 @@ class Shelf(AttrDict):
 
     @property
     def dimension_ids(self):
-        return tuple(d.id for d in self.values() if
-                     isinstance(d, Dimension))
-
-    @property
-    def metric_ids(self):
-        return tuple(d.id for d in self.values() if
-                     isinstance(d, Metric))
-
-    @property
-    def dimension_ids(self):
         """ Return the Dimensions on this shelf in the order in which
         they were used."""
         return tuple(
@@ -389,7 +381,7 @@ class Shelf(AttrDict):
         locals()[tablename] = table
 
         d = {}
-        for k, v in obj.iteritems():
+        for k, v in iteritems(obj):
             d[k] = ingredient_from_dict(v, table)
 
         shelf = cls(d)

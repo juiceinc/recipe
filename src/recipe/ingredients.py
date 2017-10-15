@@ -1,8 +1,4 @@
-import importlib
-import re
-from collections import OrderedDict
-from copy import copy
-from functools import total_ordering, wraps
+from functools import total_ordering
 from uuid import uuid4
 
 from sqlalchemy import Float, between, case, cast, distinct, func
@@ -213,7 +209,8 @@ class Filter(Ingredient):
         self.filters = [expression]
 
     def __cmp__(self, other):
-        return cmp(str(self.filters[0]), str(other.filters[0]))
+        return (self.filters[0] > str(other.filters[0])) - \
+               (self.filters[0] < str(other.filters[0]))
 
     def __repr__(self):
         return '{}'.format([str(f) for f in self.filters])
@@ -243,7 +240,8 @@ class Having(Ingredient):
         self.havings = [expression]
 
     def __cmp__(self, other):
-        return cmp(str(self.havings[0]), str(other.havings[0]))
+        return (self.havings[0] > str(other.havings[0])) - \
+               (self.havings[0] < str(other.havings[0]))
 
     def __repr__(self):
         return u'{}'.format([str(f) for f in self.havings])

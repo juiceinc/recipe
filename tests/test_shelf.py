@@ -1,11 +1,11 @@
 import pytest
 from copy import copy
-from .test_base import *
 
 from recipe import BadRecipe
 from recipe import Dimension
 from recipe import Metric
 from recipe import Shelf, AutomaticShelf
+from tests.test_base import mytable_shelf, MyTable
 
 
 class TestShelf(object):
@@ -85,9 +85,9 @@ class TestShelf(object):
 
     def test_anonymize(self):
         """ We can save and store anonymization context """
-        assert self.shelf.Meta.anonymize == False
+        assert self.shelf.Meta.anonymize is False
         self.shelf.Meta.anonymize = True
-        assert self.shelf.Meta.anonymize == True
+        assert self.shelf.Meta.anonymize is True
 
     def test_get(self):
         """ Find ingredients on the shelf """
@@ -202,9 +202,9 @@ age:
 
     def test_anonymize(self):
         """ We can save and store anonymization context """
-        assert self.shelf.Meta.anonymize == False
+        assert self.shelf.Meta.anonymize is False
         self.shelf.Meta.anonymize = True
-        assert self.shelf.Meta.anonymize == True
+        assert self.shelf.Meta.anonymize is True
 
     def test_get(self):
         """ Find ingredients on the shelf """
