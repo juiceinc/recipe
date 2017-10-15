@@ -555,6 +555,19 @@ class TestParse(object):
             ('first-last', func.sum(MyTable.first - MyTable.last)),
             ('first-last-first', func.sum(MyTable.first - MyTable.last -
                                           MyTable.first)),
+            ('first*last', func.sum(MyTable.first * MyTable.last)),
+            ('first/last', func.sum(MyTable.first / MyTable.last)),
+            ('first*last-first', func.sum(MyTable.first * MyTable.last -
+                                          MyTable.first)),
+            # Spacing doesn't matter
+            ('first + last', func.sum(MyTable.first + MyTable.last)),
+            ('first -last', func.sum(MyTable.first - MyTable.last)),
+            ('first - last   -  first', func.sum(MyTable.first - MyTable.last -
+                                          MyTable.first)),
+            ('first  *last', func.sum(MyTable.first * MyTable.last)),
+            ('first/  last', func.sum(MyTable.first / MyTable.last)),
+            ('first*  last /first', func.sum(MyTable.first * MyTable.last /
+                                          MyTable.first)),
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, MyTable)
@@ -588,7 +601,9 @@ class TestParse(object):
                     'fir st-',
                     'fir st',
                     'first+last-',
-                    'sum(first)',
+                    'sum(fir-st)',
+                    'fir st*',
+                    'first/last-',
                     'foo']
         for input_field in bad_data:
             with pytest.raises(BadIngredient):
