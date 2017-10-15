@@ -47,20 +47,42 @@ def parse_condition(cond, table, aggregated=False,
                             table,
                             aggregated=aggregated,
                             default_aggregation=default_aggregation)
+
         if 'in' in cond:
-            condition_expression = getattr(field, 'in_')(tuple(cond['in']))
+            value = cond['in']
+            if isinstance(value, (dict)):
+                raise BadIngredient('value for in must be a list')
+            condition_expression = getattr(field, 'in_')(tuple(value))
         elif 'gt' in cond:
-            condition_expression = getattr(field, '__gt__')(cond['gt'])
+            value = cond['gt']
+            if isinstance(value, (list, dict)):
+                raise BadIngredient('conditional value must be a scalar')
+            condition_expression = getattr(field, '__gt__')(value)
         elif 'gte' in cond:
-            condition_expression = getattr(field, '__gte__')(cond['gte'])
+            value = cond['gte']
+            if isinstance(value, (list, dict)):
+                raise BadIngredient('conditional value must be a scalar')
+            condition_expression = getattr(field, '__ge__')(value)
         elif 'lt' in cond:
-            condition_expression = getattr(field, '__lt__')(cond['lt'])
+            value = cond['lt']
+            if isinstance(value, (list, dict)):
+                raise BadIngredient('conditional value must be a scalar')
+            condition_expression = getattr(field, '__lt__')(value)
         elif 'lte' in cond:
-            condition_expression = getattr(field, '__lte__')(cond['lte'])
+            value = cond['lte']
+            if isinstance(value, (list, dict)):
+                raise BadIngredient('conditional value must be a scalar')
+            condition_expression = getattr(field, '__le__')(value)
         elif 'eq' in cond:
-            condition_expression = getattr(field, '__eq__')(cond['eq'])
+            value = cond['eq']
+            if isinstance(value, (list, dict)):
+                raise BadIngredient('conditional value must be a scalar')
+            condition_expression = getattr(field, '__eq__')(value)
         elif 'ne' in cond:
-            condition_expression = getattr(field, '__ne__')(cond['ne'])
+            value = cond['ne']
+            if isinstance(value, (list, dict)):
+                raise BadIngredient('conditional value must be a scalar')
+            condition_expression = getattr(field, '__ne__')(value)
         else:
             raise BadIngredient('Bad condition')
 
@@ -225,14 +247,14 @@ def ingredient_from_dict(ingr_dict, table=''):
             'weight': 'field'}),
         'ConditionalMetric': {'field': 'aggregated_field'},
         'SumIfMetric': OrderedDict({
-            'field': 'field',
-            'condition': 'condition'}),
+            'condition': 'condition',
+            'field': 'field'}),
         'AvgIfMetric': OrderedDict({
-            'field': 'field',
-            'condition': 'condition'}),
+            'condition': 'condition',
+            'field': 'field'}),
         'CountIfMetric': OrderedDict({
-            'field': 'field',
-            'condition': 'condition'}),
+            'condition': 'condition',
+            'field': 'field'}),
     }
 
     format_lookup = {
