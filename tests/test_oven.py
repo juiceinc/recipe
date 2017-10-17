@@ -9,5 +9,5 @@ def test_create_oven():
 
 def test_create_oven_no_target():
     oven = Oven()
-    assert oven.engine == None
-    assert oven.Session == None
+    assert oven.engine is None
+    assert oven.Session is None
