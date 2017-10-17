@@ -6,14 +6,13 @@ from sqlalchemy import case, func, distinct
 from recipe import (Dimension, Metric, Ingredient, BadIngredient, Filter,
                     Having, IdValueDimension, LookupDimension, DivideMetric,
                     SumIfMetric, CountIfMetric, )
-from recipe.compat import str
 from recipe.shelf import parse_field, ingredient_from_dict
+from recipe.compat import str
 from tests.test_base import mytable_shelf, MyTable
 
 
 class TestIngredients(object):
     def setup(self):
-        # create a Session
         self.shelf = mytable_shelf
 
     def test_ingredient_init(self):

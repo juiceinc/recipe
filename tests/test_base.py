@@ -1,18 +1,13 @@
 from sqlalchemy import Column, Float, distinct
 from sqlalchemy import Integer
 from sqlalchemy import String
-from sqlalchemy import create_engine
 from sqlalchemy import func
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 
-from recipe import Dimension
-from recipe import Metric
-from recipe import Shelf
-from recipe import WtdAvgMetric
+from recipe import Dimension, Metric, Oven, Shelf, WtdAvgMetric
 
 Base = declarative_base()
-engine = create_engine('sqlite://')
+oven = Oven('sqlite://')
 
 TABLEDEF = '''
         CREATE TABLE IF NOT EXISTS foo
@@ -21,11 +16,8 @@ TABLEDEF = '''
          age int);
 '''
 
-# create a configured "Session" class
-Session = sessionmaker(bind=engine)
-
-engine.execute(TABLEDEF)
-engine.execute(
+oven.engine.execute(TABLEDEF)
+oven.engine.execute(
     "insert into foo values ('hi', 'there', 5), ('hi', 'fred', 10)")
 
 
@@ -38,8 +30,8 @@ TABLEDEF = '''
          score float);
 '''
 
-engine.execute(TABLEDEF)
-engine.execute(
+oven.engine.execute(TABLEDEF)
+oven.engine.execute(
     """insert into scores values
 ('chris', 'sales', '1', 80),
 ('chip', 'ops', '2', 80),
@@ -60,9 +52,8 @@ TABLEDEF = '''
          score float);
 '''
 
-# create a configured "Session" class
-engine.execute(TABLEDEF)
-engine.execute(
+oven.engine.execute(TABLEDEF)
+oven.engine.execute(
     """insert into tagscores values
 ('chris', 'individual', 'sales', '1', 80),
 ('chris', 'manager', 'sales', '1', 80),
@@ -77,9 +68,9 @@ engine.execute(
 """)
 
 
-engine.execute("""CREATE TABLE IF NOT EXISTS census
+oven.engine.execute("""CREATE TABLE IF NOT EXISTS census
 (state text, sex text, age integer, pop2000 integer, pop2008 integer);""")
-engine.execute("""INSERT INTO CENSUS values
+oven.engine.execute("""INSERT INTO CENSUS values
 ('Tennessee','M',0,38916,43537), ('Tennessee','M',1,38569,43343),
 ('Tennessee','M',2,38157,42592), ('Tennessee','M',3,37780,41530),
 ('Tennessee','M',4,38789,41627), ('Tennessee','M',5,39442,40758),
@@ -254,14 +245,14 @@ engine.execute("""INSERT INTO CENSUS values
 ('Vermont','F',84,1172,1397), ('Vermont','F',85,7300,8494);
 """)
 
-engine.execute("""CREATE TABLE IF NOT EXISTS state_fact
+oven.engine.execute("""CREATE TABLE IF NOT EXISTS state_fact
 (id text, name text, abbreviation text, country
 text, type text, sort text, status text, occupied text, notes text,
 fips_state text, assoc_press text, standard_federal_region text,
 census_region text, census_region_name text, census_division text,
 census_division_name text, circuit_court text);""")
 
-engine.execute("""insert into state_fact VALUES
+oven.engine.execute("""insert into state_fact VALUES
 ('42','Tennessee','TN','USA','state','10','current','occupied','','47',
  'Tenn.','IV','3','South','6','East South Central','6'),
 ('45','Vermont','VT','USA','state','10','current','occupied','','50','Vt.',

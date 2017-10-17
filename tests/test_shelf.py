@@ -1,5 +1,6 @@
-import pytest
 from copy import copy
+
+import pytest
 
 from recipe import BadRecipe
 from recipe import Dimension
@@ -10,7 +11,6 @@ from tests.test_base import mytable_shelf, MyTable
 
 class TestShelf(object):
     def setup(self):
-        # create a Session
         self.shelf = copy(mytable_shelf)
 
     def test_find(self):

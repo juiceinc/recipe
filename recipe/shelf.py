@@ -13,9 +13,8 @@ from sqlalchemy.util import lightweight_named_tuple
 
 from yaml import safe_load
 
-from recipe import BadRecipe, Ingredient, BadIngredient
-from recipe import Dimension
-from recipe import Metric
+from recipe.exceptions import BadRecipe, BadIngredient
+from recipe.ingredients import Dimension, Ingredient, Metric
 from recipe.compat import basestring
 from recipe.utils import AttrDict
 
