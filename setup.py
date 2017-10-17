@@ -35,6 +35,7 @@ install = [
     'sqlparse',
     'tablib',
     'pyyaml',
+    'flapjack_stack'
 ]
 
 with open('src/recipe/core.py', 'r') as fd:

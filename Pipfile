@@ -7,26 +7,22 @@ name = "pypi"
 
 [packages]
 
-"dogpile.core" = "==0.4.1"
-"dogpile.cache" = "==0.6.4"
-gevent = "==1.2.1"
-greenlet = "==0.4.12"
-orderedset = "==2.0"
-"psycopg2" = "==2.7.1"
-py = "==1.4.32"
-pyparsing = "==2.1.10"
-"4d34739" = {path = "/Users/jasonmyers/dev/recipe", editable = true}
-sqlalchemy = "==1.2.0b2"
-sqlparse = "==0.2.2"
-tablib = "==0.12.1"
-"flake8" = "==3.4.1"
-pre-commit = "==1.1.0"
-pytest = "==3.0.6"
-pytest-cov = "==2.4.0"
-sphinx = "==1.5.5"
-sphinx-rtd-theme = "==0.2.4"
-"autopep8" = "==1.3.1"
+orderedset = "*"
+"psycopg2" = "*"
+py = "*"
+pyparsing = "*"
+sqlalchemy = "*"
+sqlparse = "*"
+tablib = "*"
 flapjack-stack = "*"
 
 
 [dev-packages]
+
+"autopep8" = "*"
+"flake8" = "*"
+pre-commit = "*"
+pytest = "*"
+pytest-cov = "*"
+sphinx = "*"
+sphinx-rtd-theme = "*"
