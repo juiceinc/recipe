@@ -25,7 +25,6 @@ class Oven:
         :return: A SQLAlchemy Engine with connection checking
         :rtype: SQLAlchemy.Engine
         """
-
         if not connection_string:
             return
 
