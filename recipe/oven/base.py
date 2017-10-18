@@ -19,18 +19,18 @@ class OvenBase(object):
     @abc.abstractmethod
     def init_engine(self, connection_string=None, **kwargs):
         """Initializes a SQLAlchemy Engine for a given connection string with
-                all other keyword arguments passed to the create_engine function. The
-                connection uses pre-ping to verify connections.
+        all other keyword arguments passed to the create_engine function. The
+        connection uses pre-ping to verify connections.
 
-                :param self: a reference to ourselves
-                :param connection_string: a reference to ourselves
-                :param kwargs: a collection of arguments passed to the engine
-                :type self: Oven
-                :type connection_string: str
-                :type kwargs: dict
-                :return: A SQLAlchemy Engine with connection checking
-                :rtype: SQLAlchemy.Engine
-                """
+        :param self: a reference to ourselves
+        :param connection_string: a reference to ourselves
+        :param kwargs: a collection of arguments passed to the engine
+        :type self: Oven
+        :type connection_string: str
+        :type kwargs: dict
+        :return: A SQLAlchemy Engine with connection checking
+        :rtype: SQLAlchemy.Engine
+        """
         if not connection_string:
             return
 
