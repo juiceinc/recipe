@@ -1,13 +1,13 @@
-from recipe.oven import Oven
+from recipe.oven import get_oven
 
 
 def test_create_oven():
-    oven = Oven('sqlite://')
+    oven = get_oven('sqlite://')
     assert oven.engine.driver == 'pysqlite'
     assert oven.Session.kw['bind'] == oven.engine
 
 
 def test_create_oven_no_target():
-    oven = Oven()
+    oven = get_oven()
     assert oven.engine is None
     assert oven.Session is None

@@ -15,6 +15,7 @@ from recipe.ingredients import (Ingredient, Dimension, LookupDimension,
                                 IdValueDimension, Metric, DivideMetric,
                                 WtdAvgMetric, CountIfMetric, SumIfMetric,
                                 Filter, Having)
+from recipe.oven import get_oven
 from recipe.shelf import Shelf, AutomaticShelf
 
 SETTINGS = FlapjackStack()
@@ -31,9 +32,8 @@ except ImportError:
 
 logging.getLogger(__name__).addHandler(NullHandler())
 
-from recipe.oven import Oven  # noqa: E501
 
 __all__ = [BadIngredient, BadRecipe, Ingredient, Dimension, LookupDimension,
            IdValueDimension, Metric, DivideMetric, WtdAvgMetric, CountIfMetric,
            SumIfMetric, Filter, Having, Recipe, Shelf, AutomaticShelf,
-           SETTINGS, Oven]
+           SETTINGS, get_oven]

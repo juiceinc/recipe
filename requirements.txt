@@ -7,4 +7,6 @@ pyparsing==2.1.10
 six==1.10.0
 SQLAlchemy==1.2.0b2
 sqlparse==0.2.2
+stevedore==1.27.1
 tablib==0.12.1
+-e .

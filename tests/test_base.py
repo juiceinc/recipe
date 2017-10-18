@@ -4,10 +4,10 @@ from sqlalchemy import String
 from sqlalchemy import func
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import Dimension, Metric, Oven, Shelf, WtdAvgMetric
+from recipe import Dimension, Metric, get_oven, Shelf, WtdAvgMetric
 
 Base = declarative_base()
-oven = Oven('sqlite://')
+oven = get_oven('sqlite://')
 
 TABLEDEF = '''
         CREATE TABLE IF NOT EXISTS foo

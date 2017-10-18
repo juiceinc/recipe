@@ -38,10 +38,6 @@ install = [
     'flapjack_stack'
 ]
 
-with open('src/recipe/core.py', 'r') as fd:
-    version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
-                        fd.read(), re.MULTILINE).group(1)
-
 setup(
     name='recipe',
     version='0.1.0',
@@ -50,9 +46,7 @@ setup(
     author='Chris Gemignani',
     author_email='chris.gemignani@juiceanalytics.com',
     url='https://github.com/juiceinc/recipe',
-    packages=find_packages('src'),
-    package_dir={'': 'src'},
-    py_modules=[splitext(basename(path))[0] for path in glob('src/*.py')],
+    packages=find_packages(),
     include_package_data=True,
     license='MIT',
     classifiers=[
@@ -70,4 +64,9 @@ setup(
     ],
     tests_require=['pytest', 'pytest-cov'],
     install_requires=install,
+    entry_points={
+        'recipe.oven.drivers': [
+            'standard = recipe.oven.drivers.standard_oven:StandardOven',
+        ],
+    }
 )
