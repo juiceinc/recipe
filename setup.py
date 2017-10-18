@@ -2,10 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-import re
 import sys
-from glob import glob
-from os.path import basename, splitext
 
 from setuptools import find_packages
 
