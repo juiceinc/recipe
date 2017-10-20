@@ -1,7 +1,5 @@
 # TODO ask jason about methods of doing this
-from sqlalchemy import and_
-from sqlalchemy import func
-from sqlalchemy import text
+from sqlalchemy import and_, func, text
 from sqlalchemy.ext.declarative import declarative_base
 
 from recipe import BadRecipe, Dimension, Recipe, Metric
@@ -269,10 +267,6 @@ class SummarizeOver(RecipeExtension):
         # Remove the summarized dimension
         self.recipe._cauldron.pop(self._summarize_over, None)
         return postquery_parts
-
-
-class CacheRecipe(RecipeExtension):
-    pass
 
 
 class Anonymize(RecipeExtension):

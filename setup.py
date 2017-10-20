@@ -32,7 +32,8 @@ install = [
     'sqlparse',
     'tablib',
     'pyyaml',
-    'flapjack_stack'
+    'flapjack_stack',
+    'stevedore'
 ]
 
 setup(
@@ -64,6 +65,9 @@ setup(
     entry_points={
         'recipe.oven.drivers': [
             'standard = recipe.oven.drivers.standard_oven:StandardOven',
+        ],
+        'recipe.hooks.modify_query': [
+            'standard = recipe.extension:Example',
         ],
     }
 )
