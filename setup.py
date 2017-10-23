@@ -66,8 +66,8 @@ setup(
         'recipe.oven.drivers': [
             'standard = recipe.oven.drivers.standard_oven:StandardOven',
         ],
-        'recipe.hooks.modify_query': [
-            'standard = recipe.extension:Example',
+        'recipe.hooks.testing': [
+            'toyextension2 = tests.test_dynamic_extensions:ToyExtension2',
         ],
     }
 )

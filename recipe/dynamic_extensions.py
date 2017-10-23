@@ -8,10 +8,10 @@ from stevedore.named import NamedExtensionManager
 class DynamicExtensionBase(object):
     """Base class for dynamic extensions
     """
-    hook_type = 'modify_query'
 
-    def __init__(self, recipe_parts):
+    def __init__(self, recipe_parts, hook_type='modify_query'):
         self.recipe_parts = recipe_parts
+        self.hook_type = hook_type
 
     @abc.abstractmethod
     def execute(self):
@@ -23,10 +23,7 @@ def run_hooks(recipe_parts, hook_type, extensions=[]):
         return recipe_parts
 
     namespace = 'recipe.hooks.' + hook_type
-    hook_mgr = NamedExtensionManager(namespace, extensions,
-                                     # invoke_args=recipe_parts,
-                                     # invoke_on_load=True,
-                                     name_order=True)
+    hook_mgr = NamedExtensionManager(namespace, extensions, name_order=True)
 
     for extension in hook_mgr.extensions:
         recipe_parts = extension.plugin(recipe_parts).execute()
