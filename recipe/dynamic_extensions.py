@@ -15,6 +15,8 @@ class DynamicExtensionBase(object):
 
     @abc.abstractmethod
     def execute(self):
+        """Perform transformations on recipe_parts here
+        """
         return self.recipe_parts
 
 
