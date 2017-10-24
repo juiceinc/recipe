@@ -7,7 +7,7 @@ from recipe import BadRecipe
 from recipe import Recipe, Shelf, Dimension, Metric
 from recipe.extensions import (RecipeExtension, AutomaticFilters, Anonymize,
                                SummarizeOver, CompareRecipe, BlendRecipe)
-from tests.test_base import (Session, mytable_shelf, scores_shelf, MyTable,
+from tests.test_base import (oven, mytable_shelf, scores_shelf, MyTable,
                              tagscores_shelf, census_shelf, Census,
                              statefact_shelf)
 
@@ -20,7 +20,7 @@ class DummyExtension(RecipeExtension):
 class TestExtensions(object):
     def setup(self):
         # create a Session
-        self.session = Session()
+        self.session = oven.Session()
         self.shelf = mytable_shelf
         self.extension_classes = []
 
@@ -59,7 +59,7 @@ class AddFilter(RecipeExtension):
 class TestAddFilterExtension(object):
     def setup(self):
         # create a Session
-        self.session = Session()
+        self.session = oven.Session()
         self.shelf = mytable_shelf
         self.extension_classes = [AddFilter]
 
@@ -79,7 +79,7 @@ GROUP BY foo.first"""
 class TestAutomaticFiltersExtension(object):
     def setup(self):
         # create a Session
-        self.session = Session()
+        self.session = oven.Session()
         self.shelf = mytable_shelf
         self.extension_classes = [AutomaticFilters]
 
@@ -241,7 +241,7 @@ GROUP BY foo.first"""
 class TestAnonymizeRecipeExtension(object):
     def setup(self):
         # create a Session
-        self.session = Session()
+        self.session = oven.Session()
 
         self.shelf = Shelf({
             'first': Dimension(MyTable.first),
@@ -328,7 +328,7 @@ class TestSummarizeOverExtension(object):
 
     def setup(self):
         # create a Session
-        self.session = Session()
+        self.session = oven.Session()
         self.extension_classes = [SummarizeOver, Anonymize, AutomaticFilters]
 
     def recipe(self):
@@ -577,7 +577,7 @@ GROUP BY summarize.department"""
 class TestCompareRecipeExtension(object):
     def setup(self):
         # create a Session
-        self.session = Session()
+        self.session = oven.Session()
 
         self.shelf = copy(census_shelf)
         self.extension_classes = [CompareRecipe]
@@ -721,7 +721,7 @@ ORDER BY census.sex,
 class TestBlendRecipeExtension(object):
     def setup(self):
         # create a Session
-        self.session = Session()
+        self.session = oven.Session()
 
         self.shelf = copy(census_shelf)
         self.extension_classes = [BlendRecipe]

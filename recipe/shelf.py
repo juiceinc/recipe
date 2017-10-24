@@ -3,19 +3,13 @@ from collections import OrderedDict
 from copy import copy
 
 from six import iteritems
-from sqlalchemy import Float
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy import func
-from sqlalchemy import distinct
-from sqlalchemy import case
+from sqlalchemy import Float, Integer, String, func, distinct, case
 from sqlalchemy.util import lightweight_named_tuple
 
 from yaml import safe_load
 
-from recipe import BadRecipe, Ingredient, BadIngredient
-from recipe import Dimension
-from recipe import Metric
+from recipe.exceptions import BadRecipe, BadIngredient
+from recipe.ingredients import Ingredient, Dimension, Metric
 from recipe.compat import basestring
 from recipe.utils import AttrDict
 

@@ -10,6 +10,7 @@ from sqlalchemy import (alias)
 from sqlalchemy.sql.elements import BinaryExpression
 
 from recipe.compat import str
+from recipe.dynamic_extensions import run_hooks
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Metric, Filter, Having
 from recipe.shelf import Shelf
@@ -20,14 +21,6 @@ ALLOW_QUERY_CACHING = True
 warnings.simplefilter('always', DeprecationWarning)
 
 logger = logging.getLogger(__name__)
-
-
-__title__ = 'recipe'
-__version__ = '0.1.0'
-__author__ = 'Chris Gemignani'
-__license__ = 'MIT'
-__copyright__ = 'Copyright 2017 Chris Gemignani'
-__docformat__ = 'restructuredtext'
 
 
 # TODO mixin approach
@@ -130,7 +123,8 @@ class Recipe(six.with_metaclass(RecipeBase)):
                  filters=None,
                  order_by=None,
                  session=None,
-                 extension_classes=None):
+                 extension_classes=None,
+                 dynamic_extensions=None):
 
         self._id = str(uuid4())[:8]
         self.shelf(shelf)
@@ -173,6 +167,8 @@ class Recipe(six.with_metaclass(RecipeBase)):
             # Create all the extension instances, passing them a reference to
             # this recipe
             self.recipe_extensions.append(ExtensionClass(self))
+
+        self.dynamic_extensions = dynamic_extensions
 
     # -------
     # Builder for parts of the recipe.
@@ -426,6 +422,9 @@ class Recipe(six.with_metaclass(RecipeBase)):
 
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_postquery_parts(recipe_parts)
+
+        recipe_parts = run_hooks(recipe_parts, 'modify_query',
+                                 self.dynamic_extensions)
 
         # Apply limit on the outermost query
         # This happens after building the comparison recipe

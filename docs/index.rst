@@ -65,6 +65,9 @@ available extensions, connecting to databases and caching.
    :maxdepth: 3
 
    tutorial
+   ovens
+   hooks
+
 
 
 API Reference
@@ -88,3 +91,5 @@ To add features, extensions or ingredients to Recipe see our development guide.
    :maxdepth: 2
 
    development
+   oven_drivers
+   dynamic_extensions

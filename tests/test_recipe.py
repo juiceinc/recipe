@@ -1,17 +1,16 @@
 import pytest
-
 from sqlalchemy import func
 
 from recipe import BadRecipe
 from recipe import Having
 from recipe import Recipe
-from tests.test_base import Session, mytable_shelf, MyTable, census_shelf
+from tests.test_base import oven, mytable_shelf, MyTable, census_shelf
 
 
 class TestRecipeIngredients(object):
     def setup(self):
         # create a Session
-        self.session = Session()
+        self.session = oven.Session()
         self.shelf = mytable_shelf
 
     def recipe(self, **kwargs):
@@ -110,7 +109,7 @@ Tennessee,36.24667550829078,Tennessee
 class TestStats(object):
     def setup(self):
         # create a Session
-        self.session = Session()
+        self.session = oven.Session()
         self.shelf = mytable_shelf
 
     def recipe(self):
@@ -136,7 +135,7 @@ class TestStats(object):
 class TestCacheContext(object):
     def setup(self):
         # create a Session
-        self.session = Session()
+        self.session = oven.Session()
         self.shelf = mytable_shelf
 
     def recipe(self):
