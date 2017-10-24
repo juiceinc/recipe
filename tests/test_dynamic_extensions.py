@@ -1,13 +1,12 @@
 from unittest.mock import patch
 
-from stevedore.named import NamedExtensionManager
-
 from recipe.dynamic_extensions import DynamicExtensionBase, run_hooks
 
 
 class ToyExtension(DynamicExtensionBase):
     def execute(self):
         return super(ToyExtension, self).execute()
+
 
 class ToyExtension2(DynamicExtensionBase):
     name = 'TestExtension2'
@@ -38,4 +37,3 @@ def test_run_hooks():
     result = run_hooks(recipe_parts, hook_type='testing',
                        extensions=['toyextension2'])
     assert expected_result == result
-
