@@ -7,7 +7,6 @@ Recipe
 import logging
 
 from flapjack_stack import FlapjackStack
-from recipe.compat import is_py2
 
 from recipe import default_settings
 from recipe.core import Recipe
@@ -31,14 +30,8 @@ except ImportError:
 
 logging.getLogger(__name__).addHandler(NullHandler())
 
-if is_py2:
-    __all__ = ['BadIngredient', 'BadRecipe', 'Ingredient', 'Dimension',
-               'LookupDimension', 'IdValueDimension', 'Metric', 'DivideMetric',
-               'WtdAvgMetric', 'CountIfMetric', 'SumIfMetric', 'Filter',
-               'Having', 'Recipe', 'Shelf', 'AutomaticShelf', 'SETTINGS',
-               'get_oven']
-else:
-    __all__ = [BadIngredient, BadRecipe, Ingredient, Dimension,
-               LookupDimension, IdValueDimension, Metric, DivideMetric,
-               WtdAvgMetric, CountIfMetric, SumIfMetric, Filter, Having,
-               Recipe, Shelf, AutomaticShelf, SETTINGS, get_oven]
+__all__ = ['BadIngredient', 'BadRecipe', 'Ingredient', 'Dimension',
+           'LookupDimension', 'IdValueDimension', 'Metric', 'DivideMetric',
+           'WtdAvgMetric', 'CountIfMetric', 'SumIfMetric', 'Filter',
+           'Having', 'Recipe', 'Shelf', 'AutomaticShelf', 'SETTINGS',
+           'get_oven']
