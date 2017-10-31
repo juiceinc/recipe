@@ -21,7 +21,6 @@ from recipe.shelf import Shelf, AutomaticShelf
 SETTINGS = FlapjackStack()
 SETTINGS.add_layer(default_settings)
 
-
 try:  # Python 2.7+
     from logging import NullHandler
 except ImportError:
@@ -29,11 +28,10 @@ except ImportError:
         def emit(self, record):
             pass
 
-
 logging.getLogger(__name__).addHandler(NullHandler())
 
-
-__all__ = [BadIngredient, BadRecipe, Ingredient, Dimension, LookupDimension,
-           IdValueDimension, Metric, DivideMetric, WtdAvgMetric, CountIfMetric,
-           SumIfMetric, Filter, Having, Recipe, Shelf, AutomaticShelf,
-           SETTINGS, get_oven]
+__all__ = ['BadIngredient', 'BadRecipe', 'Ingredient', 'Dimension',
+           'LookupDimension', 'IdValueDimension', 'Metric', 'DivideMetric',
+           'WtdAvgMetric', 'CountIfMetric', 'SumIfMetric', 'Filter',
+           'Having', 'Recipe', 'Shelf', 'AutomaticShelf', 'SETTINGS',
+           'get_oven']
