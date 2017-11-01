@@ -4,38 +4,6 @@ Overview
 
 .. start-badges
 
-.. list-table::
-    :stub-columns: 1
-
-    * - docs
-      - |docs|
-    * - tests
-      - | |travis| |appveyor| |requires|
-        | |codecov|
-    * - package
-      - | |version| |downloads| |wheel| |supported-versions| |supported-implementations|
-        | |commits-since|
-
-.. |docs| image:: https://readthedocs.org/projects/recipe/badge/?style=flat
-    :target: https://readthedocs.org/projects/recipe
-    :alt: Documentation Status
-
-.. |travis| image:: https://travis-ci.org/chrisgemignani/recipe.svg?branch=master
-    :alt: Travis-CI Build Status
-    :target: https://travis-ci.org/chrisgemignani/recipe
-
-.. |appveyor| image:: https://ci.appveyor.com/api/projects/status/github/chrisgemignani/recipe?branch=master&svg=true
-    :alt: AppVeyor Build Status
-    :target: https://ci.appveyor.com/project/chrisgemignani/recipe
-
-.. |requires| image:: https://requires.io/github/chrisgemignani/recipe/requirements.svg?branch=master
-    :alt: Requirements Status
-    :target: https://requires.io/github/chrisgemignani/recipe/requirements/?branch=master
-
-.. |codecov| image:: https://codecov.io/github/chrisgemignani/recipe/coverage.svg?branch=master
-    :alt: Coverage Status
-    :target: https://codecov.io/github/chrisgemignani/recipe
-
 .. |version| image:: https://img.shields.io/pypi/v/recipe.svg
     :alt: PyPI Package latest release
     :target: https://pypi.python.org/pypi/recipe
@@ -65,7 +33,11 @@ Overview
 
 Legos for SQL
 
-* Free software: BSD license
+Recipe is an MIT licensed cross-database querying library, written
+in Python. It allows you to reuse SQL fragments to answer data questions
+consistently. Extension classes allow you to support data anonymization,
+automatic generation of where clauses, user permissioning to data, subselects,
+and response formatting.
 
 Installation
 ============
