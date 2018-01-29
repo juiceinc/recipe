@@ -1,11 +1,11 @@
 flapjack_stack==1.0.0
 orderedset==2.0
 packaging==16.8
-psycopg2==2.7.1
+psycopg2==2.7.3.2
 py==1.4.32
 pyparsing==2.1.10
 six==1.10.0
-SQLAlchemy==1.2.0b2
+SQLAlchemy==1.2.2
 sqlparse==0.2.2
 stevedore==1.27.1
 tablib==0.12.1

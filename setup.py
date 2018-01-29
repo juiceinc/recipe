@@ -28,7 +28,7 @@ if sys.argv[-1] == 'test':
 install = [
     'orderedset',
     'six',
-    'sqlalchemy',
+    'sqlalchemy>=1.2.2',
     'sqlparse',
     'tablib',
     'pyyaml',
