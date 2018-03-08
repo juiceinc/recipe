@@ -96,20 +96,9 @@ GROUP BY foo.last
 HAVING sum(foo.age) < 10
 ORDER BY foo.last"""
 
-    def test_wtdavg(self):
-        recipe = self.recipe().shelf(census_shelf) \
-            .metrics('avgage').dimensions('state').order_by('-avgage')
-
-        assert recipe.to_sql() == """SELECT census.state AS state,
-       CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS avgage
-FROM census
-GROUP BY census.state
-ORDER BY CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) DESC"""  # noqa: E501
-
         assert recipe.dataset.csv.replace('\r\n', '\n') == \
-            """state,avgage,state_id
-Vermont,37.0597968760254,Vermont
-Tennessee,36.24667550829078,Tennessee
+        """last,age,last_id
+there,5,there
 """
 
 

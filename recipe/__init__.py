@@ -11,7 +11,6 @@ from recipe import default_settings
 from recipe.core import Recipe
 from recipe.exceptions import BadIngredient
 from recipe.exceptions import BadRecipe
-from recipe.ingredients import CountIfMetric
 from recipe.ingredients import Dimension
 from recipe.ingredients import DivideMetric
 from recipe.ingredients import Filter
@@ -20,7 +19,6 @@ from recipe.ingredients import IdValueDimension
 from recipe.ingredients import Ingredient
 from recipe.ingredients import LookupDimension
 from recipe.ingredients import Metric
-from recipe.ingredients import SumIfMetric
 from recipe.ingredients import WtdAvgMetric
 from recipe.oven import get_oven
 from recipe.shelf import AutomaticShelf
