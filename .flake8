@@ -1,2 +1,13 @@
 [flake8]
-exclude = .git,migrations,docs,manage.py,.venv*
+exclude =
+    .git,
+    migrations,
+    docs,
+    manage.py,
+    .venv*,
+    .tox,
+    # Built docs
+    _build,
+    dist,
+    __init__.py
+max-complexity = 12

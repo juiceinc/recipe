@@ -1,15 +1,18 @@
 from copy import copy
 
 import pytest
+from tests.test_base import MyTable
+from tests.test_base import mytable_shelf
 
+from recipe import AutomaticShelf
 from recipe import BadRecipe
 from recipe import Dimension
 from recipe import Metric
-from recipe import Shelf, AutomaticShelf
-from tests.test_base import mytable_shelf, MyTable
+from recipe import Shelf
 
 
 class TestShelf(object):
+
     def setup(self):
         self.shelf = copy(mytable_shelf)
 
@@ -116,8 +119,10 @@ class TestShelf(object):
 
 
 class TestShelfFromYaml(object):
+
     def setup(self):
-        self.shelf = Shelf.from_yaml("""
+        self.shelf = Shelf.from_yaml(
+            """
 first:
     kind: Dimension
     field: first
@@ -127,7 +132,8 @@ last:
 age:
     kind: Metric
     field: age
-""", MyTable)
+""", MyTable
+        )
         self.shelf.Meta.anonymize = False
 
     def test_find(self):
@@ -233,6 +239,7 @@ age:
 
 
 class TestAutomaticShelf(object):
+
     def setup(self):
         self.shelf = AutomaticShelf(MyTable)
 

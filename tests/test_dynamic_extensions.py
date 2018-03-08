@@ -1,9 +1,14 @@
-from unittest.mock import patch
+try:
+    from unittest.mock import patch
+except ImportError:  # python 2.7
+    from mock import patch
 
-from recipe.dynamic_extensions import DynamicExtensionBase, run_hooks
+from recipe.dynamic_extensions import DynamicExtensionBase
+from recipe.dynamic_extensions import run_hooks
 
 
 class ToyExtension(DynamicExtensionBase):
+
     def execute(self):
         return super(ToyExtension, self).execute()
 
@@ -34,6 +39,7 @@ def test_run_hooks_no_extensions(nem_patch):
 def test_run_hooks():
     recipe_parts = {'test': 1}
     expected_result = {'test': 2}
-    result = run_hooks(recipe_parts, hook_type='testing',
-                       extensions=['toyextension2'])
+    result = run_hooks(
+        recipe_parts, hook_type='testing', extensions=['toyextension2']
+    )
     assert expected_result == result

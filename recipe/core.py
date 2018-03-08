@@ -6,13 +6,16 @@ from uuid import uuid4
 import six
 import tablib
 from orderedset import OrderedSet
-from sqlalchemy import (alias)
+from sqlalchemy import alias
 from sqlalchemy.sql.elements import BinaryExpression
 
 from recipe.compat import str
 from recipe.dynamic_extensions import run_hooks
 from recipe.exceptions import BadRecipe
-from recipe.ingredients import Dimension, Metric, Filter, Having
+from recipe.ingredients import Dimension
+from recipe.ingredients import Filter
+from recipe.ingredients import Having
+from recipe.ingredients import Metric
 from recipe.shelf import Shelf
 from recipe.utils import prettyprintable_sql
 
@@ -21,7 +24,6 @@ ALLOW_QUERY_CACHING = True
 warnings.simplefilter('always', DeprecationWarning)
 
 logger = logging.getLogger(__name__)
-
 
 # TODO mixin approach
 # Stats
@@ -35,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 class Stats(object):
+
     def __init__(self):
         self.ready = False
 
@@ -73,6 +76,7 @@ class Stats(object):
 
 
 class RecipeBase(type):
+
     def __new__(cls, name, bases, attrs):
         super_new = super(RecipeBase, cls).__new__
 
@@ -116,15 +120,17 @@ class Recipe(six.with_metaclass(RecipeBase)):
         A Recipe object.
     """
 
-    def __init__(self,
-                 shelf=None,
-                 metrics=None,
-                 dimensions=None,
-                 filters=None,
-                 order_by=None,
-                 session=None,
-                 extension_classes=None,
-                 dynamic_extensions=None):
+    def __init__(
+        self,
+        shelf=None,
+        metrics=None,
+        dimensions=None,
+        filters=None,
+        order_by=None,
+        session=None,
+        extension_classes=None,
+        dynamic_extensions=None
+    ):
 
         self._id = str(uuid4())[:8]
         self.shelf(shelf)
@@ -278,8 +284,11 @@ class Recipe(six.with_metaclass(RecipeBase)):
                 return f
 
         for f in filters:
-            self._cauldron.use(self._shelf.find(f, (Filter, Having),
-                                                constructor=filter_constructor))
+            self._cauldron.use(
+                self._shelf.find(
+                    f, (Filter, Having), constructor=filter_constructor
+                )
+            )
 
         self.dirty = True
         return self
@@ -416,15 +425,18 @@ class Recipe(six.with_metaclass(RecipeBase)):
             recipe_parts = extension.modify_prequery_parts(recipe_parts)
 
         if len(recipe_parts['query'].selectable.froms) != 1:
-            raise BadRecipe('Recipes must use ingredients that all come from '
-                            'the same table. \nDetails on this recipe:\n{'
-                            '}'.format(str(self._cauldron)))
+            raise BadRecipe(
+                'Recipes must use ingredients that all come from '
+                'the same table. \nDetails on this recipe:\n{'
+                '}'.format(str(self._cauldron))
+            )
 
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_postquery_parts(recipe_parts)
 
-        recipe_parts = run_hooks(recipe_parts, 'modify_query',
-                                 self.dynamic_extensions)
+        recipe_parts = run_hooks(
+            recipe_parts, 'modify_query', self.dynamic_extensions
+        )
 
         # Apply limit on the outermost query
         # This happens after building the comparison recipe
@@ -474,8 +486,10 @@ class Recipe(six.with_metaclass(RecipeBase)):
             if self._table == query_table:
                 return self._table
             else:
-                raise BadRecipe('Recipe was passed a table which is not the '
-                                'table it is selecting from')
+                raise BadRecipe(
+                    'Recipe was passed a table which is not the '
+                    'table it is selecting from'
+                )
         else:
             return query_table
 
@@ -516,8 +530,8 @@ class Recipe(six.with_metaclass(RecipeBase)):
                 fetched_from_cache = True
             fetchtime = time.time()
             self._all = self._cauldron.enchant(
-                self._all,
-                cache_context=self.cache_context)
+                self._all, cache_context=self.cache_context
+            )
             enchanttime = time.time()
 
             self.all_dirty = False
@@ -525,10 +539,10 @@ class Recipe(six.with_metaclass(RecipeBase)):
             # In this case we are using the object self._all as cache
             fetched_from_cache = True
 
-        self.stats.set_stats(len(self._all),
-                             fetchtime - starttime,
-                             enchanttime - fetchtime,
-                             fetched_from_cache)
+        self.stats.set_stats(
+            len(self._all), fetchtime - starttime, enchanttime - fetchtime,
+            fetched_from_cache
+        )
 
         return self._all
 

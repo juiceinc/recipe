@@ -15,5 +15,3 @@ To access the ``SETTINGS`` object import it from recipe.
 .. code-block:: python
 
     from recipe import SETTINGS
-
-

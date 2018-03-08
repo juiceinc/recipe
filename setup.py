@@ -25,6 +25,7 @@ if sys.argv[-1] == 'test':
     errors = os.system('py.test test_tablib.py')
     sys.exit(bool(errors))
 
+# yapf: disable
 install = [
     'orderedset',
     'six',
@@ -35,6 +36,7 @@ install = [
     'flapjack_stack',
     'stevedore'
 ]
+# yapf: enable
 
 setup(
     name='recipe',
