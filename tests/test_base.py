@@ -9,7 +9,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from recipe import Dimension
 from recipe import Metric
 from recipe import Shelf
-from recipe import WtdAvgMetric
 from recipe import get_oven
 
 Base = declarative_base()
@@ -369,7 +368,6 @@ census_shelf = Shelf({
     'state': Dimension(Census.state),
     'sex': Dimension(Census.sex),
     'age': Dimension(Census.age),
-    'avgage': WtdAvgMetric(Census.age, Census.pop2000),
     'pop2000': Metric(func.sum(Census.pop2000)),
     'pop2008': Metric(func.sum(Census.pop2008)),
 })

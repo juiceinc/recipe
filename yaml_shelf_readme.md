@@ -13,9 +13,6 @@ Ingredients always require a `kind`. It can be one of
 - DivideMetric
 - WtdAvgMetric
 - ConditionalMetric
-- SumIfMetric
-- AvgIfMetric
-- CountIfMetric
 
 Ingredients may require one or two fields. Fields look like this
 
@@ -205,13 +202,9 @@ How to define the important average price of product sold
 
 #### WtdAvgMetric
 
-#### CountIfMetric
-
-#### SumIfMetric
-
 #### Filter
 
 #### Having
 from recipe.ingredients import Ingredient, Dimension, LookupDimension, \
-    IdValueDimension, Metric, DivideMetric, WtdAvgMetric, CountIfMetric, \
-    SumIfMetric, Filter, Having
+    IdValueDimension, Metric, DivideMetric, WtdAvgMetric,
+    Filter, Having
