@@ -235,25 +235,7 @@ def ingredient_from_dict(ingr_dict, table=''):
             OrderedDict({
                 'field': 'field',
                 'weight': 'field'
-            }),
-        'ConditionalMetric': {
-            'field': 'aggregated_field'
-        },
-        'SumIfMetric':
-            OrderedDict({
-                'field': 'field',
-                'condition': 'condition'
-            }),
-        'AvgIfMetric':
-            OrderedDict({
-                'field': 'field',
-                'condition': 'condition'
-            }),
-        'CountIfMetric':
-            OrderedDict({
-                'field': 'field',
-                'condition': 'condition'
-            }),
+            })
     }
 
     format_lookup = {
