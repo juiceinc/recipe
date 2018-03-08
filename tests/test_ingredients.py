@@ -492,6 +492,18 @@ class TestParse(object):
                 'value': 'age',
                 'aggregation': 'month'
             }, func.date_trunc('month', MyTable.age)),
+            ({
+                'value': 'age',
+                'aggregation': 'week'
+            }, func.date_trunc('week', MyTable.age)),
+            ({
+                'value': 'age',
+                'aggregation': 'year'
+            }, func.date_trunc('year', MyTable.age)),
+            ({
+                'value': 'age',
+                'aggregation': 'age'
+            }, func.date_part('year', func.age(MyTable.age))),
 
             # Conditions
             ({

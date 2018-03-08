@@ -102,6 +102,7 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
         'week': lambda fld: func.date_trunc('week', fld),
         'year': lambda fld: func.date_trunc('year', fld),
         'quarter': lambda fld: func.date_trunc('quarter', fld),
+        'age': lambda fld: func.date_part('year', func.age(fld)),
         None: lambda fld: fld,
     }
 
