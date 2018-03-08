@@ -15,4 +15,13 @@ precommit:
 	pre-commit run --all-files
 
 flake8:
-	flake8 src/recipe --exit-zero --max-complexity 12 --exclude=__init__.py
+	flake8 --exit-zero
+
+release:
+	# 1) Make sure tests pass
+	# 2) run flake8
+	# 3) bumpversion
+	# 4) release
+	rm -f dist/*
+	python setup.py bdist_wheel sdist
+	twine upload -r pypi dist/

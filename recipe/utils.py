@@ -5,9 +5,14 @@ import sqlalchemy.orm
 import sqlparse
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql.functions import FunctionElement
-from sqlalchemy.sql.sqltypes import String, DateTime, Date, NullType
+from sqlalchemy.sql.sqltypes import Date
+from sqlalchemy.sql.sqltypes import DateTime
+from sqlalchemy.sql.sqltypes import NullType
+from sqlalchemy.sql.sqltypes import String
 
-from recipe.compat import str, basestring, integer_types
+from recipe.compat import basestring
+from recipe.compat import integer_types
+from recipe.compat import str
 
 # only expose the printing sql function
 __all__ = ['prettyprintable_sql', 'clean_unicode']
@@ -63,8 +68,11 @@ def prettyprintable_sql(statement, dialect=None, reindent=True):
             NullType: StringLiteral,
         }
 
-    compiled = statement.compile(dialect=LiteralDialect(),
-                                 compile_kwargs={'literal_binds': True})
+    compiled = statement.compile(
+        dialect=LiteralDialect(), compile_kwargs={
+            'literal_binds': True
+        }
+    )
     return sqlparse.format(str(compiled), reindent=reindent)
 
 
@@ -80,14 +88,15 @@ def clean_unicode(value):
     try:
         cleaned_value = str(value)
     except UnicodeEncodeError:
-        cleaned_value = unicodedata.normalize('NFKD', value).encode(
-            'ascii', 'ignore')
+        cleaned_value = unicodedata.normalize('NFKD',
+                                              value).encode('ascii', 'ignore')
         if not cleaned_value:
             raise ValueError('Could not find useful chars in the string')
     return cleaned_value
 
 
 class AttrDict(dict):
+
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self

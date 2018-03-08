@@ -4,7 +4,10 @@ from sqlalchemy import func
 from sqlalchemy import text
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import BadRecipe, Dimension, Recipe, Metric
+from recipe import BadRecipe
+from recipe import Dimension
+from recipe import Metric
+from recipe import Recipe
 from recipe.compat import basestring
 
 Base = declarative_base()
@@ -194,6 +197,7 @@ class UserFilters(RecipeExtension):
 
 
 class SummarizeOver(RecipeExtension):
+
     def __init__(self, *args, **kwargs):
         super(SummarizeOver, self).__init__(*args, **kwargs)
         self._summarize_over = None
@@ -216,17 +220,19 @@ class SummarizeOver(RecipeExtension):
         # Start with a subquery
         subq = postquery_parts['query'].subquery(name='summarize')
 
-        summarize_over_dim = set((self._summarize_over,
-                                  self._summarize_over + '_id',
-                                  self._summarize_over + '_raw'))
+        summarize_over_dim = set((
+            self._summarize_over, self._summarize_over + '_id',
+            self._summarize_over + '_raw'
+        ))
         dim_column_names = set(dim for dim in self.recipe.dimension_ids).union(
-            set(dim + '_id' for dim in self.recipe.dimension_ids)).union(
-            set(dim + '_raw' for dim in self.recipe.dimension_ids))
+            set(dim + '_id' for dim in self.recipe.dimension_ids)
+        ).union(set(dim + '_raw' for dim in self.recipe.dimension_ids))
         used_dim_column_names = dim_column_names - summarize_over_dim
 
         # Build a new query around the subquery
-        group_by_columns = [col for col in subq.c
-                            if col.name in used_dim_column_names]
+        group_by_columns = [
+            col for col in subq.c if col.name in used_dim_column_names
+        ]
 
         # Generate columns for the metric, remapping the aggregation function
         # count -> sum
@@ -249,30 +255,28 @@ class SummarizeOver(RecipeExtension):
 
                 if summary_aggregation is None:
                     # We don't know how to aggregate this metric in a summary
-                    raise BadRecipe(u'Provide a summary_aggregation for metric'
-                                    u' {}'.format(col.name))
+                    raise BadRecipe(
+                        u'Provide a summary_aggregation for metric'
+                        u' {}'.format(col.name)
+                    )
                 metric_columns.append(summary_aggregation(col).label(col.name))
 
         # Find the ordering columns and apply them to the new query
         order_by_columns = []
         for col in postquery_parts['query']._order_by:
-            subq_col = getattr(subq.c, col.name, getattr(subq.c, col.name +
-                                                         '_raw', None))
+            subq_col = getattr(
+                subq.c, col.name, getattr(subq.c, col.name + '_raw', None)
+            )
             if subq_col is not None:
                 order_by_columns.append(subq_col)
 
         postquery_parts['query'] = self.recipe._session.query(
-            *(group_by_columns +
-              metric_columns)).group_by(
-            *group_by_columns).order_by(*order_by_columns)
+            *(group_by_columns + metric_columns)
+        ).group_by(*group_by_columns).order_by(*order_by_columns)
 
         # Remove the summarized dimension
         self.recipe._cauldron.pop(self._summarize_over, None)
         return postquery_parts
-
-
-class CacheRecipe(RecipeExtension):
-    pass
 
 
 class Anonymize(RecipeExtension):
@@ -379,12 +383,15 @@ class BlendRecipe(RecipeExtension):
                 for suffix in met.make_column_suffixes():
                     col = getattr(blend_subq.c, met.id, None)
                     if col is not None:
-                        postquery_parts['query'] = postquery_parts[
-                            'query'].add_columns(col.label(met.id + suffix))
+                        postquery_parts['query'
+                                       ] = postquery_parts['query'].add_columns(
+                                           col.label(met.id + suffix)
+                                       )
                     else:
-                        raise BadRecipe('{} could not be found in .blend() '
-                                        'recipe subquery'.format(
-                                            id + suffix))
+                        raise BadRecipe(
+                            '{} could not be found in .blend() '
+                            'recipe subquery'.format(id + suffix)
+                        )
 
             # For all dimensions in the blend recipe
             # Use the dimension in the base recipe and
@@ -398,14 +405,18 @@ class BlendRecipe(RecipeExtension):
                 for suffix in dim.make_column_suffixes():
                     col = getattr(blend_subq.c, dim.id, None)
                     if col is not None:
+                        postquery_parts['query'
+                                       ] = postquery_parts['query'].add_columns(
+                                           col.label(dim.id + suffix)
+                                       )
                         postquery_parts['query'] = postquery_parts[
-                            'query'].add_columns(col.label(dim.id + suffix))
-                        postquery_parts['query'] = postquery_parts[
-                            'query'].group_by(col)
+                            'query'
+                        ].group_by(col)
                     else:
-                        raise BadRecipe('{} could not be found in .blend() '
-                                        'recipe subquery'.format(
-                                            id + suffix))
+                        raise BadRecipe(
+                            '{} could not be found in .blend() '
+                            'recipe subquery'.format(id + suffix)
+                        )
 
             base_dim = self.recipe._cauldron[join_base]
             blend_dim = blend_recipe._cauldron[join_blend]
@@ -413,8 +424,10 @@ class BlendRecipe(RecipeExtension):
             base_col = base_dim.columns[0]
             blend_col = getattr(blend_subq.c, blend_dim.id_prop, None)
             if blend_col is None:
-                raise BadRecipe('Can\'t find join property for {} dimension in \
-                        blend recipe'.format(blend_dim.id_prop))
+                raise BadRecipe(
+                    'Can\'t find join property for {} dimension in \
+                        blend recipe'.format(blend_dim.id_prop)
+                )
 
             if blend_type == 'outer':
                 postquery_parts['query'] = postquery_parts['query'] \
@@ -462,8 +475,9 @@ class CompareRecipe(RecipeExtension):
         if not self.compare_recipe:
             return postquery_parts
 
-        for compare_recipe, compare_suffix in zip(self.compare_recipe,
-                                                  self.suffix):
+        for compare_recipe, compare_suffix in zip(
+            self.compare_recipe, self.suffix
+        ):
             comparison_subq = compare_recipe.subquery()
 
             # For all metrics in the comparison recipe
@@ -477,27 +491,34 @@ class CompareRecipe(RecipeExtension):
                 for suffix in met.make_column_suffixes():
                     col = getattr(comparison_subq.c, id + suffix, None)
                     if col is not None:
-                        postquery_parts['query'] = postquery_parts[
-                            'query'].add_columns(col.label(met.id + suffix))
+                        postquery_parts['query'
+                                       ] = postquery_parts['query'].add_columns(
+                                           col.label(met.id + suffix)
+                                       )
                     else:
-                        raise BadRecipe('{} could not be found in .compare() '
-                                        'recipe subquery'.format(
-                                            id + suffix))
+                        raise BadRecipe(
+                            '{} could not be found in .compare() '
+                            'recipe subquery'.format(id + suffix)
+                        )
 
             join_conditions = []
             for dim in compare_recipe.dimension_ids:
                 if dim not in self.recipe.dimension_ids:
                     raise BadRecipe(
                         '{} dimension in comparison recipe must exist '
-                        'in base recipe')
+                        'in base recipe'
+                    )
                 base_dim = self.recipe._cauldron[dim]
                 compare_dim = compare_recipe._cauldron[dim]
                 base_col = base_dim.columns[0]
-                compare_col = getattr(comparison_subq.c, compare_dim.id_prop,
-                                      None)
+                compare_col = getattr(
+                    comparison_subq.c, compare_dim.id_prop, None
+                )
                 if compare_col is None:
-                    raise BadRecipe('Can\'t find join property for {} dimension in \
-                        compare recipe'.format(compare_dim.id_prop))
+                    raise BadRecipe(
+                        'Can\'t find join property for {} dimension in \
+                        compare recipe'.format(compare_dim.id_prop)
+                    )
                 join_conditions.append(base_col == compare_col)
 
             join_clause = text('1=1')

@@ -1,20 +1,29 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from sqlalchemy import case, func, distinct
+from sqlalchemy import case
+from sqlalchemy import distinct
+from sqlalchemy import func
+from tests.test_base import MyTable
+from tests.test_base import mytable_shelf
 
-from recipe import (Dimension, Metric, Ingredient, BadIngredient, Filter,
-                    Having, IdValueDimension, LookupDimension, DivideMetric,
-                    SumIfMetric, CountIfMetric, )
+from recipe import BadIngredient
+from recipe import Dimension
+from recipe import DivideMetric
+from recipe import Filter
+from recipe import Having
+from recipe import IdValueDimension
+from recipe import Ingredient
+from recipe import LookupDimension
+from recipe import Metric
 from recipe.compat import str
-from recipe.ingredients import AvgIfMetric
-from recipe.shelf import parse_field, ingredient_from_dict
-from tests.test_base import mytable_shelf, MyTable
+from recipe.shelf import ingredient_from_dict
+from recipe.shelf import parse_field
 
 
 class TestIngredients(object):
+
     def setup(self):
-        # create a Session
         self.shelf = mytable_shelf
 
     def test_ingredient_init(self):
@@ -45,16 +54,21 @@ class TestIngredients(object):
 
         with pytest.raises(BadIngredient):
             # There must be the same number of column suffixes as columns
-            ingr = Ingredient(column_suffixes=('foo',),
-                              columns=[MyTable.first, MyTable.last])
+            ingr = Ingredient(
+                column_suffixes=('foo',), columns=[MyTable.first, MyTable.last]
+            )
             ingr.make_column_suffixes()
 
     def test_repr(self):
-        ingr = Ingredient(column_suffixes=('_foo', '_moo'),
-                          columns=[MyTable.first, MyTable.last])
+        ingr = Ingredient(
+            column_suffixes=('_foo', '_moo'),
+            columns=[MyTable.first, MyTable.last]
+        )
         s = ingr.__repr__()
-        assert s.startswith('(Ingredient)') and s.endswith('MyTable.first '
-                                                           'MyTable.last')
+        assert s.startswith('(Ingredient)') and s.endswith(
+            'MyTable.first '
+            'MyTable.last'
+        )
 
     def test_comparisons(self):
         """ Items sort in a fixed order"""
@@ -74,15 +88,15 @@ class TestIngredients(object):
         assert filt < hav
         assert dim < hav
         items.sort()
-        assert items == [
-            dim, met2, met, filt, hav, ingr, ingr2
-        ]
+        assert items == [dim, met2, met, filt, hav, ingr, ingr2]
 
     def test_ingredient_make_column_suffixes(self):
         # make_column_suffixes
         # There must be the same number of column suffixes as columns
-        ingr = Ingredient(column_suffixes=('_foo', '_moo'),
-                          columns=[MyTable.first, MyTable.last])
+        ingr = Ingredient(
+            column_suffixes=('_foo', '_moo'),
+            columns=[MyTable.first, MyTable.last]
+        )
         assert ingr.make_column_suffixes() == ('_foo', '_moo')
 
         ingr = Dimension(MyTable.first, formatters=[lambda x: x + 'foo'])
@@ -106,8 +120,7 @@ class TestIngredients(object):
         extras = list(ingr.cauldron_extras)
         assert len(extras) == 0
 
-        ingr = Metric(MyTable.first, id='foo',
-                      formatters=[lambda x: x + 'foo'])
+        ingr = Metric(MyTable.first, id='foo', formatters=[lambda x: x + 'foo'])
         extras = list(ingr.cauldron_extras)
         assert extras[0][0] == 'foo'
         assert len(extras) == 1
@@ -120,6 +133,7 @@ class TestIngredients(object):
 
 
 class TestIngredientBuildFilter(object):
+
     def test_scalar_fitler(self):
         d = Dimension(MyTable.first)
 
@@ -162,8 +176,7 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter(['moo'], operator='notin')
         assert str(filt.filters[0]) == 'foo.first NOT IN (:first_1)'
         filt = d.build_filter(['moo', 'foo'], operator='between')
-        assert str(
-            filt.filters[0]) == 'foo.first BETWEEN :first_1 AND :first_2'
+        assert str(filt.filters[0]) == 'foo.first BETWEEN :first_1 AND :first_2'
 
         with pytest.raises(ValueError):
             filt = d.build_filter('moo', 'in')
@@ -175,6 +188,7 @@ class TestIngredientBuildFilter(object):
 
 
 class TestFilter(object):
+
     def test_filter_cmp(self):
         """ Filters are compared on their filter expression """
         filters = set()
@@ -185,7 +199,9 @@ class TestFilter(object):
         filters.add(f2)
         assert len(filters) == 2
 
-        assert f1 < f2
+        assert str(f1) in (
+            "[u'foo.first = :first_1']", "['foo.first = :first_1']"
+        )
 
         assert str(f1) == '(Filter)f1 foo.first = :first_1'
 
@@ -200,10 +216,14 @@ class TestFilter(object):
 
     def test_filter_describe(self):
         f1 = Filter(MyTable.first == 'moo', id='moo')
-        assert f1.describe() == '(Filter)moo foo.first = :first_1'
+        assert f1.describe() in (
+            u'(Filter)moo [u\'foo.first = :first_1\']',
+            '(Filter)moo [\'foo.first = :first_1\']'
+        )
 
 
 class TestHaving(object):
+
     def test_having_cmp(self):
         """ Filters are compared on their filter expression """
         havings = set()
@@ -214,7 +234,9 @@ class TestHaving(object):
         havings.add(f2)
         assert len(havings) == 2
 
-        assert f1 < f2
+        assert str(f1) in (
+            u'[u\'sum(foo.age) > :sum_1\']', u'[\'sum(foo.age) > :sum_1\']'
+        )
 
         assert str(f1) == '(Having)h1 sum(foo.age) > :sum_1'
 
@@ -231,10 +253,14 @@ class TestHaving(object):
 
     def test_having_describe(self):
         f1 = Having(func.sum(MyTable.age) > 2, id='moo')
-        assert f1.describe() == '(Having)moo sum(foo.age) > :sum_1'
+        assert f1.describe() in (
+            u'(Having)moo [u\'sum(foo.age) > :sum_1\']',
+            '(Having)moo [\'sum(foo.age) > :sum_1\']'
+        )
 
 
 class TestDimension(object):
+
     def test_init(self):
         d = Dimension(MyTable.first)
         assert len(d.columns) == 1
@@ -252,8 +278,7 @@ class TestDimension(object):
         # id gets injected in the response
         assert extras[0][0] == 'moo_id'
 
-        d = Dimension(MyTable.first, id='moo',
-                      formatters=[lambda x: x + 'moo'])
+        d = Dimension(MyTable.first, id='moo', formatters=[lambda x: x + 'moo'])
         extras = list(d.cauldron_extras)
         assert len(extras) == 2
         # formatted value and id gets injected in the response
@@ -262,6 +287,7 @@ class TestDimension(object):
 
 
 class TestIdValueDimension(object):
+
     def test_init(self):
         # IdValueDimension should have two params
         with pytest.raises(TypeError):
@@ -278,8 +304,12 @@ class TestIdValueDimension(object):
         # id gets injected in the response
         assert extras[0][0] == 'moo_id'
 
-        d = IdValueDimension(MyTable.first, MyTable.last, id='moo',
-                             formatters=[lambda x: x + 'moo'])
+        d = IdValueDimension(
+            MyTable.first,
+            MyTable.last,
+            id='moo',
+            formatters=[lambda x: x + 'moo']
+        )
         extras = list(d.cauldron_extras)
         assert len(extras) == 2
         # formatted value and id gets injected in the response
@@ -288,6 +318,7 @@ class TestIdValueDimension(object):
 
 
 class TestLookupDimension(object):
+
     def test_init(self):
         # IdValueDimension should have two params
         with pytest.raises(TypeError):
@@ -304,8 +335,11 @@ class TestLookupDimension(object):
         assert len(d.formatters) == 1
 
         # Existing formatters are preserved
-        d = LookupDimension(MyTable.first, lookup={'hi': 'there'},
-                            formatters=[lambda x: x + 'moo'])
+        d = LookupDimension(
+            MyTable.first,
+            lookup={'hi': 'there'},
+            formatters=[lambda x: x + 'moo']
+        )
         assert len(d.columns) == 1
         assert len(d.group_by) == 1
         assert len(d.formatters) == 2
@@ -314,8 +348,9 @@ class TestLookupDimension(object):
         def fmt(value):
             return value + 'moo'
 
-        d = LookupDimension(MyTable.first, lookup={'hi': 'there'},
-                            formatters=[fmt])
+        d = LookupDimension(
+            MyTable.first, lookup={'hi': 'there'}, formatters=[fmt]
+        )
         assert len(d.columns) == 1
         assert len(d.group_by) == 1
         assert len(d.formatters) == 2
@@ -323,6 +358,7 @@ class TestLookupDimension(object):
 
 
 class TestMetric(object):
+
     def test_init(self):
         # Metric should have an expression
         with pytest.raises(TypeError):
@@ -342,6 +378,7 @@ class TestMetric(object):
 
 
 class TestDivideMetric(object):
+
     def test_init(self):
         # DivideMetric should have a two expressions
         with pytest.raises(TypeError):
@@ -362,109 +399,52 @@ class TestDivideMetric(object):
                                     ':coalesce_1) + :coalesce_2)'
 
         # Generate if denominator == 0 then 'zero' else numerator / denominator
-        d = DivideMetric(func.sum(MyTable.age), func.sum(MyTable.age),
-                         ifzero='zero')
+        d = DivideMetric(
+            func.sum(MyTable.age), func.sum(MyTable.age), ifzero='zero'
+        )
         assert str(d.columns[0]) == \
                'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
                ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
                'CAST(sum(foo.age) AS FLOAT) END'
 
 
-class TestSumIfMetric(object):
-    def test_init(self):
-        # DivideMetric should have a two expressions
-        with pytest.raises(TypeError):
-            d = SumIfMetric()
-
-        with pytest.raises(TypeError):
-            d = SumIfMetric(func.sum(MyTable.age))
-
-        d = SumIfMetric(MyTable.age > 5, MyTable.age)
-        assert len(d.columns) == 1
-        assert len(d.group_by) == 0
-        assert len(d.filters) == 0
-
-        # Generate numerator / (denominator+epsilon) by default
-        assert str(d.columns[0]) == \
-               'sum(CASE WHEN (foo.age > :age_1) THEN foo.age END)'
-
-
-class TestAvgIfMetric(object):
-    def test_init(self):
-        # DivideMetric should have a two expressions
-        with pytest.raises(TypeError):
-            d = AvgIfMetric()
-
-        with pytest.raises(TypeError):
-            d = AvgIfMetric(func.sum(MyTable.age))
-
-        d = AvgIfMetric(MyTable.age > 5, MyTable.age)
-        assert len(d.columns) == 1
-        assert len(d.group_by) == 0
-        assert len(d.filters) == 0
-
-        # Generate numerator / (denominator+epsilon) by default
-        assert str(d.columns[0]) == \
-               'avg(CASE WHEN (foo.age > :age_1) THEN foo.age END)'
-
-
-class TestCountIfMetric(object):
-    def test_init(self):
-        # DivideMetric should have a two expressions
-        with pytest.raises(TypeError):
-            d = SumIfMetric()
-
-        with pytest.raises(TypeError):
-            d = CountIfMetric(func.sum(MyTable.age))
-
-        d = CountIfMetric(MyTable.age > 5, MyTable.first)
-        assert len(d.columns) == 1
-        assert len(d.group_by) == 0
-        assert len(d.filters) == 0
-
-        # Generate numerator / (denominator+epsilon) by default
-        assert str(d.columns[0]) == \
-               'count(DISTINCT CASE WHEN (foo.age > :age_1) THEN foo.first END)'
-
-        d = CountIfMetric(MyTable.age > 5, MyTable.first, distinct=False)
-        assert len(d.columns) == 1
-        assert len(d.group_by) == 0
-        assert len(d.filters) == 0
-
-        # Generate numerator / (denominator+epsilon) by default
-        assert str(d.columns[0]) == \
-               'count(CASE WHEN (foo.age > :age_1) THEN foo.first END)'
-
-
 class TestIngredientFromObj(object):
+
+    def test_ingredient_from_obj(self):
+        m = ingredient_from_dict({'kind': 'Metric', 'field': 'age'}, MyTable)
+        assert isinstance(m, Metric)
+
+        d = ingredient_from_dict({
+            'kind': 'Dimension',
+            'field': 'last'
+        }, MyTable)
+        assert isinstance(d, Dimension)
+
     def test_ingredient_from_dict(self):
         data = [
             ({
-                 'kind': 'Metric',
-                 'field': 'age'
-             }, '(Metric)1 sum(foo.age)'),
+                'kind': 'Metric',
+                'field': 'age'
+            }, '(Metric)1 sum(foo.age)'),
             ({
-                 'kind': 'Dimension',
-                 'field': 'age'
-             }, '(Dimension)1 MyTable.age'),
+                'kind': 'Dimension',
+                'field': 'age'
+            }, '(Dimension)1 MyTable.age'),
             ({
-                 'kind': 'IdValueDimension',
-                 'field': 'age',
-                 'id_field': 'age'
-             }, '(IdValueDimension)1 MyTable.age'),
-            ({
-                 'kind': 'Metric',
-                 'field': {'value': 'age',
-                           'condition': {'field': 'age', 'gt': 22}},
-             },
-             '(Metric)1 sum(CASE WHEN (foo.age > :age_1) THEN foo.age END)'),
-            ({
-                 'kind': 'AvgIfMetric',
+                'kind': 'IdValueDimension',
                 'field': 'age',
-                'condition': {'field': 'age', 'gt': 22},
-             },
-             '(AvgIfMetric)1 avg(CASE WHEN foo.age THEN sum(foo.age) > :sum_1 END)'),
-
+                'id_field': 'age'
+            }, '(IdValueDimension)1 MyTable.age'),
+            ({
+                'kind': 'Metric',
+                'field': {
+                    'value': 'age',
+                    'condition': {
+                        'field': 'age',
+                        'gt': 22
+                    }
+                },
+            }, '(Metric)1 sum(CASE WHEN (foo.age > :age_1) THEN foo.age END)'),
         ]
 
         for d, expected_result in data:
@@ -475,9 +455,13 @@ class TestIngredientFromObj(object):
     def test_ingredient_from_bad_dict(self):
         bad_data = [
             # Missing required fields
-            {'kind': 'Metric'},
-            {'kind': 'IdValueDimension',
-             'field': 'age'},
+            {
+                'kind': 'Metric'
+            },
+            {
+                'kind': 'IdValueDimension',
+                'field': 'age'
+            },
 
             # Bad kind
             {
@@ -509,40 +493,70 @@ class TestIngredientFromObj(object):
 
 
 class TestParse(object):
+
     def test_parse_field_aggregation(self):
         data = [
             # Basic fields
             ('age', func.sum(MyTable.age)),
-            ({'value': 'age'}, func.sum(MyTable.age)),
+            ({
+                'value': 'age'
+            }, func.sum(MyTable.age)),
 
             # Aggregations
-            ({'value': 'age',
-              'aggregation': 'max'}, func.max(MyTable.age)),
-            ({'value': 'age',
-              'aggregation': 'sum'}, func.sum(MyTable.age)),
-            ({'value': 'age',
-              'aggregation': 'min'}, func.min(MyTable.age)),
-            ({'value': 'age',
-              'aggregation': 'avg'}, func.avg(MyTable.age)),
-            ({'value': 'age',
-              'aggregation': 'count_distinct'},
-             func.count(distinct(MyTable.age))),
+            ({
+                'value': 'age',
+                'aggregation': 'max'
+            }, func.max(MyTable.age)),
+            ({
+                'value': 'age',
+                'aggregation': 'sum'
+            }, func.sum(MyTable.age)),
+            ({
+                'value': 'age',
+                'aggregation': 'min'
+            }, func.min(MyTable.age)),
+            ({
+                'value': 'age',
+                'aggregation': 'avg'
+            }, func.avg(MyTable.age)),
+            ({
+                'value': 'age',
+                'aggregation': 'count_distinct'
+            }, func.count(distinct(MyTable.age))),
 
             # Date trunc
-            ({'value': 'age',
-              'aggregation': 'month'},
-             func.date_trunc('month', MyTable.age)),
+            ({
+                'value': 'age',
+                'aggregation': 'month'
+            }, func.date_trunc('month', MyTable.age)),
+            ({
+                'value': 'age',
+                'aggregation': 'week'
+            }, func.date_trunc('week', MyTable.age)),
+            ({
+                'value': 'age',
+                'aggregation': 'year'
+            }, func.date_trunc('year', MyTable.age)),
+            ({
+                'value': 'age',
+                'aggregation': 'age'
+            }, func.date_part('year', func.age(MyTable.age))),
 
             # Conditions
-            ({'value': 'age',
-              'condition': None}, func.sum(MyTable.age)),
-            ({'value': 'age',
-              'condition': {
-                  'field': 'last',
-                  'in': ('Jones', 'Punjabi')
-              }},
-             func.sum(case([(MyTable.last.in_(('Jones', 'Punjabi')),
-                             MyTable.age)]))),
+            ({
+                'value': 'age',
+                'condition': None
+            }, func.sum(MyTable.age)),
+            ({
+                'value': 'age',
+                'condition': {
+                    'field': 'last',
+                    'in': ('Jones', 'Punjabi')
+                }
+            },
+             func.sum(
+                 case([(MyTable.last.in_(('Jones', 'Punjabi')), MyTable.age)])
+             )),
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, MyTable)
@@ -553,21 +567,29 @@ class TestParse(object):
             # Basic fields
             ('first+last', func.sum(MyTable.first + MyTable.last)),
             ('first-last', func.sum(MyTable.first - MyTable.last)),
-            ('first-last-first', func.sum(MyTable.first - MyTable.last -
-                                          MyTable.first)),
+            (
+                'first-last-first',
+                func.sum(MyTable.first - MyTable.last - MyTable.first)
+            ),
             ('first*last', func.sum(MyTable.first * MyTable.last)),
             ('first/last', func.sum(MyTable.first / MyTable.last)),
-            ('first*last-first', func.sum(MyTable.first * MyTable.last -
-                                          MyTable.first)),
+            (
+                'first*last-first',
+                func.sum(MyTable.first * MyTable.last - MyTable.first)
+            ),
             # Spacing doesn't matter
             ('first + last', func.sum(MyTable.first + MyTable.last)),
             ('first -last', func.sum(MyTable.first - MyTable.last)),
-            ('first - last   -  first', func.sum(MyTable.first - MyTable.last -
-                                          MyTable.first)),
+            (
+                'first - last   -  first',
+                func.sum(MyTable.first - MyTable.last - MyTable.first)
+            ),
             ('first  *last', func.sum(MyTable.first * MyTable.last)),
             ('first/  last', func.sum(MyTable.first / MyTable.last)),
-            ('first*  last /first', func.sum(MyTable.first * MyTable.last /
-                                          MyTable.first)),
+            (
+                'first*  last /first',
+                func.sum(MyTable.first * MyTable.last / MyTable.first)
+            ),
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, MyTable)
@@ -577,50 +599,59 @@ class TestParse(object):
         data = [
             # Basic fields
             ('age', MyTable.age),
-            ({'value': 'age'}, MyTable.age),
+            ({
+                'value': 'age'
+            }, MyTable.age),
 
             # Conditions
-            ({'value': 'age',
-              'condition': None}, MyTable.age),
-            ({'value': 'age',
-              'condition': {
-                  'field': 'last',
-                  'in': ('Jones', 'Punjabi')
-              }},
-             case([(MyTable.last.in_(('Jones', 'Punjabi')),
-                    MyTable.age)])),
+            ({
+                'value': 'age',
+                'condition': None
+            }, MyTable.age),
+            ({
+                'value': 'age',
+                'condition': {
+                    'field': 'last',
+                    'in': ('Jones', 'Punjabi')
+                }
+            }, case([(MyTable.last.in_(('Jones', 'Punjabi')), MyTable.age)])),
         ]
         for input_field, expected_result in data:
-            result = parse_field(input_field, table=MyTable,
-                                 aggregated=False)
+            result = parse_field(input_field, table=MyTable, aggregated=False)
             assert str(result) == str(expected_result)
 
     def test_bad_field_string_definitions(self):
-        bad_data = ['first+',
-                    'first-',
-                    'fir st-',
-                    'fir st',
-                    'first+last-',
-                    'sum(fir-st)',
-                    'fir st*',
-                    'first/last-',
-                    'foo']
+        bad_data = [
+            'first+', 'first-', 'fir st-', 'fir st', 'first+last-',
+            'sum(fir-st)', 'fir st*', 'first/last-', 'foo'
+        ]
         for input_field in bad_data:
             with pytest.raises(BadIngredient):
                 parse_field(input_field, MyTable)
 
     def test_bad_field_definitions(self):
-        bad_data = ['abb',
-                    {},
-                    [],
-                    ['abb'],
-                    ['age'],
-                    {'value': 'abb'},
-                    {'value': ['age']},
-                    {'condition': ['age']},
-                    {'condition': 'foo'},
-                    {'condition': []},
-                    ]
+        bad_data = [
+            'abb',
+            {},
+            [],
+            ['abb'],
+            ['age'],
+            {
+                'value': 'abb'
+            },
+            {
+                'value': ['age']
+            },
+            {
+                'condition': ['age']
+            },
+            {
+                'condition': 'foo'
+            },
+            {
+                'condition': []
+            },
+        ]
         for input_field in bad_data:
             with pytest.raises(BadIngredient):
                 parse_field(input_field, MyTable)

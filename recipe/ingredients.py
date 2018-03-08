@@ -1,13 +1,18 @@
 from functools import total_ordering
 from uuid import uuid4
 
-from sqlalchemy import Float, between, case, cast, distinct, func
+from sqlalchemy import Float
+from sqlalchemy import between
+from sqlalchemy import case
+from sqlalchemy import cast
+from sqlalchemy import distinct
+from sqlalchemy import func
 from sqlalchemy.sql.functions import FunctionElement
 
-from recipe.compat import basestring, str
+from recipe.compat import basestring
+from recipe.compat import str
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict
-
 
 # TODO: How do we avoid attaching significance to particular
 # indices in columns
@@ -52,13 +57,17 @@ class Ingredient(object):
         self.ordering = kwargs.pop('ordering', 'asc')
 
         if not isinstance(self.formatters, (list, tuple)):
-            raise BadIngredient('formatters passed to an ingredient must be a '
-                                'list or tuple')
+            raise BadIngredient(
+                'formatters passed to an ingredient must be a '
+                'list or tuple'
+            )
         # If explicit suffixes are passed in, there must be one for each column
         if self.column_suffixes is not None and \
                 len(self.column_suffixes) != len(self.columns):
-            raise BadIngredient('column_suffixes must be the same length as '
-                                'columns')
+            raise BadIngredient(
+                'column_suffixes must be the same length as '
+                'columns'
+            )
 
         # Any remaining passed properties are available in self.meta
         self.meta = AttrDict(kwargs)
@@ -76,8 +85,9 @@ class Ingredient(object):
         return ' '.join(str(col) for col in self.columns)
 
     def describe(self):
-        return u'({}){} {}'.format(self.__class__.__name__, self.id,
-                                   self._stringify())
+        return u'({}){} {}'.format(
+            self.__class__.__name__, self.id, self._stringify()
+        )
 
     def _format_value(self, value):
         """ Formats value using any stored formatters
@@ -103,8 +113,10 @@ class Ingredient(object):
             else:
                 return ('',)
         else:
-            raise BadIngredient('column_suffixes must be supplied if there is '
-                                'more than one column')
+            raise BadIngredient(
+                'column_suffixes must be supplied if there is '
+                'more than one column'
+            )
 
     @property
     def query_columns(self):
@@ -185,15 +197,18 @@ class Ingredient(object):
                 return Filter(filter_column.notin_(value))
             elif operator == 'between':
                 if len(value) != 2:
-                    ValueError('When using between, you can only supply a '
-                               'lower and upper bounds.')
+                    ValueError(
+                        'When using between, you can only supply a '
+                        'lower and upper bounds.'
+                    )
                 lower_bound, upper_bound = value
-                return Filter(between(filter_column, lower_bound,
-                                      upper_bound))
+                return Filter(between(filter_column, lower_bound, upper_bound))
             return Filter(filter_column.in_(value))
         else:
-            raise ValueError('{} is not a valid operator for the '
-                             'supplied value'.format(operator))
+            raise ValueError(
+                '{} is not a valid operator for the '
+                'supplied value'.format(operator)
+            )
 
     @property
     def expression(self):
@@ -233,7 +248,6 @@ class Having(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Having, self).__init__(**kwargs)
         self.havings = [expression]
-
 
     def _stringify(self):
         return ' '.join(str(expr) for expr in self.havings)
@@ -288,6 +302,7 @@ class Dimension(Ingredient):
 
 
 class IdValueDimension(Dimension):
+
     def __init__(self, id_expression, value_expression, **kwargs):
         kwargs['id_expression'] = id_expression
         super(IdValueDimension, self).__init__(value_expression, **kwargs)
@@ -301,12 +316,14 @@ class LookupDimension(Dimension):
         super(LookupDimension, self).__init__(expression, **kwargs)
         self.lookup = lookup
         if not isinstance(lookup, dict):
-            raise BadIngredient('lookup for LookupDimension must be a '
-                                'dictionary')
+            raise BadIngredient(
+                'lookup for LookupDimension must be a '
+                'dictionary'
+            )
         self.default = kwargs.pop('default', 'Not found')
-        self.formatters.insert(0,
-                               lambda value: self.lookup.get(value,
-                                                             self.default))
+        self.formatters.insert(
+            0, lambda value: self.lookup.get(value, self.default)
+        )
 
 
 class Metric(Ingredient):
@@ -334,13 +351,15 @@ class DivideMetric(Metric):
             # Add an epsilon value to denominator to avoid divide by zero
             # errors
             expression = cast(numerator, Float) / (
-                func.coalesce(cast(denominator, Float), 0.0) + epsilon)
+                func.coalesce(cast(denominator, Float), 0.0) + epsilon
+            )
         else:
             # If the denominator is zero, return the ifzero value otherwise do
             # the division
             expression = case(
                 ((cast(denominator, Float) == 0.0, ifzero),),
-                else_=cast(numerator, Float) / cast(denominator, Float))
+                else_=cast(numerator, Float) / cast(denominator, Float)
+            )
         super(DivideMetric, self).__init__(expression, **kwargs)
 
 
@@ -351,57 +370,4 @@ class WtdAvgMetric(DivideMetric):
     def __init__(self, expression, weight_expression, **kwargs):
         numerator = func.sum(expression * weight_expression)
         denominator = func.sum(weight_expression)
-        super(WtdAvgMetric, self).__init__(
-            numerator, denominator, **kwargs)
-
-
-class ConditionalMetric(Metric):
-    """ A metric that calculates a function against an expression if a
-    condition is true
-    """
-
-    def __init__(self, condition, expression, **kwargs):
-        fn = getattr(func, kwargs.pop('func', 'sum'))
-        if kwargs.pop('distinct', False):
-            expression = fn(distinct(
-                case(((condition, expression),), else_=None
-                     )))
-        else:
-            expression = fn(
-                case(((condition, expression),), else_=None
-                     ))
-
-        super(ConditionalMetric, self).__init__(expression, **kwargs)
-
-
-class SumIfMetric(ConditionalMetric):
-    """ A metric that calculates a sum of an expression if a condition is true
-    """
-
-    def __init__(self, condition, expression, **kwargs):
-        kwargs['func'] = 'sum'
-        super(SumIfMetric, self).__init__(condition, expression, **kwargs)
-
-
-class AvgIfMetric(ConditionalMetric):
-    """ A metric that calculates a average of an expression if a condition is
-    true
-    """
-
-    def __init__(self, condition, expression, **kwargs):
-        kwargs['func'] = 'avg'
-        super(AvgIfMetric, self).__init__(condition, expression, **kwargs)
-
-
-class CountIfMetric(ConditionalMetric):
-    """ A metric that calculates a sum of an expression if a condition is true
-    """
-
-    def __init__(self, condition, expression, **kwargs):
-        """ Initializes an instance of a CountIfMetric
-        :param distinct: Should the count include a distinct
-                               (default is True)
-        """
-        kwargs['func'] = 'count'
-        kwargs['distinct'] = kwargs.get('distinct', True)
-        super(CountIfMetric, self).__init__(condition, expression, **kwargs)
+        super(WtdAvgMetric, self).__init__(numerator, denominator, **kwargs)

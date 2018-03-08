@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
 from sqlalchemy import func
-
-from recipe.utils import replace_whitespace_with_space, AttrDict, disaggregate
 from tests.test_base import MyTable
+
+from recipe.utils import AttrDict
+from recipe.utils import disaggregate
+from recipe.utils import replace_whitespace_with_space
 
 
 class TestUtils(object):
+
     def test_replace_whitespace_with_space(self):
         assert replace_whitespace_with_space('fooo    moo') == 'fooo moo'
         assert replace_whitespace_with_space('fooo\n\t moo') == 'fooo moo'
 
 
 class TestAttrDict(object):
+
     def test_attr_dict(self):
         d = AttrDict()
         assert isinstance(d, dict)
@@ -19,4 +23,3 @@ class TestAttrDict(object):
         assert d['foo'] == 2
         d['bar'] = 3
         assert d.bar == 3
-

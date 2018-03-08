@@ -142,12 +142,6 @@ DivideMetric
 WtdAvgMetric
 ~~~~~~~~~~~~
 
-SumIfMetric
-~~~~~~~~~~~
-
-CountIfMetric
-~~~~~~~~~~~~~
-
 Filter
 ~~~~~~
 

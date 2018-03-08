@@ -1,18 +1,18 @@
-from sqlalchemy import Column, Float, distinct
+from sqlalchemy import Column
+from sqlalchemy import Float
 from sqlalchemy import Integer
 from sqlalchemy import String
-from sqlalchemy import create_engine
+from sqlalchemy import distinct
 from sqlalchemy import func
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 
 from recipe import Dimension
 from recipe import Metric
 from recipe import Shelf
-from recipe import WtdAvgMetric
+from recipe import get_oven
 
 Base = declarative_base()
-engine = create_engine('sqlite://')
+oven = get_oven('sqlite://')
 
 TABLEDEF = '''
         CREATE TABLE IF NOT EXISTS foo
@@ -21,13 +21,10 @@ TABLEDEF = '''
          age int);
 '''
 
-# create a configured "Session" class
-Session = sessionmaker(bind=engine)
-
-engine.execute(TABLEDEF)
-engine.execute(
-    "insert into foo values ('hi', 'there', 5), ('hi', 'fred', 10)")
-
+oven.engine.execute(TABLEDEF)
+oven.engine.execute(
+    "insert into foo values ('hi', 'there', 5), ('hi', 'fred', 10)"
+)
 
 # Create a table for testing summarization
 TABLEDEF = '''
@@ -38,8 +35,8 @@ TABLEDEF = '''
          score float);
 '''
 
-engine.execute(TABLEDEF)
-engine.execute(
+oven.engine.execute(TABLEDEF)
+oven.engine.execute(
     """insert into scores values
 ('chris', 'sales', '1', 80),
 ('chip', 'ops', '2', 80),
@@ -47,8 +44,8 @@ engine.execute(
 ('chip', 'ops', '4', 100),
 ('annika', 'ops', '5', 80),
 ('annika', 'ops', '6', 90)
-""")
-
+"""
+)
 
 # Create a table for denormalized tables with tags
 TABLEDEF = '''
@@ -60,9 +57,8 @@ TABLEDEF = '''
          score float);
 '''
 
-# create a configured "Session" class
-engine.execute(TABLEDEF)
-engine.execute(
+oven.engine.execute(TABLEDEF)
+oven.engine.execute(
     """insert into tagscores values
 ('chris', 'individual', 'sales', '1', 80),
 ('chris', 'manager', 'sales', '1', 80),
@@ -74,12 +70,15 @@ engine.execute(
 ('chip', 'musician', 'ops', '4', 100),
 ('annika', 'individual', 'ops', '5', 80),
 ('annika', 'individual', 'ops', '6', 90)
-""")
+"""
+)
 
-
-engine.execute("""CREATE TABLE IF NOT EXISTS census
-(state text, sex text, age integer, pop2000 integer, pop2008 integer);""")
-engine.execute("""INSERT INTO CENSUS values
+oven.engine.execute(
+    """CREATE TABLE IF NOT EXISTS census
+(state text, sex text, age integer, pop2000 integer, pop2008 integer);"""
+)
+oven.engine.execute(
+    """INSERT INTO CENSUS values
 ('Tennessee','M',0,38916,43537), ('Tennessee','M',1,38569,43343),
 ('Tennessee','M',2,38157,42592), ('Tennessee','M',3,37780,41530),
 ('Tennessee','M',4,38789,41627), ('Tennessee','M',5,39442,40758),
@@ -252,20 +251,25 @@ engine.execute("""INSERT INTO CENSUS values
 ('Vermont','F',80,1622,1658), ('Vermont','F',81,1414,1509),
 ('Vermont','F',82,1490,1569), ('Vermont','F',83,1245,1432),
 ('Vermont','F',84,1172,1397), ('Vermont','F',85,7300,8494);
-""")
+"""
+)
 
-engine.execute("""CREATE TABLE IF NOT EXISTS state_fact
+oven.engine.execute(
+    """CREATE TABLE IF NOT EXISTS state_fact
 (id text, name text, abbreviation text, country
 text, type text, sort text, status text, occupied text, notes text,
 fips_state text, assoc_press text, standard_federal_region text,
 census_region text, census_region_name text, census_division text,
-census_division_name text, circuit_court text);""")
+census_division_name text, circuit_court text);"""
+)
 
-engine.execute("""insert into state_fact VALUES
+oven.engine.execute(
+    """insert into state_fact VALUES
 ('42','Tennessee','TN','USA','state','10','current','occupied','','47',
  'Tenn.','IV','3','South','6','East South Central','6'),
 ('45','Vermont','VT','USA','state','10','current','occupied','','50','Vt.',
- 'I','1','Northeast','1','New England','2');""")
+ 'I','1','Northeast','1','New England','2');"""
+)
 
 
 class MyTable(Base):
@@ -338,16 +342,18 @@ mytable_shelf = Shelf({
     'age': Metric(func.sum(MyTable.age))
 })
 
-
 scores_shelf = Shelf({
-    'username': Dimension(Scores.username),
-    'department': Dimension(Scores.department,
-                            anonymizer=lambda value: value[::-1]),
-    'testid': Dimension(Scores.testid),
-    'test_cnt': Metric(func.count(distinct(TagScores.testid))),
-    'score': Metric(func.avg(Scores.score))
+    'username':
+        Dimension(Scores.username),
+    'department':
+        Dimension(Scores.department, anonymizer=lambda value: value[::-1]),
+    'testid':
+        Dimension(Scores.testid),
+    'test_cnt':
+        Metric(func.count(distinct(TagScores.testid))),
+    'score':
+        Metric(func.avg(Scores.score))
 })
-
 
 tagscores_shelf = Shelf({
     'username': Dimension(TagScores.username),
@@ -358,16 +364,13 @@ tagscores_shelf = Shelf({
     'score': Metric(func.avg(TagScores.score), summary_aggregation=func.sum)
 })
 
-
 census_shelf = Shelf({
     'state': Dimension(Census.state),
     'sex': Dimension(Census.sex),
     'age': Dimension(Census.age),
-    'avgage': WtdAvgMetric(Census.age, Census.pop2000),
     'pop2000': Metric(func.sum(Census.pop2000)),
     'pop2008': Metric(func.sum(Census.pop2008)),
 })
-
 
 statefact_shelf = Shelf({
     'state': Dimension(StateFact.name),
