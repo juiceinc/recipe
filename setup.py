@@ -27,13 +27,13 @@ if sys.argv[-1] == 'test':
 
 # yapf: disable
 install = [
-    'orderedset', 
-    'six', 
-    'sqlalchemy>=1.2.2', 
-    'sqlparse', 
-    'tablib', 
+    'orderedset',
+    'six',
+    'sqlalchemy>=1.2.2',
+    'sqlparse',
+    'tablib',
     'pyyaml',
-    'flapjack_stack', 
+    'flapjack_stack',
     'stevedore'
 ]
 # yapf: enable
