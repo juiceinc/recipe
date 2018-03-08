@@ -25,10 +25,18 @@ if sys.argv[-1] == 'test':
     errors = os.system('py.test test_tablib.py')
     sys.exit(bool(errors))
 
+# yapf: disable
 install = [
-    'orderedset', 'six', 'sqlalchemy>=1.2.2', 'sqlparse', 'tablib', 'pyyaml',
-    'flapjack_stack', 'stevedore'
+    'orderedset', 
+    'six', 
+    'sqlalchemy>=1.2.2', 
+    'sqlparse', 
+    'tablib', 
+    'pyyaml',
+    'flapjack_stack', 
+    'stevedore'
 ]
+# yapf: enable
 
 setup(
     name='recipe',
