@@ -1,13 +1,17 @@
 import pytest
 from sqlalchemy import func
+from tests.test_base import MyTable
+from tests.test_base import census_shelf
+from tests.test_base import mytable_shelf
+from tests.test_base import oven
 
 from recipe import BadRecipe
 from recipe import Having
 from recipe import Recipe
-from tests.test_base import oven, mytable_shelf, MyTable, census_shelf
 
 
 class TestRecipeIngredients(object):
+
     def setup(self):
         # create a Session
         self.session = oven.Session()
@@ -41,8 +45,8 @@ hi\t15\thi\r
 '''
 
     def test_dimension2(self):
-        recipe = self.recipe().metrics('age').dimensions('last').order_by(
-            'last')
+        recipe = self.recipe().metrics('age').dimensions('last'
+                                                        ).order_by('last')
         assert recipe.to_sql() == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
@@ -53,8 +57,9 @@ ORDER BY foo.last"""
         assert recipe.stats.rows == 2
 
     def test_recipe_init(self):
-        recipe = self.recipe(metrics=('age',), dimensions=('last',)).order_by(
-            'last')
+        recipe = self.recipe(
+            metrics=('age',), dimensions=('last',)
+        ).order_by('last')
         assert recipe.to_sql() == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
@@ -65,8 +70,9 @@ ORDER BY foo.last"""
         assert recipe.stats.rows == 2
 
     def test_filter(self):
-        recipe = self.recipe().metrics('age').dimensions(
-            'last').filters(MyTable.age > 2).order_by('last')
+        recipe = self.recipe().metrics('age').dimensions('last').filters(
+            MyTable.age > 2
+        ).order_by('last')
         assert recipe.to_sql() == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
@@ -79,8 +85,9 @@ ORDER BY foo.last"""
 
     def test_having(self):
         hv = Having(func.sum(MyTable.age) < 10)
-        recipe = self.recipe().metrics('age').dimensions(
-            'last').filters(MyTable.age > 2).filters(hv).order_by('last')
+        recipe = self.recipe().metrics('age').dimensions('last').filters(
+            MyTable.age > 2
+        ).filters(hv).order_by('last')
         assert recipe.to_sql() == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
@@ -107,6 +114,7 @@ Tennessee,36.24667550829078,Tennessee
 
 
 class TestStats(object):
+
     def setup(self):
         # create a Session
         self.session = oven.Session()
@@ -116,8 +124,7 @@ class TestStats(object):
         return Recipe(shelf=self.shelf, session=self.session)
 
     def test_stats(self):
-        recipe = self.recipe().metrics('age').dimensions(
-            'last')
+        recipe = self.recipe().metrics('age').dimensions('last')
 
         assert recipe.stats.ready is False
         with pytest.raises(BadRecipe):
@@ -133,6 +140,7 @@ class TestStats(object):
 
 
 class TestCacheContext(object):
+
     def setup(self):
         # create a Session
         self.session = oven.Session()
@@ -142,8 +150,7 @@ class TestCacheContext(object):
         return Recipe(shelf=self.shelf, session=self.session)
 
     def test_cachec_context(self):
-        recipe = self.recipe().metrics('age').dimensions(
-            'last')
+        recipe = self.recipe().metrics('age').dimensions('last')
         recipe.cache_context = 'foo'
 
         assert len(recipe.all()) == 2

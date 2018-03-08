@@ -26,14 +26,8 @@ if sys.argv[-1] == 'test':
     sys.exit(bool(errors))
 
 install = [
-    'orderedset',
-    'six',
-    'sqlalchemy>=1.2.2',
-    'sqlparse',
-    'tablib',
-    'pyyaml',
-    'flapjack_stack',
-    'stevedore'
+    'orderedset', 'six', 'sqlalchemy>=1.2.2', 'sqlparse', 'tablib', 'pyyaml',
+    'flapjack_stack', 'stevedore'
 ]
 
 setup(

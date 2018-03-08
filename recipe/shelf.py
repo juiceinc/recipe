@@ -3,16 +3,22 @@ from collections import OrderedDict
 from copy import copy
 
 from six import iteritems
-from sqlalchemy import Float, Integer, String, func, distinct, case
+from sqlalchemy import Float
+from sqlalchemy import Integer
+from sqlalchemy import String
+from sqlalchemy import case
+from sqlalchemy import distinct
+from sqlalchemy import func
 from sqlalchemy.util import lightweight_named_tuple
-
 from yaml import safe_load
 
-from recipe.exceptions import BadRecipe, BadIngredient
-from recipe.ingredients import Ingredient, Dimension, Metric
 from recipe.compat import basestring
+from recipe.exceptions import BadIngredient
+from recipe.exceptions import BadRecipe
+from recipe.ingredients import Dimension
+from recipe.ingredients import Ingredient
+from recipe.ingredients import Metric
 from recipe.utils import AttrDict
-
 
 # Ensure case and distinct don't get reaped. We need it in scope for
 # creating Metrics
@@ -28,8 +34,7 @@ def ingredient_class_for_name(class_name):
     return c
 
 
-def parse_condition(cond, table, aggregated=False,
-                    default_aggregation='sum'):
+def parse_condition(cond, table, aggregated=False, default_aggregation='sum'):
     """ Create a format string from a condition """
     if cond is None:
         return None
@@ -37,10 +42,12 @@ def parse_condition(cond, table, aggregated=False,
     else:
         if 'field' not in cond:
             raise BadIngredient('field must be defined in condition')
-        field = parse_field(cond['field'],
-                            table,
-                            aggregated=aggregated,
-                            default_aggregation=default_aggregation)
+        field = parse_field(
+            cond['field'],
+            table,
+            aggregated=aggregated,
+            default_aggregation=default_aggregation
+        )
         if 'in' in cond:
             condition_expression = getattr(field, 'in_')(tuple(cond['in']))
         elif 'gt' in cond:
@@ -144,8 +151,9 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
             if hasattr(table, word):
                 field_parts.append(getattr(table, word))
             else:
-                raise BadIngredient('{} is not a field in {}'.format(
-                    word, table.__name__))
+                raise BadIngredient(
+                    '{} is not a field in {}'.format(word, table.__name__)
+                )
     if len(field_parts) is None:
         raise BadIngredient('field is not defined.')
     # Fields should have an odd number of parts
@@ -177,10 +185,12 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
 
     aggregator = aggregation_lookup[aggr]
 
-    condition = parse_condition(fld.get('condition', None),
-                                table=table,
-                                aggregated=False,
-                                default_aggregation=default_aggregation)
+    condition = parse_condition(
+        fld.get('condition', None),
+        table=table,
+        aggregated=False,
+        default_aggregation=default_aggregation
+    )
 
     if condition is not None:
         field = case([(condition, field)])
@@ -202,26 +212,47 @@ def ingredient_from_dict(ingr_dict, table=''):
     locals()[tablename] = table
 
     params_lookup = {
-        'Dimension': {'field': 'field'},
-        'LookupDimension': {'field': 'field'},
-        'IdValueDimension': {'field': 'field', 'id_field': 'field'},
-        'Metric': {'field': 'aggregated_field'},
-        'DivideMetric': OrderedDict({
-            'numerator_field': 'aggregated_field',
-            'denominator_field': 'aggregated_field'}),
-        'WtdAvgMetric': OrderedDict({
+        'Dimension': {
+            'field': 'field'
+        },
+        'LookupDimension': {
+            'field': 'field'
+        },
+        'IdValueDimension': {
             'field': 'field',
-            'weight': 'field'}),
-        'ConditionalMetric': {'field': 'aggregated_field'},
-        'SumIfMetric': OrderedDict({
-            'field': 'field',
-            'condition': 'condition'}),
-        'AvgIfMetric': OrderedDict({
-            'field': 'field',
-            'condition': 'condition'}),
-        'CountIfMetric': OrderedDict({
-            'field': 'field',
-            'condition': 'condition'}),
+            'id_field': 'field'
+        },
+        'Metric': {
+            'field': 'aggregated_field'
+        },
+        'DivideMetric':
+            OrderedDict({
+                'numerator_field': 'aggregated_field',
+                'denominator_field': 'aggregated_field'
+            }),
+        'WtdAvgMetric':
+            OrderedDict({
+                'field': 'field',
+                'weight': 'field'
+            }),
+        'ConditionalMetric': {
+            'field': 'aggregated_field'
+        },
+        'SumIfMetric':
+            OrderedDict({
+                'field': 'field',
+                'condition': 'condition'
+            }),
+        'AvgIfMetric':
+            OrderedDict({
+                'field': 'field',
+                'condition': 'condition'
+            }),
+        'CountIfMetric':
+            OrderedDict({
+                'field': 'field',
+                'condition': 'condition'
+            }),
     }
 
     format_lookup = {
@@ -248,20 +279,21 @@ def ingredient_from_dict(ingr_dict, table=''):
     for k, v in iteritems(params):
         # All the params must be in the dict
         if k not in ingr_dict:
-            raise BadIngredient('{} must be defined to make a {}'.format(k,
-                                                                         kind))
+            raise BadIngredient(
+                '{} must be defined to make a {}'.format(k, kind)
+            )
         if v == 'field':
-            statement = parse_field(ingr_dict.pop(k, None),
-                                    table,
-                                    aggregated=False)
+            statement = parse_field(
+                ingr_dict.pop(k, None), table, aggregated=False
+            )
         elif v == 'aggregated_field':
-            statement = parse_field(ingr_dict.pop(k, None),
-                                    table,
-                                    aggregated=True)
+            statement = parse_field(
+                ingr_dict.pop(k, None), table, aggregated=True
+            )
         elif v == 'condition':
-            statement = parse_condition(ingr_dict.pop(k, None),
-                                        table,
-                                        aggregated=True)
+            statement = parse_condition(
+                ingr_dict.pop(k, None), table, aggregated=True
+            )
         else:
             raise BadIngredient('Do not know what this is')
 
@@ -271,8 +303,9 @@ def ingredient_from_dict(ingr_dict, table=''):
     # If the format string exists in format_lookup, use the value otherwise
     # use the original format
     if 'format' in ingr_dict:
-        ingr_dict['format'] = format_lookup.get(ingr_dict['format'],
-                                                ingr_dict['format'])
+        ingr_dict['format'] = format_lookup.get(
+            ingr_dict['format'], ingr_dict['format']
+        )
     return IngredientClass(*args, **ingr_dict)
 
 
@@ -333,10 +366,9 @@ class Shelf(AttrDict):
         they were used."""
         return tuple(
             sorted(
-                [d.id for d in self.values()
-                 if isinstance(d, Dimension)],
-                key=lambda id: self.Meta.ingredient_order.index(id)
-                if id in self.Meta.ingredient_order else 9999
+                [d.id for d in self.values() if isinstance(d, Dimension)],
+                key=
+                lambda id: self.Meta.ingredient_order.index(id) if id in self.Meta.ingredient_order else 9999
             )
         )
 
@@ -346,10 +378,9 @@ class Shelf(AttrDict):
         they were used. """
         return tuple(
             sorted(
-                [d.id for d in self.values()
-                 if isinstance(d, Metric)],
-                key=lambda id: self.Meta.ingredient_order.index(id)
-                if id in self.Meta.ingredient_order else 9999
+                [d.id for d in self.values() if isinstance(d, Metric)],
+                key=
+                lambda id: self.Meta.ingredient_order.index(id) if id in self.Meta.ingredient_order else 9999
             )
         )
 
@@ -402,13 +433,11 @@ class Shelf(AttrDict):
                 obj = obj[1:]
 
             if obj not in self:
-                raise BadRecipe(
-                    "{} doesn't exist on the shelf".format(obj))
+                raise BadRecipe("{} doesn't exist on the shelf".format(obj))
 
             ingredient = self[obj]
             if not isinstance(ingredient, filter_to_class):
-                raise BadRecipe('{} is not a {}'.format(
-                    obj, filter_to_class))
+                raise BadRecipe('{} is not a {}'.format(obj, filter_to_class))
 
             if set_descending:
                 ingredient.ordering = 'desc'
@@ -417,8 +446,7 @@ class Shelf(AttrDict):
         elif isinstance(obj, filter_to_class):
             return obj
         else:
-            raise BadRecipe('{} is not a {}'.format(obj,
-                                                    type(filter_to_class)))
+            raise BadRecipe('{} is not a {}'.format(obj, type(filter_to_class)))
 
     def brew_query_parts(self):
         """ Make columns, group_bys, filters, havings
@@ -469,7 +497,8 @@ class Shelf(AttrDict):
 
             # Mixin the extra fields
             keyed_tuple = lightweight_named_tuple(
-                'result', sample_item._fields + tuple(extra_fields))
+                'result', sample_item._fields + tuple(extra_fields)
+            )
 
             # Iterate over the results and build a new namedtuple for each row
             for row in list:
@@ -480,6 +509,7 @@ class Shelf(AttrDict):
 
 
 class AutomaticShelf(Shelf):
+
     def __init__(self, table, *args, **kwargs):
         d = self._introspect(table)
         super(AutomaticShelf, self).__init__(d)
