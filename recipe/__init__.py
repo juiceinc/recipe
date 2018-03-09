@@ -32,6 +32,8 @@ except ImportError:
 
 logging.getLogger(__name__).addHandler(NullHandler())
 
+__version__ = '0.1.0'
+
 __all__ = [
     'BadIngredient', 'BadRecipe', 'Ingredient', 'Dimension', 'LookupDimension',
     'IdValueDimension', 'Metric', 'DivideMetric', 'WtdAvgMetric',
