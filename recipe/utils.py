@@ -4,6 +4,7 @@ import unicodedata
 import sqlalchemy.orm
 import sqlparse
 from sqlalchemy.engine.default import DefaultDialect
+from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.sql.sqltypes import Date
 from sqlalchemy.sql.sqltypes import DateTime
 from sqlalchemy.sql.sqltypes import NullType
@@ -99,3 +100,10 @@ class AttrDict(dict):
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
+
+
+def disaggregate(expr):
+    if isinstance(expr, FunctionElement):
+        return expr.clause_expr
+    else:
+        return expr

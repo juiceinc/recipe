@@ -78,10 +78,15 @@ class Ingredient(object):
     def __repr__(self):
         return self.describe()
 
+    def _stringify(self):
+        """ Return a relevant string based on ingredient type for repr and
+        ordering. Ingredients with the same classname, id and _stringify
+        value are considered the same. """
+        return ' '.join(str(col) for col in self.columns)
+
     def describe(self):
         return u'({}){} {}'.format(
-            self.__class__.__name__, self.id,
-            ' '.join(str(col) for col in self.columns)
+            self.__class__.__name__, self.id, self._stringify()
         )
 
     def _format_value(self, value):
@@ -223,16 +228,8 @@ class Filter(Ingredient):
         super(Filter, self).__init__(**kwargs)
         self.filters = [expression]
 
-    def __cmp__(self, other):
-        return (self.filters[0] > str(other.filters[0])) - \
-               (self.filters[0] < str(other.filters[0]))
-
-    def __repr__(self):
-        return '{}'.format([str(f) for f in self.filters])
-
-    def describe(self):
-        """ Stringify this ingredient to help in debugging. """
-        return u'({}){} {}'.format(self.__class__.__name__, self.id, str(self))
+    def _stringify(self):
+        return ' '.join(str(expr) for expr in self.filters)
 
     @property
     def expression(self):
@@ -252,16 +249,8 @@ class Having(Ingredient):
         super(Having, self).__init__(**kwargs)
         self.havings = [expression]
 
-    def __cmp__(self, other):
-        return (self.havings[0] > str(other.havings[0])) - \
-               (self.havings[0] < str(other.havings[0]))
-
-    def __repr__(self):
-        return u'{}'.format([str(f) for f in self.havings])
-
-    def describe(self):
-        """ Stringify this ingredient to help in debugging. """
-        return u'({}){} {}'.format(self.__class__.__name__, self.id, str(self))
+    def _stringify(self):
+        return ' '.join(str(expr) for expr in self.havings)
 
     @property
     def expression(self):
@@ -344,12 +333,6 @@ class Metric(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Metric, self).__init__(**kwargs)
         self.columns = [expression]
-
-    def _disaggregate(self, expr):
-        if isinstance(expr, FunctionElement):
-            return expr.clause_expr
-        else:
-            return expr
 
 
 class DivideMetric(Metric):

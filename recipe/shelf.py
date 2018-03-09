@@ -49,19 +49,40 @@ def parse_condition(cond, table, aggregated=False, default_aggregation='sum'):
             default_aggregation=default_aggregation
         )
         if 'in' in cond:
-            condition_expression = getattr(field, 'in_')(tuple(cond['in']))
+            value = cond['in']
+            if isinstance(value, (dict)):
+                raise BadIngredient('value for in must be a list')
+            condition_expression = getattr(field, 'in_')(tuple(value))
         elif 'gt' in cond:
-            condition_expression = getattr(field, '__gt__')(cond['gt'])
+            value = cond['gt']
+            if isinstance(value, (list, dict)):
+                raise BadIngredient('conditional value must be a scalar')
+            condition_expression = getattr(field, '__gt__')(value)
         elif 'gte' in cond:
-            condition_expression = getattr(field, '__gte__')(cond['gte'])
+            value = cond['gte']
+            if isinstance(value, (list, dict)):
+                raise BadIngredient('conditional value must be a scalar')
+            condition_expression = getattr(field, '__ge__')(value)
         elif 'lt' in cond:
-            condition_expression = getattr(field, '__lt__')(cond['lt'])
+            value = cond['lt']
+            if isinstance(value, (list, dict)):
+                raise BadIngredient('conditional value must be a scalar')
+            condition_expression = getattr(field, '__lt__')(value)
         elif 'lte' in cond:
-            condition_expression = getattr(field, '__lte__')(cond['lte'])
+            value = cond['lte']
+            if isinstance(value, (list, dict)):
+                raise BadIngredient('conditional value must be a scalar')
+            condition_expression = getattr(field, '__le__')(value)
         elif 'eq' in cond:
-            condition_expression = getattr(field, '__eq__')(cond['eq'])
+            value = cond['eq']
+            if isinstance(value, (list, dict)):
+                raise BadIngredient('conditional value must be a scalar')
+            condition_expression = getattr(field, '__eq__')(value)
         elif 'ne' in cond:
-            condition_expression = getattr(field, '__ne__')(cond['ne'])
+            value = cond['ne']
+            if isinstance(value, (list, dict)):
+                raise BadIngredient('conditional value must be a scalar')
+            condition_expression = getattr(field, '__ne__')(value)
         else:
             raise BadIngredient('Bad condition')
 
@@ -82,7 +103,8 @@ def tokenize(s):
     """
 
     # Crude tokenization
-    s = s.replace('+', ' PLUS ').replace('-', ' MINUS ')
+    s = s.replace('+', ' PLUS ').replace('-', ' MINUS ') \
+        .replace('/', ' DIVIDE ').replace('*', ' MULTIPLY ')
     words = [w for w in s.split(' ') if w]
     return words
 
@@ -146,7 +168,7 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
 
     field_parts = []
     for word in tokenize(value):
-        if word in ('MINUS', 'PLUS'):
+        if word in ('MINUS', 'PLUS', 'DIVIDE', 'MULTIPLY'):
             field_parts.append(word)
         else:
             if hasattr(table, word):
@@ -173,6 +195,10 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
                 field = field.__add__(other_field)
             elif operator == 'MINUS':
                 field = field.__sub__(other_field)
+            elif operator == 'DIVIDE':
+                field = field.__div__(other_field)
+            elif operator == 'MULTIPLY':
+                field = field.__mul__(other_field)
             else:
                 raise BadIngredient('Unknown operator {}'.format(operator))
 

@@ -59,6 +59,37 @@ class TestIngredients(object):
             )
             ingr.make_column_suffixes()
 
+    def test_repr(self):
+        ingr = Ingredient(
+            column_suffixes=('_foo', '_moo'),
+            columns=[MyTable.first, MyTable.last]
+        )
+        s = ingr.__repr__()
+        assert s.startswith('(Ingredient)') and s.endswith(
+            'MyTable.first '
+            'MyTable.last'
+        )
+
+    def test_comparisons(self):
+        """ Items sort in a fixed order"""
+        ingr = Ingredient(columns=[MyTable.first], id=1)
+        ingr2 = Ingredient(columns=[MyTable.first], id=2)
+        dim = Dimension(MyTable.first, id=3)
+        met = Metric(func.sum(MyTable.first), id=4)
+        met2 = Metric(func.sum(MyTable.first), id=2)
+        filt = Filter(MyTable.first < 'h', id=92)
+        hav = Having(func.sum(MyTable.first) < 3, id=2)
+
+        items = [filt, hav, met2, met, ingr, dim, ingr2]
+        assert ingr != ingr2
+        assert not ingr == ingr2
+        assert dim < met
+        assert met < filt
+        assert filt < hav
+        assert dim < hav
+        items.sort()
+        assert items == [dim, met2, met, filt, hav, ingr, ingr2]
+
     def test_ingredient_make_column_suffixes(self):
         # make_column_suffixes
         # There must be the same number of column suffixes as columns
@@ -161,16 +192,14 @@ class TestFilter(object):
     def test_filter_cmp(self):
         """ Filters are compared on their filter expression """
         filters = set()
-        f1 = Filter(MyTable.first == 'moo')
-        f2 = Filter(MyTable.first == 'foo')
+        f1 = Filter(MyTable.first == 'moo', id='f1')
+        f2 = Filter(MyTable.first == 'foo', id='f2')
 
         filters.add(f1)
         filters.add(f2)
         assert len(filters) == 2
 
-        assert str(f1) in (
-            "[u'foo.first = :first_1']", "['foo.first = :first_1']"
-        )
+        assert str(f1) == '(Filter)f1 foo.first = :first_1'
 
     def test_expression(self):
         f = Filter(MyTable.first == 'foo')
@@ -183,10 +212,7 @@ class TestFilter(object):
 
     def test_filter_describe(self):
         f1 = Filter(MyTable.first == 'moo', id='moo')
-        assert f1.describe() in (
-            u'(Filter)moo [u\'foo.first = :first_1\']',
-            '(Filter)moo [\'foo.first = :first_1\']'
-        )
+        assert f1.describe() == '(Filter)moo foo.first = :first_1'
 
 
 class TestHaving(object):
@@ -194,16 +220,14 @@ class TestHaving(object):
     def test_having_cmp(self):
         """ Filters are compared on their filter expression """
         havings = set()
-        f1 = Having(func.sum(MyTable.age) > 2)
-        f2 = Having(func.sum(MyTable.age) > 3)
+        f1 = Having(func.sum(MyTable.age) > 2, id='h1')
+        f2 = Having(func.sum(MyTable.age) > 3, id='h2')
 
         havings.add(f1)
         havings.add(f2)
         assert len(havings) == 2
 
-        assert str(f1) in (
-            u'[u\'sum(foo.age) > :sum_1\']', u'[\'sum(foo.age) > :sum_1\']'
-        )
+        assert str(f1) == '(Having)h1 sum(foo.age) > :sum_1'
 
     def test_expression(self):
         h = Having(func.sum(MyTable.age) > 2)
@@ -218,10 +242,7 @@ class TestHaving(object):
 
     def test_having_describe(self):
         f1 = Having(func.sum(MyTable.age) > 2, id='moo')
-        assert f1.describe() in (
-            u'(Having)moo [u\'sum(foo.age) > :sum_1\']',
-            '(Having)moo [\'sum(foo.age) > :sum_1\']'
-        )
+        assert f1.describe() == '(Having)moo sum(foo.age) > :sum_1'
 
 
 class TestDimension(object):
@@ -368,9 +389,9 @@ class TestDivideMetric(object):
             func.sum(MyTable.age), func.sum(MyTable.age), ifzero='zero'
         )
         assert str(d.columns[0]) == \
-            'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
-            ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
-            'CAST(sum(foo.age) AS FLOAT) END'
+               'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
+               ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
+               'CAST(sum(foo.age) AS FLOAT) END'
 
 
 class TestIngredientFromObj(object):
@@ -384,6 +405,59 @@ class TestIngredientFromObj(object):
             'field': 'last'
         }, MyTable)
         assert isinstance(d, Dimension)
+
+    def test_ingredient_from_dict(self):
+        data = [
+            ({
+                'kind': 'Metric',
+                'field': 'age'
+            }, '(Metric)1 sum(foo.age)'),
+            ({
+                'kind': 'Dimension',
+                'field': 'age'
+            }, '(Dimension)1 MyTable.age'),
+            ({
+                'kind': 'IdValueDimension',
+                'field': 'age',
+                'id_field': 'age'
+            }, '(IdValueDimension)1 MyTable.age'),
+            ({
+                'kind': 'Metric',
+                'field': {
+                    'value': 'age',
+                    'condition': {
+                        'field': 'age',
+                        'gt': 22
+                    }
+                },
+            }, '(Metric)1 sum(CASE WHEN (foo.age > :age_1) THEN foo.age END)'),
+        ]
+
+        for d, expected_result in data:
+            m = ingredient_from_dict(d, MyTable)
+            m.id = 1
+            assert str(m) == expected_result
+
+    def test_ingredient_from_bad_dict(self):
+        bad_data = [
+            # Missing required fields
+            {
+                'kind': 'Metric'
+            },
+            {
+                'kind': 'IdValueDimension',
+                'field': 'age'
+            },
+
+            # Bad kind
+            {
+                'kind': 'MooCow',
+                'field': 'last'
+            }
+        ]
+        for d in bad_data:
+            with pytest.raises(BadIngredient):
+                m = ingredient_from_dict(d, MyTable)
 
     def test_ingredient_from_obj_with_meta(self):
         m = ingredient_from_dict({
@@ -483,6 +557,25 @@ class TestParse(object):
                 'first-last-first',
                 func.sum(MyTable.first - MyTable.last - MyTable.first)
             ),
+            ('first*last', func.sum(MyTable.first * MyTable.last)),
+            ('first/last', func.sum(MyTable.first / MyTable.last)),
+            (
+                'first*last-first',
+                func.sum(MyTable.first * MyTable.last - MyTable.first)
+            ),
+            # Spacing doesn't matter
+            ('first + last', func.sum(MyTable.first + MyTable.last)),
+            ('first -last', func.sum(MyTable.first - MyTable.last)),
+            (
+                'first - last   -  first',
+                func.sum(MyTable.first - MyTable.last - MyTable.first)
+            ),
+            ('first  *last', func.sum(MyTable.first * MyTable.last)),
+            ('first/  last', func.sum(MyTable.first / MyTable.last)),
+            (
+                'first*  last /first',
+                func.sum(MyTable.first * MyTable.last / MyTable.first)
+            ),
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, MyTable)
@@ -516,7 +609,7 @@ class TestParse(object):
     def test_bad_field_string_definitions(self):
         bad_data = [
             'first+', 'first-', 'fir st-', 'fir st', 'first+last-',
-            'sum(first)', 'foo'
+            'sum(fir-st)', 'fir st*', 'first/last-', 'foo'
         ]
         for input_field in bad_data:
             with pytest.raises(BadIngredient):

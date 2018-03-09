@@ -117,6 +117,15 @@ class TestShelf(object):
         self.shelf.clear()
         assert len(self.shelf) == 0
 
+    def test_dimension_ids(self):
+        assert len(self.shelf.dimension_ids) == 2
+        assert self.shelf.dimension_ids in (('last', 'first'),
+                                            ('first', 'last'))
+
+    def test_metric_ids(self):
+        assert len(self.shelf.metric_ids) == 1
+        assert self.shelf.metric_ids == ('age',)
+
 
 class TestShelfFromYaml(object):
 

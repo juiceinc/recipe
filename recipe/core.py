@@ -392,6 +392,8 @@ class Recipe(six.with_metaclass(RecipeBase)):
 
         :return: A SQLAlchemy query
         """
+        if len(self._cauldron.ingredients()) == 0:
+            raise BadRecipe('No ingredients have been added to this recipe')
         if not self.dirty and self._query:
             return self._query
 
