@@ -199,10 +199,6 @@ class TestFilter(object):
         filters.add(f2)
         assert len(filters) == 2
 
-        assert str(f1) in (
-            "[u'foo.first = :first_1']", "['foo.first = :first_1']"
-        )
-
         assert str(f1) == '(Filter)f1 foo.first = :first_1'
 
     def test_expression(self):
@@ -216,10 +212,7 @@ class TestFilter(object):
 
     def test_filter_describe(self):
         f1 = Filter(MyTable.first == 'moo', id='moo')
-        assert f1.describe() in (
-            u'(Filter)moo [u\'foo.first = :first_1\']',
-            '(Filter)moo [\'foo.first = :first_1\']'
-        )
+        assert f1.describe() == '(Filter)moo foo.first = :first_1'
 
 
 class TestHaving(object):
@@ -233,10 +226,6 @@ class TestHaving(object):
         havings.add(f1)
         havings.add(f2)
         assert len(havings) == 2
-
-        assert str(f1) in (
-            u'[u\'sum(foo.age) > :sum_1\']', u'[\'sum(foo.age) > :sum_1\']'
-        )
 
         assert str(f1) == '(Having)h1 sum(foo.age) > :sum_1'
 
@@ -253,10 +242,7 @@ class TestHaving(object):
 
     def test_having_describe(self):
         f1 = Having(func.sum(MyTable.age) > 2, id='moo')
-        assert f1.describe() in (
-            u'(Having)moo [u\'sum(foo.age) > :sum_1\']',
-            '(Having)moo [\'sum(foo.age) > :sum_1\']'
-        )
+        assert f1.describe() == '(Having)moo sum(foo.age) > :sum_1'
 
 
 class TestDimension(object):
