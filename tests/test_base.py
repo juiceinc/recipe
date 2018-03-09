@@ -1,15 +1,7 @@
-from sqlalchemy import Column
-from sqlalchemy import Float
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy import distinct
-from sqlalchemy import func
+from sqlalchemy import Column, Float, Integer, String, distinct, func
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import Dimension
-from recipe import Metric
-from recipe import Shelf
-from recipe import get_oven
+from recipe import Dimension, Metric, Shelf, get_oven
 
 Base = declarative_base()
 oven = get_oven('sqlite://')

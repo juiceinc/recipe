@@ -1,16 +1,10 @@
 from functools import total_ordering
 from uuid import uuid4
 
-from sqlalchemy import Float
-from sqlalchemy import between
-from sqlalchemy import case
-from sqlalchemy import cast
-from sqlalchemy import distinct
-from sqlalchemy import func
+from sqlalchemy import Float, between, case, cast, distinct, func
 from sqlalchemy.sql.functions import FunctionElement
 
-from recipe.compat import basestring
-from recipe.compat import str
+from recipe.compat import basestring, str
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict
 

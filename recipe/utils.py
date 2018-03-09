@@ -5,14 +5,9 @@ import sqlalchemy.orm
 import sqlparse
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql.functions import FunctionElement
-from sqlalchemy.sql.sqltypes import Date
-from sqlalchemy.sql.sqltypes import DateTime
-from sqlalchemy.sql.sqltypes import NullType
-from sqlalchemy.sql.sqltypes import String
+from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
 
-from recipe.compat import basestring
-from recipe.compat import integer_types
-from recipe.compat import str
+from recipe.compat import basestring, integer_types, str
 
 # only expose the printing sql function
 __all__ = ['prettyprintable_sql', 'clean_unicode']

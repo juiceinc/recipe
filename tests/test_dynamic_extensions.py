@@ -3,8 +3,7 @@ try:
 except ImportError:  # python 2.7
     from mock import patch
 
-from recipe.dynamic_extensions import DynamicExtensionBase
-from recipe.dynamic_extensions import run_hooks
+from recipe.dynamic_extensions import DynamicExtensionBase, run_hooks
 
 
 class ToyExtension(DynamicExtensionBase):

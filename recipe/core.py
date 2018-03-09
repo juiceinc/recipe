@@ -12,10 +12,7 @@ from sqlalchemy.sql.elements import BinaryExpression
 from recipe.compat import str
 from recipe.dynamic_extensions import run_hooks
 from recipe.exceptions import BadRecipe
-from recipe.ingredients import Dimension
-from recipe.ingredients import Filter
-from recipe.ingredients import Having
-from recipe.ingredients import Metric
+from recipe.ingredients import Dimension, Filter, Having, Metric
 from recipe.shelf import Shelf
 from recipe.utils import prettyprintable_sql
 

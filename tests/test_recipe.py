@@ -1,13 +1,8 @@
 import pytest
 from sqlalchemy import func
-from tests.test_base import MyTable
-from tests.test_base import census_shelf
-from tests.test_base import mytable_shelf
-from tests.test_base import oven
+from tests.test_base import MyTable, census_shelf, mytable_shelf, oven
 
-from recipe import BadRecipe
-from recipe import Having
-from recipe import Recipe
+from recipe import BadRecipe, Having, Recipe
 
 
 class TestRecipeIngredients(object):

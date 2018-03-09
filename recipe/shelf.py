@@ -3,21 +3,13 @@ from collections import OrderedDict
 from copy import copy
 
 from six import iteritems
-from sqlalchemy import Float
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy import case
-from sqlalchemy import distinct
-from sqlalchemy import func
+from sqlalchemy import Float, Integer, String, case, distinct, func
 from sqlalchemy.util import lightweight_named_tuple
 from yaml import safe_load
 
 from recipe.compat import basestring
-from recipe.exceptions import BadIngredient
-from recipe.exceptions import BadRecipe
-from recipe.ingredients import Dimension
-from recipe.ingredients import Ingredient
-from recipe.ingredients import Metric
+from recipe.exceptions import BadIngredient, BadRecipe
+from recipe.ingredients import Dimension, Ingredient, Metric
 from recipe.utils import AttrDict
 
 # Ensure case and distinct don't get reaped. We need it in scope for

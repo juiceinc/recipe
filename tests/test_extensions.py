@@ -2,26 +2,16 @@ from copy import copy
 
 import pytest
 from sqlalchemy import func
-from tests.test_base import Census
-from tests.test_base import MyTable
-from tests.test_base import census_shelf
-from tests.test_base import mytable_shelf
-from tests.test_base import oven
-from tests.test_base import scores_shelf
-from tests.test_base import statefact_shelf
-from tests.test_base import tagscores_shelf
+from tests.test_base import (
+    Census, MyTable, census_shelf, mytable_shelf, oven, scores_shelf,
+    statefact_shelf, tagscores_shelf
+)
 
-from recipe import BadRecipe
-from recipe import Dimension
-from recipe import Metric
-from recipe import Recipe
-from recipe import Shelf
-from recipe.extensions import Anonymize
-from recipe.extensions import AutomaticFilters
-from recipe.extensions import BlendRecipe
-from recipe.extensions import CompareRecipe
-from recipe.extensions import RecipeExtension
-from recipe.extensions import SummarizeOver
+from recipe import BadRecipe, Dimension, Metric, Recipe, Shelf
+from recipe.extensions import (
+    Anonymize, AutomaticFilters, BlendRecipe, CompareRecipe, RecipeExtension,
+    SummarizeOver
+)
 
 
 class DummyExtension(RecipeExtension):

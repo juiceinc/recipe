@@ -1,24 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from sqlalchemy import case
-from sqlalchemy import distinct
-from sqlalchemy import func
-from tests.test_base import MyTable
-from tests.test_base import mytable_shelf
+from sqlalchemy import case, distinct, func
+from tests.test_base import MyTable, mytable_shelf
 
-from recipe import BadIngredient
-from recipe import Dimension
-from recipe import DivideMetric
-from recipe import Filter
-from recipe import Having
-from recipe import IdValueDimension
-from recipe import Ingredient
-from recipe import LookupDimension
-from recipe import Metric
+from recipe import (
+    BadIngredient, Dimension, DivideMetric, Filter, Having, IdValueDimension,
+    Ingredient, LookupDimension, Metric
+)
 from recipe.compat import str
-from recipe.shelf import ingredient_from_dict
-from recipe.shelf import parse_field
+from recipe.shelf import ingredient_from_dict, parse_field
 
 
 class TestIngredients(object):

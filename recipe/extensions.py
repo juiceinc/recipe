@@ -1,13 +1,8 @@
 # TODO ask jason about methods of doing this
-from sqlalchemy import and_
-from sqlalchemy import func
-from sqlalchemy import text
+from sqlalchemy import and_, func, text
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import BadRecipe
-from recipe import Dimension
-from recipe import Metric
-from recipe import Recipe
+from recipe import BadRecipe, Dimension, Metric, Recipe
 from recipe.compat import basestring
 
 Base = declarative_base()

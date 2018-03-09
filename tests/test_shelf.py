@@ -1,14 +1,9 @@
 from copy import copy
 
 import pytest
-from tests.test_base import MyTable
-from tests.test_base import mytable_shelf
+from tests.test_base import MyTable, mytable_shelf
 
-from recipe import AutomaticShelf
-from recipe import BadRecipe
-from recipe import Dimension
-from recipe import Metric
-from recipe import Shelf
+from recipe import AutomaticShelf, BadRecipe, Dimension, Metric, Shelf
 
 
 class TestShelf(object):
