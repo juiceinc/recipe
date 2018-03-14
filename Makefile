@@ -24,4 +24,4 @@ release:
 	# 4) release
 	rm -f dist/*
 	python setup.py bdist_wheel sdist
-	twine upload -r pypi dist/
+	twine upload -r pypi dist/*
