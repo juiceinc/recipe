@@ -37,6 +37,6 @@ __version__ = '0.2.0'
 __all__ = [
     'BadIngredient', 'BadRecipe', 'Ingredient', 'Dimension', 'LookupDimension',
     'IdValueDimension', 'Metric', 'DivideMetric', 'WtdAvgMetric',
-    'CountIfMetric', 'SumIfMetric', 'Filter', 'Having', 'Recipe', 'Shelf',
+    'Filter', 'Having', 'Recipe', 'Shelf',
     'AutomaticShelf', 'SETTINGS', 'get_oven'
 ]
