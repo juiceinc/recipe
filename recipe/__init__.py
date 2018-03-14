@@ -32,7 +32,7 @@ except ImportError:
 
 logging.getLogger(__name__).addHandler(NullHandler())
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 __all__ = [
     'BadIngredient', 'BadRecipe', 'Ingredient', 'Dimension', 'LookupDimension',
