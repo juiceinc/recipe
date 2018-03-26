@@ -17,23 +17,35 @@ logging.captureWarnings(True)
 
 ingredient_schema = {
     'kind': {
-        'type': 'string',
-        'required': False,
-        'default': 'Metric'
+        'type':
+            'string',
+        'required':
+            True,
+        'allowed': [
+            'Ingredient',
+            'Dimension',
+            'LookupDimension',
+            'IdValueDimension',
+            'Metric',
+            'DivideMetric',
+            'WtdAvgMetric',
+            'Filter',
+            'Having',
+        ],
+        'default':
+            'Metric'
     },
     'field': {
-        'schema': 'aggregated_field',
+        'schema': 'field',
         'type': 'dict',
-        'coerce': 'to_field',
+        'coerce': 'to_field_dict',
+        'allow_unknown': False,
         # 'required': True
     },
     'format': {
         'type': 'string',
         'coerce': 'to_format_with_lookup'
-    },
-    # 'ts': {
-    #     'default_setter': 'utcnow'
-    # }
+    }
 }
 
 default_field_schema = {
@@ -51,7 +63,6 @@ default_field_schema = {
         'schema': 'condition',
         'contains_oneof': ['in', 'gt', 'gte', 'lt', 'lte', 'eq', 'ne'],
         'required': False,
-        'default': None,
         'allow_unknown': False
     }
 }
@@ -152,13 +163,19 @@ class IngredientValidator(Validator):
     default_aggregation = 'sum'
 
     def __init__(self, *args, **kwargs):
-        kwargs['schema'] = ingredient_schema
-        kwargs['allow_unknown'] = True
+        # Set defaults
+        kwargs['schema'] = kwargs.get('schema', ingredient_schema)
+        kwargs['allow_unknown'] = kwargs.get('allow_unknown', True)
+        kwargs['normalize'] = kwargs.get('normalize', True)
         super(IngredientValidator, self).__init__(*args, **kwargs)
 
     def _normalize_coerce_to_format_with_lookup(self, v):
         """ Replace a format with a default """
-        return self.format_lookup.get(v, v)
+        try:
+            return self.format_lookup.get(v, v)
+        except TypeError:
+            # v is something we can't lookup (like a list)
+            return v
 
     def _normalize_coerce_to_aggregation_with_default(self, v):
         if v is None:
@@ -166,9 +183,9 @@ class IngredientValidator(Validator):
         else:
             return v
 
-    def _normalize_coerce_to_field(self, v):
+    def _normalize_coerce_to_field_dict(self, v):
         if isinstance(v, _str_type):
-            return {'field': v}
+            return {'value': v}
         else:
             return v
 
@@ -190,44 +207,13 @@ class IngredientValidator(Validator):
 
     def _validate_contains_oneof(self, keys, field, value):
         """ Validates that exactly one of the keys exists in value """
+        print 'validate condi', keys, '->', field, '=>', value
         results = [k for k in keys if k in value]
 
         if len(results) == 0:
             self._error(field, 'Must contain one of {}'.format(keys))
+            return False
         elif len(results) > 1:
             self._error(field, 'Must contain only one of {}'.format(keys))
-
-
-v = IngredientValidator()
-# if __name__ == '__main__':
-#     v = IngredientValidator(ingredient_schema, allow_unknown=True)
-#     testers = [
-#         {
-#             'kind': 'moo',
-#             'format': 'comma'
-#         },
-#         {
-#             'kind': 'moo',
-#             'format': 'comma',
-#             'icon': 'foo',
-#             'field': {
-#                 'value': 'cow',
-#                 'condition': {
-#                     'field': 'moo2',
-#                     'in': 'wo',
-#                     # 'gt': 2
-#                 }
-#             }
-#         }
-#     ]
-
-#     from pprint import pprint
-#     for d in testers:
-#         print('\n\nTESTING')
-#         pprint(d)
-#         if v.validate(d):
-#             print "We're good! Normalized is..."
-#             pprint(v.normalized(d))
-#         else:
-#             print 'Not good!'
-#             print v.errors
+            return False
+        return True
