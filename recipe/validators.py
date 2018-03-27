@@ -40,7 +40,7 @@ ingredient_schema = {
         'type': 'dict',
         'coerce': 'to_field_dict',
         'allow_unknown': False,
-        # 'required': True
+        'required': True
     },
     'format': {
         'type': 'string',
@@ -54,10 +54,30 @@ default_field_schema = {
         'required': True,
     },
     'aggregation': {
-        'type': 'string',
-        'required': False,
-        'nullable': True,
-        'default': None,
+        'type':
+            'string',
+        'required':
+            False,
+        # Allowed values are the keys of IngredientValidator.aggregation_lookup
+        'allowed': [
+            'sum',
+            'min',
+            'max',
+            'avg',
+            'count',
+            'count_distinct',
+            'month',
+            'week',
+            'year',
+            'quarter',
+            'age',
+            'none',
+            None,
+        ],
+        'nullable':
+            True,
+        'default':
+            None,
     },
     'condition': {
         'schema': 'condition',
@@ -71,17 +91,15 @@ field_schema = deepcopy(default_field_schema)
 
 aggregated_field_schema = deepcopy(default_field_schema)
 aggregated_field_schema['aggregation']['required'] = True
-# aggregated_field_schema['aggregation']['nullable'] = False
+aggregated_field_schema['aggregation']['nullable'] = False
 aggregated_field_schema['aggregation']['coerce'] = 'to_aggregation_with_default'
 # del aggregated_field_schema['aggregation']['default']
 
 condition_schema = {
-    'condition': {
-        'type': 'string',
-        'required': False
-    },
     'field': {
         'schema': 'field',
+        'type': 'dict',
+        'coerce': 'to_field_dict',
         'allow_unknown': False,
         'required': True
     },
@@ -147,6 +165,7 @@ class IngredientValidator(Validator):
         'year': lambda fld: func.date_trunc('year', fld),
         'quarter': lambda fld: func.date_trunc('quarter', fld),
         'age': lambda fld: func.date_part('year', func.age(fld)),
+        'none': lambda fld: fld,
         None: lambda fld: fld,
     }
 
@@ -184,6 +203,7 @@ class IngredientValidator(Validator):
             return v
 
     def _normalize_coerce_to_field_dict(self, v):
+        """ coerces strings to a dict {'value': str} """
         if isinstance(v, _str_type):
             return {'value': v}
         else:
@@ -195,9 +215,6 @@ class IngredientValidator(Validator):
         else:
             return v
 
-    def _normalize_default_setter_utcnow(self, document):
-        return datetime.utcnow()
-
     def _validate_type_scalar(self, value):
         """ Is not a list or a dict """
         if isinstance(
@@ -207,7 +224,6 @@ class IngredientValidator(Validator):
 
     def _validate_contains_oneof(self, keys, field, value):
         """ Validates that exactly one of the keys exists in value """
-        print 'validate condi', keys, '->', field, '=>', value
         results = [k for k in keys if k in value]
 
         if len(results) == 0:
