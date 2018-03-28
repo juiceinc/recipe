@@ -287,8 +287,43 @@ class IngredientValidator(Validator):
 
     def _normalize_coerce_to_field_dict(self, v):
         """ coerces strings to a dict {'value': str} """
+
+        def tokenize(s):
+            """ Tokenize a string by splitting it by + and -
+
+            >>> tokenize('this + that')
+            ['this', 'PLUS', 'that']
+
+            >>> tokenize('this+that')
+            ['this', 'PLUS', 'that']
+
+            >>> tokenize('this+that-other')
+            ['this', 'PLUS', 'that', 'SUB', 'other]
+            """
+
+            # Crude tokenization
+            s = s.replace('+', ' + ').replace('-', ' - ') \
+                .replace('/', ' / ').replace('*', ' * ')
+            words = [w for w in s.split(' ') if w]
+            return words
+
         if isinstance(v, _str_type):
-            return {'value': v}
+            field_parts = tokenize(v)
+            print '%' * 80
+            print field_parts
+            field = field_parts[0]
+            d = {'value': field}
+            if len(field_parts) > 1:
+                # if we need to add and subtract from the field
+                # join the field parts into pairs, for instance if field parts is
+                # [MyTable.first, 'MINUS', MyTable.second, 'PLUS', MyTable.third]
+                # we will get two pairs here
+                # [('MINUS', MyTable.second), ('PLUS', MyTable.third)]
+                for operator, other_field in zip(
+                    field_parts[1::2], field_parts[2::2]
+                ):
+                    d[operator] = other_field
+            return d
         else:
             return v
 
@@ -346,7 +381,7 @@ class IngredientValidator(Validator):
                 if k == '_aggregation':
                     assert callable(subdocument.get(k, None))
                     subdocument.pop(k)
-                if k in ('field', 'condition'):
+                if k in ('field', 'condition', '+', '/', '-', '*'):
                     self.test_aggregation_condition(subdocument=subdocument[k])
         if isinstance(subdocument, list):
             for itm in subdocument:

@@ -34,23 +34,22 @@ class TestValidateIngredient(object):
                 'kind': 'Metric',
                 'format': ',.0f'
             }),
-            (
-                {
-                    'kind': 'Metric',
-                    'field': 'moo',
-                    # '+': 'foo',
-                    'format': 'comma'
-                },
-                {
-                    'field': {
+            ({
+                'kind': 'Metric',
+                'field': 'moo+foo',
+                'format': 'comma'
+            }, {
+                'field': {
+                    'aggregation': None,
+                    'value': 'moo',
+                    '+': {
                         'aggregation': None,
-                        'value': 'moo',
-                        # '+': 'foo'
-                    },
-                    'kind': 'Metric',
-                    'format': ',.0f'
-                }
-            ),
+                        'value': 'foo',
+                    }
+                },
+                'kind': 'Metric',
+                'format': ',.0f'
+            }),
             ({
                 'kind': 'Metric',
                 'format': 'comma',
