@@ -251,4 +251,29 @@ class IngredientValidator(Validator):
 
     def _normalize_default_setter_aggregation(self, document):
         aggr = document.get('aggregation', None)
-        return self.aggregation_lookup.get(aggr, None)
+        try:
+            return self.aggregation_lookup.get(aggr, None)
+        except TypeError:
+            # aggr is something we can't lookup (like a list)
+            return None
+
+    def test_aggregation_condition(self, subdocument=None):
+        """ Test that _aggregation and _condition have been added to a
+        normalized document and pop them out so that the rest of the document
+        can be checked against an expected value """
+        if subdocument is None:
+            # Start with the normalized document
+            subdocument = self.document
+        if isinstance(subdocument, dict):
+            for k in subdocument.keys():
+                if k == '_condition':
+                    assert callable(subdocument.get(k, None))
+                    subdocument.pop(k)
+                if k == '_aggregation':
+                    assert callable(subdocument.get(k, None))
+                    subdocument.pop(k)
+                if k in ('field', 'condition'):
+                    self.test_aggregation_condition(subdocument=subdocument[k])
+        if isinstance(subdocument, list):
+            for itm in subdocument:
+                self.test_aggregation_condition(subdocument=itm)

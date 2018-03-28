@@ -64,14 +64,7 @@ class TestValidateIngredient(object):
         ]
         for document, expected in testers:
             assert self.validator.validate(document)
-            if 'condition' in self.validator.document['field']:
-                assert callable(
-                    self.validator.document['field']['condition'].get(
-                        '_condition', None
-                    )
-                )
-                self.validator.document['field']['condition'].pop('_condition')
-
+            self.validator.test_aggregation_condition()
             assert self.validator.document == expected
 
     def test_ingredient_kind(self):
@@ -97,6 +90,7 @@ class TestValidateIngredient(object):
 
         for document, expected in good_values:
             assert self.validator.validate(document)
+            self.validator.test_aggregation_condition()
             assert self.validator.document == expected
 
         # Dicts that fail to validate and the errors
@@ -165,6 +159,7 @@ class TestValidateIngredient(object):
         ]
         for document, expected in good_values:
             assert self.validator.validate(document)
+            self.validator.test_aggregation_condition()
             assert self.validator.document == expected
 
         # We can add new format_lookups
@@ -184,6 +179,7 @@ class TestValidateIngredient(object):
         ]
         for document, expected in good_values:
             assert self.validator.validate(document)
+            self.validator.test_aggregation_condition()
             self.validator.document == expected
 
         # Dicts that fail to validate and the errors
@@ -219,6 +215,7 @@ class TestValidateIngredient(object):
         IngredientValidator.format_lookup['cow'] = '.0f "moos"'
         for document, expected in good_values:
             assert self.validator.validate(document)
+            self.validator.test_aggregation_condition()
             assert self.validator.document == expected
 
         # Dicts that fail to validate and the errors
@@ -266,6 +263,7 @@ class TestValidateField(object):
 
         for document, expected in good_values:
             assert self.validator.validate(document)
+            self.validator.test_aggregation_condition()
             assert self.validator.document == expected
 
         # Dicts that fail to validate and the errors
@@ -334,6 +332,7 @@ class TestValidateAggregatedField(object):
 
         for document, expected in good_values:
             assert self.validator.validate(document)
+            self.validator.test_aggregation_condition()
             assert self.validator.document == expected
 
         for k in IngredientValidator.aggregation_lookup.keys():
@@ -391,6 +390,7 @@ class TestValidateAggregatedField(object):
 
         for document, expected in good_values:
             assert self.validator.validate(document)
+            self.validator.test_aggregation_condition()
             assert self.validator.document == expected
 
         # Dicts that fail to validate and the errors
@@ -404,7 +404,11 @@ class TestValidateAggregatedField(object):
             }, "{'aggregation': ['unallowed value cow']}"),
             ({
                 'value': 'foo',
-                'aggregation': ['cow']
+                'aggregation': 2
+            }, "{'aggregation': ['must be of string type']}"),
+            ({
+                'value': 'foo',
+                'aggregation': ['sum']
             }, "{'aggregation': ['must be of string type']}"),
         ]
         for document, errors in bad_values:
@@ -437,10 +441,7 @@ class TestValidateAggregatedField(object):
 
         for document, expected in good_values:
             assert self.validator.validate(document)
-            assert callable(
-                self.validator.document['condition'].get('_condition', None)
-            )
-            self.validator.document['condition'].pop('_condition')
+            self.validator.test_aggregation_condition()
             assert self.validator.document == expected
 
         # Dicts that fail to validate and the errors
@@ -507,8 +508,7 @@ class TestValidateCondition(object):
 
         for document, expected in good_values:
             assert self.validator.validate(document)
-            assert callable(self.validator.document.get('_condition', None))
-            self.validator.document.pop('_condition')
+            self.validator.test_aggregation_condition()
             assert self.validator.document == expected
 
         # Dicts that fail to validate and the errors they make
