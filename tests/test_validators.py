@@ -14,7 +14,7 @@ from recipe.validators import (
 class TestValidateIngredient(object):
 
     def setup(self):
-        self.validator = IngredientValidator()
+        self.validator = IngredientValidator(schema='Ingredient')
         self.field_validator = Validator(
             schema=default_field_schema, allow_unknown=False
         )
@@ -34,6 +34,23 @@ class TestValidateIngredient(object):
                 'kind': 'Metric',
                 'format': ',.0f'
             }),
+            (
+                {
+                    'kind': 'Metric',
+                    'field': 'moo',
+                    # '+': 'foo',
+                    'format': 'comma'
+                },
+                {
+                    'field': {
+                        'aggregation': None,
+                        'value': 'moo',
+                        # '+': 'foo'
+                    },
+                    'kind': 'Metric',
+                    'format': ',.0f'
+                }
+            ),
             ({
                 'kind': 'Metric',
                 'format': 'comma',
@@ -240,7 +257,7 @@ class TestValidateField(object):
 
     def setup(self):
         self.validator = IngredientValidator(
-            schema=default_field_schema, allow_unknown=False
+            schema='field', allow_unknown=False
         )
 
     def test_field_value(self):
@@ -285,7 +302,7 @@ class TestValidateAggregatedField(object):
 
     def setup(self):
         self.validator = IngredientValidator(
-            schema=aggregated_field_schema, allow_unknown=False
+            schema='aggregated_field', allow_unknown=False
         )
 
     def test_field_value(self):
@@ -477,7 +494,7 @@ class TestValidateCondition(object):
 
     def setup(self):
         self.validator = IngredientValidator(
-            schema=condition_schema, allow_unknown=False
+            schema='condition', allow_unknown=False
         )
 
     def test_condition(self):

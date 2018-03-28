@@ -15,39 +15,6 @@ from sqlalchemy import Float, Integer, String, case, distinct, func
 
 logging.captureWarnings(True)
 
-ingredient_schema = {
-    'kind': {
-        'type':
-            'string',
-        'required':
-            True,
-        'allowed': [
-            'Ingredient',
-            'Dimension',
-            'LookupDimension',
-            'IdValueDimension',
-            'Metric',
-            'DivideMetric',
-            'WtdAvgMetric',
-            'Filter',
-            'Having',
-        ],
-        'default':
-            'Metric'
-    },
-    'field': {
-        'schema': 'field',
-        'type': 'dict',
-        'coerce': 'to_field_dict',
-        'allow_unknown': False,
-        'required': True
-    },
-    'format': {
-        'type': 'string',
-        'coerce': 'to_format_with_lookup'
-    }
-}
-
 default_field_schema = {
     'value': {
         'type': 'string',
@@ -58,6 +25,11 @@ default_field_schema = {
         'nullable': True,
         'readonly': True
     },
+    # '_operator': {
+    #     'default_setter': 'operator',
+    #     'nullable': True,
+    #     'readonly': True
+    # },
     'aggregation': {
         'type':
             'string',
@@ -84,6 +56,34 @@ default_field_schema = {
         'default':
             None,
     },
+    '+': {
+        'schema': 'field',
+        'type': 'dict',
+        'coerce': 'to_field_dict',
+        'allow_unknown': False,
+        'required': False,
+    },
+    '-': {
+        'schema': 'field',
+        'type': 'dict',
+        'coerce': 'to_field_dict',
+        'allow_unknown': False,
+        'required': False,
+    },
+    '*': {
+        'schema': 'field',
+        'type': 'dict',
+        'coerce': 'to_field_dict',
+        'allow_unknown': False,
+        'required': False,
+    },
+    '/': {
+        'schema': 'field',
+        'type': 'dict',
+        'coerce': 'to_field_dict',
+        'allow_unknown': False,
+        'required': False,
+    },
     'condition': {
         'schema': 'condition',
         'contains_oneof': ['in', 'gt', 'gte', 'lt', 'lte', 'eq', 'ne'],
@@ -94,6 +94,7 @@ default_field_schema = {
 
 field_schema = deepcopy(default_field_schema)
 
+# Aggregated fields coerce null values to the default aggregation
 aggregated_field_schema = deepcopy(default_field_schema)
 aggregated_field_schema['aggregation']['required'] = True
 aggregated_field_schema['aggregation']['nullable'] = False
@@ -143,10 +144,76 @@ condition_schema = {
     }
 }
 
+ingredient_schema_root = {
+    'kind': {
+        'type':
+            'string',
+        'required':
+            True,
+        'allowed': [
+            'Ingredient',
+            'Dimension',
+            'LookupDimension',
+            'IdValueDimension',
+            'Metric',
+            'DivideMetric',
+            'WtdAvgMetric',
+            'Filter',
+            'Having',
+        ],
+        'default':
+            'Metric'
+    },
+    'format': {
+        'type': 'string',
+        'coerce': 'to_format_with_lookup'
+    }
+}
+
+
+def register_ingredient_schema(kind, extras):
+    """ Builds a schema for `kind` of ingredient """
+    schema = deepcopy(ingredient_schema_root)
+    for field_name, field_schema in extras.items():
+        schema[field_name] = {
+            'schema': field_schema,
+            'type': 'dict',
+            'coerce': 'to_field_dict',
+            'allow_unknown': False,
+            'required': True
+        }
+    schema_registry.add(kind, schema)
+    return schema
+
+
+register_ingredient_schema('Ingredient', {'field': 'field'})
+register_ingredient_schema('Dimension', {'field': 'field'})
+register_ingredient_schema('LookupDimension', {'field': 'field'})
+register_ingredient_schema(
+    'IdValueDimension', {
+        'field': 'field',
+        'id_field': 'field'
+    }
+)
+register_ingredient_schema('Metric', {'field': 'aggregated_field'})
+register_ingredient_schema(
+    'DivideMetric', {
+        'numerator_field': 'aggregated_field',
+        'denominator_field': 'aggregated_field'
+    }
+)
+register_ingredient_schema(
+    'WtdAvgMetric', {
+        'field': 'field',
+        'weight': 'field'
+    }
+)
+register_ingredient_schema('Filter', {'field': 'field'})
+register_ingredient_schema('Having', {'field': 'field'})
+
 schema_registry.add('field', field_schema)
 schema_registry.add('aggregated_field', aggregated_field_schema)
 schema_registry.add('condition', condition_schema)
-schema_registry.add('ingredient', ingredient_schema)
 
 
 class IngredientValidator(Validator):
@@ -188,11 +255,18 @@ class IngredientValidator(Validator):
         'ne': lambda fld: getattr(fld, '__ne__'),
     }
 
+    operator_lookup = {
+        '+': lambda fld: getattr(fld, '__add__'),
+        '-': lambda fld: getattr(fld, '__sub__'),
+        '/': lambda fld: getattr(fld, '__div__'),
+        '*': lambda fld: getattr(fld, '__mul__'),
+    }
+
     default_aggregation = 'sum'
 
     def __init__(self, *args, **kwargs):
         # Set defaults
-        kwargs['schema'] = kwargs.get('schema', ingredient_schema)
+        kwargs['schema'] = kwargs.get('schema', 'Ingredient')
         kwargs['allow_unknown'] = kwargs.get('allow_unknown', True)
         kwargs['normalize'] = kwargs.get('normalize', True)
         super(IngredientValidator, self).__init__(*args, **kwargs)
