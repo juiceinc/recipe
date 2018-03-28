@@ -53,6 +53,11 @@ default_field_schema = {
         'type': 'string',
         'required': True,
     },
+    '_aggregation': {
+        'default_setter': 'aggregation',
+        'nullable': True,
+        'readonly': True
+    },
     'aggregation': {
         'type':
             'string',
@@ -93,7 +98,6 @@ aggregated_field_schema = deepcopy(default_field_schema)
 aggregated_field_schema['aggregation']['required'] = True
 aggregated_field_schema['aggregation']['nullable'] = False
 aggregated_field_schema['aggregation']['coerce'] = 'to_aggregation_with_default'
-# del aggregated_field_schema['aggregation']['default']
 
 condition_schema = {
     'field': {
@@ -102,6 +106,11 @@ condition_schema = {
         'coerce': 'to_field_dict',
         'allow_unknown': False,
         'required': True
+    },
+    '_condition': {
+        'default_setter': 'condition',
+        'nullable': True,
+        'readonly': True
     },
     'in': {
         'required': False,
@@ -233,3 +242,13 @@ class IngredientValidator(Validator):
             self._error(field, 'Must contain only one of {}'.format(keys))
             return False
         return True
+
+    def _normalize_default_setter_condition(self, document):
+        for k in self.condition_lookup.keys():
+            if k in document:
+                return self.condition_lookup[k]
+        return None
+
+    def _normalize_default_setter_aggregation(self, document):
+        aggr = document.get('aggregation', None)
+        return self.aggregation_lookup.get(aggr, None)

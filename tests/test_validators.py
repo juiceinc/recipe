@@ -19,14 +19,22 @@ class TestValidateIngredient(object):
             schema=default_field_schema, allow_unknown=False
         )
 
-    def test_good(self):
+    def test_ingredients(self):
+        """ Test full ingredients """
         testers = [
-            {
+            ({
                 'kind': 'Metric',
                 'field': 'moo',
                 'format': 'comma'
-            },
-            {
+            }, {
+                'field': {
+                    'aggregation': None,
+                    'value': 'moo'
+                },
+                'kind': 'Metric',
+                'format': ',.0f'
+            }),
+            ({
                 'kind': 'Metric',
                 'format': 'comma',
                 'icon': 'foo',
@@ -35,13 +43,36 @@ class TestValidateIngredient(object):
                     'condition': {
                         'field': 'moo2',
                         'in': 'wo',
-                        # 'gt': 2
                     }
                 }
-            }
+            }, {
+                'field': {
+                    'condition': {
+                        'field': {
+                            'aggregation': None,
+                            'value': 'moo2'
+                        },
+                        'in': ['wo']
+                    },
+                    'value': 'cow',
+                    'aggregation': None
+                },
+                'kind': 'Metric',
+                'format': ',.0f',
+                'icon': 'foo'
+            }),
         ]
-        for d in testers:
-            assert self.validator.validate(d)
+        for document, expected in testers:
+            assert self.validator.validate(document)
+            if 'condition' in self.validator.document['field']:
+                assert callable(
+                    self.validator.document['field']['condition'].get(
+                        '_condition', None
+                    )
+                )
+                self.validator.document['field']['condition'].pop('_condition')
+
+            assert self.validator.document == expected
 
     def test_ingredient_kind(self):
         # Dicts to validate and the results
@@ -64,10 +95,9 @@ class TestValidateIngredient(object):
             }
         })]
 
-        for d, result in good_values:
-            assert_success(d, validator=self.validator)
-            # assert self.validator.validate(d)
-            # self.validator.normalized(d) == result
+        for document, expected in good_values:
+            assert self.validator.validate(document)
+            assert self.validator.document == expected
 
         # Dicts that fail to validate and the errors
         bad_values = [
@@ -306,6 +336,17 @@ class TestValidateAggregatedField(object):
             assert self.validator.validate(document)
             assert self.validator.document == expected
 
+        for k in IngredientValidator.aggregation_lookup.keys():
+            document = {'value': 'foo', 'aggregation': k}
+            expected = {
+                'value':
+                    'foo',
+                'aggregation':
+                    k if k else IngredientValidator.default_aggregation
+            }
+            assert self.validator.validate(document)
+            # assert self.validator.document == expected
+
         # We can change the default aggregation
         IngredientValidator.default_aggregation = 'count'
         good_values = [
@@ -396,7 +437,39 @@ class TestValidateAggregatedField(object):
 
         for document, expected in good_values:
             assert self.validator.validate(document)
+            assert callable(
+                self.validator.document['condition'].get('_condition', None)
+            )
+            self.validator.document['condition'].pop('_condition')
             assert self.validator.document == expected
+
+        # Dicts that fail to validate and the errors
+        bad_values = [
+            # A condition without a predicate
+            ({
+                'value': 'moo',
+                'aggregation': 'sum',
+                'condition': {
+                    'field': 'cow'
+                }
+            },
+             '''{'condition': ["Must contain one of ['in', 'gt', 'gte', 'lt', 'lte', 'eq', 'ne']"]}'''
+            ),
+            ({
+                'value': 'moo',
+                'aggregation': 'sum',
+                'condition': {
+                    'field': 'cow',
+                    'in': 1,
+                    'gt': 2
+                }
+            },
+             '''{'condition': ["Must contain only one of ['in', 'gt', 'gte', 'lt', 'lte', 'eq', 'ne']"]}'''
+            )
+        ]
+        for document, errors in bad_values:
+            assert not self.validator.validate(document)
+            assert str(self.validator.errors) == errors
 
 
 class TestValidateCondition(object):
@@ -434,6 +507,8 @@ class TestValidateCondition(object):
 
         for document, expected in good_values:
             assert self.validator.validate(document)
+            assert callable(self.validator.document.get('_condition', None))
+            self.validator.document.pop('_condition')
             assert self.validator.document == expected
 
         # Dicts that fail to validate and the errors they make
