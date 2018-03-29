@@ -6,6 +6,7 @@ and convert them to
 """
 
 import logging
+from collections import OrderedDict
 from copy import deepcopy
 from datetime import date, datetime
 
@@ -25,11 +26,13 @@ default_field_schema = {
         'nullable': True,
         'readonly': True
     },
-    # '_operator': {
-    #     'default_setter': 'operator',
-    #     'nullable': True,
-    #     'readonly': True
-    # },
+    'operators': {
+        'required': False,
+        'type': 'list',
+        'schema': {
+            'schema': 'operator',
+        }
+    },
     'aggregation': {
         'type':
             'string',
@@ -56,34 +59,6 @@ default_field_schema = {
         'default':
             None,
     },
-    '+': {
-        'schema': 'field',
-        'type': 'dict',
-        'coerce': 'to_field_dict',
-        'allow_unknown': False,
-        'required': False,
-    },
-    '-': {
-        'schema': 'field',
-        'type': 'dict',
-        'coerce': 'to_field_dict',
-        'allow_unknown': False,
-        'required': False,
-    },
-    '*': {
-        'schema': 'field',
-        'type': 'dict',
-        'coerce': 'to_field_dict',
-        'allow_unknown': False,
-        'required': False,
-    },
-    '/': {
-        'schema': 'field',
-        'type': 'dict',
-        'coerce': 'to_field_dict',
-        'allow_unknown': False,
-        'required': False,
-    },
     'condition': {
         'schema': 'condition',
         'contains_oneof': ['in', 'gt', 'gte', 'lt', 'lte', 'eq', 'ne'],
@@ -99,6 +74,21 @@ aggregated_field_schema = deepcopy(default_field_schema)
 aggregated_field_schema['aggregation']['required'] = True
 aggregated_field_schema['aggregation']['nullable'] = False
 aggregated_field_schema['aggregation']['coerce'] = 'to_aggregation_with_default'
+
+operator_schema = {
+    'operator': {
+        'type': 'string',
+        'allowed': ['+', '-', '*', '/'],
+        'required': True
+    },
+    'field': {
+        'schema': 'field',
+        'type': 'dict',
+        'coerce': 'to_field_dict',
+        'allow_unknown': False,
+        'required': True
+    },
+}
 
 condition_schema = {
     'field': {
@@ -164,6 +154,12 @@ ingredient_schema_root = {
         'default':
             'Metric'
     },
+    '_fields': {
+        'nullable': True,
+        'readonly': True,
+        'type': 'list',
+        'default': [],
+    },
     'format': {
         'type': 'string',
         'coerce': 'to_format_with_lookup'
@@ -174,6 +170,7 @@ ingredient_schema_root = {
 def register_ingredient_schema(kind, extras):
     """ Builds a schema for `kind` of ingredient """
     schema = deepcopy(ingredient_schema_root)
+    schema['_fields']['default'] = extras.keys()
     for field_name, field_schema in extras.items():
         schema[field_name] = {
             'schema': field_schema,
@@ -190,33 +187,38 @@ register_ingredient_schema('Ingredient', {'field': 'field'})
 register_ingredient_schema('Dimension', {'field': 'field'})
 register_ingredient_schema('LookupDimension', {'field': 'field'})
 register_ingredient_schema(
-    'IdValueDimension', {
-        'field': 'field',
-        'id_field': 'field'
-    }
+    'IdValueDimension', OrderedDict({
+        'id_field': 'field',
+        'field': 'field'
+    })
 )
 register_ingredient_schema('Metric', {'field': 'aggregated_field'})
 register_ingredient_schema(
-    'DivideMetric', {
+    'DivideMetric',
+    OrderedDict({
         'numerator_field': 'aggregated_field',
         'denominator_field': 'aggregated_field'
-    }
+    })
 )
 register_ingredient_schema(
-    'WtdAvgMetric', {
+    'WtdAvgMetric', OrderedDict({
         'field': 'field',
         'weight': 'field'
-    }
+    })
 )
 register_ingredient_schema('Filter', {'field': 'field'})
 register_ingredient_schema('Having', {'field': 'field'})
 
 schema_registry.add('field', field_schema)
+schema_registry.add('operator', operator_schema)
 schema_registry.add('aggregated_field', aggregated_field_schema)
 schema_registry.add('condition', condition_schema)
 
 
 class IngredientValidator(Validator):
+    """ IngredientValidator
+    """
+
     format_lookup = {
         'comma': ',.0f',
         'dollar': '$,.0f',
@@ -246,13 +248,13 @@ class IngredientValidator(Validator):
     }
 
     condition_lookup = {
-        'in': lambda fld: getattr(fld, 'in_'),
-        'gt': lambda fld: getattr(fld, '__gt__'),
-        'gte': lambda fld: getattr(fld, '__ge__'),
-        'lt': lambda fld: getattr(fld, '__lt__'),
-        'lte': lambda fld: getattr(fld, '__le__'),
-        'eq': lambda fld: getattr(fld, '__eq__'),
-        'ne': lambda fld: getattr(fld, '__ne__'),
+        'in': 'in_',
+        'gt': '__gt__',
+        'gte': '__ge__',
+        'lt': '__lt__',
+        'lte': '__le__',
+        'eq': '__eq__',
+        'ne': '__ne__',
     }
 
     operator_lookup = {
@@ -292,13 +294,13 @@ class IngredientValidator(Validator):
             """ Tokenize a string by splitting it by + and -
 
             >>> tokenize('this + that')
-            ['this', 'PLUS', 'that']
+            ['this', '+', 'that']
 
             >>> tokenize('this+that')
-            ['this', 'PLUS', 'that']
+            ['this', '+', 'that']
 
             >>> tokenize('this+that-other')
-            ['this', 'PLUS', 'that', 'SUB', 'other]
+            ['this', '+', 'that', '-', 'other]
             """
 
             # Crude tokenization
@@ -309,20 +311,25 @@ class IngredientValidator(Validator):
 
         if isinstance(v, _str_type):
             field_parts = tokenize(v)
-            print '%' * 80
-            print field_parts
             field = field_parts[0]
             d = {'value': field}
             if len(field_parts) > 1:
                 # if we need to add and subtract from the field
                 # join the field parts into pairs, for instance if field parts is
-                # [MyTable.first, 'MINUS', MyTable.second, 'PLUS', MyTable.third]
+                # [MyTable.first, '-', MyTable.second, '+', MyTable.third]
                 # we will get two pairs here
-                # [('MINUS', MyTable.second), ('PLUS', MyTable.third)]
+                # [('-', MyTable.second), ('+', MyTable.third)]
+                d['operators'] = []
                 for operator, other_field in zip(
                     field_parts[1::2], field_parts[2::2]
                 ):
-                    d[operator] = other_field
+                    d['operators'].append({
+                        'operator': operator,
+                        'field': {
+                            'value': other_field
+                        }
+                    })
+                    # d[operator] = other_field
             return d
         else:
             return v
@@ -355,7 +362,17 @@ class IngredientValidator(Validator):
     def _normalize_default_setter_condition(self, document):
         for k in self.condition_lookup.keys():
             if k in document:
-                return self.condition_lookup[k]
+                value = document[k]
+                cond = self.condition_lookup[k]
+                return lambda fld: getattr(fld, cond)(value)
+        return None
+
+    def _normalize_default_setter_condition(self, document):
+        for k in self.condition_lookup.keys():
+            if k in document:
+                value = document[k]
+                cond = self.condition_lookup[k]
+                return lambda fld: getattr(fld, cond)(value)
         return None
 
     def _normalize_default_setter_aggregation(self, document):
@@ -378,10 +395,12 @@ class IngredientValidator(Validator):
                 if k == '_condition':
                     assert callable(subdocument.get(k, None))
                     subdocument.pop(k)
+                if k == '_fields':
+                    subdocument.pop(k)
                 if k == '_aggregation':
                     assert callable(subdocument.get(k, None))
                     subdocument.pop(k)
-                if k in ('field', 'condition', '+', '/', '-', '*'):
+                if k in ('field', 'condition', 'operators'):
                     self.test_aggregation_condition(subdocument=subdocument[k])
         if isinstance(subdocument, list):
             for itm in subdocument:

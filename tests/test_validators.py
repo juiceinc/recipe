@@ -40,12 +40,54 @@ class TestValidateIngredient(object):
                 'format': 'comma'
             }, {
                 'field': {
-                    'aggregation': None,
-                    'value': 'moo',
-                    '+': {
-                        'aggregation': None,
-                        'value': 'foo',
-                    }
+                    'aggregation':
+                        None,
+                    'value':
+                        'moo',
+                    'operators': [{
+                        'operator': '+',
+                        'field': {
+                            'aggregation': None,
+                            'value': 'foo',
+                        }
+                    }]
+                },
+                'kind': 'Metric',
+                'format': ',.0f'
+            }),
+            ({
+                'kind': 'Metric',
+                'field': 'moo+foo-coo+cow',
+                'format': 'comma'
+            }, {
+                'field': {
+                    'aggregation':
+                        None,
+                    'value':
+                        'moo',
+                    'operators': [
+                        {
+                            'operator': '+',
+                            'field': {
+                                'aggregation': None,
+                                'value': 'foo',
+                            }
+                        },
+                        {
+                            'operator': '-',
+                            'field': {
+                                'aggregation': None,
+                                'value': 'coo',
+                            }
+                        },
+                        {
+                            'operator': '+',
+                            'field': {
+                                'aggregation': None,
+                                'value': 'cow',
+                            }
+                        },
+                    ]
                 },
                 'kind': 'Metric',
                 'format': ',.0f'
@@ -160,7 +202,6 @@ class TestValidateIngredient(object):
                 },
                 'format': 'cow'
             }),
-            # FIXME: Why is this not 'field': {'value': 'grass'}
             ({
                 'format': 'cow',
                 'field': 'grass'
@@ -242,10 +283,12 @@ class TestValidateIngredient(object):
             ({
                 'field': 2.1
             }, "{'field': ['must be of dict type']}"),
-            # TODO: Why don't these fail validation
-            # ({'field': tuple()}, "{'field': ['must be of dict type']}"),
-            # ({'field': []}, "{'field': ['must be of dict type']}"),
-            # ({'field': ['comma']}, "{'field': ['must be of dict type']}"),
+            ({
+                'field': tuple()
+            }, "{'field': ['must be of dict type']}"),
+            ({
+                'field': []
+            }, "{'field': ['must be of dict type']}"),
         ]
         for document, errors in bad_values:
             assert not self.validator.validate(document)
@@ -525,6 +568,12 @@ class TestValidateCondition(object):
         for document, expected in good_values:
             assert self.validator.validate(document)
             self.validator.test_aggregation_condition()
+            print 'doc'
+            print self.validator.document
+            print
+            print 'expected'
+            print expected
+
             assert self.validator.document == expected
 
         # Dicts that fail to validate and the errors they make

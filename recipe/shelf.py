@@ -310,6 +310,62 @@ def ingredient_from_dict(ingr_dict, table=''):
     return IngredientClass(*args, **ingr_dict)
 
 
+def parse_validated_condition(cnd, table=''):
+    """ Converts a validated field to sqlalchemy condition """
+    field = parse_validated_field(cnd['field'], table=table)
+    return cnd['_condition'](field)
+
+
+def parse_validated_field(fld, table=''):
+    """ Converts a validated field to sqlalchemy """
+    tablename = table.__name__
+    locals()[tablename] = table
+
+    aggregation = fld['_aggregation']
+    field = getattr(table, fld['value'])
+    for operator in fld.get('operators', []):
+        op = operator['operator']
+        other_field = parse_validated_field(operator['field'], table=table)
+        if op == '+':
+            field = field.__add__(other_field)
+        elif op == '-':
+            field = field.__sub__(other_field)
+        elif op == '*':
+            field = field.__mul__(other_field)
+        elif op == '/':
+            field = field._div__(other_field)
+        else:
+            raise BadIngredient('Unknown operator {}'.format(operator))
+
+    condition = fld.get('condition', None)
+    if condition:
+        condition = parse_validated_condition(condition, table=table)
+        field = case([(condition, field)])
+
+    field = aggregation(field)
+    return field
+
+
+def ingredient_from_validated_dict(ingr_dict, table=''):
+    """ Create an ingredient from an dictionary.
+
+    This object will be deserialized from yaml """
+    tablename = table.__name__
+    locals()[tablename] = table
+
+    kind = ingr_dict.pop('kind', 'Metric')
+    IngredientClass = ingredient_class_for_name(kind)
+
+    if IngredientClass is None:
+        raise BadIngredient('Unknown ingredient kind')
+
+    args = []
+    for fld in ingr_dict.pop('_fields', []):
+        args.append(parse_validated_field(ingr_dict.pop(fld)))
+
+    return IngredientClass(*args, **ingr_dict)
+
+
 class Shelf(AttrDict):
     """ Holds ingredients used by a recipe
 
