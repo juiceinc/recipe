@@ -1,8 +1,7 @@
 """
 Validators use cerberus to validate ingredients.yaml definitions
-and convert them to
-
-
+and convert them to a normalized structure. These definitions are used
+by Shelf.from_validated_yaml to construct a Shelf using a table.
 """
 
 import logging
@@ -14,205 +13,9 @@ from cerberus import Validator, schema_registry
 from cerberus.platform import _int_types, _str_type
 from sqlalchemy import Float, Integer, String, case, distinct, func
 
+from recipe.schemas import RecipeSchemas
+
 logging.captureWarnings(True)
-
-default_field_schema = {
-    'value': {
-        'type': 'string',
-        'required': True,
-    },
-    '_aggregation': {
-        'default_setter': 'aggregation',
-        'nullable': True,
-        'readonly': True
-    },
-    'operators': {
-        'required': False,
-        'type': 'list',
-        'schema': {
-            'schema': 'operator',
-        }
-    },
-    'aggregation': {
-        'type':
-            'string',
-        'required':
-            False,
-        # Allowed values are the keys of IngredientValidator.aggregation_lookup
-        'allowed': [
-            'sum',
-            'min',
-            'max',
-            'avg',
-            'count',
-            'count_distinct',
-            'month',
-            'week',
-            'year',
-            'quarter',
-            'age',
-            'none',
-            None,
-        ],
-        'nullable':
-            True,
-        'default':
-            None,
-    },
-    'condition': {
-        'schema': 'condition',
-        'contains_oneof': ['in', 'gt', 'gte', 'lt', 'lte', 'eq', 'ne'],
-        'required': False,
-        'allow_unknown': False
-    }
-}
-
-field_schema = deepcopy(default_field_schema)
-
-# Aggregated fields coerce null values to the default aggregation
-aggregated_field_schema = deepcopy(default_field_schema)
-aggregated_field_schema['aggregation']['required'] = True
-aggregated_field_schema['aggregation']['nullable'] = False
-aggregated_field_schema['aggregation']['coerce'] = 'to_aggregation_with_default'
-
-operator_schema = {
-    'operator': {
-        'type': 'string',
-        'allowed': ['+', '-', '*', '/'],
-        'required': True
-    },
-    'field': {
-        'schema': 'field',
-        'type': 'dict',
-        'coerce': 'to_field_dict',
-        'allow_unknown': False,
-        'required': True
-    },
-}
-
-condition_schema = {
-    'field': {
-        'schema': 'field',
-        'type': 'dict',
-        'coerce': 'to_field_dict',
-        'allow_unknown': False,
-        'required': True
-    },
-    '_condition': {
-        'default_setter': 'condition',
-        'nullable': True,
-        'readonly': True
-    },
-    'in': {
-        'required': False,
-        'type': 'list',
-        'coerce': 'to_list'
-    },
-    'gt': {
-        'required': False,
-        'type': 'scalar'
-    },
-    'gte': {
-        'required': False,
-        'type': 'scalar'
-    },
-    'lt': {
-        'required': False,
-        'type': 'scalar'
-    },
-    'lte': {
-        'required': False,
-        'type': 'scalar'
-    },
-    'eq': {
-        'required': False,
-        'type': 'scalar'
-    },
-    'ne': {
-        'required': False,
-        'type': 'scalar'
-    }
-}
-
-ingredient_schema_root = {
-    'kind': {
-        'type':
-            'string',
-        'required':
-            True,
-        'allowed': [
-            'Ingredient',
-            'Dimension',
-            'LookupDimension',
-            'IdValueDimension',
-            'Metric',
-            'DivideMetric',
-            'WtdAvgMetric',
-            'Filter',
-            'Having',
-        ],
-        'default':
-            'Metric'
-    },
-    '_fields': {
-        'nullable': True,
-        'readonly': True,
-        'type': 'list',
-        'default': [],
-    },
-    'format': {
-        'type': 'string',
-        'coerce': 'to_format_with_lookup'
-    }
-}
-
-
-def register_ingredient_schema(kind, extras):
-    """ Builds a schema for `kind` of ingredient """
-    schema = deepcopy(ingredient_schema_root)
-    schema['_fields']['default'] = extras.keys()
-    for field_name, field_schema in extras.items():
-        schema[field_name] = {
-            'schema': field_schema,
-            'type': 'dict',
-            'coerce': 'to_field_dict',
-            'allow_unknown': False,
-            'required': True
-        }
-    schema_registry.add(kind, schema)
-    return schema
-
-
-register_ingredient_schema('Ingredient', {'field': 'field'})
-register_ingredient_schema('Dimension', {'field': 'field'})
-register_ingredient_schema('LookupDimension', {'field': 'field'})
-register_ingredient_schema(
-    'IdValueDimension', OrderedDict({
-        'id_field': 'field',
-        'field': 'field'
-    })
-)
-register_ingredient_schema('Metric', {'field': 'aggregated_field'})
-register_ingredient_schema(
-    'DivideMetric',
-    OrderedDict({
-        'numerator_field': 'aggregated_field',
-        'denominator_field': 'aggregated_field'
-    })
-)
-register_ingredient_schema(
-    'WtdAvgMetric', OrderedDict({
-        'field': 'field',
-        'weight': 'field'
-    })
-)
-register_ingredient_schema('Filter', {'field': 'field'})
-register_ingredient_schema('Having', {'field': 'field'})
-
-schema_registry.add('field', field_schema)
-schema_registry.add('operator', operator_schema)
-schema_registry.add('aggregated_field', aggregated_field_schema)
-schema_registry.add('condition', condition_schema)
 
 
 class IngredientValidator(Validator):
@@ -329,7 +132,6 @@ class IngredientValidator(Validator):
                             'value': other_field
                         }
                     })
-                    # d[operator] = other_field
             return d
         else:
             return v
@@ -405,3 +207,8 @@ class IngredientValidator(Validator):
         if isinstance(subdocument, list):
             for itm in subdocument:
                 self.test_aggregation_condition(subdocument=itm)
+
+
+RecipeSchemas(
+    allowed_aggregations=IngredientValidator.aggregation_lookup.keys()
+).register_schemas()

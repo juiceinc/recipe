@@ -1,23 +1,14 @@
 # -*- coding: utf-8 -*-
-from cerberus import Validator
-from cerberus.tests import assert_normalized, assert_success
 from sqlalchemy import func
-from tests.test_base import MyTable
 
 from recipe.utils import AttrDict, disaggregate, replace_whitespace_with_space
-from recipe.validators import (
-    IngredientValidator, aggregated_field_schema, condition_schema,
-    default_field_schema
-)
+from recipe.validators import IngredientValidator
 
 
 class TestValidateIngredient(object):
 
     def setup(self):
         self.validator = IngredientValidator(schema='Ingredient')
-        self.field_validator = Validator(
-            schema=default_field_schema, allow_unknown=False
-        )
 
     def test_ingredients(self):
         """ Test full ingredients """
