@@ -327,16 +327,7 @@ def parse_validated_field(fld, table=''):
     for operator in fld.get('operators', []):
         op = operator['operator']
         other_field = parse_validated_field(operator['field'], table=table)
-        if op == '+':
-            field = field.__add__(other_field)
-        elif op == '-':
-            field = field.__sub__(other_field)
-        elif op == '*':
-            field = field.__mul__(other_field)
-        elif op == '/':
-            field = field._div__(other_field)
-        else:
-            raise BadIngredient('Unknown operator {}'.format(operator))
+        field = IngredientValidator.operator_lookup[op](field)(other_field)
 
     condition = fld.get('condition', None)
     if condition:
