@@ -11,6 +11,7 @@ from recipe.compat import basestring
 from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.ingredients import Dimension, Ingredient, Metric
 from recipe.utils import AttrDict
+from recipe.validators import IngredientValidator
 
 # Ensure case and distinct don't get reaped. We need it in scope for
 # creating Metrics
@@ -321,7 +322,7 @@ def parse_validated_field(fld, table=''):
     tablename = table.__name__
     locals()[tablename] = table
 
-    aggregation = fld['_aggregation']
+    aggr_fn = IngredientValidator.aggregation_lookup[fld['aggregation']]
     field = getattr(table, fld['value'])
     for operator in fld.get('operators', []):
         op = operator['operator']
@@ -342,7 +343,7 @@ def parse_validated_field(fld, table=''):
         condition = parse_validated_condition(condition, table=table)
         field = case([(condition, field)])
 
-    field = aggregation(field)
+    field = aggr_fn(field)
     return field
 
 
@@ -353,6 +354,15 @@ def ingredient_from_validated_dict(ingr_dict, table=''):
     tablename = table.__name__
     locals()[tablename] = table
 
+    print '%' * 100
+    print ingr_dict['kind']
+    validator = IngredientValidator(schema=ingr_dict['kind'])
+    from pprint import pprint
+    pprint(validator.schema)
+    assert validator.validate(ingr_dict)
+    ingr_dict = validator.document
+    pprint(ingr_dict)
+
     kind = ingr_dict.pop('kind', 'Metric')
     IngredientClass = ingredient_class_for_name(kind)
 
@@ -361,7 +371,7 @@ def ingredient_from_validated_dict(ingr_dict, table=''):
 
     args = []
     for fld in ingr_dict.pop('_fields', []):
-        args.append(parse_validated_field(ingr_dict.pop(fld)))
+        args.append(parse_validated_field(ingr_dict.pop(fld), table=table))
 
     return IngredientClass(*args, **ingr_dict)
 
@@ -465,6 +475,20 @@ class Shelf(AttrDict):
         d = {}
         for k, v in iteritems(obj):
             d[k] = ingredient_from_dict(v, table)
+
+        shelf = cls(d)
+        shelf.Meta.table = tablename
+        return shelf
+
+    @classmethod
+    def from_validated_yaml(cls, yaml_str, table):
+        obj = safe_load(yaml_str)
+        tablename = table.__name__
+        locals()[tablename] = table
+
+        d = {}
+        for k, v in iteritems(obj):
+            d[k] = ingredient_from_validated_dict(v, table)
 
         shelf = cls(d)
         shelf.Meta.table = tablename

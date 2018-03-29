@@ -28,7 +28,7 @@ class TestValidateIngredient(object):
                 'format': 'comma'
             }, {
                 'field': {
-                    'aggregation': None,
+                    'aggregation': 'sum',
                     'value': 'moo'
                 },
                 'kind': 'Metric',
@@ -41,7 +41,7 @@ class TestValidateIngredient(object):
             }, {
                 'field': {
                     'aggregation':
-                        None,
+                        'sum',
                     'value':
                         'moo',
                     'operators': [{
@@ -62,7 +62,7 @@ class TestValidateIngredient(object):
             }, {
                 'field': {
                     'aggregation':
-                        None,
+                        'sum',
                     'value':
                         'moo',
                     'operators': [
@@ -113,7 +113,7 @@ class TestValidateIngredient(object):
                         'in': ['wo']
                     },
                     'value': 'cow',
-                    'aggregation': None
+                    'aggregation': 'sum'
                 },
                 'kind': 'Metric',
                 'format': ',.0f',
@@ -121,9 +121,12 @@ class TestValidateIngredient(object):
             }),
         ]
         for document, expected in testers:
-            assert self.validator.validate(document)
-            self.validator.test_aggregation_condition()
-            assert self.validator.document == expected
+            validator = IngredientValidator(
+                schema=document.get('kind', 'Metric')
+            )
+            assert validator.validate(document)
+            validator.test_aggregation_condition()
+            assert validator.document == expected
 
     def test_ingredient_kind(self):
         # Dicts to validate and the results
@@ -568,12 +571,6 @@ class TestValidateCondition(object):
         for document, expected in good_values:
             assert self.validator.validate(document)
             self.validator.test_aggregation_condition()
-            print 'doc'
-            print self.validator.document
-            print
-            print 'expected'
-            print expected
-
             assert self.validator.document == expected
 
         # Dicts that fail to validate and the errors they make
