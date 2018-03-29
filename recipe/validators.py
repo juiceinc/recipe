@@ -376,7 +376,6 @@ class IngredientValidator(Validator):
         return None
 
     def _normalize_default_setter_aggregation(self, document):
-        print '_normalize_default_setter_aggregation', document
         aggr = document.get('aggregation', None)
         try:
             return self.aggregation_lookup.get(aggr, None)
