@@ -27,6 +27,7 @@ if sys.argv[-1] == 'test':
 
 # yapf: disable
 install = [
+    'Cerberus==1.1',
     'orderedset',
     'six',
     'sqlalchemy>=1.2.2',
@@ -64,6 +65,9 @@ setup(
     ],
     tests_require=['pytest', 'pytest-cov'],
     install_requires=install,
+    dependency_links=[
+        'git+git://github.com/pyeve/cerberus.git#egg=Cerberus-1.1',
+    ],
     entry_points={
         'recipe.oven.drivers': [
             'standard = recipe.oven.drivers.standard_oven:StandardOven',

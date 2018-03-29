@@ -9,5 +9,6 @@ SQLAlchemy==1.2.2
 sqlparse==0.2.2
 stevedore==1.27.1
 tablib==0.12.1
-Cerberus==1.1
+# Dependency on unreleased version of cerberus
+git+git://github.com/pyeve/cerberus.git#egg=Cerberus-1.1
 -e .
