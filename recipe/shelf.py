@@ -354,14 +354,9 @@ def ingredient_from_validated_dict(ingr_dict, table=''):
     tablename = table.__name__
     locals()[tablename] = table
 
-    print '%' * 100
-    print ingr_dict['kind']
     validator = IngredientValidator(schema=ingr_dict['kind'])
-    from pprint import pprint
-    pprint(validator.schema)
     assert validator.validate(ingr_dict)
     ingr_dict = validator.document
-    pprint(ingr_dict)
 
     kind = ingr_dict.pop('kind', 'Metric')
     IngredientClass = ingredient_class_for_name(kind)

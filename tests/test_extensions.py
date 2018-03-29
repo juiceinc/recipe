@@ -833,8 +833,6 @@ ORDER BY census.state"""
 
         assert len(r.all()) == 2
         tennesseerow, vermontrow = r.all()[0], r.all()[1]
-        print(tennesseerow)
-        print(vermontrow)
         assert tennesseerow.state == 'Tennessee'
         assert tennesseerow.state_id == 'Tennessee'
         assert tennesseerow.abbreviation == 'TN'
