@@ -71,11 +71,6 @@ class RecipeSchemas(object):
                 'type': 'string',
                 'required': True,
             },
-            '_aggregation': {
-                'default_setter': 'aggregation',
-                'nullable': True,
-                'readonly': True
-            },
             'operators': {
                 'required': False,
                 'type': 'list',
@@ -139,11 +134,6 @@ class RecipeSchemas(object):
                 'coerce': 'to_field_dict',
                 'allow_unknown': False,
                 'required': True
-            },
-            '_condition': {
-                'default_setter': 'condition',
-                'nullable': True,
-                'readonly': True
             },
         }
 
