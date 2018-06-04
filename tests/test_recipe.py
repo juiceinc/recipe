@@ -174,7 +174,7 @@ class TestStats(object):
         assert recipe.stats.ready is True
         assert recipe.stats.rows == 2
         assert recipe.stats.dbtime < 1.0
-        assert recipe.stats.from_cache is False        
+        assert recipe.stats.from_cache is False
 
 
 class TestCacheContext(object):
