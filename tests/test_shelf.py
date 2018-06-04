@@ -140,6 +140,19 @@ age:
         )
         self.shelf.Meta.anonymize = False
 
+    def test_condition(self):
+        yaml = '''
+oldage:
+    kind: Metric
+    field:
+        value: age
+        condition:
+            field: age
+            gt: 60
+'''
+        new_shelf = Shelf.from_yaml(yaml, MyTable)
+
+
     def test_find(self):
         """ Find ingredients on the shelf """
         ingredient = self.shelf.find('first', Dimension)

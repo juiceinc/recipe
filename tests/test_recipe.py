@@ -2,13 +2,12 @@ import pytest
 from sqlalchemy import func
 from tests.test_base import MyTable, census_shelf, mytable_shelf, oven
 
-from recipe import BadRecipe, Having, Recipe
+from recipe import BadRecipe, Having, Recipe, Shelf
 
 
 class TestRecipeIngredients(object):
 
     def setup(self):
-        # create a Session
         self.session = oven.Session()
         self.shelf = mytable_shelf
 
@@ -96,11 +95,66 @@ ORDER BY foo.last"""
 there,5,there
 """
 
+    def test_condition(self):
+        yaml = '''
+oldage:
+    kind: Metric
+    field:
+        value: age
+        condition:
+            field: age
+            gt: 60
+'''
+        shelf = Shelf.from_yaml(yaml, MyTable)
+        recipe = Recipe(shelf=shelf, session=self.session).metrics('oldage')
+        assert (
+            ' '.join(recipe.to_sql().split())
+            == 'SELECT sum(CASE WHEN (foo.age > 60) '
+               'THEN foo.age END) AS oldage FROM foo')
+
+    def test_compound_and_condition(self):
+        yaml = '''
+oldageandcoolname:
+    kind: Metric
+    field:
+        value: age
+        condition:
+            and:
+                - field: age
+                  gt: 60
+                - field: first
+                  eq: radix
+'''
+        shelf = Shelf.from_yaml(yaml, MyTable)
+        recipe = Recipe(shelf=shelf, session=self.session).metrics('oldageandcoolname')
+        assert (
+            ' '.join(recipe.to_sql().split())
+            == "SELECT sum(CASE WHEN (foo.age > 60 AND foo.first = 'radix') "
+               'THEN foo.age END) AS oldageandcoolname FROM foo')
+
+    def test_compound_or_condition(self):
+        yaml = '''
+oldageorcoolname:
+    kind: Metric
+    field:
+        value: age
+        condition:
+            or:
+                - field: age
+                  gt: 60
+                - field: first
+                  eq: radix
+'''
+        shelf = Shelf.from_yaml(yaml, MyTable)
+        recipe = Recipe(shelf=shelf, session=self.session).metrics('oldageorcoolname')
+        assert (
+            ' '.join(recipe.to_sql().split())
+            == "SELECT sum(CASE WHEN (foo.age > 60 OR foo.first = 'radix') "
+               'THEN foo.age END) AS oldageorcoolname FROM foo')
 
 class TestStats(object):
 
     def setup(self):
-        # create a Session
         self.session = oven.Session()
         self.shelf = mytable_shelf
 
@@ -120,13 +174,12 @@ class TestStats(object):
         assert recipe.stats.ready is True
         assert recipe.stats.rows == 2
         assert recipe.stats.dbtime < 1.0
-        assert recipe.stats.from_cache is False
+        assert recipe.stats.from_cache is False        
 
 
 class TestCacheContext(object):
 
     def setup(self):
-        # create a Session
         self.session = oven.Session()
         self.shelf = mytable_shelf
 

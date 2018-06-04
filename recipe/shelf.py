@@ -3,7 +3,7 @@ from collections import OrderedDict
 from copy import copy
 
 from six import iteritems
-from sqlalchemy import Float, Integer, String, case, distinct, func
+from sqlalchemy import Float, Integer, String, case, distinct, func, and_, or_
 from sqlalchemy.util import lightweight_named_tuple
 from yaml import safe_load
 
@@ -28,12 +28,22 @@ def ingredient_class_for_name(class_name):
 
 
 def parse_condition(cond, table, aggregated=False, default_aggregation='sum'):
-    """ Create a format string from a condition """
+    """Create a SQLAlchemy clause from a condition."""
     if cond is None:
         return None
 
     else:
-        if 'field' not in cond:
+        if 'and' in cond:
+            conditions = [
+                parse_condition(c, table, aggregated, default_aggregation)
+                for c in cond['and']]
+            return and_(*conditions)
+        elif 'or' in cond:
+            conditions = [
+                parse_condition(c, table, aggregated, default_aggregation)
+                for c in cond['or']]
+            return or_(*conditions)
+        elif 'field' not in cond:
             raise BadIngredient('field must be defined in condition')
         field = parse_field(
             cond['field'],
@@ -219,7 +229,7 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
 
 
 def ingredient_from_dict(ingr_dict, table=''):
-    """ Create an ingredient from an dictionary.
+    """Create an ingredient from an dictionary.
 
     This object will be deserialized from yaml """
 
@@ -228,8 +238,6 @@ def ingredient_from_dict(ingr_dict, table=''):
     # field: A parse_field with aggregation=False
     # aggregated_field: A parse_field with aggregation=True
     # condition: A parse_condition
-    tablename = table.__name__
-    locals()[tablename] = table
 
     params_lookup = {
         'Dimension': {
@@ -455,15 +463,13 @@ class Shelf(AttrDict):
     @classmethod
     def from_yaml(cls, yaml_str, table):
         obj = safe_load(yaml_str)
-        tablename = table.__name__
-        locals()[tablename] = table
 
         d = {}
         for k, v in iteritems(obj):
             d[k] = ingredient_from_dict(v, table)
 
         shelf = cls(d)
-        shelf.Meta.table = tablename
+        shelf.Meta.table = table.__name__
         return shelf
 
     @classmethod
