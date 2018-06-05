@@ -11,6 +11,7 @@ from recipe.compat import basestring
 from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.ingredients import Dimension, Ingredient, Metric
 from recipe.utils import AttrDict
+from recipe.validators import IngredientValidator
 
 # Ensure case and distinct don't get reaped. We need it in scope for
 # creating Metrics
@@ -310,6 +311,57 @@ def ingredient_from_dict(ingr_dict, table=''):
     return IngredientClass(*args, **ingr_dict)
 
 
+def parse_validated_condition(cnd, table=''):
+    """ Converts a validated field to sqlalchemy condition """
+    field = parse_validated_field(cnd['field'], table=table)
+    return cnd['_condition'](field)
+
+
+def parse_validated_field(fld, table=''):
+    """ Converts a validated field to sqlalchemy """
+    tablename = table.__name__
+    locals()[tablename] = table
+
+    aggr_fn = IngredientValidator.aggregation_lookup[fld['aggregation']]
+    field = getattr(table, fld['value'])
+    for operator in fld.get('operators', []):
+        op = operator['operator']
+        other_field = parse_validated_field(operator['field'], table=table)
+        field = IngredientValidator.operator_lookup[op](field)(other_field)
+
+    condition = fld.get('condition', None)
+    if condition:
+        condition = parse_validated_condition(condition, table=table)
+        field = case([(condition, field)])
+
+    field = aggr_fn(field)
+    return field
+
+
+def ingredient_from_validated_dict(ingr_dict, table=''):
+    """ Create an ingredient from an dictionary.
+
+    This object will be deserialized from yaml """
+    tablename = table.__name__
+    locals()[tablename] = table
+
+    validator = IngredientValidator(schema=ingr_dict['kind'])
+    assert validator.validate(ingr_dict)
+    ingr_dict = validator.document
+
+    kind = ingr_dict.pop('kind', 'Metric')
+    IngredientClass = ingredient_class_for_name(kind)
+
+    if IngredientClass is None:
+        raise BadIngredient('Unknown ingredient kind')
+
+    args = []
+    for fld in ingr_dict.pop('_fields', []):
+        args.append(parse_validated_field(ingr_dict.pop(fld), table=table))
+
+    return IngredientClass(*args, **ingr_dict)
+
+
 class Shelf(AttrDict):
     """ Holds ingredients used by a recipe
 
@@ -409,6 +461,20 @@ class Shelf(AttrDict):
         d = {}
         for k, v in iteritems(obj):
             d[k] = ingredient_from_dict(v, table)
+
+        shelf = cls(d)
+        shelf.Meta.table = tablename
+        return shelf
+
+    @classmethod
+    def from_validated_yaml(cls, yaml_str, table):
+        obj = safe_load(yaml_str)
+        tablename = table.__name__
+        locals()[tablename] = table
+
+        d = {}
+        for k, v in iteritems(obj):
+            d[k] = ingredient_from_validated_dict(v, table)
 
         shelf = cls(d)
         shelf.Meta.table = tablename
