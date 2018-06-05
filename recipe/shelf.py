@@ -327,9 +327,6 @@ def parse_validated_condition(cnd, table=''):
 
 def parse_validated_field(fld, table=''):
     """ Converts a validated field to sqlalchemy """
-    tablename = table.__name__
-    locals()[tablename] = table
-
     aggr_fn = IngredientValidator.aggregation_lookup[fld['aggregation']]
     field = getattr(table, fld['value'])
     for operator in fld.get('operators', []):
@@ -350,8 +347,6 @@ def ingredient_from_validated_dict(ingr_dict, table=''):
     """ Create an ingredient from an dictionary.
 
     This object will be deserialized from yaml """
-    tablename = table.__name__
-    locals()[tablename] = table
 
     validator = IngredientValidator(schema=ingr_dict['kind'])
     assert validator.validate(ingr_dict)
@@ -475,15 +470,13 @@ class Shelf(AttrDict):
     @classmethod
     def from_validated_yaml(cls, yaml_str, table):
         obj = safe_load(yaml_str)
-        tablename = table.__name__
-        locals()[tablename] = table
 
         d = {}
         for k, v in iteritems(obj):
             d[k] = ingredient_from_validated_dict(v, table)
 
         shelf = cls(d)
-        shelf.Meta.table = tablename
+        shelf.Meta.table = table.__name__
         return shelf
 
     def find(self, obj, filter_to_class=Ingredient, constructor=None):
