@@ -105,7 +105,7 @@ oldage:
             field: age
             gt: 60
 '''
-        shelf = Shelf.from_yaml(yaml, MyTable)
+        shelf = Shelf.from_validated_yaml(yaml, MyTable)
         recipe = Recipe(shelf=shelf, session=self.session).metrics('oldage')
         assert (
             ' '.join(recipe.to_sql().split())
@@ -125,7 +125,7 @@ oldageandcoolname:
                 - field: first
                   eq: radix
 '''
-        shelf = Shelf.from_yaml(yaml, MyTable)
+        shelf = Shelf.from_validated_yaml(yaml, MyTable)
         recipe = Recipe(shelf=shelf, session=self.session).metrics('oldageandcoolname')
         assert (
             ' '.join(recipe.to_sql().split())
@@ -145,7 +145,7 @@ oldageorcoolname:
                 - field: first
                   eq: radix
 '''
-        shelf = Shelf.from_yaml(yaml, MyTable)
+        shelf = Shelf.from_validated_yaml(yaml, MyTable)
         recipe = Recipe(shelf=shelf, session=self.session).metrics('oldageorcoolname')
         assert (
             ' '.join(recipe.to_sql().split())

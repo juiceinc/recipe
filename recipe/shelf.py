@@ -319,12 +319,6 @@ def ingredient_from_dict(ingr_dict, table=''):
     return IngredientClass(*args, **ingr_dict)
 
 
-def parse_validated_condition(cnd, table=''):
-    """ Converts a validated field to sqlalchemy condition """
-    field = parse_validated_field(cnd['field'], table=table)
-    return cnd['_condition'](field)
-
-
 def parse_validated_field(fld, table=''):
     """ Converts a validated field to sqlalchemy """
     aggr_fn = IngredientValidator.aggregation_lookup[fld['aggregation']]
@@ -336,7 +330,7 @@ def parse_validated_field(fld, table=''):
 
     condition = fld.get('condition', None)
     if condition:
-        condition = parse_validated_condition(condition, table=table)
+        condition = parse_condition(condition, table=table)
         field = case([(condition, field)])
 
     field = aggr_fn(field)
@@ -349,7 +343,8 @@ def ingredient_from_validated_dict(ingr_dict, table=''):
     This object will be deserialized from yaml """
 
     validator = IngredientValidator(schema=ingr_dict['kind'])
-    assert validator.validate(ingr_dict)
+    if not validator.validate(ingr_dict):
+        raise Exception(validator.errors)
     ingr_dict = validator.document
 
     kind = ingr_dict.pop('kind', 'Metric')

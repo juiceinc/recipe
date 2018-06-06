@@ -19,8 +19,7 @@ logging.captureWarnings(True)
 
 
 class IngredientValidator(Validator):
-    """ IngredientValidator
-    """
+    """A validator for ingredients."""
 
     format_lookup = {
         'comma': ',.0f',
@@ -48,16 +47,6 @@ class IngredientValidator(Validator):
         'age': lambda fld: func.date_part('year', func.age(fld)),
         'none': lambda fld: fld,
         None: lambda fld: fld,
-    }
-
-    condition_lookup = {
-        'in': 'in_',
-        'gt': '__gt__',
-        'gte': '__ge__',
-        'lt': '__lt__',
-        'lte': '__le__',
-        'eq': '__eq__',
-        'ne': '__ne__',
     }
 
     operator_lookup = {

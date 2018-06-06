@@ -87,14 +87,11 @@ class RecipeSchemas(object):
                 'default': None,
             },
             'condition': {
-                'schema':
-                    'condition',
+                'schema': 'condition',
+                'required': False,
                 'contains_oneof':
                     list(self.nonscalar_conditions + self.scalar_conditions),
-                'required':
-                    False,
-                'allow_unknown':
-                    False
+                'allow_unknown': False
             }
         }
 
