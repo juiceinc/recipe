@@ -501,31 +501,37 @@ class TestValidateAggregatedField(object):
 
 
         error_message = {'condition': [
-            "Must contain all keys in one of these sets: [('field', 'in'), ('field', 'gt'), ('field', 'gte'), ('field', 'lt'), ('field', 'lte'), ('field', 'eq'), ('field', 'ne'), ('and',), ('or',)]."]}
+            ]}
         # Dicts that fail to validate and the errors
         bad_values = [
-            {
-                # A condition without a predicate
-                'value': 'moo',
-                'aggregation': 'sum',
-                'condition': {
-                    'field': 'cow'
-                }
-            },
-            {
-                # A condition with two operators
-                'value': 'moo',
-                'aggregation': 'sum',
-                'condition': {
-                    'field': 'cow',
-                    'in': 1,
-                    'gt': 2
-                }
-            },
+            (
+                {
+                    # A condition without a predicate
+                    'value': 'moo',
+                    'aggregation': 'sum',
+                    'condition': {
+                        'field': 'cow'
+                    }
+                },
+                "Must contain one of "
+                "('in', 'gt', 'gte', 'lt', 'lte', 'eq', 'ne')"),
+            (
+                {
+                    # A condition with two operators
+                    'value': 'moo',
+                    'aggregation': 'sum',
+                    'condition': {
+                        'field': 'cow',
+                        'in': 1,
+                        'gt': 2
+                    }
+                },
+                "Must contain no more than one of "
+                "('in', 'gt', 'gte', 'lt', 'lte', 'eq', 'ne')"),
         ]
-        for document in bad_values:
+        for (document, error_message) in bad_values:
             assert not self.validator.validate(document)
-            # assert self.validator.errors == error_message
+            assert self.validator.errors['condition'] == [error_message]
 
 
 class TestValidateCondition(object):
@@ -571,8 +577,7 @@ class TestValidateCondition(object):
                 'field': 'foo',
                 'kind': 'asa'
             }, "{'kind': ['unknown field']}"),
-            ({}, "{'field': ['required field']}"),
         ]
         for document, errors in bad_values:
-            assert not self.validator.validate(document), "should not validate"
+            assert not self.validator.validate(document), "should not validate; expecting {}".format(errors)
             assert str(self.validator.errors) == errors

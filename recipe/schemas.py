@@ -105,6 +105,24 @@ class RecipeSchemas(object):
         schema_registry.add('field', deepcopy(default_field_schema))
         schema_registry.add('aggregated_field', aggregated_field_schema)
 
+    def _register_operator_schema(self):
+        operator_schema = {
+            'operator': {
+                'type': 'string',
+                'allowed': self.allowed_operators,
+                'required': True
+            },
+            'field': {
+                'schema': 'field',
+                'type': 'dict',
+                'coerce': 'to_field_dict',
+                'allow_unknown': False,
+                'required': True
+            },
+        }
+
+        schema_registry.add('operator', operator_schema)
+
     def _validate_condition_keys(self, field, value, error):
         """
         Validates that all of the keys in one of the sets of keys are defined as
@@ -134,28 +152,21 @@ class RecipeSchemas(object):
             error(field, "Must contain field + operator keys, 'and', or 'or'.")
             return False
 
-    def _register_operator_schema(self):
-        operator_schema = {
-            'operator': {
-                'type': 'string',
-                'allowed': self.allowed_operators,
-                'required': True
-            },
-            'field': {
-                'schema': 'field',
-                'type': 'dict',
-                'coerce': 'to_field_dict',
-                'allow_unknown': False,
-                'required': True
-            },
-        }
-
-        schema_registry.add('operator', operator_schema)
-
     def _register_condition_schema(self):
+        recursive = {
+            'type': 'dict',
+            'schema': 'condition',
+             'validator': self._validate_condition_keys
+        }
         condition_schema = {
-            'and': {'type': 'list', 'schema': {'type': 'dict', 'schema': 'condition'}},
-            'or': {'type': 'list', 'schema': {'type': 'dict', 'schema': 'condition'}},
+            'and': {
+                'type': 'list',
+                'schema': recursive,
+            },
+            'or': {
+                'type': 'list',
+                'schema': recursive,
+            },
             'field': {
                 'schema': 'field',
                 'type': 'dict',
