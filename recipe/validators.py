@@ -138,19 +138,6 @@ class IngredientValidator(Validator):
         ):
             return True
 
-    def _validate_contains_oneof(self, keys, field, value):
-        """ Validates that exactly one of the keys exists in value """
-        results = [k for k in keys if k in value]
-
-        if len(results) == 0:
-            self._error(field, 'Must contain one of {}'.format(keys))
-            return False
-        elif len(results) > 1:
-            self._error(field, 'Must contain only one of {}'.format(keys))
-            return False
-        return True
-
-
 RecipeSchemas(
     allowed_aggregations=IngredientValidator.aggregation_lookup.keys()
 ).register_schemas()

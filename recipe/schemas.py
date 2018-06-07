@@ -88,10 +88,10 @@ class RecipeSchemas(object):
             },
             'condition': {
                 'schema': 'condition',
+                'validator': self._validate_condition_keys,
                 'required': False,
-                'contains_oneof':
-                    list(self.nonscalar_conditions + self.scalar_conditions),
-                'allow_unknown': False
+                'allow_unknown': False,
+                'type': 'dict'
             }
         }
 
@@ -104,6 +104,35 @@ class RecipeSchemas(object):
 
         schema_registry.add('field', deepcopy(default_field_schema))
         schema_registry.add('aggregated_field', aggregated_field_schema)
+
+    def _validate_condition_keys(self, field, value, error):
+        """
+        Validates that all of the keys in one of the sets of keys are defined as
+        keys of ``value``.
+        """
+        print "_validate_condition_keys", field, value
+        if 'field' in value:
+            operators = self.nonscalar_conditions + self.scalar_conditions
+            matches = sum(1 for k in operators if k in value)
+            if matches == 0:
+                error(field, 'Must contain one of {}'.format(operators))
+                return False
+            elif matches > 1:
+                error(
+                    field,
+                    'Must contain no more than one of {}'.format(operators)
+                )
+                return False
+            return True
+        elif 'and' in value:
+            for condition in value['and']:
+                self._validate_condition_keys(field, condition, error)
+        elif 'or' in value:
+            for condition in value['or']:
+                self._validate_condition_keys(field, condition, error)
+        else:
+            error(field, "Must contain field + operator keys, 'and', or 'or'.")
+            return False
 
     def _register_operator_schema(self):
         operator_schema = {
@@ -125,12 +154,14 @@ class RecipeSchemas(object):
 
     def _register_condition_schema(self):
         condition_schema = {
+            'and': {'type': 'list', 'schema': {'type': 'dict', 'schema': 'condition'}},
+            'or': {'type': 'list', 'schema': {'type': 'dict', 'schema': 'condition'}},
             'field': {
                 'schema': 'field',
                 'type': 'dict',
                 'coerce': 'to_field_dict',
                 'allow_unknown': False,
-                'required': True
+                'required': False,
             },
         }
 
