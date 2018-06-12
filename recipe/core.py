@@ -72,25 +72,7 @@ class Stats(object):
         return self._get_value('_from_cache')
 
 
-class RecipeBase(type):
-
-    def __new__(cls, name, bases, attrs):
-        super_new = super(RecipeBase, cls).__new__
-
-        # Also ensure initialization is only performed for subclasses of Model
-        # (excluding Model class itself).
-        parents = [b for b in bases if isinstance(b, RecipeBase)]
-        if not parents:
-            return super_new(cls, name, bases, attrs)
-
-        # Create the class.
-        module = attrs.pop('__module__')
-        new_class = super_new(cls, name, bases, {'__module__': module})
-        # attr_meta = attrs.pop('Meta', None)
-        return new_class
-
-
-class Recipe(six.with_metaclass(RecipeBase)):
+class Recipe(object):
     """ A tool for getting data.
 
     Args:

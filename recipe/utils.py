@@ -64,9 +64,7 @@ def prettyprintable_sql(statement, dialect=None, reindent=True):
         }
 
     compiled = statement.compile(
-        dialect=LiteralDialect(), compile_kwargs={
-            'literal_binds': True
-        }
+        dialect=LiteralDialect(), compile_kwargs={'literal_binds': True}
     )
     return sqlparse.format(str(compiled), reindent=reindent)
 

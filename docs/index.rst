@@ -26,7 +26,7 @@ and response formatting.
 
 .. code-block:: python
 
-    >>> shelf = Shelf({ 'age': WtdAvgMetric(Census.age, Census.pop2000), 'state', Dimension(Census.state)})
+    >>> shelf = Shelf({ 'age': WtdAvgMetric(Census.age, Census.pop2000), 'state': Dimension(Census.state)})
     >>> recipe = Recipe().shelf(shelf).metrics('age').dimensions('state').order_by('-age')
 
     >>> recipe.to_sql()

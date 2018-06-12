@@ -331,7 +331,7 @@ class StateFact(Base):
 mytable_shelf = Shelf({
     'first': Dimension(MyTable.first),
     'last': Dimension(MyTable.last),
-    'age': Metric(func.sum(MyTable.age))
+    'age': Metric(func.sum(MyTable.age)),
 })
 
 scores_shelf = Shelf({

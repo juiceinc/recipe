@@ -19,8 +19,7 @@ logging.captureWarnings(True)
 
 
 class IngredientValidator(Validator):
-    """ IngredientValidator
-    """
+    """A validator for ingredients."""
 
     format_lookup = {
         'comma': ',.0f',
@@ -48,16 +47,6 @@ class IngredientValidator(Validator):
         'age': lambda fld: func.date_part('year', func.age(fld)),
         'none': lambda fld: fld,
         None: lambda fld: fld,
-    }
-
-    condition_lookup = {
-        'in': 'in_',
-        'gt': '__gt__',
-        'gte': '__ge__',
-        'lt': '__lt__',
-        'lte': '__le__',
-        'eq': '__eq__',
-        'ne': '__ne__',
     }
 
     operator_lookup = {
@@ -148,19 +137,6 @@ class IngredientValidator(Validator):
             value, _int_types + (_str_type, float, date, datetime, bool)
         ):
             return True
-
-    def _validate_contains_oneof(self, keys, field, value):
-        """ Validates that exactly one of the keys exists in value """
-        results = [k for k in keys if k in value]
-
-        if len(results) == 0:
-            self._error(field, 'Must contain one of {}'.format(keys))
-            return False
-        elif len(results) > 1:
-            self._error(field, 'Must contain only one of {}'.format(keys))
-            return False
-        return True
-
 
 RecipeSchemas(
     allowed_aggregations=IngredientValidator.aggregation_lookup.keys()

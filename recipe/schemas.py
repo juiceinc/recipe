@@ -87,14 +87,11 @@ class RecipeSchemas(object):
                 'default': None,
             },
             'condition': {
-                'schema':
-                    'condition',
-                'contains_oneof':
-                    list(self.nonscalar_conditions + self.scalar_conditions),
-                'required':
-                    False,
-                'allow_unknown':
-                    False
+                'schema': 'condition',
+                'validator': self._validate_condition_keys,
+                'required': False,
+                'allow_unknown': False,
+                'type': 'dict'
             }
         }
 
@@ -126,14 +123,55 @@ class RecipeSchemas(object):
 
         schema_registry.add('operator', operator_schema)
 
+    def _validate_condition_keys(self, field, value, error):
+        """
+        Validates that all of the keys in one of the sets of keys are defined as
+        keys of ``value``.
+        """
+        if 'field' in value:
+            operators = self.nonscalar_conditions + self.scalar_conditions
+            matches = sum(1 for k in operators if k in value)
+            if matches == 0:
+                error(field, 'Must contain one of {}'.format(operators))
+                return False
+            elif matches > 1:
+                error(
+                    field,
+                    'Must contain no more than one of {}'.format(operators)
+                )
+                return False
+            return True
+        elif 'and' in value:
+            for condition in value['and']:
+                self._validate_condition_keys(field, condition, error)
+        elif 'or' in value:
+            for condition in value['or']:
+                self._validate_condition_keys(field, condition, error)
+        else:
+            error(field, "Must contain field + operator keys, 'and', or 'or'.")
+            return False
+
     def _register_condition_schema(self):
+        recursive = {
+            'type': 'dict',
+            'schema': 'condition',
+             'validator': self._validate_condition_keys
+        }
         condition_schema = {
+            'and': {
+                'type': 'list',
+                'schema': recursive,
+            },
+            'or': {
+                'type': 'list',
+                'schema': recursive,
+            },
             'field': {
                 'schema': 'field',
                 'type': 'dict',
                 'coerce': 'to_field_dict',
                 'allow_unknown': False,
-                'required': True
+                'required': False,
             },
         }
 
