@@ -128,7 +128,6 @@ class RecipeSchemas(object):
         Validates that all of the keys in one of the sets of keys are defined as
         keys of ``value``.
         """
-        print "_validate_condition_keys", field, value
         if 'field' in value:
             operators = self.nonscalar_conditions + self.scalar_conditions
             matches = sum(1 for k in operators if k in value)
