@@ -47,24 +47,39 @@ Ingredients
 
 
 
----------
-Functions
----------
+----------
+Extensions
+----------
 
+.. autoclass:: RecipeExtension
+    :members:
 
+.. autoclass:: AutomaticFilters
+    :members:
 
+.. autoclass:: BlendRecipe
+    :members:
+
+.. autoclass:: CompareRecipe
+    :members:
+
+.. autoclass::SummarizeOver
+    :members:
+
+.. autoclass:: Anonymize
+    :members:
 
 ----------
 Exceptions
 ----------
 
 
-.. class:: BadIngredient
+.. autoexception:: BadIngredient
 
     You can't build an ingredient this way.
 
 
-.. class:: BadRecipe
+.. autoexception:: BadRecipe
 
     You can't build a recipe this way.
 

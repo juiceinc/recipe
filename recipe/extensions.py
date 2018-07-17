@@ -128,10 +128,11 @@ class RecipeExtension(object):
 
 
 class AutomaticFilters(RecipeExtension):
-    """ Add automatic filtering.
+    """Automatic generation and addition of Filters to a recipe.
 
     Automatic filters take a dictionary of keys and values. For each key in
-    the dictionary, if the
+    the dictionary, if the key is the id of a ``Dimension`` on the shelf,
+    a filter will be added to the recipe containing the values.
     """
 
     def __init__(self, *args, **kwargs):
@@ -164,22 +165,94 @@ class AutomaticFilters(RecipeExtension):
                 self.recipe.filters(dimension.build_filter(values, operator))
 
     def apply_automatic_filters(self, value):
+        """Toggles whether automatic filters are applied to a recipe. The
+        following will disable automatic filters for this recipe::
+
+            recipe.apply_automatic_filters(False)
+        """
         if self.apply != value:
             self.dirty = True
             self.apply = value
         return self.recipe
 
     def automatic_filters(self, value):
+        """Sets a dictionary of automatic filters to apply to this recipe.
+        If your recipe uses a shelf that has dimensions 'state' and 'gender'
+        you could filter the data to Men in California and New Hampshire with::
+
+            shelf = Shelf({
+                'state': Dimension(Census.state),
+                'gender': Dimension(Census.gender),
+                'population': Metric(func.sum(Census.population)),
+            })
+            recipe = Recipe(shelf=shelf)
+            recipe.dimensions('state').metrics('population').automatic_filters({
+                'state': ['California', 'New Hampshire'],
+                'gender': 'M'
+            })
+
+        Automatic filter keys can optionally include an ``operator``.
+
+        **List operators**
+
+        If the value provided in the automatic_filter dictionary is a list,
+        the following operators are available. The default operator is ``in``::
+
+            in (default)
+            notin
+            between (requires a list of two items)
+
+        **Scalar operators**
+
+        If the value provided in the automatic_fitler dictionary is a scalar
+        (a string, integer, or number), the following operators are available.
+        The default operator is ``eq``::
+
+            eq (equal) (the default)
+            ne (not equal)
+            lt (less than)
+            lte (less than or equal)
+            gt (greater than)
+            gte (greater than or equal)
+
+        **An example using operators**
+
+        Here's an example that filters to states that start with the letters
+        A-C::
+
+            shelf = Shelf({
+                'state': Dimension(Census.state),
+                'gender': Dimension(Census.gender),
+                'population': Metric(func.sum(Census.population)),
+            })
+            recipe = Recipe(shelf=shelf)
+            recipe.dimensions('state').metrics('population').automatic_filters({
+                'state__lt': 'D'
+            })
+        """
         assert isinstance(value, dict)
         self._automatic_filters = value
         self.dirty = True
         return self.recipe
 
     def exclude_automatic_filter_keys(self, *keys):
+        """A "blacklist" of automatic filter keys to exclude. The following will
+        cause ``'state'`` to be ignored if it is present in the
+        ``automatic_filters`` dictionary.::
+
+            recipe.exclude_automatic_filter_keys('state')
+        """
+
         self.exclude_keys = keys
         return self.recipe
 
     def include_automatic_filter_keys(self, *keys):
+        """A "whitelist" of automatic filter keys to use. The following will
+        **only use** ``'state'`` for automatic filters regardless of what is
+        provided in the automatic_filters dictionary.::
+
+            recipe.include_automatic_filter_keys('state')
+        """
         self.include_keys = keys
         return self.recipe
 

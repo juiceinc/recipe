@@ -10,6 +10,10 @@ from flapjack_stack import FlapjackStack
 from recipe import default_settings
 from recipe.core import Recipe
 from recipe.exceptions import BadIngredient, BadRecipe
+from recipe.extensions import (
+    Anonymize, AutomaticFilters, BlendRecipe, CompareRecipe, RecipeExtension,
+    SummarizeOver
+)
 from recipe.ingredients import (
     Dimension, DivideMetric, Filter, Having, IdValueDimension, Ingredient,
     LookupDimension, Metric, WtdAvgMetric
