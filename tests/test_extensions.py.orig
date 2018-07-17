@@ -431,6 +431,11 @@ GROUP BY summarize.department"""
             'department', 'username'
         ).summarize_over('username').limit(2)
 
+        print('=' * 80)
+        print('=' * 80)
+        print(recipe.to_sql())
+        print('=' * 80)
+        print('=' * 80)
         assert recipe.to_sql() in (
             """SELECT summarize.department,
        avg(summarize.score) AS score
@@ -666,6 +671,43 @@ ORDER BY census.sex"""
         assert rowmen.pop2000 == 3059809
         assert rowmen.pop2000_compare == 298532
 
+<<<<<<< HEAD
+=======
+    def test_compare_custom_aggregation(self):
+        """ A basic comparison recipe. The base recipe looks at all data, the
+        comparison only applies to vermont
+
+        Note: Ordering is only preserved on postgres engines.
+        """
+        r = self.recipe().metrics('pop2000').dimensions('sex').order_by('sex')
+        r = r.compare(
+            self.recipe().metrics('pop2000_sum').dimensions('sex')
+            .filters(Census.state == 'Vermont')
+        )
+
+        assert len(r.all()) == 2
+        assert r.to_sql() == """SELECT census.sex AS sex,
+       sum(census.pop2000) AS pop2000,
+       sum(anon_1.pop2000_sum) AS pop2000_sum_compare
+FROM census
+LEFT OUTER JOIN
+  (SELECT census.sex AS sex,
+          sum(census.pop2000) AS pop2000_sum
+   FROM census
+   WHERE census.state = 'Vermont'
+   GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
+GROUP BY census.sex
+ORDER BY census.sex"""
+        rowwomen, rowmen = r.all()[0], r.all()[1]
+        # We should get the lookup values
+        assert rowwomen.sex == 'F'
+        assert rowwomen.pop2000 == 3234901
+        assert rowwomen.pop2000_sum_compare == 53483056
+        assert rowmen.sex == 'M'
+        assert rowmen.pop2000 == 3059809
+        assert rowmen.pop2000_sum_compare == 51347504
+
+>>>>>>> e20ff5b... RECIPE-28 Pass tests under python 3.6
     def test_compare_suffix(self):
         """ Test that the proper suffix gets added to the comparison metrics
         """
