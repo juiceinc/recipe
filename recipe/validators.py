@@ -138,6 +138,7 @@ class IngredientValidator(Validator):
         ):
             return True
 
+
 RecipeSchemas(
-    allowed_aggregations=IngredientValidator.aggregation_lookup.keys()
+    allowed_aggregations=list(IngredientValidator.aggregation_lookup.keys())
 ).register_schemas()

@@ -431,7 +431,13 @@ GROUP BY summarize.department"""
             'department', 'username'
         ).summarize_over('username').limit(2)
 
-        assert recipe.to_sql() == """SELECT summarize.department,
+        print('=' * 80)
+        print('=' * 80)
+        print(recipe.to_sql())
+        print('=' * 80)
+        print('=' * 80)
+        assert recipe.to_sql() in (
+            """SELECT summarize.department,
        avg(summarize.score) AS score
 FROM
   (SELECT scores.department AS department,
@@ -441,7 +447,19 @@ FROM
    GROUP BY scores.department,
             scores.username) AS summarize
 GROUP BY summarize.department LIMIT 2
+OFFSET 0""", """SELECT summarize.department,
+       avg(summarize.score) AS score
+FROM
+  (SELECT scores.department AS department,
+          scores.username AS username,
+          avg(scores.score) AS score
+   FROM scores
+   GROUP BY scores.department,
+            scores.username) AS summarize
+GROUP BY summarize.department
+LIMIT 2
 OFFSET 0"""
+        )
         ops_row, sales_row = recipe.all()
         assert ops_row.department == 'ops'
         assert ops_row.score == 87.5
@@ -652,7 +670,6 @@ ORDER BY census.sex"""
         assert rowmen.sex == 'M'
         assert rowmen.pop2000 == 3059809
         assert rowmen.pop2000_compare == 298532
-
 
     def test_compare_custom_aggregation(self):
         """ A basic comparison recipe. The base recipe looks at all data, the
