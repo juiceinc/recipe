@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import pytest
 from sqlalchemy import func
 
 from recipe.utils import AttrDict, disaggregate, replace_whitespace_with_space
