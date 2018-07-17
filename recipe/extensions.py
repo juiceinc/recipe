@@ -478,18 +478,24 @@ class CompareRecipe(RecipeExtension):
             # For all metrics in the comparison recipe
             # Use the metric in the base recipe and
             # Add the metric columns to the base recipe
+
+            # Comparison metrics hoisted into the base recipe need an
+            # aggregation function.The default is func.avg but
+            # metrics can override this by provoding a
+            # metric.meta.summary_aggregation callable parameter
             for m in compare_recipe.metric_ids:
                 met = compare_recipe._cauldron[m]
                 id = met.id
                 met.id = id + compare_suffix
+                summary_aggregation = met.meta.get('summary_aggregation', func.avg)
                 self.recipe._cauldron.use(met)
                 for suffix in met.make_column_suffixes():
                     col = getattr(comparison_subq.c, id + suffix, None)
                     if col is not None:
-                        postquery_parts['query'
-                                       ] = postquery_parts['query'].add_columns(
-                                           col.label(met.id + suffix)
-                                       )
+                        postquery_parts['query'] = \
+                            postquery_parts['query'].add_columns(
+                                summary_aggregation(col).label(met.id + suffix)
+                            )
                     else:
                         raise BadRecipe(
                             '{} could not be found in .compare() '
