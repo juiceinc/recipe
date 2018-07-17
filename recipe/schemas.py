@@ -155,7 +155,7 @@ class RecipeSchemas(object):
         recursive = {
             'type': 'dict',
             'schema': 'condition',
-             'validator': self._validate_condition_keys
+            'validator': self._validate_condition_keys
         }
         condition_schema = {
             'and': {
@@ -194,7 +194,7 @@ class RecipeSchemas(object):
             'kind': {
                 'type': 'string',
                 'required': True,
-                'allowed': self.ingredient_kinds.keys(),
+                'allowed': list(self.ingredient_kinds.keys()),
                 'default': 'Metric'
             },
             '_fields': {
@@ -212,7 +212,7 @@ class RecipeSchemas(object):
         for kind, extras in self.ingredient_kinds.items():
             # Build a schema for each kind of ingredient
             schema = deepcopy(ingredient_schema_root)
-            schema['_fields']['default'] = extras.keys()
+            schema['_fields']['default'] = list(extras.keys())
             for field_name, field_schema in extras.items():
                 schema[field_name] = {
                     'schema': field_schema,

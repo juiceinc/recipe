@@ -22,7 +22,7 @@ if sys.argv[-1] == 'test':
         print('py.test required.')
         sys.exit(1)
 
-    errors = os.system('py.test test_tablib.py')
+    errors = os.system('py.test tests/')
     sys.exit(bool(errors))
 
 # yapf: disable
@@ -35,7 +35,8 @@ install = [
     'tablib',
     'pyyaml',
     'flapjack_stack',
-    'stevedore'
+    'stevedore',
+    'mock'
 ]
 # yapf: enable
 
@@ -65,9 +66,6 @@ setup(
     ],
     tests_require=['pytest', 'pytest-cov'],
     install_requires=install,
-    dependency_links=[
-        'git+git://github.com/pyeve/cerberus.git#egg=Cerberus-1.1',
-    ],
     entry_points={
         'recipe.oven.drivers': [
             'standard = recipe.oven.drivers.standard_oven:StandardOven',

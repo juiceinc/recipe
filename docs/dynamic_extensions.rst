@@ -4,7 +4,7 @@
 Dynamic Extensions
 ==================
 
-Recipes can to load dyanmic plugins and extensions as hooks. The hooks
+Recipes can to load dynamic plugins and extensions as hooks. The hooks
 are expected to accept a recipe_parts dict or object and have an
 execute method that returns a new recipe_parts dict or object. The
 plugins must be in the appropiate namespace depending on where they get
