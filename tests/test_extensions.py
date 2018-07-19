@@ -431,7 +431,8 @@ GROUP BY summarize.department"""
             'department', 'username'
         ).summarize_over('username').limit(2)
 
-        assert recipe.to_sql() == """SELECT summarize.department,
+        assert recipe.to_sql() in (
+            """SELECT summarize.department,
        avg(summarize.score) AS score
 FROM
   (SELECT scores.department AS department,
@@ -441,7 +442,19 @@ FROM
    GROUP BY scores.department,
             scores.username) AS summarize
 GROUP BY summarize.department LIMIT 2
+OFFSET 0""", """SELECT summarize.department,
+       avg(summarize.score) AS score
+FROM
+  (SELECT scores.department AS department,
+          scores.username AS username,
+          avg(scores.score) AS score
+   FROM scores
+   GROUP BY scores.department,
+            scores.username) AS summarize
+GROUP BY summarize.department
+LIMIT 2
 OFFSET 0"""
+        )
         ops_row, sales_row = recipe.all()
         assert ops_row.department == 'ops'
         assert ops_row.score == 87.5
