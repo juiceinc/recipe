@@ -6,14 +6,12 @@ env:
     - LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
     - SEGFAULT_SIGNALS=all
   matrix:
-    - TOXENV=check
-    - TOXENV=docs
-
-    - TOXENV=py27,report,codecov
-    - TOXENV=py33,report,codecov
-    - TOXENV=py34,report,codecov
-    - TOXENV=py35,report,codecov
-    - TOXENV=pypy,report,codecov
+    - python: 2.7
+      env: TOXENV=py27
+    - python: 3.6
+      env: TOXENV=py36
+    - python: 3.6
+      env: TOXENV=docs
 before_install:
   - python --version
   - uname -a

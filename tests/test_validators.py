@@ -328,15 +328,20 @@ class TestValidateField(object):
         bad_values = [
             ({
                 'kind': 'asa'
-            }, "{'kind': ['unknown field'], 'value': ['required field']}"),
+            }, {
+                'kind': ['unknown field'],
+                'value': ['required field']
+            }),
             ({
                 'value': 'foo',
                 'aggregation': 'cow'
-            }, "{'aggregation': ['unallowed value cow']}"),
+            }, {
+                'aggregation': ['unallowed value cow']
+            }),
         ]
         for document, errors in bad_values:
             assert not self.validator.validate(document)
-            assert str(self.validator.errors) == errors
+            assert self.validator.errors == errors
 
 
 class TestValidateAggregatedField(object):
@@ -453,23 +458,32 @@ class TestValidateAggregatedField(object):
         bad_values = [
             ({
                 'kind': 'asa'
-            }, "{'kind': ['unknown field'], 'value': ['required field']}"),
+            }, {
+                'kind': ['unknown field'],
+                'value': ['required field']
+            }),
             ({
                 'value': 'foo',
                 'aggregation': 'cow'
-            }, "{'aggregation': ['unallowed value cow']}"),
+            }, {
+                'aggregation': ['unallowed value cow']
+            }),
             ({
                 'value': 'foo',
                 'aggregation': 2
-            }, "{'aggregation': ['must be of string type']}"),
+            }, {
+                'aggregation': ['must be of string type']
+            }),
             ({
                 'value': 'foo',
                 'aggregation': ['sum']
-            }, "{'aggregation': ['must be of string type']}"),
+            }, {
+                'aggregation': ['must be of string type']
+            }),
         ]
         for document, errors in bad_values:
             assert not self.validator.validate(document)
-            assert str(self.validator.errors) == errors
+            assert self.validator.errors == errors
 
     def test_field_condition(self):
         # Dicts to validate and the results
@@ -499,9 +513,7 @@ class TestValidateAggregatedField(object):
             assert self.validator.validate(document)
             assert self.validator.document == expected
 
-
-        error_message = {'condition': [
-            ]}
+        error_message = {'condition': []}
         # Dicts that fail to validate and the errors
         bad_values = [
             (
@@ -513,8 +525,9 @@ class TestValidateAggregatedField(object):
                         'field': 'cow'
                     }
                 },
-                "Must contain one of "
-                "('in', 'gt', 'gte', 'lt', 'lte', 'eq', 'ne')"),
+                'Must contain one of '
+                "('in', 'gt', 'gte', 'lt', 'lte', 'eq', 'ne')"
+            ),
             (
                 {
                     # A condition with two operators
@@ -526,8 +539,9 @@ class TestValidateAggregatedField(object):
                         'gt': 2
                     }
                 },
-                "Must contain no more than one of "
-                "('in', 'gt', 'gte', 'lt', 'lte', 'eq', 'ne')"),
+                'Must contain no more than one of '
+                "('in', 'gt', 'gte', 'lt', 'lte', 'eq', 'ne')"
+            ),
         ]
         for (document, error_message) in bad_values:
             assert not self.validator.validate(document)
@@ -579,5 +593,7 @@ class TestValidateCondition(object):
             }, "{'kind': ['unknown field']}"),
         ]
         for document, errors in bad_values:
-            assert not self.validator.validate(document), "should not validate; expecting {}".format(errors)
+            assert not self.validator.validate(
+                document
+            ), 'should not validate; expecting {}'.format(errors)
             assert str(self.validator.errors) == errors
