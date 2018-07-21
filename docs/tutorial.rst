@@ -180,7 +180,7 @@ What are extensions for?
 Automatic Filtering
 -------------------
 
-AutomaticFilter
+The AutomaticFilter extension
 
 ---------------------------
 Summarizing over Dimensions

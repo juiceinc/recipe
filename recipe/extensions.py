@@ -2,8 +2,10 @@
 from sqlalchemy import and_, func, text
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import BadRecipe, Dimension, Metric, Recipe
 from recipe.compat import basestring
+from recipe.core import Recipe
+from recipe.exceptions import BadRecipe
+from recipe.ingredients import Dimension, Metric
 
 Base = declarative_base()
 
@@ -90,7 +92,7 @@ class RecipeExtension(object):
         }
 
     def modify_prequery_parts(self, prequery_parts):
-        """ This method allows extensions to directly modify query,
+        """This method allows extensions to directly modify query,
         group_bys, filters, and order_bys generated from collected
         ingredients after a preliminary query using columns has been created.
         """
@@ -405,6 +407,10 @@ class BlendRecipe(RecipeExtension):
         self.blend_criteria = []
 
     def blend(self, blend_recipe, join_base, join_blend):
+        """Blend a recipe into the base recipe.
+        This performs an inner join of the blend_recipe to the
+        base recipe's SQL.
+        """
         assert isinstance(blend_recipe, Recipe)
 
         self.blend_recipes.append(blend_recipe)
@@ -414,6 +420,11 @@ class BlendRecipe(RecipeExtension):
         return self.recipe
 
     def full_blend(self, blend_recipe, join_base, join_blend):
+        """Blend a recipe into the base recipe preserving
+        values from both recipes.
+
+        This performs an outer join of the blend_recipe to the
+        base recipe."""
         assert isinstance(blend_recipe, Recipe)
 
         self.blend_recipes.append(blend_recipe)
@@ -506,7 +517,7 @@ class BlendRecipe(RecipeExtension):
 
 
 class CompareRecipe(RecipeExtension):
-    """ Add compare recipes, used for presenting comparative context
+    """Add compare recipes, used for presenting comparative context
     vis-a-vis a base recipe.
 
     Supply a second recipe with the same ```from``.
@@ -522,6 +533,7 @@ class CompareRecipe(RecipeExtension):
         self.suffix = []
 
     def compare(self, compare_recipe, suffix='_compare'):
+        """Adds a comparison recipe to a base recipe."""
         assert isinstance(compare_recipe, Recipe)
         assert isinstance(suffix, basestring)
         self.compare_recipe.append(compare_recipe)
@@ -530,8 +542,7 @@ class CompareRecipe(RecipeExtension):
         return self.recipe
 
     def modify_postquery_parts(self, postquery_parts):
-        """
-        Make the comparison recipe a subquery that is left joined to the
+        """Make the comparison recipe a subquery that is left joined to the
         base recipe using dimensions that are shared between the recipes.
 
         Hoist the metric from the comparison recipe up to the base query

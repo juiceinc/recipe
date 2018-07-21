@@ -126,8 +126,8 @@ class RecipeSchemas(object):
 
     def _validate_condition_keys(self, field, value, error):
         """
-        Validates that all of the keys in one of the sets of keys are defined as
-        keys of ``value``.
+        Validates that all of the keys in one of the sets of keys are defined
+        as keys of ``value``.
         """
         if 'field' in value:
             operators = self.nonscalar_conditions + self.scalar_conditions

@@ -39,7 +39,26 @@ logging.getLogger(__name__).addHandler(NullHandler())
 __version__ = '0.2.2'
 
 __all__ = [
-    'BadIngredient', 'BadRecipe', 'Ingredient', 'Dimension', 'LookupDimension',
-    'IdValueDimension', 'Metric', 'DivideMetric', 'WtdAvgMetric', 'Filter',
-    'Having', 'Recipe', 'Shelf', 'AutomaticShelf', 'SETTINGS', 'get_oven'
+    'BadIngredient',
+    'BadRecipe',
+    'Ingredient',
+    'Dimension',
+    'LookupDimension',
+    'IdValueDimension',
+    'Metric',
+    'DivideMetric',
+    'WtdAvgMetric',
+    'Filter',
+    'Having',
+    'Recipe',
+    'Shelf',
+    'AutomaticShelf',
+    'SETTINGS',
+    'get_oven',
+    'Anonymize',
+    'AutomaticFilters',
+    'BlendRecipe',
+    'CompareRecipe',
+    'RecipeExtension',
+    'SummarizeOver',
 ]
