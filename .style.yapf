@@ -1,7 +1,7 @@
 [style]
 # YAPF uses the chromium style
 based_on_style: chromium
-column_limit: 80
+column_limit: 79
 blank_line_before_nested_class_or_def: true
 coalesce_brackets: true
 dedent_closing_brackets: true

@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from sqlalchemy import func
-
-from recipe.utils import AttrDict, disaggregate, replace_whitespace_with_space
 from recipe.validators import IngredientValidator
 
 
@@ -161,7 +158,7 @@ class TestValidateIngredient(object):
             }, "{'kind': ['unallowed value Sque']}"),
         ]
         for d, result in bad_values:
-            assert self.validator.validate(d) == False
+            assert self.validator.validate(d) is False
             assert str(self.validator.errors) == result
 
     def test_ingredient_format(self):
@@ -593,7 +590,6 @@ class TestValidateCondition(object):
             }, "{'kind': ['unknown field']}"),
         ]
         for document, errors in bad_values:
-            assert not self.validator.validate(
-                document
-            ), 'should not validate; expecting {}'.format(errors)
+            assert not self.validator.validate(document), \
+                'should not validate; expecting {}'.format(errors)
             assert str(self.validator.errors) == errors

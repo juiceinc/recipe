@@ -451,10 +451,9 @@ class BlendRecipe(RecipeExtension):
                 for suffix in met.make_column_suffixes():
                     col = getattr(blend_subq.c, met.id, None)
                     if col is not None:
-                        postquery_parts['query'
-                                       ] = postquery_parts['query'].add_columns(
-                                           col.label(met.id + suffix)
-                                       )
+                        postquery_parts['query'] = postquery_parts[
+                            'query'
+                        ].add_columns(col.label(met.id + suffix))
                     else:
                         raise BadRecipe(
                             '{} could not be found in .blend() '
@@ -473,10 +472,9 @@ class BlendRecipe(RecipeExtension):
                 for suffix in dim.make_column_suffixes():
                     col = getattr(blend_subq.c, dim.id, None)
                     if col is not None:
-                        postquery_parts['query'
-                                       ] = postquery_parts['query'].add_columns(
-                                           col.label(dim.id + suffix)
-                                       )
+                        postquery_parts['query'] = postquery_parts[
+                            'query'
+                        ].add_columns(col.label(dim.id + suffix))
                         postquery_parts['query'] = postquery_parts[
                             'query'
                         ].group_by(col)
@@ -559,10 +557,9 @@ class CompareRecipe(RecipeExtension):
                 for suffix in met.make_column_suffixes():
                     col = getattr(comparison_subq.c, id + suffix, None)
                     if col is not None:
-                        postquery_parts['query'
-                                       ] = postquery_parts['query'].add_columns(
-                                           col.label(met.id + suffix)
-                                       )
+                        postquery_parts['query'] = postquery_parts[
+                            'query'
+                        ].add_columns(col.label(met.id + suffix))
                     else:
                         raise BadRecipe(
                             '{} could not be found in .compare() '

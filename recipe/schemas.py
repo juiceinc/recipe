@@ -81,7 +81,8 @@ class RecipeSchemas(object):
             'aggregation': {
                 'type': 'string',
                 'required': False,
-                # Allowed values are the keys of IngredientValidator.aggregation_lookup
+                # Allowed values are the keys of
+                # IngredientValidator.aggregation_lookup
                 'allowed': self.allowed_aggregations,
                 'nullable': True,
                 'default': None,
@@ -99,8 +100,8 @@ class RecipeSchemas(object):
         aggregated_field_schema = deepcopy(default_field_schema)
         aggregated_field_schema['aggregation']['required'] = True
         aggregated_field_schema['aggregation']['nullable'] = False
-        aggregated_field_schema['aggregation']['coerce'
-                                              ] = 'to_aggregation_with_default'
+        aggregated_field_schema['aggregation']['coerce'] = \
+            'to_aggregation_with_default'
 
         schema_registry.add('field', deepcopy(default_field_schema))
         schema_registry.add('aggregated_field', aggregated_field_schema)
