@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # Anonymize (could be configured for local or cached)
 # Automatic filters
 # Query caching
-# Expose a logger
+# Expose a loggers_
 #
 # config object that you could use instead of passing data in
 #  on every call, control settings via a yamlfile/env variable/object
@@ -42,8 +42,17 @@ def make_table(r):
     t = r._table()
     # Find the declarative_base that is being used.
     b = t.__bases__[0]
-    # Create a class that uses the source recipe as a data table.
-    return type('Table{}'.format(r._id), (b,), {'__table__': r.as_table()})
+    # Create a class that uses the source recipe as a data table.v
+
+    tbl = r.as_table(name='anon')
+    return type(
+        'Table{}'.format(r._id), (b,), {
+            '__table__': tbl,
+            '__mapper_args__': {
+                'primary_key': list(tbl.columns)[0]
+            }
+        }
+    )
 
 
 class Stats(object):
@@ -471,21 +480,15 @@ class Recipe(object):
             for extension in self.recipe_extensions:
                 extension.dirty = False
 
-    def table(self):
+    def _table(self):
         """ A convenience method to determine the table the query is
         selecting from
         """
-        query_table = self.query().selectable.froms[0]
-        if self._table:
-            if self._table == query_table:
-                return self._table
-            else:
-                raise BadRecipe(
-                    'Recipe was passed a table which is not the '
-                    'table it is selecting from'
-                )
+        descriptions = self.query().column_descriptions
+        if descriptions:
+            return descriptions[0]['entity']
         else:
-            return query_table
+            return None
 
     def to_sql(self):
         """ A string representation of the SQL this recipe will generate.

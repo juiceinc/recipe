@@ -108,9 +108,10 @@ oldage:
         shelf = Shelf.from_validated_yaml(yaml, MyTable)
         recipe = Recipe(shelf=shelf, session=self.session).metrics('oldage')
         assert (
-            ' '.join(recipe.to_sql().split())
-            == 'SELECT sum(CASE WHEN (foo.age > 60) '
-               'THEN foo.age END) AS oldage FROM foo')
+            ' '.join(recipe.to_sql().split()
+                    ) == 'SELECT sum(CASE WHEN (foo.age > 60) '
+            'THEN foo.age END) AS oldage FROM foo'
+        )
 
     def test_compound_and_condition(self):
         yaml = '''
@@ -126,11 +127,15 @@ oldageandcoolname:
                   eq: radix
 '''
         shelf = Shelf.from_validated_yaml(yaml, MyTable)
-        recipe = Recipe(shelf=shelf, session=self.session).metrics('oldageandcoolname')
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).metrics('oldageandcoolname')
         assert (
-            ' '.join(recipe.to_sql().split())
-            == "SELECT sum(CASE WHEN (foo.age > 60 AND foo.first = 'radix') "
-               'THEN foo.age END) AS oldageandcoolname FROM foo')
+            ' '.join(
+                recipe.to_sql().split()
+            ) == "SELECT sum(CASE WHEN (foo.age > 60 AND foo.first = 'radix') "
+            'THEN foo.age END) AS oldageandcoolname FROM foo'
+        )
 
     def test_compound_or_condition(self):
         yaml = '''
@@ -146,11 +151,16 @@ oldageorcoolname:
                   eq: radix
 '''
         shelf = Shelf.from_validated_yaml(yaml, MyTable)
-        recipe = Recipe(shelf=shelf, session=self.session).metrics('oldageorcoolname')
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).metrics('oldageorcoolname')
         assert (
-            ' '.join(recipe.to_sql().split())
-            == "SELECT sum(CASE WHEN (foo.age > 60 OR foo.first = 'radix') "
-               'THEN foo.age END) AS oldageorcoolname FROM foo')
+            ' '.join(
+                recipe.to_sql().split()
+            ) == "SELECT sum(CASE WHEN (foo.age > 60 OR foo.first = 'radix') "
+            'THEN foo.age END) AS oldageorcoolname FROM foo'
+        )
+
 
 class TestStats(object):
 
@@ -175,6 +185,38 @@ class TestStats(object):
         assert recipe.stats.rows == 2
         assert recipe.stats.dbtime < 1.0
         assert recipe.stats.from_cache is False
+
+
+class TestNestedRecipe(object):
+
+    def setup(self):
+        self.session = oven.Session()
+        self.shelf = mytable_shelf
+
+    def recipe(self):
+        return Recipe(shelf=self.shelf, session=self.session)
+
+    def test_nested_recipe(self):
+        recipe = self.recipe().metrics('age').dimensions('last')
+        from recipe import make_table, Metric, Dimension
+
+        table = make_table(recipe)
+        nested_shelf = Shelf({
+            'age': Metric(func.sum(table.age)),
+            'last': Dimension(table.last)
+        })
+
+        r = Recipe(
+            shelf=nested_shelf, session=self.session
+        ).dimensions('last').metrics('age')
+        assert r.to_sql() == '''SELECT anon.last AS last,
+       sum(anon.age) AS age
+FROM
+  (SELECT foo.last AS last,
+          sum(foo.age) AS age
+   FROM foo
+   GROUP BY foo.last) AS anon
+GROUP BY anon.last'''
 
 
 class TestCacheContext(object):
