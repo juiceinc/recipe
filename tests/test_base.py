@@ -334,16 +334,6 @@ mytable_shelf = Shelf({
     'age': Metric(func.sum(MyTable.age)),
 })
 
-
-class Cust(Base):
-    __table__ = r.as_table()
-
-
-shelf = Shelf({
-    'first': Dimension(Cust.first),
-    'age': Metric(func.sum(Cust.age)),
-})
-
 scores_shelf = Shelf({
     'username':
         Dimension(Scores.username),
