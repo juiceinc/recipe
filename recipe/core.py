@@ -148,12 +148,12 @@ class Recipe(object):
         self._limit = 0
         self._offset = 0
 
-        # For backward compatibility
-        self.dirty = False
-
         self._is_postgres_engine = None
         # Store cached results in _query and _all
-        self.fetched = False
+        # setting dirty to true invalidates these caches
+        self.dirty = True
+        # Have the rows been fetched
+        self.all_dirty = True
         self._query = None
         self._all = []
 
@@ -223,10 +223,9 @@ class Recipe(object):
                          Metric objects
         :type metrics: list
         """
-        if self.fetched:
-            raise BadRecipe('Recipe\'s can\'t be changed once data is fetched')
         for m in metrics:
             self._cauldron.use(self._shelf.find(m, Metric))
+        self.dirty = True
         return self
 
     @property
@@ -245,10 +244,10 @@ class Recipe(object):
                          Dimension objects
         :type dimensions: list
         """
-        if self.fetched:
-            raise BadRecipe('Recipe\'s can\'t be changed once data is fetched')
         for d in dimensions:
             self._cauldron.use(self._shelf.find(d, Dimension))
+
+        self.dirty = True
         return self
 
     @property
@@ -276,14 +275,14 @@ class Recipe(object):
             else:
                 return f
 
-        if self.fetched:
-            raise BadRecipe('Recipe\'s can\'t be changed once data is fetched')
         for f in filters:
             self._cauldron.use(
                 self._shelf.find(
                     f, (Filter, Having), constructor=filter_constructor
                 )
             )
+
+        self.dirty = True
         return self
 
     @property
@@ -306,18 +305,17 @@ class Recipe(object):
         """
 
         # Order bys shouldn't be added to the _cauldron
-        if self.fetched:
-            raise BadRecipe('Recipe\'s can\'t be changed once data is fetched')
         self._order_bys = []
         for ingr in order_bys:
             order_by = self._shelf.find(ingr, (Dimension, Metric))
             self._order_bys.append(order_by)
+
+        self.dirty = True
         return self
 
     def session(self, session):
+        self.dirty = True
         self._session = session
-        if self.fetched:
-            raise BadRecipe('Recipe\'s can\'t be changed once data is fetched')
         return self
 
     def limit(self, limit):
@@ -327,9 +325,8 @@ class Recipe(object):
                       all rows.
         :type limit: int
         """
-        if self.fetched:
-            raise BadRecipe('Recipe\'s can\'t be changed once data is fetched')
         if self._limit != limit:
+            self.dirty = True
             self._limit = limit
         return self
 
@@ -340,9 +337,8 @@ class Recipe(object):
                       from the first available row
         :type offset: int
         """
-        if self.fetched:
-            raise BadRecipe('Recipe\'s can\'t be changed once data is fetched')
         if self._offset != offset:
+            self.dirty = True
             self._offset = offset
         return self
 
@@ -390,7 +386,7 @@ class Recipe(object):
         """
         if len(self._cauldron.ingredients()) == 0:
             raise BadRecipe('No ingredients have been added to this recipe')
-        if self.fetched and self._query:
+        if not self.dirty and self._query:
             return self._query
 
         # Step 1: Gather up global filters and user filters and
@@ -444,21 +440,52 @@ class Recipe(object):
         if self._offset and self._offset > 0:
             recipe_parts['query'] = recipe_parts['query'].offset(self._offset)
 
-        # Step 5:
+        # Step 5:  Clear the dirty flag,
         # Patch the query if there's a comparison query
         # cache results
 
         self._query = recipe_parts['query']
+        self.dirty = False
         return self._query
 
-    def _table(self):
+    @property
+    def dirty(self):
+        """ The recipe is dirty if it is flagged dirty or any extensions are
+        flagged dirty """
+        if self._dirty:
+            return True
+        else:
+            for extension in self.recipe_extensions:
+                if extension.dirty:
+                    return True
+        return False
+
+    @dirty.setter
+    def dirty(self, value):
+        """ If dirty is true set the recipe to dirty flag. If false,
+        clear the recipe and all extension dirty flags """
+        if value:
+            self._dirty = True
+        else:
+            self._dirty = False
+            for extension in self.recipe_extensions:
+                extension.dirty = False
+
+    def table(self):
         """ A convenience method to determine the table the query is
         selecting from
         """
-        descriptions = self.query().column_descriptions
-        if descriptions:
-            return descriptions[0]['entity']
-        return None
+        query_table = self.query().selectable.froms[0]
+        if self._table:
+            if self._table == query_table:
+                return self._table
+            else:
+                raise BadRecipe(
+                    'Recipe was passed a table which is not the '
+                    'table it is selecting from'
+                )
+        else:
+            return query_table
 
     def to_sql(self):
         """ A string representation of the SQL this recipe will generate.
@@ -485,7 +512,7 @@ class Recipe(object):
         starttime = fetchtime = enchanttime = time.time()
         fetched_from_cache = False
 
-        if not self.fetched:
+        if self.dirty or self.all_dirty:
             query = self.query()
             self._all = query.all()
             # If we're using a caching query and that query did not
@@ -500,6 +527,8 @@ class Recipe(object):
                 self._all, cache_context=self.cache_context
             )
             enchanttime = time.time()
+
+            self.all_dirty = False
         else:
             # In this case we are using the object self._all as cache
             fetched_from_cache = True
@@ -509,7 +538,6 @@ class Recipe(object):
             fetched_from_cache
         )
 
-        self.fetched = True
         return self._all
 
     def one(self):
