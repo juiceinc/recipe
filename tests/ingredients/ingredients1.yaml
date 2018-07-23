@@ -1,0 +1,9 @@
+first:
+    kind: Dimension
+    field: first
+last:
+    kind: Dimension
+    field: last
+age:
+    kind: Metric
+    field: age

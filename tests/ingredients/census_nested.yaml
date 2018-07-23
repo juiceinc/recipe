@@ -1,0 +1,8 @@
+ttlpop:
+    kind: Metric
+    field: ttlpop
+num_states:
+    kind: Metric
+    field:
+        value: state
+        aggregation: count

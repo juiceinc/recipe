@@ -305,8 +305,23 @@ class IdValueDimension(Dimension):
 class LookupDimension(Dimension):
     """ Returns the expression value looked up in a lookup dictionary
     """
+    SHOW_ORIGINAL = 'original'
 
     def __init__(self, expression, lookup, **kwargs):
+        """A Dimension that replaces values using a lookup table.
+
+        :param expression: The dimension field
+        :type value: object
+        :param lookup: A dictionary of key/value pairs. If the keys will
+           be replaced by values in the value of this Dimension
+        :type operator: dict
+        :param default: The value to use if a dimension value isn't
+           found in the lookup table. If default is
+           LookupDimension.SHOW_ORIGINAL, values will be
+           unchanged if they don't appear in the lookup table.
+           This is the default behavior.
+        :type default: object
+        """
         super(LookupDimension, self).__init__(expression, **kwargs)
         self.lookup = lookup
         if not isinstance(lookup, dict):
@@ -314,9 +329,12 @@ class LookupDimension(Dimension):
                 'lookup for LookupDimension must be a '
                 'dictionary'
             )
-        self.default = kwargs.pop('default', 'Not found')
+        self.default = kwargs.pop('default', LookupDimension.SHOW_ORIGINAL)
+        # Inject a formatter that performs the lookup
         self.formatters.insert(
-            0, lambda value: self.lookup.get(value, self.default)
+            0, lambda value: self.lookup.get(value, self.default) \
+                             if self.default != LookupDimension.SHOW_ORIGINAL \
+                             else self.lookup.get(value, value)
         )
 
 
@@ -350,10 +368,9 @@ class DivideMetric(Metric):
         else:
             # If the denominator is zero, return the ifzero value otherwise do
             # the division
-            expression = case(
-                ((cast(denominator, Float) == 0.0, ifzero),),
-                else_=cast(numerator, Float) / cast(denominator, Float)
-            )
+            expression = case(((cast(denominator, Float) == 0.0, ifzero),),
+                              else_=cast(numerator, Float) /
+                              cast(denominator, Float))
         super(DivideMetric, self).__init__(expression, **kwargs)
 
 

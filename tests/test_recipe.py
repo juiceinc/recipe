@@ -217,6 +217,7 @@ FROM
    FROM foo
    GROUP BY foo.last) AS anon
 GROUP BY anon.last'''
+        assert len(r.all()) == 2
 
 
 class TestCacheContext(object):

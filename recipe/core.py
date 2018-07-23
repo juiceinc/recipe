@@ -22,21 +22,11 @@ warnings.simplefilter('always', DeprecationWarning)
 
 logger = logging.getLogger(__name__)
 
-# TODO mixin approach
-# Stats
-# Anonymize (could be configured for local or cached)
-# Automatic filters
-# Query caching
-# Expose a loggers_
-#
-# config object that you could use instead of passing data in
-#  on every call, control settings via a yamlfile/env variable/object
-
 
 def make_table(r):
     """Make a SQLAlchemy Table from a recipe.
 
-    Used to construct nested recipes.
+    Used for building a shelf that depends on another recipe's results.
     """
     # Get the table used in the columns of the source recipe.
     t = r._table()

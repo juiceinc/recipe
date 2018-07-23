@@ -3,7 +3,7 @@ from collections import OrderedDict
 from copy import copy
 
 from six import iteritems
-from sqlalchemy import Float, Integer, String, case, distinct, func, and_, or_
+from sqlalchemy import Float, Integer, String, and_, case, distinct, func, or_
 from sqlalchemy.util import lightweight_named_tuple
 from yaml import safe_load
 
@@ -36,12 +36,14 @@ def parse_condition(cond, table, aggregated=False, default_aggregation='sum'):
         if 'and' in cond:
             conditions = [
                 parse_condition(c, table, aggregated, default_aggregation)
-                for c in cond['and']]
+                for c in cond['and']
+            ]
             return and_(*conditions)
         elif 'or' in cond:
             conditions = [
                 parse_condition(c, table, aggregated, default_aggregation)
-                for c in cond['or']]
+                for c in cond['or']
+            ]
             return or_(*conditions)
         elif 'field' not in cond:
             raise BadIngredient('field must be defined in condition')
@@ -232,6 +234,9 @@ def ingredient_from_dict(ingr_dict, table=''):
     """Create an ingredient from an dictionary.
 
     This object will be deserialized from yaml """
+
+    # TODO: This is deprecated in favor of
+    # ingredient_from_validated_dict
 
     # Describe the required params for each kind of ingredient
     # The key is the parameter name, the value is one of
@@ -452,6 +457,10 @@ class Shelf(AttrDict):
 
     @classmethod
     def from_yaml(cls, yaml_str, table):
+        from recipe.core import Recipe, make_table
+        if isinstance(table, Recipe):
+            table = make_table(table)
+
         obj = safe_load(yaml_str)
 
         d = {}
@@ -464,6 +473,10 @@ class Shelf(AttrDict):
 
     @classmethod
     def from_validated_yaml(cls, yaml_str, table):
+        from recipe.core import Recipe, make_table
+        if isinstance(table, Recipe):
+            table = make_table(table)
+
         obj = safe_load(yaml_str)
 
         d = {}
