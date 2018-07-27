@@ -361,6 +361,7 @@ census_shelf = Shelf({
     'sex': Dimension(Census.sex),
     'age': Dimension(Census.age),
     'pop2000': Metric(func.sum(Census.pop2000)),
+    'pop2000_sum': Metric(func.sum(Census.pop2000), summary_aggregation=func.sum),
     'pop2008': Metric(func.sum(Census.pop2008)),
 })
 
