@@ -1,9 +1,11 @@
-# TODO ask jason about methods of doing this
+*# TODO ask jason about methods of doing this
 from sqlalchemy import and_, func, text
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import BadRecipe, Dimension, Metric, Recipe
 from recipe.compat import basestring
+from recipe.core import Recipe
+from recipe.exceptions import BadRecipe
+from recipe.ingredients import Dimension, Metric
 
 Base = declarative_base()
 
@@ -90,7 +92,7 @@ class RecipeExtension(object):
         }
 
     def modify_prequery_parts(self, prequery_parts):
-        """ This method allows extensions to directly modify query,
+        """This method allows extensions to directly modify query,
         group_bys, filters, and order_bys generated from collected
         ingredients after a preliminary query using columns has been created.
         """
@@ -128,10 +130,11 @@ class RecipeExtension(object):
 
 
 class AutomaticFilters(RecipeExtension):
-    """ Add automatic filtering.
+    """Automatic generation and addition of Filters to a recipe.
 
     Automatic filters take a dictionary of keys and values. For each key in
-    the dictionary, if the
+    the dictionary, if the key is the id of a ``Dimension`` on the shelf,
+    a filter will be added to the recipe containing the values.
     """
 
     def __init__(self, *args, **kwargs):
@@ -164,22 +167,94 @@ class AutomaticFilters(RecipeExtension):
                 self.recipe.filters(dimension.build_filter(values, operator))
 
     def apply_automatic_filters(self, value):
+        """Toggles whether automatic filters are applied to a recipe. The
+        following will disable automatic filters for this recipe::
+
+            recipe.apply_automatic_filters(False)
+        """
         if self.apply != value:
             self.dirty = True
             self.apply = value
         return self.recipe
 
     def automatic_filters(self, value):
+        """Sets a dictionary of automatic filters to apply to this recipe.
+        If your recipe uses a shelf that has dimensions 'state' and 'gender'
+        you could filter the data to Men in California and New Hampshire with::
+
+            shelf = Shelf({
+                'state': Dimension(Census.state),
+                'gender': Dimension(Census.gender),
+                'population': Metric(func.sum(Census.population)),
+            })
+            recipe = Recipe(shelf=shelf)
+            recipe.dimensions('state').metrics('population').automatic_filters({
+                'state': ['California', 'New Hampshire'],
+                'gender': 'M'
+            })
+
+        Automatic filter keys can optionally include an ``operator``.
+
+        **List operators**
+
+        If the value provided in the automatic_filter dictionary is a list,
+        the following operators are available. The default operator is ``in``::
+
+            in (default)
+            notin
+            between (requires a list of two items)
+
+        **Scalar operators**
+
+        If the value provided in the automatic_fitler dictionary is a scalar
+        (a string, integer, or number), the following operators are available.
+        The default operator is ``eq``::
+
+            eq (equal) (the default)
+            ne (not equal)
+            lt (less than)
+            lte (less than or equal)
+            gt (greater than)
+            gte (greater than or equal)
+
+        **An example using operators**
+
+        Here's an example that filters to states that start with the letters
+        A-C::
+
+            shelf = Shelf({
+                'state': Dimension(Census.state),
+                'gender': Dimension(Census.gender),
+                'population': Metric(func.sum(Census.population)),
+            })
+            recipe = Recipe(shelf=shelf)
+            recipe.dimensions('state').metrics('population').automatic_filters({
+                'state__lt': 'D'
+            })
+        """
         assert isinstance(value, dict)
         self._automatic_filters = value
         self.dirty = True
         return self.recipe
 
     def exclude_automatic_filter_keys(self, *keys):
+        """A "blacklist" of automatic filter keys to exclude. The following will
+        cause ``'state'`` to be ignored if it is present in the
+        ``automatic_filters`` dictionary.::
+
+            recipe.exclude_automatic_filter_keys('state')
+        """
+
         self.exclude_keys = keys
         return self.recipe
 
     def include_automatic_filter_keys(self, *keys):
+        """A "whitelist" of automatic filter keys to use. The following will
+        **only use** ``'state'`` for automatic filters regardless of what is
+        provided in the automatic_filters dictionary.::
+
+            recipe.include_automatic_filter_keys('state')
+        """
         self.include_keys = keys
         return self.recipe
 
@@ -332,6 +407,10 @@ class BlendRecipe(RecipeExtension):
         self.blend_criteria = []
 
     def blend(self, blend_recipe, join_base, join_blend):
+        """Blend a recipe into the base recipe.
+        This performs an inner join of the blend_recipe to the
+        base recipe's SQL.
+        """
         assert isinstance(blend_recipe, Recipe)
 
         self.blend_recipes.append(blend_recipe)
@@ -341,6 +420,11 @@ class BlendRecipe(RecipeExtension):
         return self.recipe
 
     def full_blend(self, blend_recipe, join_base, join_blend):
+        """Blend a recipe into the base recipe preserving
+        values from both recipes.
+
+        This performs an outer join of the blend_recipe to the
+        base recipe."""
         assert isinstance(blend_recipe, Recipe)
 
         self.blend_recipes.append(blend_recipe)
@@ -378,10 +462,9 @@ class BlendRecipe(RecipeExtension):
                 for suffix in met.make_column_suffixes():
                     col = getattr(blend_subq.c, met.id, None)
                     if col is not None:
-                        postquery_parts['query'
-                                       ] = postquery_parts['query'].add_columns(
-                                           col.label(met.id + suffix)
-                                       )
+                        postquery_parts['query'] = postquery_parts[
+                            'query'
+                        ].add_columns(col.label(met.id + suffix))
                     else:
                         raise BadRecipe(
                             '{} could not be found in .blend() '
@@ -400,10 +483,9 @@ class BlendRecipe(RecipeExtension):
                 for suffix in dim.make_column_suffixes():
                     col = getattr(blend_subq.c, dim.id, None)
                     if col is not None:
-                        postquery_parts['query'
-                                       ] = postquery_parts['query'].add_columns(
-                                           col.label(dim.id + suffix)
-                                       )
+                        postquery_parts['query'] = postquery_parts[
+                            'query'
+                        ].add_columns(col.label(dim.id + suffix))
                         postquery_parts['query'] = postquery_parts[
                             'query'
                         ].group_by(col)
@@ -435,7 +517,7 @@ class BlendRecipe(RecipeExtension):
 
 
 class CompareRecipe(RecipeExtension):
-    """ Add compare recipes, used for presenting comparative context
+    """Add compare recipes, used for presenting comparative context
     vis-a-vis a base recipe.
 
     Supply a second recipe with the same ```from``.
@@ -451,6 +533,7 @@ class CompareRecipe(RecipeExtension):
         self.suffix = []
 
     def compare(self, compare_recipe, suffix='_compare'):
+        """Adds a comparison recipe to a base recipe."""
         assert isinstance(compare_recipe, Recipe)
         assert isinstance(suffix, basestring)
         self.compare_recipe.append(compare_recipe)
@@ -459,8 +542,7 @@ class CompareRecipe(RecipeExtension):
         return self.recipe
 
     def modify_postquery_parts(self, postquery_parts):
-        """
-        Make the comparison recipe a subquery that is left joined to the
+        """Make the comparison recipe a subquery that is left joined to the
         base recipe using dimensions that are shared between the recipes.
 
         Hoist the metric from the comparison recipe up to the base query

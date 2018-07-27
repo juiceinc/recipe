@@ -108,9 +108,10 @@ oldage:
         shelf = Shelf.from_validated_yaml(yaml, MyTable)
         recipe = Recipe(shelf=shelf, session=self.session).metrics('oldage')
         assert (
-            ' '.join(recipe.to_sql().split())
-            == 'SELECT sum(CASE WHEN (foo.age > 60) '
-               'THEN foo.age END) AS oldage FROM foo')
+            ' '.join(recipe.to_sql().split()
+                    ) == 'SELECT sum(CASE WHEN (foo.age > 60) '
+            'THEN foo.age END) AS oldage FROM foo'
+        )
 
     def test_compound_and_condition(self):
         yaml = '''
@@ -126,11 +127,15 @@ oldageandcoolname:
                   eq: radix
 '''
         shelf = Shelf.from_validated_yaml(yaml, MyTable)
-        recipe = Recipe(shelf=shelf, session=self.session).metrics('oldageandcoolname')
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).metrics('oldageandcoolname')
         assert (
-            ' '.join(recipe.to_sql().split())
-            == "SELECT sum(CASE WHEN (foo.age > 60 AND foo.first = 'radix') "
-               'THEN foo.age END) AS oldageandcoolname FROM foo')
+            ' '.join(
+                recipe.to_sql().split()
+            ) == "SELECT sum(CASE WHEN (foo.age > 60 AND foo.first = 'radix') "
+            'THEN foo.age END) AS oldageandcoolname FROM foo'
+        )
 
     def test_compound_or_condition(self):
         yaml = '''
@@ -146,11 +151,16 @@ oldageorcoolname:
                   eq: radix
 '''
         shelf = Shelf.from_validated_yaml(yaml, MyTable)
-        recipe = Recipe(shelf=shelf, session=self.session).metrics('oldageorcoolname')
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).metrics('oldageorcoolname')
         assert (
-            ' '.join(recipe.to_sql().split())
-            == "SELECT sum(CASE WHEN (foo.age > 60 OR foo.first = 'radix') "
-               'THEN foo.age END) AS oldageorcoolname FROM foo')
+            ' '.join(
+                recipe.to_sql().split()
+            ) == "SELECT sum(CASE WHEN (foo.age > 60 OR foo.first = 'radix') "
+            'THEN foo.age END) AS oldageorcoolname FROM foo'
+        )
+
 
 class TestStats(object):
 

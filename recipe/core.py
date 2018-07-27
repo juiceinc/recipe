@@ -3,7 +3,6 @@ import time
 import warnings
 from uuid import uuid4
 
-import six
 import tablib
 from orderedset import OrderedSet
 from sqlalchemy import alias
@@ -308,8 +307,8 @@ class Recipe(object):
     def limit(self, limit):
         """ Limit the number of rows returned from the database.
 
-        :param limit: The number of rows to return in the recipe. 0 will return
-                      all rows.
+        :param limit: The number of rows to return in the recipe. 0 will
+                      return all rows.
         :type limit: int
         """
         if self._limit != limit:
@@ -320,8 +319,8 @@ class Recipe(object):
     def offset(self, offset):
         """ Offset a number of rows before returning rows from the database.
 
-        :param offset: The number of rows to offset in the recipe. 0 will return
-                      from the first available row
+        :param offset: The number of rows to offset in the recipe. 0 will
+                       return from the first available row
         :type offset: int
         """
         if self._offset != offset:

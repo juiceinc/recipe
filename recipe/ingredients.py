@@ -1,8 +1,7 @@
 from functools import total_ordering
 from uuid import uuid4
 
-from sqlalchemy import Float, between, case, cast, distinct, func
-from sqlalchemy.sql.functions import FunctionElement
+from sqlalchemy import Float, between, case, cast, func
 
 from recipe.compat import basestring, str
 from recipe.exceptions import BadIngredient
@@ -350,10 +349,9 @@ class DivideMetric(Metric):
         else:
             # If the denominator is zero, return the ifzero value otherwise do
             # the division
-            expression = case(
-                ((cast(denominator, Float) == 0.0, ifzero),),
-                else_=cast(numerator, Float) / cast(denominator, Float)
-            )
+            expression = case(((cast(denominator, Float) == 0.0, ifzero),),
+                              else_=cast(numerator, Float) /
+                              cast(denominator, Float))
         super(DivideMetric, self).__init__(expression, **kwargs)
 
 

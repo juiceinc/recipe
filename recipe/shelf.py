@@ -3,7 +3,7 @@ from collections import OrderedDict
 from copy import copy
 
 from six import iteritems
-from sqlalchemy import Float, Integer, String, case, distinct, func, and_, or_
+from sqlalchemy import Float, Integer, String, and_, case, distinct, func, or_
 from sqlalchemy.util import lightweight_named_tuple
 from yaml import safe_load
 
@@ -36,12 +36,14 @@ def parse_condition(cond, table, aggregated=False, default_aggregation='sum'):
         if 'and' in cond:
             conditions = [
                 parse_condition(c, table, aggregated, default_aggregation)
-                for c in cond['and']]
+                for c in cond['and']
+            ]
             return and_(*conditions)
         elif 'or' in cond:
             conditions = [
                 parse_condition(c, table, aggregated, default_aggregation)
-                for c in cond['or']]
+                for c in cond['or']
+            ]
             return or_(*conditions)
         elif 'field' not in cond:
             raise BadIngredient('field must be defined in condition')
@@ -507,7 +509,9 @@ class Shelf(AttrDict):
         elif isinstance(obj, filter_to_class):
             return obj
         else:
-            raise BadRecipe('{} is not a {}'.format(obj, type(filter_to_class)))
+            raise BadRecipe(
+                '{} is not a {}'.format(obj, type(filter_to_class))
+            )
 
     def brew_query_parts(self):
         """ Make columns, group_bys, filters, havings

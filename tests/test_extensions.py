@@ -309,8 +309,9 @@ ORDER BY foo.last"""
 
     def test_anonymize_without_anonymizer(self):
         """ If the dimension doesn't have an anonymizer, there is no change """
-        recipe = self.recipe(
-        ).metrics('age').dimensions('first').order_by('first').anonymize(False)
+        recipe = self.recipe().metrics('age').dimensions('first').order_by(
+            'first'
+        ).anonymize(False)
         assert recipe.to_sql() == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
