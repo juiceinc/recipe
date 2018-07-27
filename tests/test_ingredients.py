@@ -46,7 +46,8 @@ class TestIngredients(object):
         with pytest.raises(BadIngredient):
             # There must be the same number of column suffixes as columns
             ingr = Ingredient(
-                column_suffixes=('foo',), columns=[MyTable.first, MyTable.last]
+                column_suffixes=('foo',),
+                columns=[MyTable.first, MyTable.last]
             )
             ingr.make_column_suffixes()
 
@@ -111,7 +112,9 @@ class TestIngredients(object):
         extras = list(ingr.cauldron_extras)
         assert len(extras) == 0
 
-        ingr = Metric(MyTable.first, id='foo', formatters=[lambda x: x + 'foo'])
+        ingr = Metric(
+            MyTable.first, id='foo', formatters=[lambda x: x + 'foo']
+        )
         extras = list(ingr.cauldron_extras)
         assert extras[0][0] == 'foo'
         assert len(extras) == 1
@@ -167,7 +170,8 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter(['moo'], operator='notin')
         assert str(filt.filters[0]) == 'foo.first NOT IN (:first_1)'
         filt = d.build_filter(['moo', 'foo'], operator='between')
-        assert str(filt.filters[0]) == 'foo.first BETWEEN :first_1 AND :first_2'
+        assert str(filt.filters[0]
+                  ) == 'foo.first BETWEEN :first_1 AND :first_2'
 
         with pytest.raises(ValueError):
             filt = d.build_filter('moo', 'in')
@@ -255,7 +259,9 @@ class TestDimension(object):
         # id gets injected in the response
         assert extras[0][0] == 'moo_id'
 
-        d = Dimension(MyTable.first, id='moo', formatters=[lambda x: x + 'moo'])
+        d = Dimension(
+            MyTable.first, id='moo', formatters=[lambda x: x + 'moo']
+        )
         extras = list(d.cauldron_extras)
         assert len(extras) == 2
         # formatted value and id gets injected in the response
@@ -448,7 +454,7 @@ class TestIngredientFromObj(object):
         ]
         for d in bad_data:
             with pytest.raises(BadIngredient):
-                m = ingredient_from_dict(d, MyTable)
+                ingredient_from_dict(d, MyTable)
 
     def test_ingredient_from_obj_with_meta(self):
         m = ingredient_from_dict({

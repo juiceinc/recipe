@@ -10,18 +10,18 @@ API
 This part of the documentation covers all the interfaces of Recipe.
 
 
---------------
-Recipe Object
---------------
+------
+Recipe
+------
 
 
 .. autoclass:: Recipe
    :inherited-members:
 
 
-------------
-Shelf Object
-------------
+-----
+Shelf
+-----
 
 
 .. autoclass:: Shelf
@@ -37,36 +37,59 @@ Ingredients
 
 
 .. autoclass:: Ingredient
-   :inherited-members:
+   :members:
 
 .. autoclass:: Dimension
-   :inherited-members:
+   :members:
+
+.. autoclass:: IdValueDimension
+   :members:
 
 .. autoclass:: Metric
-   :inherited-members:
+   :members:
+
+.. autoclass:: WtdAveMetric
+   :members:
+
+.. autoclass:: DivideMetric
+   :members:
+
+.. autoclass:: Filter
+   :members:
+
+.. autoclass:: Having
+   :members:
 
 
+----------
+Extensions
+----------
 
----------
-Functions
----------
+.. autoclass:: RecipeExtension
+    :members:
 
+.. autoclass:: AutomaticFilters
+    :members: apply_automatic_filters,automatic_filters,include_automatic_filter_keys,exclude_automatic_filter_keys
 
+.. autoclass:: BlendRecipe
+    :members: blend,full_blend
 
+.. autoclass:: CompareRecipe
+    :members: compare
+
+.. autoclass::SummarizeOver
+    :members: summarize_over
+
+.. autoclass:: Anonymize
+    :members:
 
 ----------
 Exceptions
 ----------
 
+.. autoexception:: BadIngredient
 
-.. class:: BadIngredient
-
-    You can't build an ingredient this way.
-
-
-.. class:: BadRecipe
-
-    You can't build a recipe this way.
+.. autoexception:: BadRecipe
 
 
 Now, go start some :ref:`Recipe Development <development>`.

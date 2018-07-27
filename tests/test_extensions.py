@@ -309,8 +309,9 @@ ORDER BY foo.last"""
 
     def test_anonymize_without_anonymizer(self):
         """ If the dimension doesn't have an anonymizer, there is no change """
-        recipe = self.recipe(
-        ).metrics('age').dimensions('first').order_by('first').anonymize(False)
+        recipe = self.recipe().metrics('age').dimensions('first').order_by(
+            'first'
+        ).anonymize(False)
         assert recipe.to_sql() == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
@@ -647,7 +648,7 @@ class TestCompareRecipeExtension(object):
         assert len(r.all()) == 2
         assert r.to_sql() == """SELECT census.sex AS sex,
        sum(census.pop2000) AS pop2000,
-       anon_1.pop2000 AS pop2000_compare
+       avg(anon_1.pop2000) AS pop2000_compare
 FROM census
 LEFT OUTER JOIN
   (SELECT census.sex AS sex,
@@ -666,6 +667,41 @@ ORDER BY census.sex"""
         assert rowmen.pop2000 == 3059809
         assert rowmen.pop2000_compare == 298532
 
+
+    def test_compare_custom_aggregation(self):
+        """ A basic comparison recipe. The base recipe looks at all data, the
+        comparison only applies to vermont
+
+        Note: Ordering is only preserved on postgres engines.
+        """
+        r = self.recipe().metrics('pop2000').dimensions('sex').order_by('sex')
+        r = r.compare(
+            self.recipe().metrics('pop2000_sum').dimensions('sex')
+            .filters(Census.state == 'Vermont')
+        )
+
+        assert len(r.all()) == 2
+        assert r.to_sql() == """SELECT census.sex AS sex,
+       sum(census.pop2000) AS pop2000,
+       sum(anon_1.pop2000_sum) AS pop2000_sum_compare
+FROM census
+LEFT OUTER JOIN
+  (SELECT census.sex AS sex,
+          sum(census.pop2000) AS pop2000_sum
+   FROM census
+   WHERE census.state = 'Vermont'
+   GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
+GROUP BY census.sex
+ORDER BY census.sex"""
+        rowwomen, rowmen = r.all()[0], r.all()[1]
+        # We should get the lookup values
+        assert rowwomen.sex == 'F'
+        assert rowwomen.pop2000 == 3234901
+        assert rowwomen.pop2000_sum_compare == 53483056
+        assert rowmen.sex == 'M'
+        assert rowmen.pop2000 == 3059809
+        assert rowmen.pop2000_sum_compare == 51347504
+
     def test_compare_suffix(self):
         """ Test that the proper suffix gets added to the comparison metrics
         """
@@ -680,7 +716,7 @@ ORDER BY census.sex"""
         assert len(r.all()) == 2
         assert r.to_sql() == """SELECT census.sex AS sex,
        sum(census.pop2000) AS pop2000,
-       anon_1.pop2000 AS pop2000_x
+       avg(anon_1.pop2000) AS pop2000_x
 FROM census
 LEFT OUTER JOIN
   (SELECT census.sex AS sex,
@@ -720,8 +756,8 @@ ORDER BY census.sex"""
         assert r.to_sql() == """SELECT census.sex AS sex,
        census.state AS state,
        sum(census.pop2000) AS pop2000,
-       anon_1.pop2000 AS pop2000_vermont,
-       anon_2.pop2000 AS pop2000_total
+       avg(anon_1.pop2000) AS pop2000_vermont,
+       avg(anon_2.pop2000) AS pop2000_total
 FROM census
 LEFT OUTER JOIN
   (SELECT census.sex AS sex,

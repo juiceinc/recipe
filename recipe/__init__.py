@@ -10,6 +10,10 @@ from flapjack_stack import FlapjackStack
 from recipe import default_settings
 from recipe.core import Recipe, make_table
 from recipe.exceptions import BadIngredient, BadRecipe
+from recipe.extensions import (
+    Anonymize, AutomaticFilters, BlendRecipe, CompareRecipe, RecipeExtension,
+    SummarizeOver
+)
 from recipe.ingredients import (
     Dimension, DivideMetric, Filter, Having, IdValueDimension, Ingredient,
     LookupDimension, Metric, WtdAvgMetric
@@ -35,8 +39,27 @@ logging.getLogger(__name__).addHandler(NullHandler())
 __version__ = '0.2.2'
 
 __all__ = [
-    'BadIngredient', 'BadRecipe', 'Ingredient', 'Dimension', 'LookupDimension',
-    'IdValueDimension', 'Metric', 'DivideMetric', 'WtdAvgMetric', 'Filter',
-    'Having', 'Recipe', 'Shelf', 'AutomaticShelf', 'SETTINGS', 'get_oven',
-    'make_table'
+    'BadIngredient',
+    'BadRecipe',
+    'Ingredient',
+    'Dimension',
+    'LookupDimension',
+    'IdValueDimension',
+    'Metric',
+    'DivideMetric',
+    'WtdAvgMetric',
+    'Filter',
+    'Having',
+    'Recipe',
+    'Shelf',
+    'AutomaticShelf',
+    'SETTINGS',
+    'get_oven',
+    'Anonymize',
+    'AutomaticFilters',
+    'BlendRecipe',
+    'CompareRecipe',
+    'RecipeExtension',
+    'SummarizeOver',
+    'make_table',
 ]

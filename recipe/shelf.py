@@ -520,7 +520,9 @@ class Shelf(AttrDict):
         elif isinstance(obj, filter_to_class):
             return obj
         else:
-            raise BadRecipe('{} is not a {}'.format(obj, type(filter_to_class)))
+            raise BadRecipe(
+                '{} is not a {}'.format(obj, type(filter_to_class))
+            )
 
     def brew_query_parts(self):
         """ Make columns, group_bys, filters, havings
