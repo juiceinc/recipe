@@ -38,6 +38,18 @@ hi,15,hi\r
 hi\t15\thi\r
 '''
 
+    def test_shelf(self):
+        recipe = self.recipe().metrics('age').dimensions('first')
+        assert len(recipe._shelf) == 3
+        recipe.shelf(None)
+        assert len(recipe._shelf) == 0
+        recipe.shelf(self.shelf)
+        assert len(recipe._shelf) == 3
+        recipe.shelf({})
+        assert len(recipe._shelf) == 0
+        with pytest.raises(BadRecipe):
+            recipe.shelf(52)
+
     def test_dimension2(self):
         recipe = self.recipe().metrics('age').dimensions('last'
                                                         ).order_by('last')
@@ -184,6 +196,7 @@ class TestStats(object):
         assert recipe.stats.ready is True
         assert recipe.stats.rows == 2
         assert recipe.stats.dbtime < 1.0
+        assert recipe.stats.enchanttime < 1.0
         assert recipe.stats.from_cache is False
 
 

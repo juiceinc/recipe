@@ -11,3 +11,6 @@ pop2000:
         condition:
             field: age
             gt: 40
+allthemath:
+    kind: Metric
+    field: pop2000+pop2008   - pop2000 * pop2008 /pop2000

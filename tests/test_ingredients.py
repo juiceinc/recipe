@@ -6,7 +6,7 @@ from tests.test_base import MyTable, mytable_shelf
 
 from recipe import (
     BadIngredient, Dimension, DivideMetric, Filter, Having, IdValueDimension,
-    Ingredient, LookupDimension, Metric
+    Ingredient, LookupDimension, Metric, WtdAvgMetric
 )
 from recipe.compat import str
 from recipe.shelf import ingredient_from_dict, parse_field
@@ -389,6 +389,27 @@ class TestDivideMetric(object):
                'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
                ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
                'CAST(sum(foo.age) AS FLOAT) END'
+
+
+class TestWtdAvgMetric(object):
+
+    def test_init(self):
+        # WtdAvgMetric should have a two expressions
+        with pytest.raises(TypeError):
+            d = WtdAvgMetric()
+
+        with pytest.raises(TypeError):
+            d = WtdAvgMetric(MyTable.age)
+
+        d = WtdAvgMetric(MyTable.age, MyTable.age)
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 0
+        assert len(d.filters) == 0
+
+        # Generate numerator / (denominator+epsilon) by default
+        assert str(
+            d.columns[0]
+        ) == 'CAST(sum(foo.age * foo.age) AS FLOAT) / (coalesce(CAST(sum(foo.age) AS FLOAT), :coalesce_1) + :coalesce_2)'
 
 
 class TestIngredientFromObj(object):

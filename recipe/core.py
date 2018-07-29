@@ -201,10 +201,10 @@ class Recipe(object):
         """ Defines a shelf to use for this recipe """
         if shelf is None:
             self._shelf = Shelf({})
-        elif isinstance(shelf, dict):
-            self._shelf = Shelf(shelf)
         elif isinstance(shelf, Shelf):
             self._shelf = shelf
+        elif isinstance(shelf, dict):
+            self._shelf = Shelf(shelf)
         else:
             raise BadRecipe('shelf must be a dict or recipe.shelf.Shelf')
         return self

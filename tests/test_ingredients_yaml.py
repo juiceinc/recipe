@@ -1,3 +1,8 @@
+"""
+Test recipes built from yaml files in the ingredients directory.
+
+"""
+
 import os
 
 from tests.test_base import Census, MyTable, oven

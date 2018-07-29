@@ -121,6 +121,9 @@ class TestShelf(object):
         assert len(self.shelf.metric_ids) == 1
         assert self.shelf.metric_ids == ('age',)
 
+    def test_filter_ids(self):
+        assert len(self.shelf.filter_ids) == 0
+
 
 class TestShelfFromYaml(object):
 

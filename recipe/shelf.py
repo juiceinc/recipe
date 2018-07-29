@@ -9,7 +9,7 @@ from yaml import safe_load
 
 from recipe.compat import basestring
 from recipe.exceptions import BadIngredient, BadRecipe
-from recipe.ingredients import Dimension, Ingredient, Metric
+from recipe.ingredients import Dimension, Filter, Ingredient, Metric
 from recipe.utils import AttrDict
 from recipe.validators import IngredientValidator
 
@@ -435,6 +435,18 @@ class Shelf(AttrDict):
         return tuple(
             sorted(
                 [d.id for d in self.values() if isinstance(d, Metric)],
+                key=
+                lambda id: self.Meta.ingredient_order.index(id) if id in self.Meta.ingredient_order else 9999
+            )
+        )
+
+    @property
+    def filter_ids(self):
+        """ Return the Filters on this shelf in the order in which
+        they were used. """
+        return tuple(
+            sorted(
+                [d.id for d in self.values() if isinstance(d, Filter)],
                 key=
                 lambda id: self.Meta.ingredient_order.index(id) if id in self.Meta.ingredient_order else 9999
             )
