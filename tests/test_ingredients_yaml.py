@@ -5,9 +5,10 @@ Test recipes built from yaml files in the ingredients directory.
 
 import os
 
+import pytest
 from tests.test_base import Census, MyTable, oven
 
-from recipe import Recipe, Shelf
+from recipe import BadIngredient, BadRecipe, Recipe, Shelf
 
 
 class TestRecipeIngredientsYaml(object):
@@ -137,3 +138,23 @@ ORDER BY census.state'''
 Tennessee,2392122,The Volunteer State,Tennessee
 Vermont,271469,The Green Mountain State,Vermont
 '''
+
+    def test_bad_census_from_validated_yaml(self):
+        """ Test a bad yaml file """
+        with pytest.raises(Exception):
+            shelf = self.validated_shelf('census_bad.yaml', Census)
+
+    def test_bad_census_from_yaml(self):
+        """ Test a bad yaml file """
+        with pytest.raises(BadIngredient):
+            shelf = self.unvalidated_shelf('census_bad.yaml', Census)
+
+    def test_bad_census_in_from_validated_yaml(self):
+        """ Test a bad yaml file """
+        with pytest.raises(Exception):
+            shelf = self.validated_shelf('census_bad_in.yaml', Census)
+
+    def test_bad_census_in_from_yaml(self):
+        """ Test a bad yaml file """
+        with pytest.raises(BadIngredient):
+            shelf = self.unvalidated_shelf('census_bad_in.yaml', Census)

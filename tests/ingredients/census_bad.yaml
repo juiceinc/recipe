@@ -1,0 +1,6 @@
+pop2000:
+    kind: Metric
+    field:
+        value: pop2000
+        condition:
+            gt: 40

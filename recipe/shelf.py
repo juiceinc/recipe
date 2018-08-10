@@ -55,7 +55,7 @@ def parse_condition(cond, table, aggregated=False, default_aggregation='sum'):
         )
         if 'in' in cond:
             value = cond['in']
-            if isinstance(value, (dict)):
+            if isinstance(value, (dict,)):
                 raise BadIngredient('value for in must be a list')
             condition_expression = getattr(field, 'in_')(tuple(value))
         elif 'gt' in cond:
@@ -164,6 +164,8 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
         if not isinstance(fld['aggregation'], basestring) and \
                 not fld['aggregation'] is None:
             raise BadIngredient('aggregation must be null or an string')
+        if fld['aggregation'] is None:
+            fld['aggregation'] = initial_aggregation
     else:
         fld['aggregation'] = initial_aggregation
 

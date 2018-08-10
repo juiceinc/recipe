@@ -1,0 +1,8 @@
+pop2000:
+    kind: Metric
+    field:
+        value: pop2000
+        condition:
+            field: age
+            in:
+                cow: 40
