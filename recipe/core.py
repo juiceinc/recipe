@@ -285,7 +285,7 @@ class Recipe(object):
 
     @property
     def filter_ids(self):
-        return (f.id for f in self._filters if isinstance(f, Filter))
+        return self._cauldron.filter_ids
 
     def order_by(self, *order_bys):
         """ Add a list of ingredients to order by to the query. These can

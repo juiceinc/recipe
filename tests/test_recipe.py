@@ -1,8 +1,8 @@
 import pytest
 from sqlalchemy import func
-from tests.test_base import MyTable, census_shelf, mytable_shelf, oven
+from tests.test_base import MyTable, Scores, census_shelf, mytable_shelf, oven
 
-from recipe import BadRecipe, Having, Recipe, Shelf
+from recipe import BadRecipe, Dimension, Having, Recipe, Shelf
 
 
 class TestRecipeIngredients(object):
@@ -24,6 +24,22 @@ GROUP BY foo.first"""
         assert recipe.all()[0].age == 15
         assert recipe.stats.rows == 1
 
+    def test_offset(self):
+        recipe = self.recipe().metrics('age').dimensions('first').offset(1)
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first LIMIT ?
+OFFSET 1"""
+        assert len(recipe.all()) == 0
+        assert recipe.stats.rows == 0
+        assert recipe.one() == []
+        assert recipe.dataset.csv == '\r\n'
+
+    def test_is_postgres(self):
+        recipe = self.recipe().metrics('age')
+        assert recipe._is_postgres() is False
+
     def test_dataset(self):
         recipe = self.recipe().metrics('age').dimensions('first')
         assert recipe.dataset.json == '[{"first": "hi", "age": 15, ' \
@@ -37,6 +53,21 @@ hi,15,hi\r
         assert recipe.dataset.tsv == '''first\tage\tfirst_id\r
 hi\t15\thi\r
 '''
+
+    def test_session(self):
+        recipe = self.recipe().metrics('age').dimensions('first')
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first"""
+        assert recipe.all()[0].first == 'hi'
+        assert recipe.all()[0].age == 15
+        assert recipe.stats.rows == 1
+        assert recipe.dirty is False
+
+        sess = oven.Session()
+        recipe.session(sess)
+        assert recipe.dirty is True
 
     def test_shelf(self):
         recipe = self.recipe().metrics('age').dimensions('first')
@@ -62,7 +93,42 @@ ORDER BY foo.last"""
         assert recipe.all()[0].age == 10
         assert recipe.stats.rows == 2
 
+    def test_order_bys(self):
+        recipe = self.recipe().metrics('age').dimensions('last'
+                                                        ).order_by('last')
+        assert recipe.to_sql() == """SELECT foo.last AS last,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.last
+ORDER BY foo.last"""
+        assert recipe.all()[0].last == 'fred'
+        assert recipe.all()[0].age == 10
+        assert recipe.stats.rows == 2
+
+        recipe = self.recipe().metrics('age').dimensions('last'
+                                                        ).order_by('age')
+        assert recipe.to_sql() == """SELECT foo.last AS last,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.last
+ORDER BY sum(foo.age)"""
+        assert recipe.all()[0].last == 'there'
+        assert recipe.all()[0].age == 5
+        assert recipe.stats.rows == 2
+
+        recipe = self.recipe().metrics('age').dimensions('last'
+                                                        ).order_by('-age')
+        assert recipe.to_sql() == """SELECT foo.last AS last,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.last
+ORDER BY sum(foo.age) DESC"""
+        assert recipe.all()[0].last == 'fred'
+        assert recipe.all()[0].age == 10
+        assert recipe.stats.rows == 2
+
     def test_recipe_init(self):
+        """Test that all options can be passed in the init"""
         recipe = self.recipe(
             metrics=('age',), dimensions=('last',)
         ).order_by('last')
@@ -74,6 +140,44 @@ ORDER BY foo.last"""
         assert recipe.all()[0].last == 'fred'
         assert recipe.all()[0].age == 10
         assert recipe.stats.rows == 2
+        recipe = self.recipe(
+            metrics=['age'],
+            dimensions=['first'],
+            filters=[MyTable.age > 4],
+            order_by=['first']
+        )
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.age > 4
+GROUP BY foo.first
+ORDER BY foo.first"""
+        assert recipe.all()[0].first == 'hi'
+        assert recipe.all()[0].age == 15
+        assert recipe.stats.rows == 1
+
+    def test_recipe_empty(self):
+        recipe = self.recipe()
+        with pytest.raises(BadRecipe):
+            recipe.all()
+
+    def test_recipe_multi_tables(self):
+        dim = Dimension(Scores.username)
+        recipe = self.recipe().dimensions('last', dim).metrics('age')
+        with pytest.raises(BadRecipe):
+            recipe.all()
+
+    def test_recipe_table(self):
+        recipe = self.recipe().dimensions('last').metrics('age')
+        assert recipe._table() == MyTable
+
+    def test_recipe_as_table(self):
+        recipe = self.recipe().dimensions('last').metrics('age')
+        tbl = recipe.as_table()
+        assert tbl.name == recipe._id
+
+        tbl = recipe.as_table(name='foo')
+        assert tbl.name == 'foo'
 
     def test_filter(self):
         recipe = self.recipe().metrics('age').dimensions('last').filters(
@@ -88,6 +192,7 @@ ORDER BY foo.last"""
         assert recipe.all()[0].last == 'fred'
         assert recipe.all()[0].age == 10
         assert recipe.stats.rows == 2
+        assert len(list(recipe.filter_ids)) == 1
 
     def test_having(self):
         hv = Having(func.sum(MyTable.age) < 10)
