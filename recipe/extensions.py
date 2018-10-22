@@ -1,4 +1,4 @@
-*# TODO ask jason about methods of doing this
+# TODO ask jason about methods of doing this
 from sqlalchemy import and_, func, text
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -569,7 +569,9 @@ class CompareRecipe(RecipeExtension):
                 met = compare_recipe._cauldron[m]
                 id = met.id
                 met.id = id + compare_suffix
-                summary_aggregation = met.meta.get('summary_aggregation', func.avg)
+                summary_aggregation = met.meta.get(
+                    'summary_aggregation', func.avg
+                )
                 self.recipe._cauldron.use(met)
                 for suffix in met.make_column_suffixes():
                     col = getattr(comparison_subq.c, id + suffix, None)
