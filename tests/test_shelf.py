@@ -47,6 +47,7 @@ class TestShelf(object):
     def test_repr(self):
         """ Find ingredients on the shelf """
         assert self.shelf.__repr__() == """(Dimension)first MyTable.first
+(IdValueDimension)firstlast MyTable.first MyTable.last
 (Dimension)last MyTable.last
 (Metric)age sum(foo.age)"""
 
@@ -55,29 +56,29 @@ class TestShelf(object):
         new_shelf = Shelf({
             'squee': Dimension(MyTable.first),
         })
-        assert len(self.shelf) == 3
-        self.shelf.update(new_shelf)
         assert len(self.shelf) == 4
+        self.shelf.update(new_shelf)
+        assert len(self.shelf) == 5
 
     def test_update_key_value(self):
         """ Shelves can be built with key_values and updated """
         new_shelf = Shelf(squee=Dimension(MyTable.first))
-        assert len(self.shelf) == 3
-        self.shelf.update(new_shelf)
         assert len(self.shelf) == 4
+        self.shelf.update(new_shelf)
+        assert len(self.shelf) == 5
         assert isinstance(self.shelf.get('squee'), Dimension)
 
     def test_update_key_value_direct(self):
         """ Shelves can be updated directly with key_value"""
-        assert len(self.shelf) == 3
-        self.shelf.update(squee=Dimension(MyTable.first))
         assert len(self.shelf) == 4
+        self.shelf.update(squee=Dimension(MyTable.first))
+        assert len(self.shelf) == 5
         assert isinstance(self.shelf.get('squee'), Dimension)
 
     def test_brew(self):
         recipe_parts = self.shelf.brew_query_parts()
-        assert len(recipe_parts['columns']) == 3
-        assert len(recipe_parts['group_bys']) == 2
+        assert len(recipe_parts['columns']) == 5
+        assert len(recipe_parts['group_bys']) == 4
         assert len(recipe_parts['filters']) == 0
         assert len(recipe_parts['havings']) == 0
 
@@ -108,14 +109,14 @@ class TestShelf(object):
         assert ingredient.id == 'last'
 
     def test_clear(self):
-        assert len(self.shelf) == 3
+        assert len(self.shelf) == 4
         self.shelf.clear()
         assert len(self.shelf) == 0
 
     def test_dimension_ids(self):
-        assert len(self.shelf.dimension_ids) == 2
-        assert self.shelf.dimension_ids in (('last', 'first'),
-                                            ('first', 'last'))
+        assert len(self.shelf.dimension_ids) == 3
+        assert sorted(self.shelf.dimension_ids) == \
+                        ['first', 'firstlast', 'last']
 
     def test_metric_ids(self):
         assert len(self.shelf.metric_ids) == 1
