@@ -24,6 +24,22 @@ GROUP BY foo.first"""
         assert recipe.all()[0].age == 15
         assert recipe.stats.rows == 1
 
+    def test_idvaluedimension(self):
+        recipe = self.recipe().metrics('age').dimensions('firstlast')
+        assert recipe.to_sql() == """SELECT foo.first AS firstlast_id,
+       foo.last AS firstlast,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first,
+         foo.last"""
+        assert recipe.all()[0].firstlast == 'fred'
+        assert recipe.all()[0].firstlast_id == 'hi'
+        assert recipe.all()[0].age == 10
+        assert recipe.all()[1].firstlast == 'there'
+        assert recipe.all()[1].firstlast_id == 'hi'
+        assert recipe.all()[1].age == 5
+        assert recipe.stats.rows == 2
+
     def test_dataset(self):
         recipe = self.recipe().metrics('age').dimensions('first')
         assert recipe.dataset.json == '[{"first": "hi", "age": 15, ' \
@@ -47,6 +63,7 @@ FROM foo
 GROUP BY foo.last
 ORDER BY foo.last"""
         assert recipe.all()[0].last == 'fred'
+        assert recipe.all()[0].last_id == 'fred'
         assert recipe.all()[0].age == 10
         assert recipe.stats.rows == 2
 
