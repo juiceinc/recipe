@@ -37,23 +37,17 @@ class RecipeSchemas(object):
                 'field': 'field'
             },
             'IdValueDimension':
-                OrderedDict({
-                    'id_field': 'field',
-                    'field': 'field'
-                }),
+                OrderedDict(id_field='field', field='field'),
             'Metric': {
                 'field': 'aggregated_field'
             },
             'DivideMetric':
-                OrderedDict({
-                    'numerator_field': 'aggregated_field',
-                    'denominator_field': 'aggregated_field'
-                }),
+                OrderedDict(
+                    numerator_field='aggregated_field',
+                    denominator_field='aggregated_field'
+                ),
             'WtdAvgMetric':
-                OrderedDict({
-                    'field': 'field',
-                    'weight': 'field'
-                }),
+                OrderedDict(field='field', weight='field'),
             # FIXME: what to do about these guys, field isn't the right
             # SQLAlchemy structure
             'Filter': {

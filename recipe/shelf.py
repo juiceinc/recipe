@@ -248,23 +248,18 @@ def ingredient_from_dict(ingr_dict, table=''):
         'LookupDimension': {
             'field': 'field'
         },
-        'IdValueDimension': {
-            'field': 'field',
-            'id_field': 'field'
-        },
+        'IdValueDimension':
+            OrderedDict(id_field='field', field='field'),
         'Metric': {
             'field': 'aggregated_field'
         },
         'DivideMetric':
-            OrderedDict({
-                'numerator_field': 'aggregated_field',
-                'denominator_field': 'aggregated_field'
-            }),
+            OrderedDict(
+                numerator_field='aggregated_field',
+                denominator_field='aggregated_field'
+            ),
         'WtdAvgMetric':
-            OrderedDict({
-                'field': 'field',
-                'weight': 'field'
-            })
+            OrderedDict(field='field', weight='field')
     }
 
     format_lookup = {
