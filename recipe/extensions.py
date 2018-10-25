@@ -206,7 +206,7 @@ class AutomaticFilters(RecipeExtension):
 
         **Scalar operators**
 
-        If the value provided in the automatic_fitler dictionary is a scalar
+        If the value provided in the automatic_filter dictionary is a scalar
         (a string, integer, or number), the following operators are available.
         The default operator is ``eq``::
 

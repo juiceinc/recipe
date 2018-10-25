@@ -117,6 +117,7 @@ class Recipe(object):
         dimensions=None,
         filters=None,
         order_by=None,
+        select_from=None,
         session=None,
         extension_classes=None,
         dynamic_extensions=None
@@ -140,6 +141,8 @@ class Recipe(object):
             self.filters(*filters)
         if order_by is not None:
             self.order_by(*order_by)
+
+        self._select_from = select_from
 
         self._session = session
 
@@ -311,6 +314,11 @@ class Recipe(object):
         self.dirty = True
         return self
 
+    def select_from(self, selectable):
+        self.dirty = True
+        self._select_from = select_from
+        return self
+
     def session(self, session):
         self.dirty = True
         self._session = session
@@ -409,6 +417,9 @@ class Recipe(object):
             .group_by(*recipe_parts['group_bys']) \
             .order_by(*recipe_parts['order_bys']) \
             .filter(*recipe_parts['filters'])
+        if self._select_from:
+            recipe_parts['query'] = \
+                recipe_parts['query'].select_from(self._select_from)
         if recipe_parts['havings']:
             for having in recipe_parts['havings']:
                 recipe_parts['query'] = recipe_parts['query'].having(having)
@@ -416,7 +427,9 @@ class Recipe(object):
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_prequery_parts(recipe_parts)
 
-        if len(recipe_parts['query'].selectable.froms) != 1:
+        if not self._select_from and len(
+            recipe_parts['query'].selectable.froms
+        ) != 1:
             raise BadRecipe(
                 'Recipes must use ingredients that all come from '
                 'the same table. \nDetails on this recipe:\n{'
