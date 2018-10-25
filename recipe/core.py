@@ -413,7 +413,7 @@ class Recipe(object):
             recipe_parts = extension.modify_recipe_parts(recipe_parts)
 
         # Start building the query
-        if self._select_from:
+        if self._select_from is not None:
             recipe_parts['query'] = self._session.query(
                 *recipe_parts['columns']) \
                 .select_from(self._select_from) \
