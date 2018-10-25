@@ -434,7 +434,7 @@ class Recipe(object):
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_prequery_parts(recipe_parts)
 
-        if not self._select_from and len(
+        if self._select_from is None and len(
             recipe_parts['query'].selectable.froms
         ) != 1:
             raise BadRecipe(
