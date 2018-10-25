@@ -43,10 +43,10 @@ GROUP BY foo.first,
     def test_offset(self):
         recipe = self.recipe().metrics('age').dimensions('first').offset(1)
         assert recipe.to_sql() == """SELECT foo.first AS first,
-            sum(foo.age) AS age
-            FROM foo
-            GROUP BY foo.first LIMIT ?
-            OFFSET 1"""
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first LIMIT ?
+OFFSET 1"""
         assert len(recipe.all()) == 0
         assert recipe.stats.rows == 0
         assert recipe.one() == []
@@ -87,11 +87,11 @@ GROUP BY foo.first"""
 
     def test_shelf(self):
         recipe = self.recipe().metrics('age').dimensions('first')
-        assert len(recipe._shelf) == 3
+        assert len(recipe._shelf) == 4
         recipe.shelf(None)
         assert len(recipe._shelf) == 0
         recipe.shelf(self.shelf)
-        assert len(recipe._shelf) == 3
+        assert len(recipe._shelf) == 4
         recipe.shelf({})
         assert len(recipe._shelf) == 0
         with pytest.raises(BadRecipe):
