@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Float, Integer, String, distinct, func
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import Dimension, Filter, Metric, Shelf, get_oven
+from recipe import Dimension, Filter, IdValueDimension, Metric, Shelf, get_oven
 
 Base = declarative_base()
 oven = get_oven('sqlite://')
@@ -331,6 +331,7 @@ class StateFact(Base):
 mytable_shelf = Shelf({
     'first': Dimension(MyTable.first),
     'last': Dimension(MyTable.last),
+    'firstlast': IdValueDimension(MyTable.first, MyTable.last),
     'age': Metric(func.sum(MyTable.age)),
 })
 

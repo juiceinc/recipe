@@ -11,6 +11,8 @@ from cerberus.platform import _int_types, _str_type
 
 logging.captureWarnings(True)
 
+IdValueDimensionFields = OrderedDict()
+
 
 class RecipeSchemas(object):
 
@@ -37,23 +39,18 @@ class RecipeSchemas(object):
                 'field': 'field'
             },
             'IdValueDimension':
-                OrderedDict({
-                    'id_field': 'field',
-                    'field': 'field'
-                }),
+                OrderedDict([('id_field', 'field'), ('field', 'field')]),
             'Metric': {
                 'field': 'aggregated_field'
             },
             'DivideMetric':
-                OrderedDict({
-                    'numerator_field': 'aggregated_field',
-                    'denominator_field': 'aggregated_field'
-                }),
+                OrderedDict([('numerator_field', 'aggregated_field'),
+                             ('denominator_field', 'aggregated_field')]),
             'WtdAvgMetric':
-                OrderedDict({
-                    'field': 'field',
-                    'weight': 'field'
-                }),
+                OrderedDict([
+                    ('field', 'field'),
+                    ('weight', 'field'),
+                ]),
             # FIXME: what to do about these guys, field isn't the right
             # SQLAlchemy structure
             'Filter': {

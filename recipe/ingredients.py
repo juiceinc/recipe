@@ -102,9 +102,9 @@ class Ingredient(object):
 
         elif len(self.columns) == 1:
             if self.formatters:
-                return ('_raw',)
+                return '_raw',
             else:
-                return ('',)
+                return '',
         else:
             raise BadIngredient(
                 'column_suffixes must be supplied if there is '
@@ -285,6 +285,33 @@ class Dimension(Ingredient):
 
         yield self.id + '_id', lambda row: getattr(row, prop)
 
+    def make_column_suffixes(self):
+        """ Make sure we have the right column suffixes. These will be appended
+        to `id` when generating the query.
+        """
+        if self.column_suffixes:
+            return self.column_suffixes
+
+        if len(self.columns) == 0:
+            return ()
+
+        elif len(self.columns) == 1:
+            if self.formatters:
+                return '_raw',
+            else:
+                return '',
+
+        elif len(self.columns) == 2:
+            if self.formatters:
+                return '_id', '_raw',
+            else:
+                return '_id', '',
+        else:
+            raise BadIngredient(
+                'column_suffixes must be supplied if there is '
+                'more than one column'
+            )
+
     @property
     def id_prop(self):
         """ The label of this dimensions id in the query columns """
@@ -367,9 +394,10 @@ class DivideMetric(Metric):
         else:
             # If the denominator is zero, return the ifzero value otherwise do
             # the division
-            expression = case(((cast(denominator, Float) == 0.0, ifzero),),
-                              else_=cast(numerator, Float) /
-                              cast(denominator, Float))
+            expression = case(
+                ((cast(denominator, Float) == 0.0, ifzero),),
+                else_=cast(numerator, Float) / cast(denominator, Float)
+            )
         super(DivideMetric, self).__init__(expression, **kwargs)
 
 
