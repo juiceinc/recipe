@@ -316,7 +316,7 @@ class Recipe(object):
 
     def select_from(self, selectable):
         self.dirty = True
-        self._select_from = select_from
+        self._select_from = selectable
         return self
 
     def session(self, session):
