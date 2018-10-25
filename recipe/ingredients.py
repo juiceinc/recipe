@@ -166,7 +166,9 @@ class Ingredient(object):
         :param operator: An operator to override the default interaction
         :type operator: str
         """
-        scalar_ops = ['ne', 'lt', 'lte', 'gt', 'gte', 'eq', None]
+        scalar_ops = [
+            'ne', 'lt', 'lte', 'gt', 'gte', 'eq', 'is', 'isnot', None
+        ]
         non_scalar_ops = ['notin', 'between', 'in', None]
 
         is_scalar = isinstance(value, (int, basestring))
@@ -184,6 +186,10 @@ class Ingredient(object):
                 return Filter(filter_column > value)
             elif operator == 'gte':
                 return Filter(filter_column >= value)
+            elif operator == 'is':
+                return Filter(filter_column.is_(value))
+            elif operator == 'isnot':
+                return Filter(filter_column.isnot(value))
             return Filter(filter_column == value)
         elif not is_scalar and operator in non_scalar_ops:
             if operator == 'notin':
