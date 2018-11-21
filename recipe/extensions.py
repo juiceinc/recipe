@@ -161,10 +161,15 @@ class AutomaticFilters(RecipeExtension):
                     continue
 
                 # Only look for dimensions
-                dimension = self.recipe._shelf.find(dim, Dimension)
-
-                # make a Filter and add it to filters
-                self.recipe.filters(dimension.build_filter(values, operator))
+                try:
+                    dimension = self.recipe._shelf.find(dim, Dimension)
+                    # make a Filter and add it to filters
+                    self.recipe.filters(
+                        dimension.build_filter(values, operator)
+                    )
+                except BadRecipe:
+                    # Skip if the dimension can't be found in the shelf.
+                    pass
 
     def apply_automatic_filters(self, value):
         """Toggles whether automatic filters are applied to a recipe. The
