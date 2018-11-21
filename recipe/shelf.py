@@ -180,9 +180,11 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
         else:
             if hasattr(table, word):
                 field_parts.append(getattr(table, word))
+            elif hasattr(table, 'c') and hasattr(table.c, word):
+                field_parts.append(getattr(table.c, word))
             else:
                 raise BadIngredient(
-                    '{} is not a field in {}'.format(word, table.__name__)
+                    '{} is not a field in {}'.format(word, table)
                 )
     if len(field_parts) is None:
         raise BadIngredient('field is not defined.')
@@ -324,7 +326,14 @@ def ingredient_from_dict(ingr_dict, table=''):
 def parse_validated_field(fld, table=''):
     """ Converts a validated field to sqlalchemy """
     aggr_fn = IngredientValidator.aggregation_lookup[fld['aggregation']]
-    field = getattr(table, fld['value'])
+
+    if hasattr(table, fld['value']):
+        field = getattr(table, fld['value'])
+    elif hasattr(table, 'c') and hasattr(table.c, fld):
+        field = getattr(table.c, fld['value'])
+    else:
+        raise BadIngredient('{} is not a field in {}'.format(fld, table))
+
     for operator in fld.get('operators', []):
         op = operator['operator']
         other_field = parse_validated_field(operator['field'], table=table)
