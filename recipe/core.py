@@ -117,12 +117,12 @@ class Recipe(object):
         dimensions=None,
         filters=None,
         order_by=None,
-        select_from=None,
         session=None,
         extension_classes=None,
         dynamic_extensions=None
     ):
 
+        self._select_from = None
         self._id = str(uuid4())[:8]
         self.shelf(shelf)
 
@@ -141,8 +141,6 @@ class Recipe(object):
             self.filters(*filters)
         if order_by is not None:
             self.order_by(*order_by)
-
-        self._select_from = select_from
 
         self._session = session
 
@@ -213,6 +211,10 @@ class Recipe(object):
             self._shelf = Shelf(shelf)
         else:
             raise BadRecipe('shelf must be a dict or recipe.shelf.Shelf')
+
+        if self._select_from is None and \
+            self._shelf.Meta.select_from is not None:
+            self._select_from = self._shelf.Meta.select_from
         return self
 
     def metrics(self, *metrics):

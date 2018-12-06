@@ -3,7 +3,10 @@ from collections import OrderedDict
 from copy import copy
 
 from six import iteritems
-from sqlalchemy import Float, Integer, String, and_, case, distinct, func, or_
+from sqlalchemy import (
+    Float, Integer, String, Table, and_, case, distinct, func, or_
+)
+from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.util import lightweight_named_tuple
 from yaml import safe_load
 
@@ -114,7 +117,34 @@ def tokenize(s):
     return words
 
 
-def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
+def find_column(selectable, name):
+    """
+    Find a column named `name` in selectable
+
+    :param selectable:
+    :param name:
+    :return: A column object
+    """
+    if isinstance(selectable, Table):
+        attr = getattr(selectable, name, None)
+        if attr is None:
+            raise Exception('Can not find {} in {}'.format(name, selectable))
+    elif hasattr(selectable, 'c'
+                ) and isinstance(selectable.c, ImmutableColumnCollection):
+        for col in selectable.c:
+            if col.name == name:
+                return col
+        # If we still haven't found the column search using _label
+        for col in selectable.c:
+            if getattr(col, '_label', None) == name:
+                return col
+
+        raise Exception('Can not find {} in {}'.format(name, selectable))
+    else:
+        raise BadIngredient('Can not find {} in {}'.format(name, selectable))
+
+
+def parse_field(fld, selectable, aggregated=True, default_aggregation='sum'):
     """ Parse a field object from yaml into a sqlalchemy expression """
     # An aggregation is a callable that takes a single field expression
     # None will perform no aggregation
@@ -178,13 +208,13 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
         if word in ('MINUS', 'PLUS', 'DIVIDE', 'MULTIPLY'):
             field_parts.append(word)
         else:
-            if hasattr(table, word):
-                field_parts.append(getattr(table, word))
-            elif hasattr(table, 'c') and hasattr(table.c, word):
-                field_parts.append(getattr(table.c, word))
+            if hasattr(selectable, word):
+                field_parts.append(getattr(selectable, word))
+            elif hasattr(selectable, 'c') and hasattr(selectable.c, word):
+                field_parts.append(getattr(selectable.c, word))
             else:
                 raise BadIngredient(
-                    '{} is not a field in {}'.format(word, table)
+                    '{} is not a field in {}'.format(word, selectable)
                 )
     if len(field_parts) is None:
         raise BadIngredient('field is not defined.')
@@ -223,7 +253,7 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
 
     condition = parse_condition(
         fld.get('condition', None),
-        table=table,
+        table=selectable,
         aggregated=False,
         default_aggregation=default_aggregation
     )
@@ -384,12 +414,14 @@ class Shelf(AttrDict):
     class Meta:
         anonymize = False
         table = None
+        select_from = None
 
     def __init__(self, *args, **kwargs):
         super(Shelf, self).__init__(*args, **kwargs)
 
         self.Meta.ingredient_order = []
         self.Meta.table = kwargs.pop('table', None)
+        self.Meta.select_from = kwargs.pop('select_from', None)
 
         # Set the ids of all ingredients on the shelf to the key
         for k, ingredient in self.items():

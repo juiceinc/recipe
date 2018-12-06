@@ -621,7 +621,9 @@ class TestParse(object):
             }, case([(MyTable.last.in_(('Jones', 'Punjabi')), MyTable.age)])),
         ]
         for input_field, expected_result in data:
-            result = parse_field(input_field, table=MyTable, aggregated=False)
+            result = parse_field(
+                input_field, selectable=MyTable, aggregated=False
+            )
             assert str(result) == str(expected_result)
 
     def test_bad_field_string_definitions(self):

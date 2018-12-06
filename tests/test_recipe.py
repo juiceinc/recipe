@@ -390,6 +390,46 @@ South\t5685230\tSouth\r
         assert len(r.all()) == 2
 
 
+class TestShelfSelectFrom(object):
+
+    def setup(self):
+        self.session = oven.Session()
+        self.shelf = mytable_shelf
+
+    def recipe(self):
+        return Recipe(shelf=self.shelf, session=self.session)
+
+    def test_recipe_with_select_from(self):
+        from recipe import Dimension, Metric
+        shelf = Shelf({
+            'region': Dimension(StateFact.census_region_name),
+            'pop': Metric(func.sum(Census.pop2000))
+        },
+                      select_from=join(
+                          Census, StateFact, Census.state == StateFact.name
+                      ))
+
+        assert shelf.Meta.select_from is not None
+
+        # assert getattr(shelf.Meta.select_from, 'c') is None
+
+        r = Recipe(shelf=shelf, session=self.session)\
+            .dimensions('region').metrics('pop')
+
+        assert r._select_from is not None
+
+        assert r.to_sql() == """SELECT state_fact.census_region_name AS region,
+       sum(census.pop2000) AS pop
+FROM census
+JOIN state_fact ON census.state = state_fact.name
+GROUP BY state_fact.census_region_name"""
+        assert r.dataset.tsv == '''region\tpop\tregion_id\r
+Northeast\t609480\tNortheast\r
+South\t5685230\tSouth\r
+'''
+        assert len(r.all()) == 2
+
+
 class TestCacheContext(object):
 
     def setup(self):
