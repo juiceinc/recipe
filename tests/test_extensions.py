@@ -121,6 +121,11 @@ class TestAutomaticFiltersExtension(object):
         assert recipe.recipe_extensions[0].include_keys == ('first',)
         assert recipe.recipe_extensions[0].exclude_keys == ('last',)
 
+    def test_attribute_not_found(self):
+        recipe = self.recipe().metrics('age').dimensions('first')
+        with pytest.raises(AttributeError):
+            recipe = recipe.foo(True)
+
     def test_apply(self):
         recipe = self.recipe().metrics('age').dimensions('first')
         recipe = recipe.apply_automatic_filters(False)
@@ -666,7 +671,6 @@ ORDER BY census.sex"""
         assert rowmen.sex == 'M'
         assert rowmen.pop2000 == 3059809
         assert rowmen.pop2000_compare == 298532
-
 
     def test_compare_custom_aggregation(self):
         """ A basic comparison recipe. The base recipe looks at all data, the

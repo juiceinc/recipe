@@ -1,6 +1,8 @@
 import pytest
-from sqlalchemy import func
-from tests.test_base import MyTable, Scores, census_shelf, mytable_shelf, oven
+from sqlalchemy import func, join
+from tests.test_base import (
+    Census, MyTable, Scores, StateFact, census_shelf, mytable_shelf, oven
+)
 
 from recipe import BadRecipe, Dimension, Having, Recipe, Shelf
 
@@ -352,6 +354,39 @@ FROM
    FROM foo
    GROUP BY foo.last) AS anon
 GROUP BY anon.last'''
+        assert len(r.all()) == 2
+
+
+class TestSelectFrom(object):
+
+    def setup(self):
+        self.session = oven.Session()
+        self.shelf = mytable_shelf
+
+    def recipe(self):
+        return Recipe(shelf=self.shelf, session=self.session)
+
+    def test_recipe_with_select_from(self):
+        j = join(Census, StateFact, Census.state == StateFact.name)
+
+        from recipe import Dimension, Metric
+        shelf = Shelf({
+            'region': Dimension(StateFact.census_region_name),
+            'pop': Metric(func.sum(Census.pop2000))
+        })
+
+        r = Recipe(shelf=shelf, session=self.session)\
+            .dimensions('region').metrics('pop').select_from(j)
+
+        assert r.to_sql() == """SELECT state_fact.census_region_name AS region,
+       sum(census.pop2000) AS pop
+FROM census
+JOIN state_fact ON census.state = state_fact.name
+GROUP BY state_fact.census_region_name"""
+        assert r.dataset.tsv == '''region\tpop\tregion_id\r
+Northeast\t609480\tNortheast\r
+South\t5685230\tSouth\r
+'''
         assert len(r.all()) == 2
 
 

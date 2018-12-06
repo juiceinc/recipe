@@ -16,6 +16,9 @@ class TestRecipeIngredientsYaml(object):
     def setup(self):
         self.session = oven.Session()
 
+    def assert_recipe_csv(self, recipe, csv_text):
+        assert recipe.dataset.export('csv', lineterminator='\n') == csv_text
+
     def validated_shelf(self, shelf_name, table):
         """Load a file from the sample ingredients.yaml files."""
         d = os.path.dirname(os.path.realpath(__file__))
@@ -35,48 +38,42 @@ class TestRecipeIngredientsYaml(object):
         recipe = Recipe(
             shelf=shelf, session=self.session
         ).metrics('age').dimensions('first')
-        assert recipe.dataset.export('csv').replace(
-            '\r\n', '\n'
-        ) == '''first,age,first_id
+        self.assert_recipe_csv(recipe, '''first,age,first_id
 hi,15,hi
-'''
+''')
 
     def test_ingredients1_from_yaml(self):
         shelf = self.unvalidated_shelf('ingredients1.yaml', MyTable)
         recipe = Recipe(
             shelf=shelf, session=self.session
         ).metrics('age').dimensions('first')
-        assert recipe.dataset.export('csv').replace(
-            '\r\n', '\n'
-        ) == '''first,age,first_id
+        self.assert_recipe_csv(recipe, '''first,age,first_id
 hi,15,hi
+''')
+
+    def test_census_from_validated_yaml(self):
+        shelf = self.validated_shelf('census.yaml', Census)
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).dimensions('state').metrics('pop2000', 'ttlpop').order_by('state')
+        self.assert_recipe_csv(
+            recipe, '''state,pop2000,ttlpop,state_id
+Tennessee,5685230,11887637,Tennessee
+Vermont,609480,1230082,Vermont
 '''
+        )
 
-        def test_census_from_validated_yaml(self):
-            shelf = self.validated_shelf('census.yaml', Census)
-            recipe = Recipe(
-                shelf=shelf, session=self.session
-            ).dimensions('state').metrics('pop2000',
-                                          'ttlpop').order_by('state')
-            assert recipe.dataset.export('csv').replace(
-                '\r\n', '\n'
-            ) == '''state,pop2000,ttlpop,state_id
-    Tennessee,5685230,11887637,Tennessee
-    Vermont,609480,1230082,Vermont
-    '''
-
-        def test_census_from_yaml(self):
-            shelf = self.unvalidated_shelf('census.yaml', Census)
-            recipe = Recipe(
-                shelf=shelf, session=self.session
-            ).dimensions('state').metrics('pop2000',
-                                          'ttlpop').order_by('state')
-            assert recipe.dataset.export('csv').replace(
-                '\r\n', '\n'
-            ) == '''state,pop2000,ttlpop,state_id
-    Tennessee,5685230,11887637,Tennessee
-    Vermont,609480,1230082,Vermont
-    '''
+    def test_census_from_yaml(self):
+        shelf = self.unvalidated_shelf('census.yaml', Census)
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).dimensions('state').metrics('pop2000', 'ttlpop').order_by('state')
+        self.assert_recipe_csv(
+            recipe, '''state,pop2000,ttlpop,state_id
+Tennessee,5685230,11887637,Tennessee
+Vermont,609480,1230082,Vermont
+'''
+        )
 
     def test_nested_census_from_validated_yaml(self):
         """Build a recipe that depends on the results of another recipe """
@@ -98,11 +95,11 @@ FROM
    FROM census
    GROUP BY census.state
    ORDER BY census.state) AS anon'''
-        assert nested_recipe.dataset.export('csv').replace(
-            '\r\n', '\n'
-        ) == '''num_states,ttlpop
+        self.assert_recipe_csv(
+            nested_recipe, '''num_states,ttlpop
 2,13117719
 '''
+        )
 
     def test_nested_census_from_yaml(self):
         shelf = self.unvalidated_shelf('census.yaml', Census)
@@ -113,11 +110,11 @@ FROM
         nested_recipe = Recipe(
             shelf=nested_shelf, session=self.session
         ).metrics('ttlpop', 'num_states')
-        assert nested_recipe.dataset.export('csv').replace(
-            '\r\n', '\n'
-        ) == '''num_states,ttlpop
+        self.assert_recipe_csv(
+            nested_recipe, '''num_states,ttlpop
 2,13117719
 '''
+        )
 
     def test_complex_census_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and metrics """
@@ -132,12 +129,12 @@ FROM
 FROM census
 GROUP BY census.state
 ORDER BY census.state'''
-        assert recipe.dataset.export('csv').replace(
-            '\r\n', '\n'
-        ) == '''state_raw,pop2000,state,state_id
+        self.assert_recipe_csv(
+            recipe, '''state_raw,pop2000,state,state_id
 Tennessee,2392122,The Volunteer State,Tennessee
 Vermont,271469,The Green Mountain State,Vermont
 '''
+        )
 
     def test_bad_census_from_validated_yaml(self):
         """ Test a bad yaml file """

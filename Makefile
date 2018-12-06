@@ -11,6 +11,9 @@ autodocs:
 tests:
 	py.test --cov-config .coveragerc --cov=recipe tests/
 
+tox:
+	tox
+
 precommit:
 	pre-commit run --all-files
 

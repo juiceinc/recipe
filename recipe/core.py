@@ -196,7 +196,10 @@ class Recipe(object):
         try:
             proxy_callable
         except NameError:
-            raise AttributeError
+            raise AttributeError(
+                '{} isn\'t available on this recipe, '
+                'you may need to add an extension'.format(name)
+            )
 
         return proxy_callable
 

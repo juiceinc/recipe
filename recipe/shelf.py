@@ -104,7 +104,7 @@ def tokenize(s):
     ['this', 'PLUS', 'that']
 
     >>> tokenize('this+that-other')
-    ['this', 'PLUS', 'that', 'SUB', 'other]
+    ['this', 'PLUS', 'that', 'MINUS', 'other']
     """
 
     # Crude tokenization
@@ -486,7 +486,6 @@ class Shelf(AttrDict):
             d[k] = ingredient_from_dict(v, table)
 
         shelf = cls(d)
-        shelf.Meta.table = table.__name__
         return shelf
 
     @classmethod
@@ -502,7 +501,6 @@ class Shelf(AttrDict):
             d[k] = ingredient_from_validated_dict(v, table)
 
         shelf = cls(d)
-        shelf.Meta.table = table.__name__
         return shelf
 
     def find(self, obj, filter_to_class=Ingredient, constructor=None):
