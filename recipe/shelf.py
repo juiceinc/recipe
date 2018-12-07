@@ -6,6 +6,7 @@ from six import iteritems
 from sqlalchemy import (
     Float, Integer, String, Table, and_, case, distinct, func, or_
 )
+from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.util import lightweight_named_tuple
 from yaml import safe_load
@@ -30,7 +31,9 @@ def ingredient_class_for_name(class_name):
     return c
 
 
-def parse_condition(cond, table, aggregated=False, default_aggregation='sum'):
+def parse_condition(
+    cond, selectable, aggregated=False, default_aggregation='sum'
+):
     """Create a SQLAlchemy clause from a condition."""
     if cond is None:
         return None
@@ -38,21 +41,23 @@ def parse_condition(cond, table, aggregated=False, default_aggregation='sum'):
     else:
         if 'and' in cond:
             conditions = [
-                parse_condition(c, table, aggregated, default_aggregation)
-                for c in cond['and']
+                parse_condition(
+                    c, selectable, aggregated, default_aggregation
+                ) for c in cond['and']
             ]
             return and_(*conditions)
         elif 'or' in cond:
             conditions = [
-                parse_condition(c, table, aggregated, default_aggregation)
-                for c in cond['or']
+                parse_condition(
+                    c, selectable, aggregated, default_aggregation
+                ) for c in cond['or']
             ]
             return or_(*conditions)
         elif 'field' not in cond:
             raise BadIngredient('field must be defined in condition')
         field = parse_field(
             cond['field'],
-            table,
+            selectable,
             aggregated=aggregated,
             default_aggregation=default_aggregation
         )
@@ -125,10 +130,18 @@ def find_column(selectable, name):
     :param name:
     :return: A column object
     """
-    if isinstance(selectable, Table):
-        attr = getattr(selectable, name, None)
-        if attr is None:
-            raise Exception('Can not find {} in {}'.format(name, selectable))
+    from recipe import Recipe
+    if isinstance(selectable, Recipe):
+        selectable = selectable.subquery()
+
+    if isinstance(selectable, DeclarativeMeta):
+        col = getattr(selectable, name, None)
+        if col is None:
+            raise BadIngredient(
+                'Can not find {} in table {}'.format(name, selectable)
+            )
+        else:
+            return col
     elif hasattr(selectable, 'c'
                 ) and isinstance(selectable.c, ImmutableColumnCollection):
         for col in selectable.c:
@@ -139,7 +152,9 @@ def find_column(selectable, name):
             if getattr(col, '_label', None) == name:
                 return col
 
-        raise Exception('Can not find {} in {}'.format(name, selectable))
+        raise BadIngredient(
+            'Can not find {} in selectable {}'.format(name, selectable)
+        )
     else:
         raise BadIngredient('Can not find {} in {}'.format(name, selectable))
 
@@ -208,14 +223,8 @@ def parse_field(fld, selectable, aggregated=True, default_aggregation='sum'):
         if word in ('MINUS', 'PLUS', 'DIVIDE', 'MULTIPLY'):
             field_parts.append(word)
         else:
-            if hasattr(selectable, word):
-                field_parts.append(getattr(selectable, word))
-            elif hasattr(selectable, 'c') and hasattr(selectable.c, word):
-                field_parts.append(getattr(selectable.c, word))
-            else:
-                raise BadIngredient(
-                    '{} is not a field in {}'.format(word, selectable)
-                )
+            field_parts.append(find_column(selectable, word))
+
     if len(field_parts) is None:
         raise BadIngredient('field is not defined.')
     # Fields should have an odd number of parts
@@ -253,7 +262,7 @@ def parse_field(fld, selectable, aggregated=True, default_aggregation='sum'):
 
     condition = parse_condition(
         fld.get('condition', None),
-        table=selectable,
+        selectable,
         aggregated=False,
         default_aggregation=default_aggregation
     )
@@ -264,7 +273,7 @@ def parse_field(fld, selectable, aggregated=True, default_aggregation='sum'):
     return aggregator(field)
 
 
-def ingredient_from_dict(ingr_dict, table=''):
+def ingredient_from_dict(ingr_dict, selectable):
     """Create an ingredient from an dictionary.
 
     This object will be deserialized from yaml """
@@ -328,15 +337,15 @@ def ingredient_from_dict(ingr_dict, table=''):
             )
         if v == 'field':
             statement = parse_field(
-                ingr_dict.pop(k, None), table, aggregated=False
+                ingr_dict.pop(k, None), selectable, aggregated=False
             )
         elif v == 'aggregated_field':
             statement = parse_field(
-                ingr_dict.pop(k, None), table, aggregated=True
+                ingr_dict.pop(k, None), selectable, aggregated=True
             )
         elif v == 'condition':
             statement = parse_condition(
-                ingr_dict.pop(k, None), table, aggregated=True
+                ingr_dict.pop(k, None), selectable, aggregated=True
             )
         else:
             raise BadIngredient('Do not know what this is')
@@ -353,32 +362,28 @@ def ingredient_from_dict(ingr_dict, table=''):
     return IngredientClass(*args, **ingr_dict)
 
 
-def parse_validated_field(fld, table=''):
-    """ Converts a validated field to sqlalchemy """
+def parse_validated_field(fld, selectable):
+    """ Converts a validated field to sqlalchemy. Field references are
+    looked up in selectable """
     aggr_fn = IngredientValidator.aggregation_lookup[fld['aggregation']]
 
-    if hasattr(table, fld['value']):
-        field = getattr(table, fld['value'])
-    elif hasattr(table, 'c') and hasattr(table.c, fld):
-        field = getattr(table.c, fld['value'])
-    else:
-        raise BadIngredient('{} is not a field in {}'.format(fld, table))
+    field = find_column(selectable, fld['value'])
 
     for operator in fld.get('operators', []):
         op = operator['operator']
-        other_field = parse_validated_field(operator['field'], table=table)
+        other_field = parse_validated_field(operator['field'], selectable)
         field = IngredientValidator.operator_lookup[op](field)(other_field)
 
     condition = fld.get('condition', None)
     if condition:
-        condition = parse_condition(condition, table=table)
+        condition = parse_condition(condition, selectable)
         field = case([(condition, field)])
 
     field = aggr_fn(field)
     return field
 
 
-def ingredient_from_validated_dict(ingr_dict, table=''):
+def ingredient_from_validated_dict(ingr_dict, selectable):
     """ Create an ingredient from an dictionary.
 
     This object will be deserialized from yaml """
@@ -396,7 +401,7 @@ def ingredient_from_validated_dict(ingr_dict, table=''):
 
     args = []
     for fld in ingr_dict.pop('_fields', []):
-        args.append(parse_validated_field(ingr_dict.pop(fld), table=table))
+        args.append(parse_validated_field(ingr_dict.pop(fld), selectable))
 
     return IngredientClass(*args, **ingr_dict)
 
@@ -506,33 +511,59 @@ class Shelf(AttrDict):
         self[ingredient.id] = ingredient
 
     @classmethod
-    def from_yaml(cls, yaml_str, table):
-        from recipe.core import Recipe, make_table
-        if isinstance(table, Recipe):
-            table = make_table(table)
+    def from_yaml(cls, yaml_str, selectable):
+        """Create a shelf using a yaml shelf definition.
+
+        :param yaml_str: A string containing yaml ingredient definitions.
+        :param selectable: A SQLAlchemy Table, a Recipe, or a SQLAlchemy
+        join to select from.
+        :return: A shelf that contains the ingredients defined in yaml_str.
+        """
+
+        from recipe import Recipe
+        if isinstance(selectable, Recipe):
+            selectable = selectable.subquery()
 
         obj = safe_load(yaml_str)
 
         d = {}
         for k, v in iteritems(obj):
-            d[k] = ingredient_from_dict(v, table)
+            d[k] = ingredient_from_dict(v, selectable)
 
-        shelf = cls(d)
+        kwargs = {}
+        if hasattr(selectable, 'c'
+                  ) and isinstance(selectable.c, ImmutableColumnCollection):
+            kwargs['select_from'] = selectable
+
+        shelf = cls(d, **kwargs)
         return shelf
 
     @classmethod
-    def from_validated_yaml(cls, yaml_str, table):
-        from recipe.core import Recipe, make_table
-        if isinstance(table, Recipe):
-            table = make_table(table)
+    def from_validated_yaml(cls, yaml_str, selectable):
+        """Create a shelf using a yaml shelf definition.
+
+        :param yaml_str: A string containing yaml ingredient definitions.
+        :param selectable: A SQLAlchemy Table, a Recipe, or a SQLAlchemy
+        join to select from.
+        :return: A shelf that contains the ingredients defined in yaml_str.
+        """
+
+        from recipe import Recipe
+        if isinstance(selectable, Recipe):
+            selectable = selectable.subquery()
 
         obj = safe_load(yaml_str)
 
         d = {}
         for k, v in iteritems(obj):
-            d[k] = ingredient_from_validated_dict(v, table)
+            d[k] = ingredient_from_validated_dict(v, selectable)
 
-        shelf = cls(d)
+        kwargs = {}
+        if hasattr(selectable, 'c'
+                  ) and isinstance(selectable.c, ImmutableColumnCollection):
+            kwargs['select_from'] = selectable
+
+        shelf = cls(d, **kwargs)
         return shelf
 
     def find(self, obj, filter_to_class=Ingredient, constructor=None):

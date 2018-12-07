@@ -22,28 +22,6 @@ warnings.simplefilter('always', DeprecationWarning)
 logger = logging.getLogger(__name__)
 
 
-def make_table(r):
-    """Make a SQLAlchemy Table from a recipe.
-
-    Used for building a shelf that depends on another recipe's results.
-    """
-    # Get the table used in the columns of the source recipe.
-    t = r._table()
-    # Find the declarative_base that is being used.
-    b = t.__bases__[0]
-    # Create a class that uses the source recipe as a data table.v
-
-    tbl = r.as_table(name='anon')
-    return type(
-        'Table{}'.format(r._id), (b,), {
-            '__table__': tbl,
-            '__mapper_args__': {
-                'primary_key': list(tbl.columns)[0]
-            }
-        }
-    )
-
-
 class Stats(object):
 
     def __init__(self):

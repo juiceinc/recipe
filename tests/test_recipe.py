@@ -4,7 +4,7 @@ from tests.test_base import (
     Census, MyTable, Scores, StateFact, census_shelf, mytable_shelf, oven
 )
 
-from recipe import BadRecipe, Dimension, Having, Recipe, Shelf
+from recipe import BadRecipe, Dimension, Having, Metric, Recipe, Shelf
 
 
 class TestRecipeIngredients(object):
@@ -335,12 +335,12 @@ class TestNestedRecipe(object):
 
     def test_nested_recipe(self):
         recipe = self.recipe().metrics('age').dimensions('last')
-        from recipe import make_table, Metric, Dimension
+        from recipe import Metric, Dimension
 
-        table = make_table(recipe)
+        subq = recipe.subquery(name='anon')
         nested_shelf = Shelf({
-            'age': Metric(func.sum(table.age)),
-            'last': Dimension(table.last)
+            'age': Metric(func.sum(subq.c.age)),
+            'last': Dimension(subq.c.last)
         })
 
         r = Recipe(
@@ -411,8 +411,6 @@ class TestShelfSelectFrom(object):
 
         assert shelf.Meta.select_from is not None
 
-        # assert getattr(shelf.Meta.select_from, 'c') is None
-
         r = Recipe(shelf=shelf, session=self.session)\
             .dimensions('region').metrics('pop')
 
@@ -428,6 +426,74 @@ Northeast\t609480\tNortheast\r
 South\t5685230\tSouth\r
 '''
         assert len(r.all()) == 2
+
+        def test_recipe_as_selectable_from_validated_yaml(self):
+            """ A recipe can be used as a selectable for a shelf created from yaml """
+            recipe = Recipe(shelf=census_shelf, session=self.session) \
+                .metrics('pop2000').dimensions('state')
+
+            yaml = '''
+            pop:
+                kind: Metric
+                field:
+                    value: pop2000
+                    aggregation: avg
+            '''
+
+            recipe_shelf = Shelf.from_validated_yaml(yaml, recipe)
+
+            r = Recipe(shelf=recipe_shelf, session=self.session).metrics('pop')
+            assert r.to_sql() == '''SELECT avg(anon_1.pop2000) AS pop
+    FROM
+      (SELECT census.state AS state,
+              sum(census.pop2000) AS pop2000
+       FROM census
+       GROUP BY census.state) AS anon_1'''
+            assert r.dataset.tsv == '''pop\r\n3147355.0\r\n'''
+
+    def test_recipe_as_selectable_from_yaml(self):
+        """ A recipe can be used as a selectable for a shelf created from yaml """
+        recipe = Recipe(shelf=census_shelf, session=self.session) \
+            .metrics('pop2000').dimensions('state')
+
+        yaml = '''
+        pop:
+            kind: Metric
+            field:
+                value: pop2000
+                aggregation: avg
+        '''
+
+        recipe_shelf = Shelf.from_yaml(yaml, recipe)
+
+        r = Recipe(shelf=recipe_shelf, session=self.session).metrics('pop')
+        assert r.to_sql() == '''SELECT avg(anon_1.pop2000) AS pop
+FROM
+  (SELECT census.state AS state,
+          sum(census.pop2000) AS pop2000
+   FROM census
+   GROUP BY census.state) AS anon_1'''
+        assert r.dataset.tsv == '''pop\r\n3147355.0\r\n'''
+
+    def test_recipe_as_subquery(self):
+        recipe = Recipe(shelf=census_shelf, session=self.session)\
+            .metrics('pop2000').dimensions('state')
+
+        # Another approach is to use
+        subq = recipe.subquery()
+        recipe_subquery_shelf = Shelf({
+            'pop': Metric(func.avg(subq.c.pop2000))
+        })
+        r2 = Recipe(
+            shelf=recipe_subquery_shelf, session=self.session
+        ).metrics('pop')
+        assert r2.to_sql() == '''SELECT avg(anon_1.pop2000) AS pop
+FROM
+  (SELECT census.state AS state,
+          sum(census.pop2000) AS pop2000
+   FROM census
+   GROUP BY census.state) AS anon_1'''
+        assert r2.dataset.tsv == '''pop\r\n3147355.0\r\n'''
 
 
 class TestCacheContext(object):

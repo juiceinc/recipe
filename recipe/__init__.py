@@ -8,7 +8,7 @@ import logging
 from flapjack_stack import FlapjackStack
 
 from recipe import default_settings
-from recipe.core import Recipe, make_table
+from recipe.core import Recipe
 from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.extensions import (
     Anonymize, AutomaticFilters, BlendRecipe, CompareRecipe, RecipeExtension,
@@ -61,5 +61,4 @@ __all__ = [
     'CompareRecipe',
     'RecipeExtension',
     'SummarizeOver',
-    'make_table',
 ]

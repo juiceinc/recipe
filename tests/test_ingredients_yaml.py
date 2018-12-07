@@ -86,15 +86,15 @@ Vermont,609480,1230082,Vermont
             shelf=nested_shelf, session=self.session
         ).metrics('ttlpop', 'num_states')
         assert nested_recipe.to_sql(
-        ) == '''SELECT count(anon.state) AS num_states,
-       sum(anon.ttlpop) AS ttlpop
+        ) == '''SELECT count(anon_1.state) AS num_states,
+       sum(anon_1.ttlpop) AS ttlpop
 FROM
   (SELECT census.state AS state,
           sum(census.pop2000) AS pop2000,
           sum(census.pop2000 + census.pop2008) AS ttlpop
    FROM census
    GROUP BY census.state
-   ORDER BY census.state) AS anon'''
+   ORDER BY census.state) AS anon_1'''
         self.assert_recipe_csv(
             nested_recipe, '''num_states,ttlpop
 2,13117719
