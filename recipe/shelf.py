@@ -134,6 +134,7 @@ def find_column(selectable, name):
     if isinstance(selectable, Recipe):
         selectable = selectable.subquery()
 
+    # Selectable is a table
     if isinstance(selectable, DeclarativeMeta):
         col = getattr(selectable, name, None)
         if col is None:
@@ -142,6 +143,8 @@ def find_column(selectable, name):
             )
         else:
             return col
+
+    # Selectable is a sqlalchemy subquery
     elif hasattr(selectable, 'c'
                 ) and isinstance(selectable.c, ImmutableColumnCollection):
         for col in selectable.c:
@@ -420,6 +423,8 @@ class Shelf(AttrDict):
         anonymize = False
         table = None
         select_from = None
+        engine = None
+        ingredient_order = []
 
     def __init__(self, *args, **kwargs):
         super(Shelf, self).__init__(*args, **kwargs)
@@ -427,6 +432,7 @@ class Shelf(AttrDict):
         self.Meta.ingredient_order = []
         self.Meta.table = kwargs.pop('table', None)
         self.Meta.select_from = kwargs.pop('select_from', None)
+        self.Meta.metadata = kwargs.pop('metadata', None)
 
         # Set the ids of all ingredients on the shelf to the key
         for k, ingredient in self.items():
@@ -511,7 +517,7 @@ class Shelf(AttrDict):
         self[ingredient.id] = ingredient
 
     @classmethod
-    def from_yaml(cls, yaml_str, selectable):
+    def from_yaml(cls, yaml_str, selectable, **kwargs):
         """Create a shelf using a yaml shelf definition.
 
         :param yaml_str: A string containing yaml ingredient definitions.
@@ -523,12 +529,29 @@ class Shelf(AttrDict):
         from recipe import Recipe
         if isinstance(selectable, Recipe):
             selectable = selectable.subquery()
+        elif isinstance(selectable, basestring):
+            if '.' in selectable:
+                schema, tablename = selectable.split('.')
+            else:
+                schema, tablename = None, selectable
+
+            metadata = kwargs.get('metadata', None)
+
+            kwargs = {'extend_existing': True, 'autoload': True}
+            if schema is not None:
+                kwargs['schema'] = schema
+
+            selectable = Table(tablename, metadata, **kwargs)
 
         obj = safe_load(yaml_str)
 
+        ingredient_constructor = kwargs.get(
+            'ingredient_constructor', ingredient_from_dict
+        )
+
         d = {}
         for k, v in iteritems(obj):
-            d[k] = ingredient_from_dict(v, selectable)
+            d[k] = ingredient_constructor(v, selectable)
 
         kwargs = {}
         if hasattr(selectable, 'c'
@@ -539,7 +562,7 @@ class Shelf(AttrDict):
         return shelf
 
     @classmethod
-    def from_validated_yaml(cls, yaml_str, selectable):
+    def from_validated_yaml(cls, yaml_str, selectable, **kwargs):
         """Create a shelf using a yaml shelf definition.
 
         :param yaml_str: A string containing yaml ingredient definitions.
@@ -548,23 +571,8 @@ class Shelf(AttrDict):
         :return: A shelf that contains the ingredients defined in yaml_str.
         """
 
-        from recipe import Recipe
-        if isinstance(selectable, Recipe):
-            selectable = selectable.subquery()
-
-        obj = safe_load(yaml_str)
-
-        d = {}
-        for k, v in iteritems(obj):
-            d[k] = ingredient_from_validated_dict(v, selectable)
-
-        kwargs = {}
-        if hasattr(selectable, 'c'
-                  ) and isinstance(selectable.c, ImmutableColumnCollection):
-            kwargs['select_from'] = selectable
-
-        shelf = cls(d, **kwargs)
-        return shelf
+        kwargs['ingredient_constructor'] = ingredient_from_validated_dict
+        return cls.from_yaml(yaml_str, selectable, **kwargs)
 
     def find(self, obj, filter_to_class=Ingredient, constructor=None):
         """

@@ -427,29 +427,29 @@ South\t5685230\tSouth\r
 '''
         assert len(r.all()) == 2
 
-        def test_recipe_as_selectable_from_validated_yaml(self):
-            """ A recipe can be used as a selectable for a shelf created from yaml """
-            recipe = Recipe(shelf=census_shelf, session=self.session) \
-                .metrics('pop2000').dimensions('state')
+    def test_recipe_as_selectable_from_validated_yaml(self):
+        """ A recipe can be used as a selectable for a shelf created from yaml """
+        recipe = Recipe(shelf=census_shelf, session=self.session) \
+            .metrics('pop2000').dimensions('state')
 
-            yaml = '''
-            pop:
-                kind: Metric
-                field:
-                    value: pop2000
-                    aggregation: avg
-            '''
+        yaml = '''
+        pop:
+            kind: Metric
+            field:
+                value: pop2000
+                aggregation: avg
+        '''
 
-            recipe_shelf = Shelf.from_validated_yaml(yaml, recipe)
+        recipe_shelf = Shelf.from_validated_yaml(yaml, recipe)
 
-            r = Recipe(shelf=recipe_shelf, session=self.session).metrics('pop')
-            assert r.to_sql() == '''SELECT avg(anon_1.pop2000) AS pop
-    FROM
-      (SELECT census.state AS state,
-              sum(census.pop2000) AS pop2000
-       FROM census
-       GROUP BY census.state) AS anon_1'''
-            assert r.dataset.tsv == '''pop\r\n3147355.0\r\n'''
+        r = Recipe(shelf=recipe_shelf, session=self.session).metrics('pop')
+        assert r.to_sql() == '''SELECT avg(anon_1.pop2000) AS pop
+FROM
+  (SELECT census.state AS state,
+          sum(census.pop2000) AS pop2000
+   FROM census
+   GROUP BY census.state) AS anon_1'''
+        assert r.dataset.tsv == '''pop\r\n3147355.0\r\n'''
 
     def test_recipe_as_selectable_from_yaml(self):
         """ A recipe can be used as a selectable for a shelf created from yaml """
@@ -476,6 +476,8 @@ FROM
         assert r.dataset.tsv == '''pop\r\n3147355.0\r\n'''
 
     def test_recipe_as_subquery(self):
+        """ Use a recipe subquery as a source for generating a new shelf."""
+
         recipe = Recipe(shelf=census_shelf, session=self.session)\
             .metrics('pop2000').dimensions('state')
 

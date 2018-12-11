@@ -1,11 +1,112 @@
 from copy import copy
 
 import pytest
+from sqlalchemy import join
+from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.sql.elements import ColumnElement
+from test_base import Base, Census, StateFact, oven
 from tests.test_base import MyTable, mytable_shelf
 
 from recipe import (
-    AutomaticShelf, BadIngredient, BadRecipe, Dimension, Metric, Shelf
+    AutomaticShelf, BadIngredient, BadRecipe, Dimension, Metric, Recipe, Shelf
 )
+from recipe.shelf import find_column
+
+
+class TestFindColumn(object):
+
+    def test_find_column_from_recipe(self):
+        """ Can find columns in a recipe. """
+        content = '''
+        state:
+            kind: Dimension
+            field: state
+        sex:
+            kind: Dimension
+            field: sex
+        age:
+            kind: Dimension
+            field: age
+        pop2000:
+            kind: Metric
+            field: pop2000
+        pop2008:
+            kind: Metric
+            field: pop2008
+        ttlpop:
+            kind: Metric
+            field: pop2000 + pop2008
+
+        '''
+        shelf = Shelf.from_validated_yaml(
+            content, 'census', metadata=Base.metadata
+        )
+
+        session = oven.Session()
+        recipe = Recipe(shelf=shelf, session=session) \
+            .metrics('pop2000').dimensions('state')
+        assert recipe.to_sql() == '''SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state'''
+
+        col = find_column(recipe, 'state')
+        assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+
+        with pytest.raises(BadIngredient):
+            find_column(recipe, 'foo')
+
+        col = find_column(recipe, 'pop2000')
+        assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+
+    def test_find_column_from_table(self):
+        """SQLALchemy ORM Tables can be used and return
+        InstrumentedAttributes"""
+        col = find_column(MyTable, 'first')
+        assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+
+        col = find_column(MyTable, 'last')
+        assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+
+        col = find_column(MyTable, 'age')
+        assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+
+        with pytest.raises(BadIngredient):
+            find_column(MyTable, 'foo')
+
+    def test_find_column_from_join(self):
+        """ Columns can be found in a join """
+        j = join(Census, StateFact, Census.state == StateFact.name)
+
+        col = find_column(j, 'state')
+        assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+
+        # Names can be either the column name or the {tablename}_{column}
+        col = find_column(j, 'sex')
+        assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+
+        col2 = find_column(j, 'census_sex')
+        assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+        assert col == col2
+
+        col = find_column(j, 'assoc_press')
+        assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+
+        # Columns can be referenced as {tablename}_{column}
+        col2 = find_column(j, 'state_fact_assoc_press')
+        assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+        assert col == col2
+
+        with pytest.raises(BadIngredient):
+            find_column(j, 'foo')
+
+    def test_find_column_from_invalid_type(self):
+        """ Columns can be found in a join """
+        with pytest.raises(BadIngredient):
+            find_column(1, 'foo')
+
+        with pytest.raises(BadIngredient):
+            find_column(MyTable.first, 'foo')
 
 
 class TestShelf(object):
@@ -118,7 +219,7 @@ class TestShelf(object):
     def test_dimension_ids(self):
         assert len(self.shelf.dimension_ids) == 3
         assert sorted(self.shelf.dimension_ids) == \
-                        ['first', 'firstlast', 'last']
+               ['first', 'firstlast', 'last']
 
     def test_metric_ids(self):
         assert len(self.shelf.metric_ids) == 1
@@ -279,9 +380,21 @@ oldage:
             self.make_shelf(content)
             assert str(
                 self.shelf['oldage']
-            ) == '(Metric)oldage sum(CASE WHEN (foo.age {} :age_1) THEN foo.age END)'.format(
+            ) == '(Metric)oldage sum(CASE WHEN (foo.age {} ?) THEN foo.age ' \
+                 'END)'.format(
                 symbl
             )
+            assert isinstance(self.shelf['oldage'], Metric)
+
+    def test_invalid_kind(self):
+        content = '''
+oldage:
+    kind: Metric2
+    field:
+        value: age
+'''
+        with pytest.raises(Exception):
+            self.make_shelf(content)
 
     def test_invalid_condition(self):
         content = '''
@@ -362,6 +475,51 @@ oldage:
 '''
         with pytest.raises(Exception):
             self.make_shelf(content)
+
+
+class TestShelfFromIntrospection(object):
+    """Test that shelves are created correctly using
+    Cerberus validation.
+    """
+
+    def test_shelf(self):
+        """Cerberus validated shelf doesn't accept null."""
+        content = '''
+state:
+    kind: Dimension
+    field: state
+sex:
+    kind: Dimension
+    field: sex
+age:
+    kind: Dimension
+    field: age
+pop2000:
+    kind: Metric
+    field: pop2000
+pop2008:
+    kind: Metric
+    field: pop2008
+ttlpop:
+    kind: Metric
+    field: pop2000 + pop2008
+
+'''
+        shelf = Shelf.from_validated_yaml(
+            content, 'census', metadata=Base.metadata
+        )
+
+        session = oven.Session()
+        recipe = Recipe(shelf=shelf, session=session) \
+            .metrics('pop2000').dimensions('state')
+        assert recipe.to_sql() == '''SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state'''
+        assert recipe.dataset.tsv == '''state	pop2000	state_id\r
+Tennessee	5685230	Tennessee\r
+Vermont	609480	Vermont\r
+'''
 
 
 class TestAutomaticShelf(object):

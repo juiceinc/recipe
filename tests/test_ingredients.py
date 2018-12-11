@@ -146,6 +146,10 @@ class TestIngredientBuildFilter(object):
         assert str(filt.filters[0]) == 'foo.first > :first_1'
         filt = d.build_filter('moo', 'gte')
         assert str(filt.filters[0]) == 'foo.first >= :first_1'
+        filt = d.build_filter('moo', 'is')
+        assert str(filt.filters[0]) == 'foo.first IS :first_1'
+        filt = d.build_filter('moo', 'isnot')
+        assert str(filt.filters[0]) == 'foo.first IS NOT :first_1'
 
         # str filter values are acceptable
         filt = d.build_filter(u'Τη γλώσ')
@@ -448,7 +452,7 @@ class TestIngredientFromObj(object):
                         'gt': 22
                     }
                 },
-            }, '(Metric)1 sum(CASE WHEN (foo.age > :age_1) THEN foo.age END)'),
+            }, '(Metric)1 sum(CASE WHEN (foo.age > ?) THEN foo.age END)'),
         ]
 
         for d, expected_result in data:
