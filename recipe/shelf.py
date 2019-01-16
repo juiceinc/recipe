@@ -459,7 +459,10 @@ class Shelf(AttrDict):
     @classmethod
     def from_validated_yaml(cls, yaml_str, table):
         obj = safe_load(yaml_str)
+        return cls.from_validated_data(obj, table)
 
+    @classmethod
+    def from_validated_data(cls, obj, table):
         d = {}
         for k, v in iteritems(obj):
             d[k] = ingredient_from_validated_dict(v, table)
@@ -568,15 +571,19 @@ class Shelf(AttrDict):
 class AutomaticShelf(Shelf):
 
     def __init__(self, table, *args, **kwargs):
-        d = self._introspect(table)
-        super(AutomaticShelf, self).__init__(d)
+        d = introspect_table(table.__table__)
+        super(AutomaticShelf, self).from_validated_data(d, table)
 
-    def _introspect(self, table):
-        """ Build initial shelf using table """
-        d = {}
-        for c in table.__table__.columns:
-            if isinstance(c.type, String):
-                d[c.name] = Dimension(c)
-            if isinstance(c.type, (Integer, Float)):
-                d[c.name] = Metric(func.sum(c))
-        return d
+
+def introspect_table(table):
+    """Build an initial shelf using a SQLAlchemy Table object."""
+    d = {}
+    for c in table.columns:
+        if isinstance(c.type, String):
+            d[c.name] = {'kind': 'Dimension', 'field': c.name}
+        if isinstance(c.type, (Integer, Float)):
+            d[c.name] = {
+                'kind': 'Metric',
+                'field': {'value': c.name, 'aggregation': 'sum'},
+            }
+    return d
