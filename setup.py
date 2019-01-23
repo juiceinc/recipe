@@ -36,7 +36,6 @@ install = [
     'pyyaml',
     'flapjack_stack',
     'stevedore',
-    'mock'
 ]
 # yapf: enable
 
