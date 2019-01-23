@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy import func
-from tests.test_base import MyTable, census_shelf, mytable_shelf, oven
+from tests.test_base import MyTable, mytable_shelf, oven
 
 from recipe import BadRecipe, Having, Recipe, Shelf
 
@@ -55,8 +55,9 @@ hi\t15\thi\r
 '''
 
     def test_dimension2(self):
-        recipe = self.recipe().metrics('age').dimensions('last'
-                                                        ).order_by('last')
+        recipe = self.recipe().metrics('age') \
+            .dimensions('last') \
+            .order_by('last')
         assert recipe.to_sql() == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
@@ -108,7 +109,7 @@ HAVING sum(foo.age) < 10
 ORDER BY foo.last"""
 
         assert recipe.dataset.csv.replace('\r\n', '\n') == \
-        """last,age,last_id
+            """last,age,last_id
 there,5,there
 """
 
@@ -125,9 +126,9 @@ oldage:
         shelf = Shelf.from_validated_yaml(yaml, MyTable)
         recipe = Recipe(shelf=shelf, session=self.session).metrics('oldage')
         assert (
-            ' '.join(recipe.to_sql().split()
-                    ) == 'SELECT sum(CASE WHEN (foo.age > 60) '
-            'THEN foo.age END) AS oldage FROM foo'
+            ' '.join(recipe.to_sql().split())
+            == 'SELECT sum(CASE WHEN (foo.age > 60) '
+               'THEN foo.age END) AS oldage FROM foo'
         )
 
     def test_compound_and_condition(self):

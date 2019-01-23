@@ -667,7 +667,6 @@ ORDER BY census.sex"""
         assert rowmen.pop2000 == 3059809
         assert rowmen.pop2000_compare == 298532
 
-
     def test_compare_custom_aggregation(self):
         """ A basic comparison recipe. The base recipe looks at all data, the
         comparison only applies to vermont
@@ -859,8 +858,9 @@ ORDER BY census.sex"""
         Note: Ordering is only preserved on postgres engines.
         """
 
-        r = self.recipe().metrics('pop2000').dimensions('state'
-                                                       ).order_by('state')
+        r = self.recipe().metrics('pop2000') \
+            .dimensions('state') \
+            .order_by('state')
 
         blend_recipe = self.recipe().shelf(statefact_shelf) \
             .dimensions('state', 'abbreviation')
