@@ -188,8 +188,8 @@ oldage:
 
     def test_repr(self):
         """ Find ingredients on the shelf """
-        assert self.shelf.__repr__() == """(Dimension)first MyTable.first
-(Dimension)last MyTable.last
+        assert self.shelf.__repr__() == """(Dimension)first foo.first
+(Dimension)last foo.last
 (Metric)age sum(foo.age)"""
 
     def test_update(self):
@@ -308,8 +308,8 @@ age:
 
     def test_repr(self):
         """ Find ingredients on the shelf """
-        assert self.shelf.__repr__() == """(Dimension)first MyTable.first
-(Dimension)last MyTable.last
+        assert self.shelf.__repr__() == """(Dimension)first foo.first
+(Dimension)last foo.last
 (Metric)age sum(foo.age)"""
 
     def test_update(self):

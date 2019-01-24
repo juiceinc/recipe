@@ -115,6 +115,8 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
     """ Parse a field object from yaml into a sqlalchemy expression """
     # An aggregation is a callable that takes a single field expression
     # None will perform no aggregation
+    if hasattr(table, '__table__'):
+        table = table.__table__
     aggregation_lookup = {
         'sum': func.sum,
         'min': func.min,
@@ -173,11 +175,11 @@ def parse_field(fld, table, aggregated=True, default_aggregation='sum'):
         if word in ('MINUS', 'PLUS', 'DIVIDE', 'MULTIPLY'):
             field_parts.append(word)
         else:
-            if hasattr(table, word):
-                field_parts.append(getattr(table, word))
+            if hasattr(table.c, word):
+                field_parts.append(getattr(table.c, word))
             else:
                 raise BadIngredient(
-                    '{} is not a field in {}'.format(word, table.__name__)
+                    '{} is not a field in {}'.format(word, table.name)
                 )
     if len(field_parts) is None:
         raise BadIngredient('field is not defined.')
@@ -231,6 +233,9 @@ def ingredient_from_dict(ingr_dict, table=''):
     """Create an ingredient from an dictionary.
 
     This object will be deserialized from yaml """
+
+    if hasattr(table, '__table__'):
+        table = table.__table__
 
     # Describe the required params for each kind of ingredient
     # The key is the parameter name, the value is one of
@@ -316,7 +321,7 @@ def ingredient_from_dict(ingr_dict, table=''):
 def parse_validated_field(fld, table=''):
     """ Converts a validated field to sqlalchemy """
     aggr_fn = IngredientValidator.aggregation_lookup[fld['aggregation']]
-    field = getattr(table, fld['value'])
+    field = getattr(table.c, fld['value'])
     for operator in fld.get('operators', []):
         op = operator['operator']
         other_field = parse_validated_field(operator['field'], table=table)
@@ -372,7 +377,10 @@ class Shelf(AttrDict):
         super(Shelf, self).__init__(*args, **kwargs)
 
         self.Meta.ingredient_order = []
-        self.Meta.table = kwargs.pop('table', None)
+        table = kwargs.pop('table', None)
+        if hasattr(table, '__table__'):
+            table = table.__table__
+        self.Meta.table = table
 
         # Set the ids of all ingredients on the shelf to the key
         for k, ingredient in self.items():
@@ -446,6 +454,8 @@ class Shelf(AttrDict):
 
     @classmethod
     def from_yaml(cls, yaml_str, table):
+        if hasattr(table, '__table__'):
+            table = table.__table__
         obj = safe_load(yaml_str)
 
         d = {}
@@ -453,22 +463,26 @@ class Shelf(AttrDict):
             d[k] = ingredient_from_dict(v, table)
 
         shelf = cls(d)
-        shelf.Meta.table = table.__name__
+        shelf.Meta.table = table
         return shelf
 
     @classmethod
     def from_validated_yaml(cls, yaml_str, table):
+        if hasattr(table, '__table__'):
+            table = table.__table__
         obj = safe_load(yaml_str)
         return cls.from_validated_data(obj, table)
 
     @classmethod
     def from_validated_data(cls, obj, table):
+        if hasattr(table, '__table__'):
+            table = table.__table__
         d = {}
         for k, v in iteritems(obj):
             d[k] = ingredient_from_validated_dict(v, table)
 
         shelf = cls(d)
-        shelf.Meta.table = table.__name__
+        shelf.Meta.table = table
         return shelf
 
     def find(self, obj, filter_to_class=Ingredient, constructor=None):
@@ -568,11 +582,11 @@ class Shelf(AttrDict):
         return enchantedlist
 
 
-class AutomaticShelf(Shelf):
-
-    def __init__(self, table, *args, **kwargs):
-        d = introspect_table(table.__table__)
-        super(AutomaticShelf, self).from_validated_data(d, table)
+def AutomaticShelf(table, *args, **kwargs):
+    if hasattr(table, '__table__'):
+        table = table.__table__
+    d = introspect_table(table)
+    return Shelf.from_validated_data(d, table)
 
 
 def introspect_table(table):

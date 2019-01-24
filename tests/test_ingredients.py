@@ -412,12 +412,12 @@ class TestIngredientFromObj(object):
             ({
                 'kind': 'Dimension',
                 'field': 'age'
-            }, '(Dimension)1 MyTable.age'),
+            }, '(Dimension)1 foo.age'),
             ({
                 'kind': 'IdValueDimension',
                 'field': 'age',
                 'id_field': 'age'
-            }, '(IdValueDimension)1 MyTable.age'),
+            }, '(IdValueDimension)1 foo.age'),
             ({
                 'kind': 'Metric',
                 'field': {
@@ -581,16 +581,16 @@ class TestParse(object):
     def test_parse_field_no_aggregations(self):
         data = [
             # Basic fields
-            ('age', MyTable.age),
+            ('age', MyTable.__table__.c.age),
             ({
                 'value': 'age'
-            }, MyTable.age),
+            }, MyTable.__table__.c.age),
 
             # Conditions
             ({
                 'value': 'age',
                 'condition': None
-            }, MyTable.age),
+            }, MyTable.__table__.c.age),
             (
                 {
                     'value': 'age',
@@ -601,7 +601,7 @@ class TestParse(object):
                 },
                 case([(
                     MyTable.last.in_(('Jones', 'Punjabi')),
-                    MyTable.age
+                    MyTable.__table__.c.age
                 )])),
         ]
         for input_field, expected_result in data:
