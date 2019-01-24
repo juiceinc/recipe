@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from sqlalchemy import func
-
 from recipe.utils import AttrDict, replace_whitespace_with_space
 
 

@@ -5,8 +5,6 @@ by Shelf.from_validated_yaml to construct a Shelf using a table.
 """
 
 import logging
-from collections import OrderedDict
-from copy import deepcopy
 from datetime import date, datetime
 
 from cerberus import Validator
@@ -106,11 +104,11 @@ class IngredientValidator(Validator):
             field = field_parts[0]
             d = {'value': field}
             if len(field_parts) > 1:
-                # if we need to add and subtract from the field
-                # join the field parts into pairs, for instance if field parts is
-                # [MyTable.first, '-', MyTable.second, '+', MyTable.third]
+                # if we need to add and subtract from the field join the field
+                # parts into pairs, for instance if field parts is
+                #     [MyTable.first, '-', MyTable.second, '+', MyTable.third]
                 # we will get two pairs here
-                # [('-', MyTable.second), ('+', MyTable.third)]
+                #     [('-', MyTable.second), ('+', MyTable.third)]
                 d['operators'] = []
                 for operator, other_field in zip(
                     field_parts[1::2], field_parts[2::2]

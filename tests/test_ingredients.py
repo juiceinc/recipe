@@ -170,8 +170,8 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter(['moo'], operator='notin')
         assert str(filt.filters[0]) == 'foo.first NOT IN (:first_1)'
         filt = d.build_filter(['moo', 'foo'], operator='between')
-        assert str(filt.filters[0]
-                  ) == 'foo.first BETWEEN :first_1 AND :first_2'
+        assert str(filt.filters[0]) \
+            == 'foo.first BETWEEN :first_1 AND :first_2'
 
         with pytest.raises(ValueError):
             filt = d.build_filter('moo', 'in')
@@ -386,9 +386,9 @@ class TestDivideMetric(object):
             func.sum(MyTable.age), func.sum(MyTable.age), ifzero='zero'
         )
         assert str(d.columns[0]) == \
-               'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
-               ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
-               'CAST(sum(foo.age) AS FLOAT) END'
+            'CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN ' \
+            ':param_2 ELSE CAST(sum(foo.age) AS FLOAT) / ' \
+            'CAST(sum(foo.age) AS FLOAT) END'
 
 
 class TestIngredientFromObj(object):
@@ -591,13 +591,18 @@ class TestParse(object):
                 'value': 'age',
                 'condition': None
             }, MyTable.age),
-            ({
-                'value': 'age',
-                'condition': {
-                    'field': 'last',
-                    'in': ('Jones', 'Punjabi')
-                }
-            }, case([(MyTable.last.in_(('Jones', 'Punjabi')), MyTable.age)])),
+            (
+                {
+                    'value': 'age',
+                    'condition': {
+                        'field': 'last',
+                        'in': ('Jones', 'Punjabi')
+                    }
+                },
+                case([(
+                    MyTable.last.in_(('Jones', 'Punjabi')),
+                    MyTable.age
+                )])),
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, table=MyTable, aggregated=False)

@@ -1,4 +1,3 @@
-import importlib
 from collections import OrderedDict
 from copy import copy
 
@@ -9,6 +8,7 @@ from yaml import safe_load
 
 from recipe.compat import basestring
 from recipe.exceptions import BadIngredient, BadRecipe
+from recipe import ingredients
 from recipe.ingredients import Dimension, Ingredient, Metric
 from recipe.utils import AttrDict
 from recipe.validators import IngredientValidator
@@ -20,11 +20,8 @@ _case = case
 
 
 def ingredient_class_for_name(class_name):
-    # load the module, will raise ImportError if module cannot be loaded
-    m = importlib.import_module('recipe.ingredients')
-    # get the class, will raise AttributeError if class cannot be found
-    c = getattr(m, class_name, None)
-    return c
+    """Get the class in the recipe.ingredients module with the given name."""
+    return getattr(ingredients, class_name, None)
 
 
 def parse_condition(cond, table, aggregated=False, default_aggregation='sum'):
@@ -412,25 +409,25 @@ class Shelf(AttrDict):
     def dimension_ids(self):
         """ Return the Dimensions on this shelf in the order in which
         they were used."""
-        return tuple(
-            sorted(
-                [d.id for d in self.values() if isinstance(d, Dimension)],
-                key=
-                lambda id: self.Meta.ingredient_order.index(id) if id in self.Meta.ingredient_order else 9999
-            )
+        return self._sorted_ingredients([
+            d.id for d in self.values() if isinstance(d, Dimension)]
         )
 
     @property
     def metric_ids(self):
         """ Return the Metrics on this shelf in the order in which
         they were used. """
-        return tuple(
-            sorted(
-                [d.id for d in self.values() if isinstance(d, Metric)],
-                key=
-                lambda id: self.Meta.ingredient_order.index(id) if id in self.Meta.ingredient_order else 9999
-            )
+        return self._sorted_ingredients(
+            [d.id for d in self.values() if isinstance(d, Metric)]
         )
+
+    def _sorted_ingredients(self, ingredients):
+        def sort_key(id):
+            if id in self.Meta.ingredient_order:
+                return self.Meta.ingredient_order.index(id)
+            else:
+                return 9999
+        return tuple(sorted(ingredients, key=sort_key))
 
     def __repr__(self):
         """ A string representation of the ingredients used in a recipe
@@ -505,7 +502,7 @@ class Shelf(AttrDict):
             return obj
         else:
             raise BadRecipe(
-                '{} is not a {}'.format(obj, type(filter_to_class))
+                '{} is not a {}'.format(obj, filter_to_class)
             )
 
     def brew_query_parts(self):
