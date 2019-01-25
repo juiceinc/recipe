@@ -56,7 +56,7 @@ class Ingredient(object):
             )
         # If explicit suffixes are passed in, there must be one for each column
         if self.column_suffixes is not None and \
-                len(self.column_suffixes) != len(self.columns):
+            len(self.column_suffixes) != len(self.columns):
             raise BadIngredient(
                 'column_suffixes must be the same length as '
                 'columns'
@@ -364,9 +364,9 @@ class LookupDimension(Dimension):
         self.default = kwargs.pop('default', LookupDimension.SHOW_ORIGINAL)
         # Inject a formatter that performs the lookup
         self.formatters.insert(
-            0, lambda value: self.lookup.get(value, self.default) \
-                             if self.default != LookupDimension.SHOW_ORIGINAL \
-                             else self.lookup.get(value, value)
+            0, lambda value: self.lookup.get(value, self.default)
+            if self.default != LookupDimension.SHOW_ORIGINAL
+            else self.lookup.get(value, value)
         )
 
 
