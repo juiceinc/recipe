@@ -413,7 +413,9 @@ class TestWtdAvgMetric(object):
         # Generate numerator / (denominator+epsilon) by default
         assert str(
             d.columns[0]
-        ) == 'CAST(sum(foo.age * foo.age) AS FLOAT) / (coalesce(CAST(sum(foo.age) AS FLOAT), :coalesce_1) + :coalesce_2)'
+        ) == 'CAST(sum(foo.age * foo.age) AS FLOAT) / ' \
+             '(coalesce(CAST(sum(foo.age) AS FLOAT), :coalesce_1) ' \
+             '+ :coalesce_2)'
 
 
 class TestIngredientFromObj(object):

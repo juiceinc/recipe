@@ -190,7 +190,8 @@ class Recipe(object):
         else:
             raise BadRecipe('shelf must be a dict or recipe.shelf.Shelf')
 
-        if self._select_from is None and self._shelf.Meta.select_from is not None:
+        if self._select_from is None and \
+            self._shelf.Meta.select_from is not None:
             self._select_from = self._shelf.Meta.select_from
         return self
 

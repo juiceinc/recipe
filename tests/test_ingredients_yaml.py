@@ -8,7 +8,7 @@ import os
 import pytest
 from tests.test_base import Census, MyTable, oven
 
-from recipe import BadIngredient, BadRecipe, Recipe, Shelf
+from recipe import BadIngredient, Recipe, Shelf
 
 
 class TestRecipeIngredientsYaml(object):
@@ -117,7 +117,8 @@ FROM
         )
 
     def test_complex_census_from_validated_yaml(self):
-        """Build a recipe that uses complex definitions dimensions and metrics """
+        """Build a recipe that uses complex definitions dimensions and
+        metrics """
         shelf = self.validated_shelf('census_complex.yaml', Census)
         recipe = Recipe(
             shelf=shelf, session=self.session
@@ -139,19 +140,19 @@ Vermont,271469,The Green Mountain State,Vermont
     def test_bad_census_from_validated_yaml(self):
         """ Test a bad yaml file """
         with pytest.raises(Exception):
-            shelf = self.validated_shelf('census_bad.yaml', Census)
+            self.validated_shelf('census_bad.yaml', Census)
 
     def test_bad_census_from_yaml(self):
         """ Test a bad yaml file """
         with pytest.raises(BadIngredient):
-            shelf = self.unvalidated_shelf('census_bad.yaml', Census)
+            self.unvalidated_shelf('census_bad.yaml', Census)
 
     def test_bad_census_in_from_validated_yaml(self):
         """ Test a bad yaml file """
         with pytest.raises(Exception):
-            shelf = self.validated_shelf('census_bad_in.yaml', Census)
+            self.validated_shelf('census_bad_in.yaml', Census)
 
     def test_bad_census_in_from_yaml(self):
         """ Test a bad yaml file """
         with pytest.raises(BadIngredient):
-            shelf = self.unvalidated_shelf('census_bad_in.yaml', Census)
+            self.unvalidated_shelf('census_bad_in.yaml', Census)

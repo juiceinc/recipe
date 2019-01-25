@@ -114,8 +114,8 @@ ORDER BY foo.last"""
         assert recipe.stats.rows == 2
 
     def test_order_bys(self):
-        recipe = self.recipe().metrics('age').dimensions('last'
-                                                        ).order_by('last')
+        recipe = self.recipe().metrics('age')\
+            .dimensions('last').order_by('last')
         assert recipe.to_sql() == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
@@ -125,8 +125,8 @@ ORDER BY foo.last"""
         assert recipe.all()[0].age == 10
         assert recipe.stats.rows == 2
 
-        recipe = self.recipe().metrics('age').dimensions('last'
-                                                        ).order_by('age')
+        recipe = self.recipe().metrics('age')\
+            .dimensions('last').order_by('age')
         assert recipe.to_sql() == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
@@ -136,8 +136,8 @@ ORDER BY sum(foo.age)"""
         assert recipe.all()[0].age == 5
         assert recipe.stats.rows == 2
 
-        recipe = self.recipe().metrics('age').dimensions('last'
-                                                        ).order_by('-age')
+        recipe = self.recipe().metrics('age')\
+            .dimensions('last').order_by('-age')
         assert recipe.to_sql() == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
@@ -429,7 +429,8 @@ South\t5685230\tSouth\r
         assert len(r.all()) == 2
 
     def test_recipe_as_selectable_from_validated_yaml(self):
-        """ A recipe can be used as a selectable for a shelf created from yaml """
+        """ A recipe can be used as a selectable for a shelf
+        created from yaml """
         recipe = Recipe(shelf=census_shelf, session=self.session) \
             .metrics('pop2000').dimensions('state')
 
@@ -453,7 +454,8 @@ FROM
         assert r.dataset.tsv == '''pop\r\n3147355.0\r\n'''
 
     def test_recipe_as_selectable_from_yaml(self):
-        """ A recipe can be used as a selectable for a shelf created from yaml """
+        """ A recipe can be used as a selectable for a shelf
+        created from yaml """
         recipe = Recipe(shelf=census_shelf, session=self.session) \
             .metrics('pop2000').dimensions('state')
 

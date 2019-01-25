@@ -118,8 +118,8 @@ class RecipeExtension(object):
 
     def enchant_add_fields(self):
         """ This method allows extensions to add fields to a result row.
-        Return a tuple of the field names that are being added with this method
-        """
+        Return a tuple of the field names that are being added with
+        this method """
         return ()
 
     def enchant_row(self, row):
@@ -582,8 +582,8 @@ class CompareRecipe(RecipeExtension):
                     if col is not None:
                         postquery_parts['query'] = \
                             postquery_parts['query'].add_columns(
-                                summary_aggregation(col).label(met.id + suffix)
-                            )
+                                summary_aggregation(col).label(
+                                    met.id + suffix))
                     else:
                         raise BadRecipe(
                             '{} could not be found in .compare() '
