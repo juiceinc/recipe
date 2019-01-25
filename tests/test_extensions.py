@@ -863,8 +863,9 @@ ORDER BY census.sex"""
         Note: Ordering is only preserved on postgres engines.
         """
 
-        r = self.recipe().metrics('pop2000').dimensions('state'
-                                                       ).order_by('state')
+        r = self.recipe().metrics('pop2000') \
+            .dimensions('state') \
+            .order_by('state')
 
         blend_recipe = self.recipe().shelf(statefact_shelf) \
             .dimensions('state', 'abbreviation')

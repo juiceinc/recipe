@@ -1,4 +1,3 @@
-# TODO ask jason about methods of doing this
 from sqlalchemy import and_, func, text
 from sqlalchemy.ext.declarative import declarative_base
 

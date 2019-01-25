@@ -219,7 +219,7 @@ class TestShelf(object):
     def test_dimension_ids(self):
         assert len(self.shelf.dimension_ids) == 3
         assert sorted(self.shelf.dimension_ids) == \
-               ['first', 'firstlast', 'last']
+            ['first', 'firstlast', 'last']
 
     def test_metric_ids(self):
         assert len(self.shelf.metric_ids) == 1

@@ -6,8 +6,7 @@ import logging
 from collections import OrderedDict
 from copy import deepcopy
 
-from cerberus import Validator, schema_registry
-from cerberus.platform import _int_types, _str_type
+from cerberus import schema_registry
 
 logging.captureWarnings(True)
 

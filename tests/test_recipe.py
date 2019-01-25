@@ -100,8 +100,9 @@ GROUP BY foo.first"""
             recipe.shelf(52)
 
     def test_dimension2(self):
-        recipe = self.recipe().metrics('age').dimensions('last'
-                                                        ).order_by('last')
+        recipe = self.recipe().metrics('age') \
+            .dimensions('last') \
+            .order_by('last')
         assert recipe.to_sql() == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
@@ -227,7 +228,7 @@ HAVING sum(foo.age) < 10
 ORDER BY foo.last"""
 
         assert recipe.dataset.csv.replace('\r\n', '\n') == \
-        """last,age,last_id
+            """last,age,last_id
 there,5,there
 """
 
