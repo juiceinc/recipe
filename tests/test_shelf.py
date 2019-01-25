@@ -4,13 +4,13 @@ import pytest
 from sqlalchemy import join
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import ColumnElement
-from test_base import Base, Census, StateFact, oven
-from tests.test_base import MyTable, mytable_shelf
 
 from recipe import (
     AutomaticShelf, BadIngredient, BadRecipe, Dimension, Metric, Recipe, Shelf
 )
 from recipe.shelf import find_column
+
+from .test_base import Base, Census, MyTable, StateFact, mytable_shelf, oven
 
 
 class TestFindColumn(object):
