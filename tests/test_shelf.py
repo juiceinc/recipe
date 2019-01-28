@@ -59,16 +59,23 @@ GROUP BY census.state'''
         col = find_column(recipe, 'pop2000')
         assert isinstance(col, (ColumnElement, InstrumentedAttribute))
 
-    def test_find_column_from_table(self):
+    def test_find_column_from_table_mytable(self):
         """SQLALchemy ORM Tables can be used and return
         InstrumentedAttributes"""
         col = find_column(MyTable, 'first')
         assert isinstance(col, (ColumnElement, InstrumentedAttribute))
 
+        col2 = find_column(MyTable, 'foo_first')
+        assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+        assert col == col2
+
         col = find_column(MyTable, 'last')
         assert isinstance(col, (ColumnElement, InstrumentedAttribute))
 
         col = find_column(MyTable, 'age')
+        assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+
+        col = find_column(MyTable, 'foo_age')
         assert isinstance(col, (ColumnElement, InstrumentedAttribute))
 
         with pytest.raises(BadIngredient):
@@ -78,8 +85,13 @@ GROUP BY census.state'''
         """ Columns can be found in a join """
         j = join(Census, StateFact, Census.state == StateFact.name)
 
+        # Names can be either the column name or the {tablename}_{column}
         col = find_column(j, 'state')
         assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+
+        col2 = find_column(j, 'census_state')
+        assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+        assert col == col2
 
         # Names can be either the column name or the {tablename}_{column}
         col = find_column(j, 'sex')

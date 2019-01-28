@@ -119,6 +119,14 @@ def tokenize(s):
     return words
 
 
+def _find_in_columncollection(columns, name):
+    """ Find a column in a column collection by name or _label"""
+    for col in columns:
+        if col.name == name or getattr(col, '_label', None) == name:
+            return col
+    return None
+
+
 def find_column(selectable, name):
     """
     Find a column named `name` in selectable
@@ -128,17 +136,18 @@ def find_column(selectable, name):
     :return: A column object
     """
     from recipe import Recipe
+
     if isinstance(selectable, Recipe):
         selectable = selectable.subquery()
 
     # Selectable is a table
     if isinstance(selectable, DeclarativeMeta):
         col = getattr(selectable, name, None)
-        if col is None:
-            raise BadIngredient(
-                'Can not find {} in table {}'.format(name, selectable)
-            )
-        else:
+        if col is not None:
+            return col
+
+        col = _find_in_columncollection(selectable.__table__.columns, name)
+        if col is not None:
             return col
 
     # Selectable is a sqlalchemy subquery
@@ -147,19 +156,12 @@ def find_column(selectable, name):
         col = getattr(selectable.c, name, None)
         if col is not None:
             return col
-        for col in selectable.c:
-            if col.name == name:
-                return col
-        # If we still haven't found the column search using _label
-        for col in selectable.c:
-            if getattr(col, '_label', None) == name:
-                return col
 
-        raise BadIngredient(
-            'Can not find {} in selectable {}'.format(name, selectable)
-        )
-    else:
-        raise BadIngredient('Can not find {} in {}'.format(name, selectable))
+        col = _find_in_columncollection(selectable.c, name)
+        if col is not None:
+            return col
+
+    raise BadIngredient('Can not find {} in {}'.format(name, selectable))
 
 
 def parse_field(fld, selectable, aggregated=True, default_aggregation='sum'):
