@@ -6,7 +6,7 @@ from tests.test_base import MyTable, mytable_shelf
 
 from recipe import (
     BadIngredient, Dimension, DivideMetric, Filter, Having, IdValueDimension,
-    Ingredient, LookupDimension, Metric
+    Ingredient, LookupDimension, Metric, WtdAvgMetric
 )
 from recipe.compat import str
 from recipe.shelf import ingredient_from_dict, parse_field
@@ -146,6 +146,10 @@ class TestIngredientBuildFilter(object):
         assert str(filt.filters[0]) == 'foo.first > :first_1'
         filt = d.build_filter('moo', 'gte')
         assert str(filt.filters[0]) == 'foo.first >= :first_1'
+        filt = d.build_filter('moo', 'is')
+        assert str(filt.filters[0]) == 'foo.first IS :first_1'
+        filt = d.build_filter('moo', 'isnot')
+        assert str(filt.filters[0]) == 'foo.first IS NOT :first_1'
 
         # str filter values are acceptable
         filt = d.build_filter(u'Τη γλώσ')
@@ -391,6 +395,29 @@ class TestDivideMetric(object):
             'CAST(sum(foo.age) AS FLOAT) END'
 
 
+class TestWtdAvgMetric(object):
+
+    def test_init(self):
+        # WtdAvgMetric should have a two expressions
+        with pytest.raises(TypeError):
+            d = WtdAvgMetric()
+
+        with pytest.raises(TypeError):
+            d = WtdAvgMetric(MyTable.age)
+
+        d = WtdAvgMetric(MyTable.age, MyTable.age)
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 0
+        assert len(d.filters) == 0
+
+        # Generate numerator / (denominator+epsilon) by default
+        assert str(
+            d.columns[0]
+        ) == 'CAST(sum(foo.age * foo.age) AS FLOAT) / ' \
+             '(coalesce(CAST(sum(foo.age) AS FLOAT), :coalesce_1) ' \
+             '+ :coalesce_2)'
+
+
 class TestIngredientFromObj(object):
 
     def test_ingredient_from_obj(self):
@@ -427,7 +454,7 @@ class TestIngredientFromObj(object):
                         'gt': 22
                     }
                 },
-            }, '(Metric)1 sum(CASE WHEN (foo.age > :age_1) THEN foo.age END)'),
+            }, '(Metric)1 sum(CASE WHEN (foo.age > ?) THEN foo.age END)'),
         ]
 
         for d, expected_result in data:
@@ -591,21 +618,18 @@ class TestParse(object):
                 'value': 'age',
                 'condition': None
             }, MyTable.age),
-            (
-                {
-                    'value': 'age',
-                    'condition': {
-                        'field': 'last',
-                        'in': ('Jones', 'Punjabi')
-                    }
-                },
-                case([(
-                    MyTable.last.in_(('Jones', 'Punjabi')),
-                    MyTable.age
-                )])),
+            ({
+                'value': 'age',
+                'condition': {
+                    'field': 'last',
+                    'in': ('Jones', 'Punjabi')
+                }
+            }, case([(MyTable.last.in_(('Jones', 'Punjabi')), MyTable.age)])),
         ]
         for input_field, expected_result in data:
-            result = parse_field(input_field, table=MyTable, aggregated=False)
+            result = parse_field(
+                input_field, selectable=MyTable, aggregated=False
+            )
             assert str(result) == str(expected_result)
 
     def test_bad_field_string_definitions(self):

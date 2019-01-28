@@ -118,7 +118,8 @@ class RecipeExtension(object):
 
     def enchant_add_fields(self):
         """ This method allows extensions to add fields to a result row.
-        Return a tuple of the field names that are being added with this method
+        Return a tuple of the field names that are being added with
+        this method
         """
         return ()
 
@@ -159,9 +160,8 @@ class AutomaticFilters(RecipeExtension):
                     # Ignore keys that are in exclude_keys
                     continue
 
-                # Only look for dimensions
+                # TODO: If dim can't be found, optionally raise a warning
                 dimension = self.recipe._shelf.find(dim, Dimension)
-
                 # make a Filter and add it to filters
                 self.recipe.filters(dimension.build_filter(values, operator))
 
@@ -205,7 +205,7 @@ class AutomaticFilters(RecipeExtension):
 
         **Scalar operators**
 
-        If the value provided in the automatic_fitler dictionary is a scalar
+        If the value provided in the automatic_filter dictionary is a scalar
         (a string, integer, or number), the following operators are available.
         The default operator is ``eq``::
 
@@ -577,8 +577,8 @@ class CompareRecipe(RecipeExtension):
                     if col is not None:
                         postquery_parts['query'] = \
                             postquery_parts['query'].add_columns(
-                                summary_aggregation(col).label(met.id + suffix)
-                            )
+                                summary_aggregation(col).label(
+                                    met.id + suffix))
                     else:
                         raise BadRecipe(
                             '{} could not be found in .compare() '

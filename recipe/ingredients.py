@@ -56,7 +56,7 @@ class Ingredient(object):
             )
         # If explicit suffixes are passed in, there must be one for each column
         if self.column_suffixes is not None and \
-                len(self.column_suffixes) != len(self.columns):
+            len(self.column_suffixes) != len(self.columns):
             raise BadIngredient(
                 'column_suffixes must be the same length as '
                 'columns'
@@ -166,7 +166,9 @@ class Ingredient(object):
         :param operator: An operator to override the default interaction
         :type operator: str
         """
-        scalar_ops = ['ne', 'lt', 'lte', 'gt', 'gte', 'eq', None]
+        scalar_ops = [
+            'ne', 'lt', 'lte', 'gt', 'gte', 'eq', 'is', 'isnot', None
+        ]
         non_scalar_ops = ['notin', 'between', 'in', None]
 
         is_scalar = isinstance(value, (int, basestring))
@@ -184,6 +186,10 @@ class Ingredient(object):
                 return Filter(filter_column > value)
             elif operator == 'gte':
                 return Filter(filter_column >= value)
+            elif operator == 'is':
+                return Filter(filter_column.is_(value))
+            elif operator == 'isnot':
+                return Filter(filter_column.isnot(value))
             return Filter(filter_column == value)
         elif not is_scalar and operator in non_scalar_ops:
             if operator == 'notin':
@@ -331,8 +337,23 @@ class IdValueDimension(Dimension):
 class LookupDimension(Dimension):
     """ Returns the expression value looked up in a lookup dictionary
     """
+    SHOW_ORIGINAL = object()
 
     def __init__(self, expression, lookup, **kwargs):
+        """A Dimension that replaces values using a lookup table.
+
+        :param expression: The dimension field
+        :type value: object
+        :param lookup: A dictionary of key/value pairs. If the keys will
+           be replaced by values in the value of this Dimension
+        :type operator: dict
+        :param default: The value to use if a dimension value isn't
+           found in the lookup table. If default is
+           LookupDimension.SHOW_ORIGINAL, values will be
+           unchanged if they don't appear in the lookup table.
+           This is the default behavior.
+        :type default: object
+        """
         super(LookupDimension, self).__init__(expression, **kwargs)
         self.lookup = lookup
         if not isinstance(lookup, dict):
@@ -340,9 +361,12 @@ class LookupDimension(Dimension):
                 'lookup for LookupDimension must be a '
                 'dictionary'
             )
-        self.default = kwargs.pop('default', 'Not found')
+        self.default = kwargs.pop('default', LookupDimension.SHOW_ORIGINAL)
+        # Inject a formatter that performs the lookup
         self.formatters.insert(
             0, lambda value: self.lookup.get(value, self.default)
+            if self.default != LookupDimension.SHOW_ORIGINAL
+            else self.lookup.get(value, value)
         )
 
 

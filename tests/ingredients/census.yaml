@@ -1,0 +1,18 @@
+state:
+    kind: Dimension
+    field: state
+sex:
+    kind: Dimension
+    field: sex
+age:
+    kind: Dimension
+    field: age
+pop2000:
+    kind: Metric
+    field: pop2000
+pop2008:
+    kind: Metric
+    field: pop2008
+ttlpop:
+    kind: Metric
+    field: pop2000 + pop2008

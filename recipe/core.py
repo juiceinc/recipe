@@ -21,16 +21,6 @@ warnings.simplefilter('always', DeprecationWarning)
 
 logger = logging.getLogger(__name__)
 
-# TODO mixin approach
-# Stats
-# Anonymize (could be configured for local or cached)
-# Automatic filters
-# Query caching
-# Expose a logger
-#
-# config object that you could use instead of passing data in
-#  on every call, control settings via a yamlfile/env variable/object
-
 
 class Stats(object):
 
@@ -110,6 +100,7 @@ class Recipe(object):
         dynamic_extensions=None
     ):
 
+        self._select_from = None
         self._id = str(uuid4())[:8]
         self.shelf(shelf)
 
@@ -181,7 +172,10 @@ class Recipe(object):
         try:
             proxy_callable
         except NameError:
-            raise AttributeError
+            raise AttributeError(
+                '{} isn\'t available on this recipe, '
+                'you may need to add an extension'.format(name)
+            )
 
         return proxy_callable
 
@@ -189,12 +183,16 @@ class Recipe(object):
         """ Defines a shelf to use for this recipe """
         if shelf is None:
             self._shelf = Shelf({})
-        elif isinstance(shelf, dict):
-            self._shelf = Shelf(shelf)
         elif isinstance(shelf, Shelf):
             self._shelf = shelf
+        elif isinstance(shelf, dict):
+            self._shelf = Shelf(shelf)
         else:
             raise BadRecipe('shelf must be a dict or recipe.shelf.Shelf')
+
+        if self._select_from is None and \
+            self._shelf.Meta.select_from is not None:
+            self._select_from = self._shelf.Meta.select_from
         return self
 
     def metrics(self, *metrics):
@@ -273,7 +271,7 @@ class Recipe(object):
 
     @property
     def filter_ids(self):
-        return (f.id for f in self._filters if isinstance(f, Filter))
+        return self._cauldron.filter_ids
 
     def order_by(self, *order_bys):
         """ Add a list of ingredients to order by to the query. These can
@@ -297,6 +295,11 @@ class Recipe(object):
             self._order_bys.append(order_by)
 
         self.dirty = True
+        return self
+
+    def select_from(self, selectable):
+        self.dirty = True
+        self._select_from = selectable
         return self
 
     def session(self, session):
@@ -393,10 +396,14 @@ class Recipe(object):
             recipe_parts = extension.modify_recipe_parts(recipe_parts)
 
         # Start building the query
-        recipe_parts['query'] = self._session.query(*recipe_parts['columns'])\
+        query = self._session.query(*recipe_parts['columns'])
+        if self._select_from is not None:
+            query = query.select_from(self._select_from)
+        recipe_parts['query'] = query \
             .group_by(*recipe_parts['group_bys']) \
             .order_by(*recipe_parts['order_bys']) \
             .filter(*recipe_parts['filters'])
+
         if recipe_parts['havings']:
             for having in recipe_parts['havings']:
                 recipe_parts['query'] = recipe_parts['query'].having(having)
@@ -404,7 +411,9 @@ class Recipe(object):
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_prequery_parts(recipe_parts)
 
-        if len(recipe_parts['query'].selectable.froms) != 1:
+        if self._select_from is None and len(
+            recipe_parts['query'].selectable.froms
+        ) != 1:
             raise BadRecipe(
                 'Recipes must use ingredients that all come from '
                 'the same table. \nDetails on this recipe:\n{'
@@ -457,21 +466,15 @@ class Recipe(object):
             for extension in self.recipe_extensions:
                 extension.dirty = False
 
-    def table(self):
+    def _table(self):
         """ A convenience method to determine the table the query is
         selecting from
         """
-        query_table = self.query().selectable.froms[0]
-        if self._table:
-            if self._table == query_table:
-                return self._table
-            else:
-                raise BadRecipe(
-                    'Recipe was passed a table which is not the '
-                    'table it is selecting from'
-                )
+        descriptions = self.query().column_descriptions
+        if descriptions:
+            return descriptions[0]['entity']
         else:
-            return query_table
+            return None
 
     def to_sql(self):
         """ A string representation of the SQL this recipe will generate.

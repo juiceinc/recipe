@@ -121,6 +121,11 @@ class TestAutomaticFiltersExtension(object):
         assert recipe.recipe_extensions[0].include_keys == ('first',)
         assert recipe.recipe_extensions[0].exclude_keys == ('last',)
 
+    def test_attribute_not_found(self):
+        recipe = self.recipe().metrics('age').dimensions('first')
+        with pytest.raises(AttributeError):
+            recipe = recipe.foo(True)
+
     def test_apply(self):
         recipe = self.recipe().metrics('age').dimensions('first')
         recipe = recipe.apply_automatic_filters(False)

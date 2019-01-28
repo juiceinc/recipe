@@ -3,8 +3,8 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from recipe import Dimension, IdValueDimension, Metric, Shelf, get_oven
 
-Base = declarative_base()
 oven = get_oven('sqlite://')
+Base = declarative_base(bind=oven.engine)
 
 TABLEDEF = '''
         CREATE TABLE IF NOT EXISTS foo
