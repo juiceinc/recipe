@@ -119,7 +119,8 @@ class RecipeExtension(object):
     def enchant_add_fields(self):
         """ This method allows extensions to add fields to a result row.
         Return a tuple of the field names that are being added with
-        this method """
+        this method
+        """
         return ()
 
     def enchant_row(self, row):

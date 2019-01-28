@@ -144,6 +144,9 @@ def find_column(selectable, name):
     # Selectable is a sqlalchemy subquery
     elif hasattr(selectable, 'c'
                 ) and isinstance(selectable.c, ImmutableColumnCollection):
+        col = getattr(selectable.c, name, None)
+        if col is not None:
+            return col
         for col in selectable.c:
             if col.name == name:
                 return col

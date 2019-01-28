@@ -337,7 +337,7 @@ class IdValueDimension(Dimension):
 class LookupDimension(Dimension):
     """ Returns the expression value looked up in a lookup dictionary
     """
-    SHOW_ORIGINAL = 'original'
+    SHOW_ORIGINAL = object()
 
     def __init__(self, expression, lookup, **kwargs):
         """A Dimension that replaces values using a lookup table.

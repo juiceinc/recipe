@@ -396,19 +396,13 @@ class Recipe(object):
             recipe_parts = extension.modify_recipe_parts(recipe_parts)
 
         # Start building the query
+        query = self._session.query(*recipe_parts['columns'])
         if self._select_from is not None:
-            recipe_parts['query'] = self._session.query(
-                *recipe_parts['columns']) \
-                .select_from(self._select_from) \
-                .group_by(*recipe_parts['group_bys']) \
-                .order_by(*recipe_parts['order_bys']) \
-                .filter(*recipe_parts['filters'])
-        else:
-            recipe_parts['query'] = self._session.query(
-                *recipe_parts['columns']) \
-                .group_by(*recipe_parts['group_bys']) \
-                .order_by(*recipe_parts['order_bys']) \
-                .filter(*recipe_parts['filters'])
+            query = query.select_from(self._select_from)
+        recipe_parts['query'] = query \
+            .group_by(*recipe_parts['group_bys']) \
+            .order_by(*recipe_parts['order_bys']) \
+            .filter(*recipe_parts['filters'])
 
         if recipe_parts['havings']:
             for having in recipe_parts['havings']:
