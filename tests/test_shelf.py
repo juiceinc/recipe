@@ -27,7 +27,7 @@ class TestFindColumn(object):
         age:
             kind: Dimension
             field: age
-        pop2000:
+        sum_pop2000:
             kind: Metric
             field: pop2000
         pop2008:
@@ -44,9 +44,9 @@ class TestFindColumn(object):
 
         session = oven.Session()
         recipe = Recipe(shelf=shelf, session=session) \
-            .metrics('pop2000').dimensions('state')
+            .metrics('sum_pop2000').dimensions('state')
         assert recipe.to_sql() == '''SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
+       sum(census.pop2000) AS sum_pop2000
 FROM census
 GROUP BY census.state'''
 
@@ -54,10 +54,16 @@ GROUP BY census.state'''
         assert isinstance(col, (ColumnElement, InstrumentedAttribute))
 
         with pytest.raises(BadIngredient):
+            find_column(recipe, 'census_state')
+
+        with pytest.raises(BadIngredient):
             find_column(recipe, 'foo')
 
-        col = find_column(recipe, 'pop2000')
+        col = find_column(recipe, 'sum_pop2000')
         assert isinstance(col, (ColumnElement, InstrumentedAttribute))
+
+        with pytest.raises(BadIngredient):
+            find_column(recipe, 'pop2000')
 
     def test_find_column_from_table_mytable(self):
         """SQLALchemy ORM Tables can be used and return
