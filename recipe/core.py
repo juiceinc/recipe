@@ -7,6 +7,7 @@ import tablib
 from orderedset import OrderedSet
 from sqlalchemy import alias
 from sqlalchemy.sql.elements import BinaryExpression
+from sureberus import normalize_schema
 
 from recipe.compat import str
 from recipe.dynamic_extensions import run_hooks
@@ -14,6 +15,7 @@ from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Filter, Having, Metric
 from recipe.shelf import Shelf
 from recipe.utils import prettyprintable_sql
+from recipe.schemas import recipe_schema
 
 ALLOW_QUERY_CACHING = True
 
@@ -144,6 +146,18 @@ class Recipe(object):
             self.recipe_extensions.append(ExtensionClass(self))
 
         self.dynamic_extensions = dynamic_extensions
+
+    @classmethod
+    def from_config(cls, shelf, obj):
+        """Construct a Recipe from a plain Python dictionary."""
+        obj = normalize_schema(recipe_schema, obj)
+        return cls(
+            shelf=shelf,
+            metrics=obj.get('metrics'),
+            dimensions=obj.get('dimensions'),
+            filters=obj.get('filters'),
+            order_by=obj.get('order_by'),
+        )
 
     # -------
     # Builder for parts of the recipe.

@@ -225,3 +225,27 @@ class RecipeSchemas(object):
         self._register_operator_schema()
         self._register_condition_schema()
         self._register_ingredient_schemas()
+
+
+# This schema is used with sureberus
+recipe_schema = {
+    'type': 'dict',
+    'schema': {
+        'metrics': {
+            'type': 'list',
+            'schema': {'type': 'string'},
+        },
+        'dimensions': {
+            'type': 'list',
+            'schema': {'type': 'string'},
+        },
+        'filters': {
+            'type': 'list',
+            'schema': {'type': 'dict'},
+        },
+        'order_by': {
+            'type': 'list',
+            'schema': {'type': 'string'},
+        },
+    }
+}
