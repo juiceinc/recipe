@@ -241,7 +241,7 @@ recipe_schema = {
         },
         'filters': {
             'type': 'list',
-            'schema': {'type': 'dict'},
+            'schema': {'type': 'string'},
         },
         'order_by': {
             'type': 'list',
