@@ -1,10 +1,11 @@
 import pytest
 from sqlalchemy import func, join
 from tests.test_base import (
-    Census, MyTable, Scores, StateFact, census_shelf, mytable_shelf, oven
+    Census, MyTable, Scores, StateFact, census_shelf, mytable_shelf,
+    mytable_shelf_with_filter, oven
 )
 
-from recipe import BadRecipe, Dimension, Having, Metric, Recipe, Shelf
+from recipe import BadRecipe, Dimension, Filter, Having, Metric, Recipe, Shelf
 
 
 class TestRecipeIngredients(object):
@@ -175,6 +176,18 @@ ORDER BY foo.first"""
         assert recipe.all()[0].first == 'hi'
         assert recipe.all()[0].age == 15
         assert recipe.stats.rows == 1
+
+    def test_from_config(self):
+        config = {'dimensions': ['first', 'last'], 'metrics': ['age'], 'filters': ['ageover4']}
+        recipe = Recipe.from_config(mytable_shelf_with_filter, config).session(self.session)
+        assert recipe.to_sql() == """\
+SELECT foo.first AS first,
+       foo.last AS last,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.age > 4
+GROUP BY foo.first,
+         foo.last"""
 
     def test_recipe_empty(self):
         recipe = self.recipe()
