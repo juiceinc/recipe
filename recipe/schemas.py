@@ -241,7 +241,12 @@ recipe_schema = {
         },
         'filters': {
             'type': 'list',
-            'schema': {'type': 'string'},
+            'schema': {
+                'oneof': [
+                    {'type': 'string'},
+                    {'type': 'dict'},
+                ]
+            },
         },
         'order_by': {
             'type': 'list',

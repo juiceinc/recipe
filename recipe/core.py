@@ -13,7 +13,7 @@ from recipe.compat import str
 from recipe.dynamic_extensions import run_hooks
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Filter, Having, Metric
-from recipe.shelf import Shelf
+from recipe.shelf import Shelf, parse_condition
 from recipe.utils import prettyprintable_sql
 from recipe.schemas import recipe_schema
 
@@ -151,11 +151,15 @@ class Recipe(object):
     def from_config(cls, shelf, obj):
         """Construct a Recipe from a plain Python dictionary."""
         obj = normalize_schema(recipe_schema, obj)
+        filters = [
+            parse_condition(filter, shelf.Meta.select_from) if isinstance(filter, dict) else filter
+            for filter in obj.get('filters', [])
+        ]
         return cls(
             shelf=shelf,
             metrics=obj.get('metrics'),
             dimensions=obj.get('dimensions'),
-            filters=obj.get('filters'),
+            filters=filters,
             order_by=obj.get('order_by'),
         )
 

@@ -178,7 +178,11 @@ ORDER BY foo.first"""
         assert recipe.stats.rows == 1
 
     def test_from_config(self):
-        config = {'dimensions': ['first', 'last'], 'metrics': ['age'], 'filters': ['ageover4']}
+        config = {
+            'dimensions': ['first', 'last'],
+            'metrics': ['age'],
+            'filters': ['ageover4'],
+        }
         recipe = Recipe.from_config(mytable_shelf_with_filter, config).session(self.session)
         assert recipe.to_sql() == """\
 SELECT foo.first AS first,
@@ -186,6 +190,25 @@ SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
 WHERE foo.age > 4
+GROUP BY foo.first,
+         foo.last"""
+
+    def test_from_config_filter_object(self):
+        config = {
+            'dimensions': ['last'],
+            'metrics': ['age'],
+            'filters': [
+                {'field': 'age', 'gt': 13},
+            ]
+        }
+
+        recipe = Recipe.from_config(mytable_shelf_with_filter, config).session(self.session)
+        assert recipe.to_sql() == """\
+SELECT foo.first AS first,
+       foo.last AS last,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.age > 13
 GROUP BY foo.first,
          foo.last"""
 
