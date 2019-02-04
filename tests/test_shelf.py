@@ -127,6 +127,18 @@ GROUP BY census.state'''
             find_column(MyTable.first, 'foo')
 
 
+class TestShelfConstruction(object):
+    def test_pass_some_metadata(self):
+        shelf = Shelf(metadata={'a': 'hello'})
+        assert shelf.Meta.metadata['a'] == 'hello'
+
+    def test_Meta_is_not_shared(self):
+        shelf = Shelf(metadata={'a': 'hello'})
+        shelf2 = Shelf(metadata={'b': 'there'})
+        assert shelf.Meta.metadata == {'a': 'hello'}
+        assert shelf2.Meta.metadata == {'b': 'there'}
+
+
 class TestShelf(object):
 
     def setup(self):
@@ -211,7 +223,7 @@ class TestShelf(object):
 
     def test_get(self):
         """ Find ingredients on the shelf """
-        ingredient = self.shelf.first
+        ingredient = self.shelf['first']
         assert ingredient.id == 'first'
 
         ingredient = self.shelf.get('first', None)
@@ -346,7 +358,7 @@ age:
 
     def test_get(self):
         """ Find ingredients on the shelf """
-        ingredient = self.shelf.first
+        ingredient = self.shelf['first']
         assert ingredient.id == 'first'
 
         ingredient = self.shelf.get('first', None)
@@ -564,7 +576,7 @@ class TestAutomaticShelf(object):
 
     def test_get(self):
         """ Find ingredients on the shelf """
-        ingredient = self.shelf.first
+        ingredient = self.shelf['first']
         assert ingredient.id == 'first'
 
         ingredient = self.shelf.get('first', None)

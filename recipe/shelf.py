@@ -14,7 +14,6 @@ from recipe import ingredients
 from recipe.compat import basestring
 from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric
-from recipe.utils import AttrDict
 from recipe.validators import IngredientValidator
 
 # Ensure case and distinct don't get reaped. We need it in scope for
@@ -411,14 +410,18 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
     return IngredientClass(*args, **ingr_dict)
 
 
-class Shelf(AttrDict):
-    """ Holds ingredients used by a recipe
+class Shelf(object):
+    """Holds ingredients used by a recipe.
 
-    Args:
+    Can be initialized with no arguments, but also accepts:
+    - a dictionary of ingredients as a positional argument
+    - ingredients as keyword arguments
 
-
-    Returns:
-        A Shelf object
+    These keyword arguments have special meaning:
+    :param select_from: The SQLALchemy-compatible object which will be queried
+        (usually a Table or ORM object).
+    :param table: Unused, but stored on the `Meta` attribute.
+    :param metadata: Unused, but stored on the `Meta` attribute.
     """
 
     class Meta:
@@ -427,30 +430,55 @@ class Shelf(AttrDict):
         select_from = None
         engine = None
         ingredient_order = []
+        metadata = None
 
     def __init__(self, *args, **kwargs):
-        super(Shelf, self).__init__(*args, **kwargs)
-
+        self.Meta = type(self).Meta()
         self.Meta.ingredient_order = []
         self.Meta.table = kwargs.pop('table', None)
         self.Meta.select_from = kwargs.pop('select_from', None)
         self.Meta.metadata = kwargs.pop('metadata', None)
 
+        self._ingredients = {}
+        if args and isinstance(args[0], dict):
+            self._ingredients.update(args[0])
+        self._ingredients.update(kwargs)
+
         # Set the ids of all ingredients on the shelf to the key
         for k, ingredient in self.items():
             ingredient.id = k
 
+    ## Dict Interface
+
     def get(self, k, d=None):
-        ingredient = super(Shelf, self).get(k, d)
+        ingredient = self._ingredients.get(k, d)
         if isinstance(ingredient, Ingredient):
             ingredient.id = k
             ingredient.anonymize = self.Meta.anonymize
         return ingredient
 
+    def items(self):
+        """Return an iterator over the ingredient names and values."""
+        return self._ingredients.items()
+
+    def values(self):
+        """Return an iterator over the ingredients."""
+        return self._ingredients.values()
+
+    def __copy__(self):
+        meta = copy(self.Meta)
+        ingredients = copy(self._ingredients)
+        new_shelf = type(self)(ingredients)
+        new_shelf.Meta = meta
+        return new_shelf
+
+    def __iter__(self):
+        return iter(self._ingredients)
+
     def __getitem__(self, key):
         """ Set the id and anonymize property of the ingredient whenever we
         get or set items """
-        ingredient = super(Shelf, self).__getitem__(key)
+        ingredient = self._ingredients[key]
         ingredient.id = key
         ingredient.anonymize = self.Meta.anonymize
         return ingredient
@@ -461,7 +489,35 @@ class Shelf(AttrDict):
         ingredient_copy = copy(ingredient)
         ingredient_copy.id = key
         ingredient_copy.anonymize = self.Meta.anonymize
-        super(Shelf, self).__setitem__(key, ingredient_copy)
+        self._ingredients[key] = ingredient_copy
+
+    def __contains__(self, key):
+        return key in self._ingredients
+
+    def __len__(self):
+        return len(self._ingredients)
+
+    def clear(self):
+        self._ingredients.clear()
+
+    def update(self, *args, **kwargs):
+        if len(args) > 0:
+            shelf = args[0]
+            if isinstance(args[0], Shelf):
+                shelf = shelf.items()
+        else:
+            shelf = {}
+        self._ingredients.update(shelf, **kwargs)
+
+    DEFAULT = object()
+    def pop(self, k, d=DEFAULT):
+        """Pop an ingredient off of this shelf."""
+        if d is self.DEFAULT:
+            return self._ingredients.pop(k)
+        else:
+            return self._ingredients.pop(k, d)
+
+    ## End dict interface
 
     def ingredients(self):
         """ Return the ingredients in this shelf in a deterministic order """
