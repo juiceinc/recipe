@@ -152,7 +152,9 @@ class Recipe(object):
         """Construct a Recipe from a plain Python dictionary."""
         obj = normalize_schema(recipe_schema, obj)
         filters = [
-            parse_condition(filter, shelf.Meta.select_from) if isinstance(filter, dict) else filter
+            parse_condition(filter, shelf.Meta.select_from)
+            if isinstance(filter, dict)
+            else filter
             for filter in obj.get('filters', [])
         ]
         return cls(
