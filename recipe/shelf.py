@@ -21,6 +21,8 @@ from recipe.validators import IngredientValidator
 _distinct = distinct
 _case = case
 
+_POP_DEFAULT = object()
+
 
 def ingredient_class_for_name(class_name):
     """Get the class in the recipe.ingredients module with the given name."""
@@ -448,7 +450,7 @@ class Shelf(object):
         for k, ingredient in self.items():
             ingredient.id = k
 
-    ## Dict Interface
+    # Dict Interface
 
     def get(self, k, d=None):
         ingredient = self._ingredients.get(k, d)
@@ -516,15 +518,14 @@ class Shelf(object):
             shelf = {}
         self._ingredients.update(shelf, **kwargs)
 
-    DEFAULT = object()
-    def pop(self, k, d=DEFAULT):
+    def pop(self, k, d=_POP_DEFAULT):
         """Pop an ingredient off of this shelf."""
-        if d is self.DEFAULT:
+        if d is _POP_DEFAULT:
             return self._ingredients.pop(k)
         else:
             return self._ingredients.pop(k, d)
 
-    ## End dict interface
+    # End dict interface
 
     def ingredients(self):
         """ Return the ingredients in this shelf in a deterministic order """
