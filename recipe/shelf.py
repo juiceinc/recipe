@@ -501,6 +501,13 @@ class Shelf(object):
         self._ingredients.clear()
 
     def update(self, *args, **kwargs):
+        # This is a little more complicated than it seems it should be, because
+        # apparently `dict.update` special-cases when `dict` is passed. If we
+        # don't special-case the case of `Shelf` being passed, `dict.update`
+        # will merely iterate it and expect to find two-tuples. But if you
+        # iterate a dict normally, it only returns the keys. Therefore, we must
+        # explicitly convert Shelf arguments into two-tuples before passing it
+        # on.
         if len(args) > 0:
             shelf = args[0]
             if isinstance(args[0], Shelf):
