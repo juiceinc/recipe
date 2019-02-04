@@ -335,14 +335,6 @@ mytable_shelf = Shelf({
     'age': Metric(func.sum(MyTable.age)),
 })
 
-mytable_shelf_with_filter = Shelf({
-    'first': Dimension(MyTable.first),
-    'last': Dimension(MyTable.last),
-    'firstlast': IdValueDimension(MyTable.first, MyTable.last),
-    'age': Metric(func.sum(MyTable.age)),
-    'ageover4': Filter(MyTable.age > 4),
-})
-
 
 scores_shelf = Shelf({
     'username':

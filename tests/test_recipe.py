@@ -1,8 +1,9 @@
+from copy import copy
+
 import pytest
 from sqlalchemy import func, join
 from tests.test_base import (
-    Census, MyTable, Scores, StateFact, census_shelf, mytable_shelf,
-    mytable_shelf_with_filter, oven
+    Census, MyTable, Scores, StateFact, census_shelf, mytable_shelf, oven
 )
 
 from recipe import BadRecipe, Dimension, Filter, Having, Metric, Recipe, Shelf
@@ -178,12 +179,14 @@ ORDER BY foo.first"""
         assert recipe.stats.rows == 1
 
     def test_from_config(self):
+        shelf = copy(mytable_shelf)
+        shelf['ageover4'] = Filter(MyTable.age > 4)
         config = {
             'dimensions': ['first', 'last'],
             'metrics': ['age'],
             'filters': ['ageover4'],
         }
-        recipe = Recipe.from_config(mytable_shelf_with_filter, config).session(self.session)
+        recipe = Recipe.from_config(shelf, config).session(self.session)
         assert recipe.to_sql() == """\
 SELECT foo.first AS first,
        foo.last AS last,
@@ -202,15 +205,18 @@ GROUP BY foo.first,
             ]
         }
 
-        recipe = Recipe.from_config(mytable_shelf_with_filter, config).session(self.session)
+        shelf = copy(mytable_shelf)
+        # The shelf must have an accurate `select_from` in order to allow
+        # passing in full ingredient structures, instead of just names. That's
+        # because we need to be able to map a field name to an actual column.
+        shelf.Meta.select_from = MyTable
+        recipe = Recipe.from_config(shelf, config).session(self.session)
         assert recipe.to_sql() == """\
-SELECT foo.first AS first,
-       foo.last AS last,
+SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
 WHERE foo.age > 13
-GROUP BY foo.first,
-         foo.last"""
+GROUP BY foo.last"""
 
     def test_recipe_empty(self):
         recipe = self.recipe()
