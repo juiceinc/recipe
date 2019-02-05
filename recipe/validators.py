@@ -139,4 +139,4 @@ class IngredientValidator(Validator):
 
 RecipeSchemas(
     allowed_aggregations=list(IngredientValidator.aggregation_lookup.keys())
-).register_schemas()
+)

@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
+import pytest
+from sureberus import normalize_schema
+from sureberus.errors import UnknownFields
+
 from recipe.validators import IngredientValidator
+from recipe.schemas import recipe_schema
 
 
 class TestValidateIngredient(object):
@@ -593,3 +598,49 @@ class TestValidateCondition(object):
             assert not self.validator.validate(document), \
                 'should not validate; expecting {}'.format(errors)
             assert str(self.validator.errors) == errors
+
+
+class TestValidateRecipe(object):
+
+    def test_nothing_required(self):
+        config = {}
+        assert normalize_schema(recipe_schema, config) == {}
+
+    def test_disallow_unknown(self):
+        config = {'foo': 'bar'}
+        with pytest.raises(UnknownFields):
+            normalize_schema(recipe_schema, config)
+
+    def test_ingredient_names(self):
+        config = {
+            'metrics': ['foo'],
+            'dimensions': ['bar'],
+            'filters': ['baz']
+        }
+        assert normalize_schema(recipe_schema, config) == config
+
+    def test_filter_objects(self):
+        """Recipes can have in-line filters, since it's common for those to be
+        specific to a particular Recipe.
+        """
+        config = {
+            'metrics': ['foo'], 'dimensions': ['bar'],
+            'filters': [{'field': 'xyzzy', 'gt': 3}]
+        }
+        assert normalize_schema(recipe_schema, config) == {
+            'metrics': ['foo'], 'dimensions': ['bar'],
+            'filters': [
+                {
+                    '_fields': ['field'],
+                    'kind': 'Filter',
+                    'field': {'aggregation': None, 'value': 'xyzzy'}, 'gt': 3},
+            ]
+        }
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason="The Cerberus-based validator isn't strict about fields")
+    def test_filter_objects_disallow_unknown(self):
+        config = {'filters': [{'ueoa': 'xyz', 'field': 'xyzzy', 'gt': 3}]}
+        with pytest.raises(UnknownFields):
+            normalize_schema(recipe_schema, config)

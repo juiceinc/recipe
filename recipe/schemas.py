@@ -227,6 +227,17 @@ class RecipeSchemas(object):
         self._register_ingredient_schemas()
 
 
+def _coerce_filter(v):
+    # For now, we'll delegate to the validator / normalizer that using
+    # Cerberus.
+    from recipe.validators import IngredientValidator
+    validator = IngredientValidator(schema='Filter')
+    if not validator.validate(v):
+        raise Exception(validator.errors)
+    validator.document['kind'] = 'Filter'
+    return validator.document
+
+
 # This schema is used with sureberus
 recipe_schema = {
     'type': 'dict',
@@ -244,7 +255,10 @@ recipe_schema = {
             'schema': {
                 'oneof': [
                     {'type': 'string'},
-                    {'type': 'dict'},
+                    {
+                        'type': 'dict',
+                        'coerce': _coerce_filter,
+                    },
                 ]
             },
         },
