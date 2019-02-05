@@ -619,6 +619,9 @@ class TestAutomaticShelf(object):
         ingredient = self.shelf.get('first', None)
         assert ingredient.id == 'first'
 
+        ingredient = self.shelf['age']
+        assert str(ingredient.columns[0]) == 'sum(foo.age)'
+
         ingredient = self.shelf.get('primo', None)
         assert ingredient is None
 
