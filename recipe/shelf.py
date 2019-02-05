@@ -440,11 +440,8 @@ class Shelf(object):
         self.Meta.table = kwargs.pop('table', None)
         self.Meta.select_from = kwargs.pop('select_from', None)
         self.Meta.metadata = kwargs.pop('metadata', None)
-
         self._ingredients = {}
-        if args and isinstance(args[0], dict):
-            self._ingredients.update(args[0])
-        self._ingredients.update(kwargs)
+        self.update(*args, **kwargs)
 
         # Set the ids of all ingredients on the shelf to the key
         for k, ingredient in self.items():
