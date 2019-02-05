@@ -443,10 +443,6 @@ class Shelf(object):
         self._ingredients = {}
         self.update(*args, **kwargs)
 
-        # Set the ids of all ingredients on the shelf to the key
-        for k, ingredient in self.items():
-            ingredient.id = k
-
     # Dict Interface
 
     def get(self, k, d=None):
@@ -477,14 +473,14 @@ class Shelf(object):
     def __getitem__(self, key):
         """ Set the id and anonymize property of the ingredient whenever we
         get or set items """
-        ingredient = self._ingredients[key]
-        ingredient.id = key
-        ingredient.anonymize = self.Meta.anonymize
-        return ingredient
+        return self._ingredients[key]
 
     def __setitem__(self, key, ingredient):
         """ Set the id and anonymize property of the ingredient whenever we
         get or set items """
+        # Maintainer's note: try to make all mutation of self._ingredients go
+        # through this method, so we can reliably copy & annotate the
+        # ingredients that go into the Shelf.
         if not isinstance(ingredient, Ingredient):
             raise TypeError(
                 "Can only set Ingredients as items on Shelf. "
@@ -504,21 +500,12 @@ class Shelf(object):
     def clear(self):
         self._ingredients.clear()
 
-    def update(self, *args, **kwargs):
-        # This is a little more complicated than it seems it should be, because
-        # apparently `dict.update` special-cases when `dict` is passed. If we
-        # don't special-case the case of `Shelf` being passed, `dict.update`
-        # will merely iterate it and expect to find two-tuples. But if you
-        # iterate a dict normally, it only returns the keys. Therefore, we must
-        # explicitly convert Shelf arguments into two-tuples before passing it
-        # on.
-        if len(args) > 0:
-            shelf = args[0]
-            if isinstance(args[0], Shelf):
-                shelf = shelf.items()
-        else:
-            shelf = {}
-        self._ingredients.update(shelf, **kwargs)
+    def update(self, d=None, **kwargs):
+        items = []
+        if d is not None:
+            items = d.items()
+        for k, v in items + kwargs.items():
+            self[k] = v
 
     def pop(self, k, d=_POP_DEFAULT):
         """Pop an ingredient off of this shelf."""

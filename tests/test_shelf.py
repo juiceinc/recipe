@@ -8,6 +8,7 @@ from sqlalchemy.sql.elements import ColumnElement
 from recipe import (
     AutomaticShelf, BadIngredient, BadRecipe, Dimension, Metric, Recipe, Shelf
 )
+from recipe.ingredients import Ingredient
 from recipe.shelf import find_column
 
 from .test_base import Base, Census, MyTable, StateFact, mytable_shelf, oven
@@ -231,6 +232,16 @@ class TestShelf(object):
 
         ingredient = self.shelf.get('primo', None)
         assert ingredient is None
+
+    def test_get_doesnt_mutate(self):
+        """
+        Sharing ingredients between shelves won't cause race conditions on
+        their `.id` and `.anonymize` attributes.
+        """
+        ingr = Ingredient(id='b')
+        shelf = Shelf({'a': ingr})
+        assert shelf['a'].id == 'a'
+        assert ingr.id == 'b'
 
     def test_add_to_shelf(self):
         """ We can add an ingredient to a shelf """
