@@ -473,7 +473,25 @@ class Shelf(object):
     def __getitem__(self, key):
         """ Set the id and anonymize property of the ingredient whenever we
         get or set items """
-        return self._ingredients[key]
+        ingr = self._ingredients[key]
+        # Ensure the ingredient's `anonymize` matches the shelf.
+
+        # TODO: this is nasty, but *somewhat* safe because we are (hopefully)
+        # guaranteed to "own" copies of all of our ingredients. It would be much
+        # better if Shelf had logic that ran when anonymize is set to update all
+        # ingredients. Or better yet, the code that anonymizes queries should
+        # just look at the shelf instead of the ingredients.
+
+        # One way in this is "spooky" is:
+        # ingr = shelf['foo']
+        # # ingr.anonymize is now False
+        # shelf.Meta.anonymize = True
+        # # ingr.anonymize is still False
+        # shelf['foo] # ignore result
+        # # ingr.anonymize is now True
+
+        ingr.anonymize = self.Meta.anonymize
+        return ingr
 
     def __setitem__(self, key, ingredient):
         """ Set the id and anonymize property of the ingredient whenever we
