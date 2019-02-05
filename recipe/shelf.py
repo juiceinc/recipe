@@ -520,8 +520,8 @@ class Shelf(object):
     def update(self, d=None, **kwargs):
         items = []
         if d is not None:
-            items = d.items()
-        for k, v in items + kwargs.items():
+            items = list(d.items())
+        for k, v in items + list(kwargs.items()):
             self[k] = v
 
     def pop(self, k, d=_POP_DEFAULT):
