@@ -10,7 +10,7 @@ from recipe import (
     AutomaticShelf, BadIngredient, BadRecipe, Dimension, Metric, Recipe, Shelf
 )
 from recipe.ingredients import Ingredient
-from recipe.shelf import find_column
+from recipe.shelf import find_column, introspect_table
 
 from .test_base import Base, Census, MyTable, StateFact, mytable_shelf, oven
 
@@ -621,3 +621,11 @@ class TestAutomaticShelf(object):
 
         ingredient = self.shelf.get('primo', None)
         assert ingredient is None
+
+    def test_introspect_table(self):
+        config = introspect_table(MyTable.__table__)
+        assert config == {
+            'age': {'field': 'age', 'kind': 'Metric'},
+            'first': {'field': 'first', 'kind': 'Dimension'},
+            'last': {'field': 'last', 'kind': 'Dimension'}
+        }
