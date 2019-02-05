@@ -593,15 +593,17 @@ class Shelf(object):
         self[ingredient.id] = ingredient
 
     @classmethod
-    def from_yaml(cls, yaml_str, selectable, **kwargs):
-        """Create a shelf using a yaml shelf definition.
+    def from_config(
+        cls, obj, selectable,
+        ingredient_constructor=ingredient_from_validated_dict, metadata=None
+    ):
+        """Create a shelf using a dict shelf definition.
 
-        :param yaml_str: A string containing yaml ingredient definitions.
+        :param obj: A Python dictionary describing a Shelf.
         :param selectable: A SQLAlchemy Table, a Recipe, or a SQLAlchemy
-        join to select from.
-        :return: A shelf that contains the ingredients defined in yaml_str.
+            join to select from.
+        :return: A shelf that contains the ingredients defined in obj.
         """
-
         from recipe import Recipe
         if isinstance(selectable, Recipe):
             selectable = selectable.subquery()
@@ -611,31 +613,37 @@ class Shelf(object):
             else:
                 schema, tablename = None, selectable
 
-            metadata = kwargs.get('metadata', None)
-
             kwargs = {'extend_existing': True, 'autoload': True}
             if schema is not None:
                 kwargs['schema'] = schema
 
             selectable = Table(tablename, metadata, **kwargs)
 
-        obj = safe_load(yaml_str)
-
-        ingredient_constructor = kwargs.get(
-            'ingredient_constructor', ingredient_from_dict
-        )
-
         d = {}
         for k, v in iteritems(obj):
             d[k] = ingredient_constructor(v, selectable)
 
         kwargs = {}
-        if hasattr(selectable, 'c'
-                  ) and isinstance(selectable.c, ImmutableColumnCollection):
-            kwargs['select_from'] = selectable
 
-        shelf = cls(d, **kwargs)
+        shelf = cls(d, select_from=selectable)
         return shelf
+
+
+    @classmethod
+    def from_yaml(cls, yaml_str, selectable, **kwargs):
+        """Create a shelf using a yaml shelf definition.
+
+        :param yaml_str: A string containing yaml ingredient definitions.
+        :param selectable: A SQLAlchemy Table, a Recipe, or a SQLAlchemy
+            join to select from.
+        :return: A shelf that contains the ingredients defined in yaml_str.
+        """
+        obj = safe_load(yaml_str)
+        return cls.from_config(
+            obj, selectable,
+            ingredient_constructor=ingredient_from_dict,
+            **kwargs
+        )
 
     @classmethod
     def from_validated_yaml(cls, yaml_str, selectable, **kwargs):
@@ -646,9 +654,8 @@ class Shelf(object):
         join to select from.
         :return: A shelf that contains the ingredients defined in yaml_str.
         """
-
-        kwargs['ingredient_constructor'] = ingredient_from_validated_dict
-        return cls.from_yaml(yaml_str, selectable, **kwargs)
+        obj = safe_load(yaml_str)
+        return cls.from_config(obj, selectable, **kwargs)
 
     def find(self, obj, filter_to_class=Ingredient, constructor=None):
         """
