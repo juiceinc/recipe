@@ -241,6 +241,16 @@ class TestShelf(object):
         ingredient = self.shelf.find('last', Dimension)
         assert ingredient.id == 'last'
 
+    def test_setitem_type_error(self):
+        """Only ingredients can be added to shelves."""
+        with pytest.raises(TypeError):
+            self.shelf['foo'] = 3
+
+    def test_use_type_error(self):
+        """`use` requires Ingredients"""
+        with pytest.raises(TypeError):
+            self.shelf.use(3)
+
     def test_clear(self):
         assert len(self.shelf) == 4
         self.shelf.clear()

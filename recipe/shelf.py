@@ -488,6 +488,11 @@ class Shelf(object):
     def __setitem__(self, key, ingredient):
         """ Set the id and anonymize property of the ingredient whenever we
         get or set items """
+        if not isinstance(ingredient, Ingredient):
+            raise TypeError(
+                "Can only set Ingredients as items on Shelf. "
+                "Got: {!r}".format(ingredient)
+            )
         ingredient_copy = copy(ingredient)
         ingredient_copy.id = key
         ingredient_copy.anonymize = self.Meta.anonymize
@@ -576,6 +581,12 @@ class Shelf(object):
         return '\n'.join(lines)
 
     def use(self, ingredient):
+        if not isinstance(ingredient, Ingredient):
+            raise TypeError(
+                "Can only set Ingredients as items on Shelf. "
+                "Got: {!r}".format(ingredient)
+            )
+
         # Track the order in which ingredients are added.
         self.Meta.ingredient_order.append(ingredient.id)
         self[ingredient.id] = ingredient
