@@ -600,8 +600,11 @@ class Shelf(object):
         """Create a shelf using a dict shelf definition.
 
         :param obj: A Python dictionary describing a Shelf.
-        :param selectable: A SQLAlchemy Table, a Recipe, or a SQLAlchemy
-            join to select from.
+        :param selectable: A SQLAlchemy Table, a Recipe, a table name, or a
+            SQLAlchemy join to select from.
+        :param metadata: If `selectable` is passed as a table name, then in
+            order to introspect its schema, we must have the SQLAlchemy
+            MetaData object to associate it with.
         :return: A shelf that contains the ingredients defined in obj.
         """
         from recipe import Recipe
@@ -613,18 +616,14 @@ class Shelf(object):
             else:
                 schema, tablename = None, selectable
 
-            kwargs = {'extend_existing': True, 'autoload': True}
-            if schema is not None:
-                kwargs['schema'] = schema
-
-            selectable = Table(tablename, metadata, **kwargs)
+            selectable = Table(
+                tablename, metadata, schema=schema,
+                extend_existing=True, autoload=True
+            )
 
         d = {}
         for k, v in iteritems(obj):
             d[k] = ingredient_constructor(v, selectable)
-
-        kwargs = {}
-
         shelf = cls(d, select_from=selectable)
         return shelf
 
