@@ -627,7 +627,6 @@ class Shelf(object):
         shelf = cls(d, select_from=selectable)
         return shelf
 
-
     @classmethod
     def from_yaml(cls, yaml_str, selectable, **kwargs):
         """Create a shelf using a yaml shelf definition.
@@ -751,18 +750,24 @@ class Shelf(object):
         return enchantedlist
 
 
-class AutomaticShelf(Shelf):
+def AutomaticShelf(table):
+    """Given a SQLAlchemy Table, automatically generate a Shelf with metrics
+    and dimensions based on its schema.
+    """
+    if hasattr(table, '__table__'):
+        table = table.__table__
+    config = introspect_table(table)
+    return Shelf.from_config(config, table)
 
-    def __init__(self, table, *args, **kwargs):
-        d = self._introspect(table)
-        super(AutomaticShelf, self).__init__(d)
 
-    def _introspect(self, table):
-        """ Build initial shelf using table """
-        d = {}
-        for c in table.__table__.columns:
-            if isinstance(c.type, String):
-                d[c.name] = Dimension(c)
-            if isinstance(c.type, (Integer, Float)):
-                d[c.name] = Metric(func.sum(c))
-        return d
+def introspect_table(table):
+    """Given a SQLAlchemy Table object, return a Shelf description suitable
+    for passing to Shelf.from_config.
+    """
+    d = {}
+    for c in table.columns:
+        if isinstance(c.type, String):
+            d[c.name] = {'kind': 'Dimension', 'field': c.name}
+        if isinstance(c.type, (Integer, Float)):
+            d[c.name] = {'kind': 'Metric', 'field': c.name}
+    return d

@@ -536,6 +536,7 @@ oldage:
         with pytest.raises(Exception):
             self.make_shelf(content)
 
+
 class TestShelfFromConfig(TestShelfFromValidatedYaml):
 
     def make_shelf(self, content, table=MyTable):
