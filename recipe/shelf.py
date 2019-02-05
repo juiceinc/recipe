@@ -430,7 +430,6 @@ class Shelf(object):
         anonymize = False
         table = None
         select_from = None
-        engine = None
         ingredient_order = []
         metadata = None
 
@@ -477,10 +476,10 @@ class Shelf(object):
         # Ensure the ingredient's `anonymize` matches the shelf.
 
         # TODO: this is nasty, but *somewhat* safe because we are (hopefully)
-        # guaranteed to "own" copies of all of our ingredients. It would be much
-        # better if Shelf had logic that ran when anonymize is set to update all
-        # ingredients. Or better yet, the code that anonymizes queries should
-        # just look at the shelf instead of the ingredients.
+        # guaranteed to "own" copies of all of our ingredients. It would be
+        # much better if Shelf had logic that ran when anonymize is set to
+        # update all ingredients. Or better yet, the code that anonymizes
+        # queries should just look at the shelf instead of the ingredients.
 
         # One way in this is "spooky" is:
         # ingr = shelf['foo']

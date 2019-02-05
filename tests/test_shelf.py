@@ -378,7 +378,9 @@ age:
         assert self.shelf.Meta.anonymize is True
 
     def test_anonymize_keeps_ingredients_up_to_date(self):
-        """Setting the anonymize attribute causes all ingredients to be updated."""
+        """Setting the anonymize attribute causes all ingredients to be
+        updated.
+        """
         assert self.shelf['first'].anonymize is False
         self.shelf.Meta.anonymize = True
         assert self.shelf['first'].anonymize is True
