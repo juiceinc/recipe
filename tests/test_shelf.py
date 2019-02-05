@@ -8,6 +8,7 @@ from sqlalchemy.sql.elements import ColumnElement
 from recipe import (
     AutomaticShelf, BadIngredient, BadRecipe, Dimension, Metric, Recipe, Shelf
 )
+from recipe.ingredients import Ingredient
 from recipe.shelf import find_column
 
 from .test_base import Base, Census, MyTable, StateFact, mytable_shelf, oven
@@ -127,6 +128,18 @@ GROUP BY census.state'''
             find_column(MyTable.first, 'foo')
 
 
+class TestShelfConstruction(object):
+    def test_pass_some_metadata(self):
+        shelf = Shelf(metadata={'a': 'hello'})
+        assert shelf.Meta.metadata['a'] == 'hello'
+
+    def test_Meta_is_not_shared(self):
+        shelf = Shelf(metadata={'a': 'hello'})
+        shelf2 = Shelf(metadata={'b': 'there'})
+        assert shelf.Meta.metadata == {'a': 'hello'}
+        assert shelf2.Meta.metadata == {'b': 'there'}
+
+
 class TestShelf(object):
 
     def setup(self):
@@ -211,7 +224,7 @@ class TestShelf(object):
 
     def test_get(self):
         """ Find ingredients on the shelf """
-        ingredient = self.shelf.first
+        ingredient = self.shelf['first']
         assert ingredient.id == 'first'
 
         ingredient = self.shelf.get('first', None)
@@ -219,6 +232,16 @@ class TestShelf(object):
 
         ingredient = self.shelf.get('primo', None)
         assert ingredient is None
+
+    def test_get_doesnt_mutate(self):
+        """
+        Sharing ingredients between shelves won't cause race conditions on
+        their `.id` and `.anonymize` attributes.
+        """
+        ingr = Ingredient(id='b')
+        shelf = Shelf({'a': ingr})
+        assert shelf['a'].id == 'a'
+        assert ingr.id == 'b'
 
     def test_add_to_shelf(self):
         """ We can add an ingredient to a shelf """
@@ -228,6 +251,16 @@ class TestShelf(object):
         self.shelf['foo'] = Dimension(MyTable.last)
         ingredient = self.shelf.find('last', Dimension)
         assert ingredient.id == 'last'
+
+    def test_setitem_type_error(self):
+        """Only ingredients can be added to shelves."""
+        with pytest.raises(TypeError):
+            self.shelf['foo'] = 3
+
+    def test_use_type_error(self):
+        """`use` requires Ingredients"""
+        with pytest.raises(TypeError):
+            self.shelf.use(3)
 
     def test_clear(self):
         assert len(self.shelf) == 4
@@ -344,9 +377,17 @@ age:
         self.shelf.Meta.anonymize = True
         assert self.shelf.Meta.anonymize is True
 
+    def test_anonymize_keeps_ingredients_up_to_date(self):
+        """Setting the anonymize attribute causes all ingredients to be
+        updated.
+        """
+        assert self.shelf['first'].anonymize is False
+        self.shelf.Meta.anonymize = True
+        assert self.shelf['first'].anonymize is True
+
     def test_get(self):
         """ Find ingredients on the shelf """
-        ingredient = self.shelf.first
+        ingredient = self.shelf['first']
         assert ingredient.id == 'first'
 
         ingredient = self.shelf.get('first', None)
@@ -564,7 +605,7 @@ class TestAutomaticShelf(object):
 
     def test_get(self):
         """ Find ingredients on the shelf """
-        ingredient = self.shelf.first
+        ingredient = self.shelf['first']
         assert ingredient.id == 'first'
 
         ingredient = self.shelf.get('first', None)

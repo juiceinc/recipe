@@ -14,13 +14,14 @@ from recipe import ingredients
 from recipe.compat import basestring
 from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric
-from recipe.utils import AttrDict
 from recipe.validators import IngredientValidator
 
 # Ensure case and distinct don't get reaped. We need it in scope for
 # creating Metrics
 _distinct = distinct
 _case = case
+
+_POP_DEFAULT = object()
 
 
 def ingredient_class_for_name(class_name):
@@ -411,57 +412,126 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
     return IngredientClass(*args, **ingr_dict)
 
 
-class Shelf(AttrDict):
-    """ Holds ingredients used by a recipe
+class Shelf(object):
+    """Holds ingredients used by a recipe.
 
-    Args:
+    Can be initialized with no arguments, but also accepts:
+    - a dictionary of ingredients as a positional argument
+    - ingredients as keyword arguments
 
-
-    Returns:
-        A Shelf object
+    These keyword arguments have special meaning:
+    :param select_from: The SQLALchemy-compatible object which will be queried
+        (usually a Table or ORM object).
+    :param table: Unused, but stored on the `Meta` attribute.
+    :param metadata: Unused, but stored on the `Meta` attribute.
     """
 
     class Meta:
         anonymize = False
         table = None
         select_from = None
-        engine = None
         ingredient_order = []
+        metadata = None
 
     def __init__(self, *args, **kwargs):
-        super(Shelf, self).__init__(*args, **kwargs)
-
+        self.Meta = type(self).Meta()
         self.Meta.ingredient_order = []
         self.Meta.table = kwargs.pop('table', None)
         self.Meta.select_from = kwargs.pop('select_from', None)
         self.Meta.metadata = kwargs.pop('metadata', None)
+        self._ingredients = {}
+        self.update(*args, **kwargs)
 
-        # Set the ids of all ingredients on the shelf to the key
-        for k, ingredient in self.items():
-            ingredient.id = k
+    # Dict Interface
 
     def get(self, k, d=None):
-        ingredient = super(Shelf, self).get(k, d)
+        ingredient = self._ingredients.get(k, d)
         if isinstance(ingredient, Ingredient):
             ingredient.id = k
             ingredient.anonymize = self.Meta.anonymize
         return ingredient
 
+    def items(self):
+        """Return an iterator over the ingredient names and values."""
+        return self._ingredients.items()
+
+    def values(self):
+        """Return an iterator over the ingredients."""
+        return self._ingredients.values()
+
+    def __copy__(self):
+        meta = copy(self.Meta)
+        ingredients = copy(self._ingredients)
+        new_shelf = type(self)(ingredients)
+        new_shelf.Meta = meta
+        return new_shelf
+
+    def __iter__(self):
+        return iter(self._ingredients)
+
     def __getitem__(self, key):
         """ Set the id and anonymize property of the ingredient whenever we
         get or set items """
-        ingredient = super(Shelf, self).__getitem__(key)
-        ingredient.id = key
-        ingredient.anonymize = self.Meta.anonymize
-        return ingredient
+        ingr = self._ingredients[key]
+        # Ensure the ingredient's `anonymize` matches the shelf.
+
+        # TODO: this is nasty, but *somewhat* safe because we are (hopefully)
+        # guaranteed to "own" copies of all of our ingredients. It would be
+        # much better if Shelf had logic that ran when anonymize is set to
+        # update all ingredients. Or better yet, the code that anonymizes
+        # queries should just look at the shelf instead of the ingredients.
+
+        # One way in this is "spooky" is:
+        # ingr = shelf['foo']
+        # # ingr.anonymize is now False
+        # shelf.Meta.anonymize = True
+        # # ingr.anonymize is still False
+        # shelf['foo] # ignore result
+        # # ingr.anonymize is now True
+
+        ingr.anonymize = self.Meta.anonymize
+        return ingr
 
     def __setitem__(self, key, ingredient):
         """ Set the id and anonymize property of the ingredient whenever we
         get or set items """
+        # Maintainer's note: try to make all mutation of self._ingredients go
+        # through this method, so we can reliably copy & annotate the
+        # ingredients that go into the Shelf.
+        if not isinstance(ingredient, Ingredient):
+            raise TypeError(
+                "Can only set Ingredients as items on Shelf. "
+                "Got: {!r}".format(ingredient)
+            )
         ingredient_copy = copy(ingredient)
         ingredient_copy.id = key
         ingredient_copy.anonymize = self.Meta.anonymize
-        super(Shelf, self).__setitem__(key, ingredient_copy)
+        self._ingredients[key] = ingredient_copy
+
+    def __contains__(self, key):
+        return key in self._ingredients
+
+    def __len__(self):
+        return len(self._ingredients)
+
+    def clear(self):
+        self._ingredients.clear()
+
+    def update(self, d=None, **kwargs):
+        items = []
+        if d is not None:
+            items = list(d.items())
+        for k, v in items + list(kwargs.items()):
+            self[k] = v
+
+    def pop(self, k, d=_POP_DEFAULT):
+        """Pop an ingredient off of this shelf."""
+        if d is _POP_DEFAULT:
+            return self._ingredients.pop(k)
+        else:
+            return self._ingredients.pop(k, d)
+
+    # End dict interface
 
     def ingredients(self):
         """ Return the ingredients in this shelf in a deterministic order """
@@ -512,6 +582,12 @@ class Shelf(AttrDict):
         return '\n'.join(lines)
 
     def use(self, ingredient):
+        if not isinstance(ingredient, Ingredient):
+            raise TypeError(
+                "Can only set Ingredients as items on Shelf. "
+                "Got: {!r}".format(ingredient)
+            )
+
         # Track the order in which ingredients are added.
         self.Meta.ingredient_order.append(ingredient.id)
         self[ingredient.id] = ingredient
