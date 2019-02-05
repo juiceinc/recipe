@@ -49,7 +49,8 @@ GROUP BY foo.first,
         assert recipe.to_sql() == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first LIMIT ?
+GROUP BY foo.first
+LIMIT ?
 OFFSET 1"""
         assert len(recipe.all()) == 0
         assert recipe.stats.rows == 0
