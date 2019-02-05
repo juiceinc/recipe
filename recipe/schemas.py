@@ -228,7 +228,7 @@ class RecipeSchemas(object):
 
 
 def _coerce_filter(v):
-    # For now, we'll delegate to the validator / normalizer that using
+    # For now, we'll delegate to the validator / normalizer using
     # Cerberus.
     from recipe.validators import IngredientValidator
     validator = IngredientValidator(schema='Filter')
