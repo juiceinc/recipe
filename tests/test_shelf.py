@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy import join
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import ColumnElement
+from yaml import safe_load
 
 from recipe import (
     AutomaticShelf, BadIngredient, BadRecipe, Dimension, Metric, Recipe, Shelf
@@ -534,6 +535,12 @@ oldage:
 '''
         with pytest.raises(Exception):
             self.make_shelf(content)
+
+class TestShelfFromConfig(TestShelfFromValidatedYaml):
+
+    def make_shelf(self, content, table=MyTable):
+        obj = safe_load(content)
+        self.shelf = Shelf.from_config(obj, table)
 
 
 class TestShelfFromIntrospection(object):
