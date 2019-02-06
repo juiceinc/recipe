@@ -129,6 +129,13 @@ class RecipeExtension(object):
         return ()
 
 
+def apply_dict_of_lists_methods(instance, directives):
+    for k, v in directives.items():
+        method = getattr(instance, k, None)
+        if method is None:
+            raise BadRecipe("Directive {} isn't handled".format(k))
+        method(*v)
+
 class AutomaticFilters(RecipeExtension):
     """Automatic generation and addition of Filters to a recipe.
 
@@ -137,12 +144,29 @@ class AutomaticFilters(RecipeExtension):
     a filter will be added to the recipe containing the values.
     """
 
+    recipe_schema = {
+        'automatic_filters': {'type': 'dict'},
+        'include_automatic_filter_keys': {'type': 'list', 'schema': {'type': 'string'}},
+        'exclude_automatic_filter_keys': {'type': 'list', 'schema': {'type': 'string'}},
+        'apply_automatic_filters': {'type': 'boolean'},
+    }
+
     def __init__(self, *args, **kwargs):
         super(AutomaticFilters, self).__init__(*args, **kwargs)
         self.apply = True
         self._automatic_filters = {}
         self.exclude_keys = None
         self.include_keys = None
+
+    def from_config(self, obj):
+        automatic_filters = obj.pop('automatic_filters', None)
+        if automatic_filters:
+            self.automatic_filters(automatic_filters)
+        apply_automatic_filters = obj.pop('apply_automatic_filters', None)
+        if apply_automatic_filters is not None:
+            self.apply_automatic_filters(apply_automatic_filters)
+        apply_dict_of_lists_methods(self, obj)
+        return self.recipe
 
     def add_ingredients(self):
         if self.apply:
@@ -267,9 +291,19 @@ class UserFilters(RecipeExtension):
 
 class SummarizeOver(RecipeExtension):
 
+    recipe_schema = {
+        'summarize_over': {'type': 'string'},
+    }
+
     def __init__(self, *args, **kwargs):
         super(SummarizeOver, self).__init__(*args, **kwargs)
         self._summarize_over = None
+
+    def from_config(self, obj):
+        summarize_over = obj.get('summarize_over')
+        if summarize_over is not None:
+            self.summarize_over(summarize_over)
+        return self.recipe
 
     def summarize_over(self, dimension_key):
         self.dirty = True

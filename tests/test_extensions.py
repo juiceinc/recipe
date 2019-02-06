@@ -102,6 +102,25 @@ class TestAutomaticFiltersExtension(object):
             extension_classes=self.extension_classes
         )
 
+    def test_from_config(self):
+        recipe = Recipe.from_config(
+            self.shelf, {
+                'metrics': ['age'], 'dimensions': ['first'],
+                'automatic_filters': {'first': ['foo']},
+                'include_automatic_filter_keys': ['foo'],
+                'exclude_automatic_filter_keys': ['foo'],
+                'apply_automatic_filters': False,
+            },
+            session=self.session,
+            extension_classes=self.extension_classes
+        )
+        ext = recipe.recipe_extensions[0]
+        assert ext._automatic_filters == {'first': ['foo']}
+        assert ext.include_keys == ('foo',)
+        assert ext.exclude_keys == ('foo',)
+        assert ext.apply is False
+
+
     def test_proxy_calls(self):
         recipe = self.recipe().metrics('age').dimensions('first')
         recipe = recipe.apply_automatic_filters(False)
@@ -361,6 +380,28 @@ class TestSummarizeOverExtension(object):
             session=self.session,
             extension_classes=self.extension_classes
         )
+
+    def test_from_config(self):
+        recipe = Recipe.from_config(
+            self.anonymized_foo_shelf,
+            {
+                'metrics': ['age'],
+                'dimensions': ['first', 'last'],
+                'summarize_over': 'last',
+            },
+            session=self.session,
+            extension_classes=self.extension_classes,
+        )
+        assert recipe.to_sql() == """SELECT summarize.first,
+       sum(summarize.age) AS age
+FROM
+  (SELECT foo.first AS first,
+          foo.last AS last,
+          sum(foo.age) AS age
+   FROM foo
+   GROUP BY foo.first,
+            foo.last) AS summarize
+GROUP BY summarize.first"""
 
     def test_summarize_over(self):
         """ Anonymize requires ingredients to have an anonymizer """
