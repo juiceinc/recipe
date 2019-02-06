@@ -297,6 +297,15 @@ class TestAnonymizeRecipeExtension(object):
             extension_classes=self.extension_classes
         )
 
+    def test_from_config(self):
+        recipe = Recipe.from_config(
+            self.shelf,
+            {'metrics': ['age'], 'dimensions': ['last'], 'anonymize': True},
+            session=self.session,
+            extension_classes=self.extension_classes,
+        )
+        assert recipe.recipe_extensions[0]._anonymize is True
+
     def test_apply(self):
         recipe = self.recipe().metrics('age').dimensions('first')
         recipe.anonymize(True)

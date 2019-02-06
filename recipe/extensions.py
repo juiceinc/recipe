@@ -392,9 +392,19 @@ class Anonymize(RecipeExtension):
     AnonymizeRecipe should occur last
     """
 
+    recipe_schema = {
+        'anonymize': {'type': 'boolean'},
+    }
+
     def __init__(self, *args, **kwargs):
         super(Anonymize, self).__init__(*args, **kwargs)
         self._anonymize = False
+
+    def from_config(self, obj):
+        anonymize = obj.get('anonymize')
+        if anonymize is not None:
+            self.anonymize(anonymize)
+        return self.recipe
 
     def anonymize(self, value):
         """ Should this recipe be anonymized"""
