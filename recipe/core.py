@@ -149,21 +149,25 @@ class Recipe(object):
 
     @classmethod
     def from_config(cls, shelf, obj):
-        """Construct a Recipe from a plain Python dictionary."""
+        """
+        Construct a Recipe from a plain Python dictionary.
+
+        Most of the directives only support named things retrieved from the shelf, but 
+        """
         obj = normalize_schema(recipe_schema, obj)
-        filters = [
+        obj['filters'] = [
             parse_condition(filter, shelf.Meta.select_from)
             if isinstance(filter, dict)
             else filter
             for filter in obj.get('filters', [])
         ]
-        return cls(
-            shelf=shelf,
-            metrics=obj.get('metrics'),
-            dimensions=obj.get('dimensions'),
-            filters=filters,
-            order_by=obj.get('order_by'),
-        )
+        recipe = cls(shelf=shelf)
+        for directive, values in obj.items():
+            directive_handler = getattr(recipe, directive, None)
+            if not directive_handler:
+                raise BadRecipe("{} is an unhandled directive".format(directive))
+            recipe = directive_handler(*values)
+        return recipe
 
     # -------
     # Builder for parts of the recipe.

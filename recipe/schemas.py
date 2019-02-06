@@ -242,6 +242,8 @@ def _coerce_filter(v):
 recipe_schema = {
     'type': 'dict',
     'schema': {
+        # These directives correspond with the names of methods on the `Recipe`
+        # class.
         'metrics': {
             'type': 'list',
             'schema': {'type': 'string'},
