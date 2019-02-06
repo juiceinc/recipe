@@ -1,3 +1,4 @@
+from copy import deepcopy
 import logging
 import time
 import warnings
@@ -7,7 +8,7 @@ import tablib
 from orderedset import OrderedSet
 from sqlalchemy import alias
 from sqlalchemy.sql.elements import BinaryExpression
-from sureberus import normalize_schema
+from sureberus import normalize_dict, normalize_schema
 
 from recipe.compat import str
 from recipe.dynamic_extensions import run_hooks
@@ -98,7 +99,7 @@ class Recipe(object):
         filters=None,
         order_by=None,
         session=None,
-        extension_classes=None,
+        extension_classes=(),
         dynamic_extensions=None
     ):
 
@@ -136,15 +137,9 @@ class Recipe(object):
         self._query = None
         self._all = []
 
-        self.recipe_extensions = []
-        if extension_classes is None:
-            extension_classes = []
-
-        for ExtensionClass in extension_classes:
-            # Create all the extension instances, passing them a reference to
-            # this recipe
-            self.recipe_extensions.append(ExtensionClass(self))
-
+        self.recipe_extensions = [
+            ExtensionClass(self) for ExtensionClass in extension_classes
+        ]
         self.dynamic_extensions = dynamic_extensions
 
     @classmethod
@@ -155,16 +150,36 @@ class Recipe(object):
         Most of the directives only support named ingredients, specified as
         strings, and looked up on the shelf. But filters can be specified as
         objects.
+
+        Additionally, each RecipeExtension can extract and handle data from the
+        configuration.
         """
-        obj = normalize_schema(recipe_schema, obj)
-        obj['filters'] = [
+        def subdict(d, keys):
+            new = {}
+            for k in keys:
+                if k in d:
+                    new[k] = d[k]
+            return new
+
+        core_kwargs = subdict(obj, recipe_schema['schema'].keys())
+        core_kwargs = normalize_schema(recipe_schema, core_kwargs)
+        core_kwargs['filters'] = [
             parse_condition(filter, shelf.Meta.select_from)
             if isinstance(filter, dict)
             else filter
             for filter in obj.get('filters', [])
         ]
-        obj.update(kwargs)
-        return cls(shelf=shelf, **obj)
+        core_kwargs.update(kwargs)
+        recipe = cls(shelf=shelf, **core_kwargs)
+
+        # Now let extensions handle their own stuff
+        for ext in recipe.recipe_extensions:
+            additional_schema = getattr(ext, 'recipe_schema', None)
+            if additional_schema is not None:
+                ext_data = subdict(obj, additional_schema.keys())
+                ext_data = normalize_dict(additional_schema, ext_data)
+                recipe = ext.from_config(ext_data)
+        return recipe
 
     # -------
     # Builder for parts of the recipe.

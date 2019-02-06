@@ -220,12 +220,16 @@ GROUP BY foo.last"""
 
     def test_from_config_extra_kwargs(self):
         config = {'dimensions': ['last'], 'metrics': ['age']}
-        from tests.test_extensions import DummyExtension
         recipe = Recipe.from_config(
             self.shelf, config,
-            extension_classes=[DummyExtension]
-        )
-        assert recipe.a() == 'a'
+            order_by=['last'],
+        ).session(self.session)
+        assert recipe.to_sql() == """\
+SELECT foo.last AS last,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.last
+ORDER BY foo.last"""
 
     def test_recipe_empty(self):
         recipe = self.recipe()
