@@ -218,6 +218,15 @@ FROM foo
 WHERE foo.age > 13
 GROUP BY foo.last"""
 
+    def test_from_config_extra_kwargs(self):
+        config = {'dimensions': ['last'], 'metrics': ['age']}
+        from tests.test_extensions import DummyExtension
+        recipe = Recipe.from_config(
+            self.shelf, config,
+            extension_classes=[DummyExtension]
+        )
+        assert recipe.a() == 'a'
+
     def test_recipe_empty(self):
         recipe = self.recipe()
         with pytest.raises(BadRecipe):

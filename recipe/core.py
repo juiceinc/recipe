@@ -148,11 +148,13 @@ class Recipe(object):
         self.dynamic_extensions = dynamic_extensions
 
     @classmethod
-    def from_config(cls, shelf, obj):
+    def from_config(cls, shelf, obj, **kwargs):
         """
         Construct a Recipe from a plain Python dictionary.
 
-        Most of the directives only support named things retrieved from the shelf, but 
+        Most of the directives only support named ingredients, specified as
+        strings, and looked up on the shelf. But filters can be specified as
+        objects.
         """
         obj = normalize_schema(recipe_schema, obj)
         obj['filters'] = [
@@ -161,13 +163,8 @@ class Recipe(object):
             else filter
             for filter in obj.get('filters', [])
         ]
-        recipe = cls(shelf=shelf)
-        for directive, values in obj.items():
-            directive_handler = getattr(recipe, directive, None)
-            if not directive_handler:
-                raise BadRecipe("{} is an unhandled directive".format(directive))
-            recipe = directive_handler(*values)
-        return recipe
+        obj.update(kwargs)
+        return cls(shelf=shelf, **obj)
 
     # -------
     # Builder for parts of the recipe.
