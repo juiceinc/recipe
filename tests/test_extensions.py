@@ -120,7 +120,6 @@ class TestAutomaticFiltersExtension(object):
         assert ext.exclude_keys == ('foo',)
         assert ext.apply is False
 
-
     def test_proxy_calls(self):
         recipe = self.recipe().metrics('age').dimensions('first')
         recipe = recipe.apply_automatic_filters(False)

@@ -136,6 +136,7 @@ def handle_directives(directives, handlers):
             raise BadRecipe("Directive {} isn't handled".format(k))
         method(v)
 
+
 class AutomaticFilters(RecipeExtension):
     """Automatic generation and addition of Filters to a recipe.
 
@@ -146,8 +147,14 @@ class AutomaticFilters(RecipeExtension):
 
     recipe_schema = {
         'automatic_filters': {'type': 'dict'},
-        'include_automatic_filter_keys': {'type': 'list', 'schema': {'type': 'string'}},
-        'exclude_automatic_filter_keys': {'type': 'list', 'schema': {'type': 'string'}},
+        'include_automatic_filter_keys': {
+            'type': 'list',
+            'schema': {'type': 'string'}
+        },
+        'exclude_automatic_filter_keys': {
+            'type': 'list',
+            'schema': {'type': 'string'}
+        },
         'apply_automatic_filters': {'type': 'boolean'},
     }
 
@@ -164,8 +171,10 @@ class AutomaticFilters(RecipeExtension):
             {
                 'automatic_filters': self.automatic_filters,
                 'apply_automatic_filters': self.apply_automatic_filters,
-                'include_automatic_filter_keys': lambda v: self.include_automatic_filter_keys(*v),
-                'exclude_automatic_filter_keys': lambda v: self.exclude_automatic_filter_keys(*v),
+                'include_automatic_filter_keys':
+                    lambda v: self.include_automatic_filter_keys(*v),
+                'exclude_automatic_filter_keys':
+                    lambda v: self.exclude_automatic_filter_keys(*v),
             }
         )
         return self.recipe
