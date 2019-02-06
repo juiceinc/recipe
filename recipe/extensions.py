@@ -129,12 +129,12 @@ class RecipeExtension(object):
         return ()
 
 
-def apply_dict_of_lists_methods(instance, directives):
+def handle_directives(directives, handlers):
     for k, v in directives.items():
-        method = getattr(instance, k, None)
+        method = handlers.get(k)
         if method is None:
             raise BadRecipe("Directive {} isn't handled".format(k))
-        method(*v)
+        method(v)
 
 class AutomaticFilters(RecipeExtension):
     """Automatic generation and addition of Filters to a recipe.
@@ -159,13 +159,15 @@ class AutomaticFilters(RecipeExtension):
         self.include_keys = None
 
     def from_config(self, obj):
-        automatic_filters = obj.pop('automatic_filters', None)
-        if automatic_filters:
-            self.automatic_filters(automatic_filters)
-        apply_automatic_filters = obj.pop('apply_automatic_filters', None)
-        if apply_automatic_filters is not None:
-            self.apply_automatic_filters(apply_automatic_filters)
-        apply_dict_of_lists_methods(self, obj)
+        handle_directives(
+            obj,
+            {
+                'automatic_filters': self.automatic_filters,
+                'apply_automatic_filters': self.apply_automatic_filters,
+                'include_automatic_filter_keys': lambda v: self.include_automatic_filter_keys(*v),
+                'exclude_automatic_filter_keys': lambda v: self.exclude_automatic_filter_keys(*v),
+            }
+        )
         return self.recipe
 
     def add_ingredients(self):
@@ -300,9 +302,7 @@ class SummarizeOver(RecipeExtension):
         self._summarize_over = None
 
     def from_config(self, obj):
-        summarize_over = obj.get('summarize_over')
-        if summarize_over is not None:
-            self.summarize_over(summarize_over)
+        handle_directives(obj, {'summarize_over': self.summarize_over})
         return self.recipe
 
     def summarize_over(self, dimension_key):
@@ -401,9 +401,7 @@ class Anonymize(RecipeExtension):
         self._anonymize = False
 
     def from_config(self, obj):
-        anonymize = obj.get('anonymize')
-        if anonymize is not None:
-            self.anonymize(anonymize)
+        handle_directives(obj, {'anonymize': self.anonymize})
         return self.recipe
 
     def anonymize(self, value):
