@@ -593,15 +593,20 @@ class Shelf(object):
         self[ingredient.id] = ingredient
 
     @classmethod
-    def from_yaml(cls, yaml_str, selectable, **kwargs):
-        """Create a shelf using a yaml shelf definition.
+    def from_config(
+        cls, obj, selectable,
+        ingredient_constructor=ingredient_from_validated_dict, metadata=None
+    ):
+        """Create a shelf using a dict shelf definition.
 
-        :param yaml_str: A string containing yaml ingredient definitions.
-        :param selectable: A SQLAlchemy Table, a Recipe, or a SQLAlchemy
-        join to select from.
-        :return: A shelf that contains the ingredients defined in yaml_str.
+        :param obj: A Python dictionary describing a Shelf.
+        :param selectable: A SQLAlchemy Table, a Recipe, a table name, or a
+            SQLAlchemy join to select from.
+        :param metadata: If `selectable` is passed as a table name, then in
+            order to introspect its schema, we must have the SQLAlchemy
+            MetaData object to associate it with.
+        :return: A shelf that contains the ingredients defined in obj.
         """
-
         from recipe import Recipe
         if isinstance(selectable, Recipe):
             selectable = selectable.subquery()
@@ -611,31 +616,32 @@ class Shelf(object):
             else:
                 schema, tablename = None, selectable
 
-            metadata = kwargs.get('metadata', None)
-
-            kwargs = {'extend_existing': True, 'autoload': True}
-            if schema is not None:
-                kwargs['schema'] = schema
-
-            selectable = Table(tablename, metadata, **kwargs)
-
-        obj = safe_load(yaml_str)
-
-        ingredient_constructor = kwargs.get(
-            'ingredient_constructor', ingredient_from_dict
-        )
+            selectable = Table(
+                tablename, metadata, schema=schema,
+                extend_existing=True, autoload=True
+            )
 
         d = {}
         for k, v in iteritems(obj):
             d[k] = ingredient_constructor(v, selectable)
-
-        kwargs = {}
-        if hasattr(selectable, 'c'
-                  ) and isinstance(selectable.c, ImmutableColumnCollection):
-            kwargs['select_from'] = selectable
-
-        shelf = cls(d, **kwargs)
+        shelf = cls(d, select_from=selectable)
         return shelf
+
+    @classmethod
+    def from_yaml(cls, yaml_str, selectable, **kwargs):
+        """Create a shelf using a yaml shelf definition.
+
+        :param yaml_str: A string containing yaml ingredient definitions.
+        :param selectable: A SQLAlchemy Table, a Recipe, or a SQLAlchemy
+            join to select from.
+        :return: A shelf that contains the ingredients defined in yaml_str.
+        """
+        obj = safe_load(yaml_str)
+        return cls.from_config(
+            obj, selectable,
+            ingredient_constructor=ingredient_from_dict,
+            **kwargs
+        )
 
     @classmethod
     def from_validated_yaml(cls, yaml_str, selectable, **kwargs):
@@ -646,9 +652,8 @@ class Shelf(object):
         join to select from.
         :return: A shelf that contains the ingredients defined in yaml_str.
         """
-
-        kwargs['ingredient_constructor'] = ingredient_from_validated_dict
-        return cls.from_yaml(yaml_str, selectable, **kwargs)
+        obj = safe_load(yaml_str)
+        return cls.from_config(obj, selectable, **kwargs)
 
     def find(self, obj, filter_to_class=Ingredient, constructor=None):
         """
@@ -745,18 +750,24 @@ class Shelf(object):
         return enchantedlist
 
 
-class AutomaticShelf(Shelf):
+def AutomaticShelf(table):
+    """Given a SQLAlchemy Table, automatically generate a Shelf with metrics
+    and dimensions based on its schema.
+    """
+    if hasattr(table, '__table__'):
+        table = table.__table__
+    config = introspect_table(table)
+    return Shelf.from_config(config, table)
 
-    def __init__(self, table, *args, **kwargs):
-        d = self._introspect(table)
-        super(AutomaticShelf, self).__init__(d)
 
-    def _introspect(self, table):
-        """ Build initial shelf using table """
-        d = {}
-        for c in table.__table__.columns:
-            if isinstance(c.type, String):
-                d[c.name] = Dimension(c)
-            if isinstance(c.type, (Integer, Float)):
-                d[c.name] = Metric(func.sum(c))
-        return d
+def introspect_table(table):
+    """Given a SQLAlchemy Table object, return a Shelf description suitable
+    for passing to Shelf.from_config.
+    """
+    d = {}
+    for c in table.columns:
+        if isinstance(c.type, String):
+            d[c.name] = {'kind': 'Dimension', 'field': c.name}
+        if isinstance(c.type, (Integer, Float)):
+            d[c.name] = {'kind': 'Metric', 'field': c.name}
+    return d

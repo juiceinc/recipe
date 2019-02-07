@@ -8,3 +8,4 @@ stevedore==1.27.1
 tablib==0.12.1
 Cerberus==1.2
 pyyaml>=4.2b1
+sureberus==0.2

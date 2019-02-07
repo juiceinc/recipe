@@ -225,3 +225,48 @@ class RecipeSchemas(object):
         self._register_operator_schema()
         self._register_condition_schema()
         self._register_ingredient_schemas()
+
+
+def _coerce_filter(v):
+    # For now, we'll delegate to the validator / normalizer using
+    # Cerberus.
+    from recipe.validators import IngredientValidator
+    validator = IngredientValidator(schema='Filter')
+    if not validator.validate(v):
+        raise Exception(validator.errors)
+    validator.document['kind'] = 'Filter'
+    return validator.document
+
+
+# This schema is used with sureberus
+recipe_schema = {
+    'type': 'dict',
+    'schema': {
+        # These directives correspond with the keyword arguments of Recipe
+        # class.
+        'metrics': {
+            'type': 'list',
+            'schema': {'type': 'string'},
+        },
+        'dimensions': {
+            'type': 'list',
+            'schema': {'type': 'string'},
+        },
+        'filters': {
+            'type': 'list',
+            'schema': {
+                'oneof': [
+                    {'type': 'string'},
+                    {
+                        'type': 'dict',
+                        'coerce': _coerce_filter,
+                    },
+                ]
+            },
+        },
+        'order_by': {
+            'type': 'list',
+            'schema': {'type': 'string'},
+        },
+    }
+}

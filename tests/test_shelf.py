@@ -4,12 +4,13 @@ import pytest
 from sqlalchemy import join
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import ColumnElement
+from yaml import safe_load
 
 from recipe import (
     AutomaticShelf, BadIngredient, BadRecipe, Dimension, Metric, Recipe, Shelf
 )
 from recipe.ingredients import Ingredient
-from recipe.shelf import find_column
+from recipe.shelf import find_column, introspect_table
 
 from .test_base import Base, Census, MyTable, StateFact, mytable_shelf, oven
 
@@ -536,6 +537,13 @@ oldage:
             self.make_shelf(content)
 
 
+class TestShelfFromConfig(TestShelfFromValidatedYaml):
+
+    def make_shelf(self, content, table=MyTable):
+        obj = safe_load(content)
+        self.shelf = Shelf.from_config(obj, table)
+
+
 class TestShelfFromIntrospection(object):
     """Test that shelves are created correctly using
     Cerberus validation.
@@ -611,5 +619,16 @@ class TestAutomaticShelf(object):
         ingredient = self.shelf.get('first', None)
         assert ingredient.id == 'first'
 
+        ingredient = self.shelf['age']
+        assert str(ingredient.columns[0]) == 'sum(foo.age)'
+
         ingredient = self.shelf.get('primo', None)
         assert ingredient is None
+
+    def test_introspect_table(self):
+        config = introspect_table(MyTable.__table__)
+        assert config == {
+            'age': {'field': 'age', 'kind': 'Metric'},
+            'first': {'field': 'first', 'kind': 'Dimension'},
+            'last': {'field': 'last', 'kind': 'Dimension'}
+        }

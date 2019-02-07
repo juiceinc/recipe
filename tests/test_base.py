@@ -335,6 +335,7 @@ mytable_shelf = Shelf({
     'age': Metric(func.sum(MyTable.age)),
 })
 
+
 scores_shelf = Shelf({
     'username':
         Dimension(Scores.username),

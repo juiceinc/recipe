@@ -129,6 +129,14 @@ class RecipeExtension(object):
         return ()
 
 
+def handle_directives(directives, handlers):
+    for k, v in directives.items():
+        method = handlers.get(k)
+        if method is None:
+            raise BadRecipe("Directive {} isn't handled".format(k))
+        method(v)
+
+
 class AutomaticFilters(RecipeExtension):
     """Automatic generation and addition of Filters to a recipe.
 
@@ -137,12 +145,39 @@ class AutomaticFilters(RecipeExtension):
     a filter will be added to the recipe containing the values.
     """
 
+    recipe_schema = {
+        'automatic_filters': {'type': 'dict'},
+        'include_automatic_filter_keys': {
+            'type': 'list',
+            'schema': {'type': 'string'}
+        },
+        'exclude_automatic_filter_keys': {
+            'type': 'list',
+            'schema': {'type': 'string'}
+        },
+        'apply_automatic_filters': {'type': 'boolean'},
+    }
+
     def __init__(self, *args, **kwargs):
         super(AutomaticFilters, self).__init__(*args, **kwargs)
         self.apply = True
         self._automatic_filters = {}
         self.exclude_keys = None
         self.include_keys = None
+
+    def from_config(self, obj):
+        handle_directives(
+            obj,
+            {
+                'automatic_filters': self.automatic_filters,
+                'apply_automatic_filters': self.apply_automatic_filters,
+                'include_automatic_filter_keys':
+                    lambda v: self.include_automatic_filter_keys(*v),
+                'exclude_automatic_filter_keys':
+                    lambda v: self.exclude_automatic_filter_keys(*v),
+            }
+        )
+        return self.recipe
 
     def add_ingredients(self):
         if self.apply:
@@ -267,9 +302,17 @@ class UserFilters(RecipeExtension):
 
 class SummarizeOver(RecipeExtension):
 
+    recipe_schema = {
+        'summarize_over': {'type': 'string'},
+    }
+
     def __init__(self, *args, **kwargs):
         super(SummarizeOver, self).__init__(*args, **kwargs)
         self._summarize_over = None
+
+    def from_config(self, obj):
+        handle_directives(obj, {'summarize_over': self.summarize_over})
+        return self.recipe
 
     def summarize_over(self, dimension_key):
         self.dirty = True
@@ -358,9 +401,17 @@ class Anonymize(RecipeExtension):
     AnonymizeRecipe should occur last
     """
 
+    recipe_schema = {
+        'anonymize': {'type': 'boolean'},
+    }
+
     def __init__(self, *args, **kwargs):
         super(Anonymize, self).__init__(*args, **kwargs)
         self._anonymize = False
+
+    def from_config(self, obj):
+        handle_directives(obj, {'anonymize': self.anonymize})
+        return self.recipe
 
     def anonymize(self, value):
         """ Should this recipe be anonymized"""
