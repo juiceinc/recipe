@@ -1,11 +1,11 @@
 from sqlalchemy import and_, func, text
 from sqlalchemy.ext.declarative import declarative_base
-from utils import FakerAnonymizer
 
 from recipe.compat import basestring
 from recipe.core import Recipe
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Metric
+from recipe.utils import FakerAnonymizer
 
 Base = declarative_base()
 
