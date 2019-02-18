@@ -369,9 +369,8 @@ ORDER BY foo.first"""
 FROM foo
 GROUP BY foo.first
 ORDER BY foo.first"""
-        # This anonymized value depends deterministically on the
-        # original value. So we always get "hi"->"Kim Brown"
-        assert recipe.all()[0].firstanon == 'Kim Brown'
+        assert recipe.all()[0].firstanon != 'hi'
+        anonymized_value = recipe.all()[0].firstanon
         assert recipe.all()[0].firstanon_raw == 'hi'
         assert recipe.all()[0].firstanon_id == 'hi'
         assert recipe.all()[0].age == 15
