@@ -3,6 +3,7 @@ import unicodedata
 
 import sqlalchemy.orm
 import sqlparse
+from faker import Faker
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
@@ -102,3 +103,27 @@ def disaggregate(expr):
         return expr.clause_expr
     else:
         return expr
+
+
+class WrappedFaker(object):
+    """A wrapped faker that can access instance methods as attributes."""
+
+    def __init__(self, fake):
+        self.fake = fake
+
+    def __getattr__(self, item):
+        if callable(getattr(self.fake, item)):
+            return getattr(self.fake, item)()
+
+
+class FakerAnonymizer(object):
+    """Returns a deterministically generated fake value that depends on the
+    input value. """
+
+    def __init__(self, format_str):
+        self.fake = WrappedFaker(Faker('en_US'))
+        self.format_str = format_str
+
+    def __call__(self, value):
+        self.fake.fake.seed_instance(hash(value))
+        return self.format_str.format(fake=self.fake)
