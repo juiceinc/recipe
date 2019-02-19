@@ -10,6 +10,8 @@ from recipe.utils import (
     replace_whitespace_with_space
 )
 
+uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
 
 class TestUtils(object):
 
@@ -56,7 +58,6 @@ class TestFakerAnonymizer(object):
         a = FakerAnonymizer('{fake.random_uppercase_letter}')
 
         assert a('Value') == a('Value')
-        from string import uppercase
         assert a('boo') in uppercase
 
         b = FakerAnonymizer('{fake.military_apo}')
