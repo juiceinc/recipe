@@ -1,3 +1,4 @@
+import inspect
 import re
 import unicodedata
 
@@ -105,25 +106,62 @@ def disaggregate(expr):
         return expr
 
 
-class WrappedFaker(object):
-    """A wrapped faker that can access instance methods as attributes."""
+class StringFormattableFaker(object):
+    """A wrapped faker that can access instance methods as attributes.
+
+    This enables faker to be used in a python formatting string.
+    """
 
     def __init__(self, fake):
         self.fake = fake
 
     def __getattr__(self, item):
+        """ """
+        kwargs = {}
+        if '|' in item:
+            try:
+                newitem, potential_kwargs = item.split('|')
+                for part in potential_kwargs.split(','):
+                    k, v = part.split('=')
+                    if v == 'None':
+                        v = None
+                    elif v == 'True':
+                        v = True
+                    elif v == 'False':
+                        v = False
+                    elif v.isdigit():
+                        v = int(v)
+                    kwargs[k] = v
+                item = newitem
+            except ValueError:
+                # If more than one "|"  don't try to parse
+                # If the kwargs aren't of form x=y then don't try to parse
+                pass
+
         if callable(getattr(self.fake, item)):
-            return getattr(self.fake, item)()
+            c = getattr(self.fake, item)
+            argspec = inspect.getargspec(c)
+            if len(argspec.args) == 1:
+                return getattr(self.fake, item)()
+            elif kwargs:
+                return getattr(self.fake, item)(**kwargs)
+            else:
+                return c
 
 
 class FakerAnonymizer(object):
     """Returns a deterministically generated fake value that depends on the
     input value. """
 
-    def __init__(self, format_str):
-        self.fake = WrappedFaker(Faker('en_US'))
+    def __init__(self, format_str, locale='en_US', postprocessor=None):
+        self.fake = StringFormattableFaker(Faker(locale))
         self.format_str = format_str
+        self.postprocessor = postprocessor
 
     def __call__(self, value):
         self.fake.fake.seed_instance(hash(value))
-        return self.format_str.format(fake=self.fake)
+        value = self.format_str.format(fake=self.fake)
+        if self.postprocessor is None:
+            return value
+        else:
+            return self.postprocessor(value)
