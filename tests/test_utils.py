@@ -4,6 +4,7 @@ from datetime import date
 import pytest
 from faker import Faker
 
+from recipe.compat import basestring
 from recipe.utils import (
     AttrDict, FakerAnonymizer, StringFormattableFaker,
     replace_whitespace_with_space
