@@ -70,7 +70,8 @@ class TestFakerAnonymizer(object):
         assert a('Value') == a('Value')
 
         b = FakerAnonymizer(
-            '{fake.lexify|text=???,letters=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ}'
+            '{fake.lexify|text=???,letters=abcdefghijklmnopqrstuvwxyz'
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZ}'
         )
         assert len(b('value'))
 
