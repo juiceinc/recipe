@@ -450,10 +450,10 @@ class Anonymize(RecipeExtension):
                     # Check for extra parameters
                     kwargs = {}
                     anonymizer_locale = getattr(
-                        ingredient.meta, 'anonymizer_locale'
+                        ingredient.meta, 'anonymizer_locale', None
                     )
                     anonymizer_postprocessor = getattr(
-                        ingredient.meta, 'anonymizer_postprocessor'
+                        ingredient.meta, 'anonymizer_postprocessor', None
                     )
                     if anonymizer_postprocessor is not None:
                         kwargs['postprocessor'] = anonymizer_postprocessor
