@@ -98,4 +98,4 @@ class TestFakerAnonymizer(object):
 
         assert isinstance(b('Value'), int)
 
-        assert str(a('Value')) == str(b('Value'))
+        assert int(a('Value')) == b('Value')
