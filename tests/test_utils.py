@@ -6,8 +6,7 @@ from faker import Faker
 
 from recipe.compat import basestring
 from recipe.utils import (
-    AttrDict, FakerAnonymizer, StringFormattableFaker,
-    replace_whitespace_with_space
+    AttrDict, FakerAnonymizer, FakerFormatter, replace_whitespace_with_space
 )
 
 uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -31,56 +30,56 @@ class TestAttrDict(object):
         assert d.bar == 3
 
 
-class TestStringFormattableFaker(object):
+class TestFakerFormatter(object):
 
-    def test_wrap(self):
-        wrap = StringFormattableFaker(Faker())
-
+    def test_formatter(self):
+        formatter = FakerFormatter()
         # Faker providers can be accessed by attribute if they take no
         # arguments
-        assert len(wrap.name) > 0
+        assert len(formatter.format('{fake:name}', fake=Faker())) > 0
 
         # They can no longer be accessed as callables
-        with pytest.raises(TypeError):
-            wrap.name()
+        with pytest.raises(AttributeError):
+            formatter.format('{fake:name()}', fake=Faker())
 
         # Some attributes can't be found
         with pytest.raises(AttributeError):
-            wrap.nm
+            formatter.format('{fake:nm}', fake=Faker())
 
         # Parameterized values still work
-        assert len(wrap.numerify(text='###')) == 3
+        assert len(formatter.format('{fake:numerify|text=###}',
+                                    fake=Faker())) == 3
 
 
 class TestFakerAnonymizer(object):
 
     def test_anonymizer_with_NO_params(self):
-        a = FakerAnonymizer('{fake.random_uppercase_letter}')
+        a = FakerAnonymizer('{fake:random_uppercase_letter}')
 
         assert a('Value') == a('Value')
         assert a('boo') in uppercase
 
-        b = FakerAnonymizer('{fake.military_apo}')
+        b = FakerAnonymizer('{fake:military_apo}')
         assert b('Value') == b('Value')
         assert b('boo') == b('boo')
         assert b('Value') != b('boo')
 
     def test_anonymizer_with_params(self):
-        a = FakerAnonymizer('{fake.numerify|text=###}')
+        a = FakerAnonymizer('{fake:numerify|text=###}')
         assert a('Value') == a('Value')
 
         b = FakerAnonymizer(
-            '{fake.lexify|text=???,letters=abcdefghijklmnopqrstuvwxyz'
+            '{fake:lexify|text=???,letters=abcdefghijklmnopqrstuvwxyz'
             'ABCDEFGHIJKLMNOPQRSTUVWXYZ}'
         )
         assert len(b('value'))
 
         # Show we handle booleans
         before_today = FakerAnonymizer(
-            '{fake.date_this_century|before_today=True,after_today=False}'
+            '{fake:date_this_century|before_today=True,after_today=False}'
         )
         after_today = FakerAnonymizer(
-            '{fake.date_this_century|before_today=False,after_today=True}'
+            '{fake:date_this_century|before_today=False,after_today=True}'
         )
 
         # FakerAnonymizer always returns a string
@@ -91,11 +90,11 @@ class TestFakerAnonymizer(object):
 
     def test_anonymizer_with_postprocessor(self):
         # FakerAnonymizer always returns string unless converted
-        a = FakerAnonymizer('{fake.ean8}')
+        a = FakerAnonymizer('{fake:ean8}')
 
         assert isinstance(a('Value'), basestring)
 
-        b = FakerAnonymizer('{fake.ean8}', postprocessor=lambda x: int(x))
+        b = FakerAnonymizer('{fake:ean8}', postprocessor=lambda x: int(x))
 
         assert isinstance(b('Value'), int)
 

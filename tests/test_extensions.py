@@ -282,7 +282,7 @@ class TestAnonymizeRecipeExtension(object):
             'first':
                 Dimension(MyTable.first),
             'firstanon':
-                Dimension(MyTable.first, anonymizer='{fake.name}'),
+                Dimension(MyTable.first, anonymizer='{fake:name}'),
             'last':
                 Dimension(
                     MyTable.last,
