@@ -15,7 +15,9 @@ from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
 from recipe.compat import basestring, integer_types, str
 
 # only expose the printing sql function
-__all__ = ['prettyprintable_sql', 'clean_unicode']
+__all__ = [
+    'prettyprintable_sql', 'clean_unicode', 'FakerAnonymizer', 'FakerFormatter'
+]
 
 
 class StringLiteral(String):

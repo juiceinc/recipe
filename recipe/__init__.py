@@ -20,6 +20,7 @@ from recipe.ingredients import (
 )
 from recipe.oven import get_oven
 from recipe.shelf import AutomaticShelf, Shelf
+from recipe.utils import FakerAnonymizer
 
 SETTINGS = FlapjackStack()
 SETTINGS.add_layer(default_settings)
@@ -61,4 +62,5 @@ __all__ = [
     'CompareRecipe',
     'RecipeExtension',
     'SummarizeOver',
+    'FakerAnonymizer',
 ]
