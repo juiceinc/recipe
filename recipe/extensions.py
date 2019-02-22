@@ -5,6 +5,7 @@ from recipe.compat import basestring
 from recipe.core import Recipe
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Metric
+from recipe.utils import FakerAnonymizer
 
 Base = declarative_base()
 
@@ -146,16 +147,24 @@ class AutomaticFilters(RecipeExtension):
     """
 
     recipe_schema = {
-        'automatic_filters': {'type': 'dict'},
+        'automatic_filters': {
+            'type': 'dict'
+        },
         'include_automatic_filter_keys': {
             'type': 'list',
-            'schema': {'type': 'string'}
+            'schema': {
+                'type': 'string'
+            }
         },
         'exclude_automatic_filter_keys': {
             'type': 'list',
-            'schema': {'type': 'string'}
+            'schema': {
+                'type': 'string'
+            }
         },
-        'apply_automatic_filters': {'type': 'boolean'},
+        'apply_automatic_filters': {
+            'type': 'boolean'
+        },
     }
 
     def __init__(self, *args, **kwargs):
@@ -167,10 +176,11 @@ class AutomaticFilters(RecipeExtension):
 
     def from_config(self, obj):
         handle_directives(
-            obj,
-            {
-                'automatic_filters': self.automatic_filters,
-                'apply_automatic_filters': self.apply_automatic_filters,
+            obj, {
+                'automatic_filters':
+                    self.automatic_filters,
+                'apply_automatic_filters':
+                    self.apply_automatic_filters,
                 'include_automatic_filter_keys':
                     lambda v: self.include_automatic_filter_keys(*v),
                 'exclude_automatic_filter_keys':
@@ -303,7 +313,9 @@ class UserFilters(RecipeExtension):
 class SummarizeOver(RecipeExtension):
 
     recipe_schema = {
-        'summarize_over': {'type': 'string'},
+        'summarize_over': {
+            'type': 'string'
+        },
     }
 
     def __init__(self, *args, **kwargs):
@@ -402,7 +414,9 @@ class Anonymize(RecipeExtension):
     """
 
     recipe_schema = {
-        'anonymize': {'type': 'boolean'},
+        'anonymize': {
+            'type': 'boolean'
+        },
     }
 
     def __init__(self, *args, **kwargs):
@@ -428,12 +442,37 @@ class Anonymize(RecipeExtension):
         """ Put the anonymizers in the last position of formatters """
         for ingredient in self.recipe._cauldron.values():
             if hasattr(ingredient.meta, 'anonymizer'):
-                if ingredient.meta.anonymizer not in ingredient.formatters \
-                        and self._anonymize:
-                    ingredient.formatters.append(ingredient.meta.anonymizer)
-                if ingredient.meta.anonymizer in ingredient.formatters \
-                        and not self._anonymize:
-                    ingredient.formatters.remove(ingredient.meta.anonymizer)
+                anonymizer = ingredient.meta.anonymizer
+
+                # Build a FakerAnonymizer if we have a string
+                if isinstance(anonymizer, basestring):
+
+                    # Check for extra parameters
+                    kwargs = {}
+                    anonymizer_locale = getattr(
+                        ingredient.meta, 'anonymizer_locale', None
+                    )
+                    anonymizer_postprocessor = getattr(
+                        ingredient.meta, 'anonymizer_postprocessor', None
+                    )
+                    if anonymizer_postprocessor is not None:
+                        kwargs['postprocessor'] = anonymizer_postprocessor
+                    if anonymizer_locale is not None:
+                        kwargs['locale'] = anonymizer_locale
+
+                    anonymizer = FakerAnonymizer(anonymizer, **kwargs)
+
+                # Strip out all FakerAnonymizers
+                ingredient.formatters = [
+                    f for f in ingredient.formatters
+                    if not isinstance(f, FakerAnonymizer)
+                ]
+                if self._anonymize:
+                    if ingredient.meta.anonymizer not in ingredient.formatters:
+                        ingredient.formatters.append(anonymizer)
+                else:
+                    if ingredient.meta.anonymizer in ingredient.formatters:
+                        ingredient.formatters.remove(anonymizer)
 
 
 class BlendRecipe(RecipeExtension):

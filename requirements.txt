@@ -1,3 +1,4 @@
+faker==1.0.2
 flapjack_stack==1.0.0
 orderedset==2.0.1
 py==1.4.32

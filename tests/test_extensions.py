@@ -1,6 +1,7 @@
 from copy import copy
 
 import pytest
+from faker import Faker
 from sqlalchemy import func
 from tests.test_base import (
     Census, MyTable, census_shelf, mytable_shelf, oven, scores_shelf,
@@ -105,8 +106,11 @@ class TestAutomaticFiltersExtension(object):
     def test_from_config(self):
         recipe = Recipe.from_config(
             self.shelf, {
-                'metrics': ['age'], 'dimensions': ['first'],
-                'automatic_filters': {'first': ['foo']},
+                'metrics': ['age'],
+                'dimensions': ['first'],
+                'automatic_filters': {
+                    'first': ['foo']
+                },
                 'include_automatic_filter_keys': ['foo'],
                 'exclude_automatic_filter_keys': ['foo'],
                 'apply_automatic_filters': False,
@@ -278,6 +282,8 @@ class TestAnonymizeRecipeExtension(object):
         self.shelf = Shelf({
             'first':
                 Dimension(MyTable.first),
+            'firstanon':
+                Dimension(MyTable.first, anonymizer='{fake:name}'),
             'last':
                 Dimension(
                     MyTable.last,
@@ -299,7 +305,9 @@ class TestAnonymizeRecipeExtension(object):
     def test_from_config(self):
         recipe = Recipe.from_config(
             self.shelf,
-            {'metrics': ['age'], 'dimensions': ['last'], 'anonymize': True},
+            {'metrics': ['age'],
+             'dimensions': ['last'],
+             'anonymize': True},
             session=self.session,
             extension_classes=self.extension_classes,
         )
@@ -338,6 +346,40 @@ ORDER BY foo.last"""
         assert recipe.all()[0].last_id == 'fred'
         assert recipe.all()[0].age == 10
         assert recipe.stats.rows == 2
+
+    def test_anonymize_with_faker_anonymizer(self):
+        """ Anonymize requires ingredients to have an anonymizer """
+        recipe = self.recipe().metrics('age').dimensions('firstanon').order_by(
+            'firstanon'
+        ).anonymize(False)
+        assert recipe.to_sql() == """SELECT foo.first AS firstanon,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first
+ORDER BY foo.first"""
+        assert recipe.all()[0].firstanon == 'hi'
+        assert recipe.all()[0].firstanon_id == 'hi'
+        assert recipe.all()[0].age == 15
+        assert recipe.stats.rows == 1
+
+        recipe = self.recipe().metrics('age').dimensions('firstanon').order_by(
+            'firstanon'
+        ).anonymize(True)
+        assert recipe.to_sql() == """SELECT foo.first AS firstanon_raw,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first
+ORDER BY foo.first"""
+
+        fake = Faker(locale='en_US')
+        fake.seed_instance(hash('hi'))
+        fake_value = fake.name()
+
+        assert recipe.all()[0].firstanon == fake_value
+        assert recipe.all()[0].firstanon_raw == 'hi'
+        assert recipe.all()[0].firstanon_id == 'hi'
+        assert recipe.all()[0].age == 15
+        assert recipe.stats.rows == 1
 
     def test_anonymize_without_anonymizer(self):
         """ If the dimension doesn't have an anonymizer, there is no change """

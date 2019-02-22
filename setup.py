@@ -36,6 +36,8 @@ install = [
     'pyyaml',
     'flapjack_stack',
     'stevedore',
+    'sureberus',
+    'faker',
 ]
 # yapf: enable
 
