@@ -1,6 +1,7 @@
 from copy import copy
 
 import pytest
+from faker import Faker
 from sqlalchemy import func
 from tests.test_base import (
     Census, MyTable, census_shelf, mytable_shelf, oven, scores_shelf,
@@ -369,7 +370,12 @@ ORDER BY foo.first"""
 FROM foo
 GROUP BY foo.first
 ORDER BY foo.first"""
-        assert recipe.all()[0].firstanon != 'hi'
+
+        fake = Faker(locale='en_US')
+        fake.seed_instance(hash('hi'))
+        fake_value = fake.name()
+
+        assert recipe.all()[0].firstanon == fake_value
         assert recipe.all()[0].firstanon_raw == 'hi'
         assert recipe.all()[0].firstanon_id == 'hi'
         assert recipe.all()[0].age == 15
