@@ -459,6 +459,10 @@ class Shelf(object):
         """Return an iterator over the ingredients."""
         return self._ingredients.values()
 
+    def keys(self):
+        """Return an iterator over the ingredient keys."""
+        return self._ingredients.keys()
+
     def __copy__(self):
         meta = copy(self.Meta)
         ingredients = copy(self._ingredients)
@@ -500,8 +504,8 @@ class Shelf(object):
         # ingredients that go into the Shelf.
         if not isinstance(ingredient, Ingredient):
             raise TypeError(
-                "Can only set Ingredients as items on Shelf. "
-                "Got: {!r}".format(ingredient)
+                'Can only set Ingredients as items on Shelf. '
+                'Got: {!r}'.format(ingredient)
             )
         ingredient_copy = copy(ingredient)
         ingredient_copy.id = key
@@ -584,8 +588,8 @@ class Shelf(object):
     def use(self, ingredient):
         if not isinstance(ingredient, Ingredient):
             raise TypeError(
-                "Can only set Ingredients as items on Shelf. "
-                "Got: {!r}".format(ingredient)
+                'Can only set Ingredients as items on Shelf. '
+                'Got: {!r}'.format(ingredient)
             )
 
         # Track the order in which ingredients are added.
@@ -594,8 +598,11 @@ class Shelf(object):
 
     @classmethod
     def from_config(
-        cls, obj, selectable,
-        ingredient_constructor=ingredient_from_validated_dict, metadata=None
+        cls,
+        obj,
+        selectable,
+        ingredient_constructor=ingredient_from_validated_dict,
+        metadata=None
     ):
         """Create a shelf using a dict shelf definition.
 
@@ -617,8 +624,11 @@ class Shelf(object):
                 schema, tablename = None, selectable
 
             selectable = Table(
-                tablename, metadata, schema=schema,
-                extend_existing=True, autoload=True
+                tablename,
+                metadata,
+                schema=schema,
+                extend_existing=True,
+                autoload=True
             )
 
         d = {}
@@ -638,7 +648,8 @@ class Shelf(object):
         """
         obj = safe_load(yaml_str)
         return cls.from_config(
-            obj, selectable,
+            obj,
+            selectable,
             ingredient_constructor=ingredient_from_dict,
             **kwargs
         )
