@@ -163,11 +163,23 @@ class FakerAnonymizer(object):
     """Returns a deterministically generated fake value that depends on the
     input value. """
 
-    def __init__(self, format_str, locale='en_US', postprocessor=None):
+    def __init__(
+        self, format_str, locale='en_US', postprocessor=None, providers=None
+    ):
+        """
+
+        :param format_str:
+        :param locale:
+        :param postprocessor:
+        :param providers: An optional list of providers to add to the faker generator
+        """
         self.fake = Faker(locale)
         self.format_str = format_str
         self.postprocessor = postprocessor
         self.formatter = FakerFormatter()
+        if providers is isinstance(providers, (list, tuple)):
+            for p in providers:
+                self.fake.add_provider(p)
 
     def __call__(self, value):
         self.fake.seed_instance(hash(value))
