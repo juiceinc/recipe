@@ -114,6 +114,22 @@ class TestFakerAnonymizer(object):
         assert isinstance(a('Value'), basestring)
         assert a('Value') == 'moo'
 
+    def test_anonymizer_with_bad_providers(self):
+        """Register a provider"""
+        a = FakerAnonymizer('{fake:moo}', providers=[None, 4, CowProvider])
+
+        assert isinstance(a('Value'), basestring)
+        assert a('Value') == 'moo'
+
+    def test_anonymizer_with_stringprovider(self):
+        """Register a string provider that is dynamically imported"""
+        a = FakerAnonymizer(
+            '{fake:foo}', providers=['recipe.utils.TestProvider']
+        )
+
+        assert isinstance(a('Value'), basestring)
+        assert a('Value') == 'foo'
+
     def test_anonymizer_with_stringprovider(self):
         """Register a string provider that is dynamically imported"""
         a = FakerAnonymizer(

@@ -1,6 +1,3 @@
-import importlib
-
-from faker.providers import BaseProvider
 from sqlalchemy import and_, func, text
 from sqlalchemy.ext.declarative import declarative_base
 

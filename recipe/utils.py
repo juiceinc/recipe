@@ -217,7 +217,9 @@ class FakerAnonymizer(object):
                     except ImportError:
                         # TODO: log an issue, can't import module
                         continue
-            elif issubclass(provider, BaseProvider):
+            elif inspect.isclass(provider) and issubclass(
+                provider, BaseProvider
+            ):
                 cleaned_providers.append(provider)
             else:
                 # TODO: log an issue, provider is not an importable string or a ProviderBase
