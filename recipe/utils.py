@@ -222,7 +222,8 @@ class FakerAnonymizer(object):
             ):
                 cleaned_providers.append(provider)
             else:
-                # TODO: log an issue, provider is not an importable string or a ProviderBase
+                # TODO: log an issue, provider is not an importable string
+                #  or a ProviderBase
                 continue
 
         return cleaned_providers
