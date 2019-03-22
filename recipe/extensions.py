@@ -441,44 +441,6 @@ class Anonymize(RecipeExtension):
         # Builder pattern must return the recipe
         return self.recipe
 
-    def _clean_providers(self, anonymizer_providers):
-        """Convert a list of anonymizer providers into classes suitable for
-        adding with faker.add_provider"""
-        cleaned_providers = []
-        for provider in anonymizer_providers:
-            if isinstance(provider, basestring):
-                # dynamically import the provider
-                parts = provider.split('.')
-                if len(parts) > 1:
-                    _module = '.'.join(parts[:-1])
-                    _provider_class = parts[-1]
-                    try:
-                        _mod = importlib.import_module(_module)
-                        _provider = getattr(_mod, _provider_class, None)
-                        if _provider is None:
-                            # TODO: log an issue
-                            continue
-                        elif not isinstance(_provider, BaseProvider):
-                            # TODO: log an issue
-                            continue
-                        else:
-                            cleaned_providers.append(_provider)
-
-                    except ImportError:
-                        # TODO: log an issue
-                        continue
-
-                pass
-            elif isinstance(provider, BaseProvider):
-                # Use the provider
-                cleaned_providers.append(provider)
-            else:
-                # TODO: log an issue
-                # provider is not an importable string or a ProviderBase
-                continue
-
-        return cleaned_providers
-
     def add_ingredients(self):
         """ Put the anonymizers in the last position of formatters """
         for ingredient in self.recipe._cauldron.values():
@@ -496,20 +458,15 @@ class Anonymize(RecipeExtension):
                     anonymizer_postprocessor = getattr(
                         ingredient.meta, 'anonymizer_postprocessor', None
                     )
+                    anonymizer_providers = getattr(
+                        ingredient.meta, 'anonymizer_providers', None
+                    )
                     if anonymizer_postprocessor is not None:
                         kwargs['postprocessor'] = anonymizer_postprocessor
                     if anonymizer_locale is not None:
                         kwargs['locale'] = anonymizer_locale
-
-                    anonymizer_providers = getattr(
-                        ingredient.meta, 'anonymizer_providers', None
-                    )
                     if anonymizer_providers is not None:
-                        if not isinstance(anonymizer_providers, (list, tuple)):
-                            anonymizer_providers = [anonymizer_providers]
-                        clean_providers = self._clean_providers(
-                            anonymizer_providers
-                        )
+                        kwargs['providers'] = anonymizer_providers
 
                     anonymizer = FakerAnonymizer(anonymizer, **kwargs)
 
