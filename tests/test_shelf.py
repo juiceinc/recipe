@@ -130,6 +130,7 @@ GROUP BY census.state'''
 
 
 class TestShelfConstruction(object):
+
     def test_pass_some_metadata(self):
         shelf = Shelf(metadata={'a': 'hello'})
         assert shelf.Meta.metadata['a'] == 'hello'
@@ -185,6 +186,11 @@ class TestShelf(object):
 (IdValueDimension)firstlast MyTable.first MyTable.last
 (Dimension)last MyTable.last
 (Metric)age sum(foo.age)"""
+
+    def test_keys(self):
+        assert sorted(self.shelf.keys()) == [
+            'age', 'first', 'firstlast', 'last'
+        ]
 
     def test_update(self):
         """ Shelves can be updated with other shelves """
@@ -628,7 +634,16 @@ class TestAutomaticShelf(object):
     def test_introspect_table(self):
         config = introspect_table(MyTable.__table__)
         assert config == {
-            'age': {'field': 'age', 'kind': 'Metric'},
-            'first': {'field': 'first', 'kind': 'Dimension'},
-            'last': {'field': 'last', 'kind': 'Dimension'}
+            'age': {
+                'field': 'age',
+                'kind': 'Metric'
+            },
+            'first': {
+                'field': 'first',
+                'kind': 'Dimension'
+            },
+            'last': {
+                'field': 'last',
+                'kind': 'Dimension'
+            }
         }
