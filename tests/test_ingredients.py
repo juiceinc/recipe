@@ -364,6 +364,9 @@ class TestIdValueDimension(object):
 
 
 class TestLookupDimension(object):
+    """LookupDimension is deprecated and this feature is available in
+    Dimension. See TestDimension.test_dimension_with_lookup for equivalent
+    test on Dimension."""
 
     def test_init(self):
         # IdValueDimension should have two params

@@ -383,7 +383,7 @@ class IdValueDimension(Dimension):
 
 
 class LookupDimension(Dimension):
-    """ Returns the expression value looked up in a lookup dictionary
+    """DEPRECATED Returns the expression value looked up in a lookup dictionary
     """
 
     def __init__(self, expression, lookup, **kwargs):

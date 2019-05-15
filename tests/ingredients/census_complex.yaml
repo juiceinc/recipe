@@ -1,5 +1,5 @@
 state:
-    kind: LookupDimension
+    kind: Dimension
     field: state
     lookup:
         Vermont: "The Green Mountain State"

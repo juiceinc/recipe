@@ -7,7 +7,6 @@ Shelves can be defined in YAML.
 Ingredients always require a `kind`. It can be one of
 
 - Dimension
-- LookupDimension
 - IdValueDimension
 - Metric
 - DivideMetric
@@ -66,13 +65,13 @@ Potential aggregations are
 
 #### Dimension
 
+field is required
+
     foo:
         kind: Dimension
         field: moo
 
-#### LookupDimension
-
-field and lookup are required
+You can also create lookups.
 
     foo:
         kind: LookupDimension
@@ -85,13 +84,13 @@ field and lookup are required
 
 This creates
 
-    'foo': LookupDimension(MyTable.moo,
+    'foo': Dimension(MyTable.moo,
                            lookup={
                              'NY': 'New York',
                              'VT': 'Vermont',
                              'GA': 'Georgia'
                            },
-                           default='Unknown')
+                           lookup_default='Unknown')
 
 #### IdValueDimension
 
@@ -205,6 +204,6 @@ How to define the important average price of product sold
 #### Filter
 
 #### Having
-from recipe.ingredients import Ingredient, Dimension, LookupDimension, \
+from recipe.ingredients import Ingredient, Dimension, \
     IdValueDimension, Metric, DivideMetric, WtdAvgMetric,
     Filter, Having
