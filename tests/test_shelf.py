@@ -183,7 +183,7 @@ class TestShelf(object):
     def test_repr(self):
         """ Find ingredients on the shelf """
         assert self.shelf.__repr__() == """(Dimension)first MyTable.first
-(IdValueDimension)firstlast MyTable.first MyTable.last
+(Dimension)firstlast MyTable.first MyTable.last
 (Dimension)last MyTable.last
 (Metric)age sum(foo.age)"""
 
