@@ -142,6 +142,9 @@ class Recipe(object):
         self.dynamic_extensions = dynamic_extensions
 
     def total_count(self):
+        """Return the number of rows that would be returned by this Recipe,
+        ignoring any `limit` that has been applied.
+        """
         # If there is an ordering we take it off to make this
         # count run faster, then set the recipe to dirty so the
         # query is generated again
