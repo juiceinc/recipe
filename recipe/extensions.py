@@ -455,10 +455,15 @@ class Anonymize(RecipeExtension):
                     anonymizer_postprocessor = getattr(
                         ingredient.meta, 'anonymizer_postprocessor', None
                     )
+                    anonymizer_providers = getattr(
+                        ingredient.meta, 'anonymizer_providers', None
+                    )
                     if anonymizer_postprocessor is not None:
                         kwargs['postprocessor'] = anonymizer_postprocessor
                     if anonymizer_locale is not None:
                         kwargs['locale'] = anonymizer_locale
+                    if anonymizer_providers is not None:
+                        kwargs['providers'] = anonymizer_providers
 
                     anonymizer = FakerAnonymizer(anonymizer, **kwargs)
 
@@ -467,6 +472,7 @@ class Anonymize(RecipeExtension):
                     f for f in ingredient.formatters
                     if not isinstance(f, FakerAnonymizer)
                 ]
+
                 if self._anonymize:
                     if ingredient.meta.anonymizer not in ingredient.formatters:
                         ingredient.formatters.append(anonymizer)

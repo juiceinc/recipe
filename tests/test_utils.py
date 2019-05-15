@@ -3,6 +3,7 @@ from datetime import date
 
 import pytest
 from faker import Faker
+from faker.providers import BaseProvider
 
 from recipe.compat import basestring
 from recipe.utils import (
@@ -49,6 +50,12 @@ class TestFakerFormatter(object):
         # Parameterized values still work
         assert len(formatter.format('{fake:numerify|text=###}',
                                     fake=Faker())) == 3
+
+
+class CowProvider(BaseProvider):
+
+    def moo(self):
+        return 'moo'
 
 
 class TestFakerAnonymizer(object):
@@ -99,3 +106,36 @@ class TestFakerAnonymizer(object):
         assert isinstance(b('Value'), int)
 
         assert int(a('Value')) == b('Value')
+
+    def test_anonymizer_with_provider(self):
+        """Register a provider"""
+        a = FakerAnonymizer('{fake:moo}', providers=[CowProvider])
+
+        assert isinstance(a('Value'), basestring)
+        assert a('Value') == 'moo'
+
+    def test_anonymizer_with_bad_providers(self):
+        """Register a provider"""
+        a = FakerAnonymizer('{fake:moo}', providers=[None, 4, CowProvider])
+
+        assert isinstance(a('Value'), basestring)
+        assert a('Value') == 'moo'
+
+    def test_anonymizer_with_stringprovider(self):
+        """Register a string provider that is dynamically imported"""
+        a = FakerAnonymizer(
+            '{fake:foo}', providers=['recipe.utils.TestProvider']
+        )
+
+        assert isinstance(a('Value'), basestring)
+        assert a('Value') == 'foo'
+
+    def test_anonymizer_with_multipleproviders(self):
+        """Register multiple providers"""
+        a = FakerAnonymizer(
+            '{fake:foo} {fake:moo}',
+            providers=['recipe.utils.TestProvider', CowProvider]
+        )
+
+        assert isinstance(a('Value'), basestring)
+        assert a('Value') == 'foo moo'

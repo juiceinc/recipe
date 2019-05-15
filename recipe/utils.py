@@ -1,13 +1,16 @@
 from __future__ import print_function
 
+import importlib
 import inspect
 import re
 import string
 import unicodedata
 
+import attr
 import sqlalchemy.orm
 import sqlparse
 from faker import Faker
+from faker.providers import BaseProvider
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
@@ -18,6 +21,13 @@ from recipe.compat import basestring, integer_types, str
 __all__ = [
     'prettyprintable_sql', 'clean_unicode', 'FakerAnonymizer', 'FakerFormatter'
 ]
+
+
+class TestProvider(BaseProvider):
+    """A demo faker provider for testing string providers"""
+
+    def foo(self):
+        return 'foo'
 
 
 class StringLiteral(String):
@@ -159,15 +169,64 @@ class FakerFormatter(string.Formatter):
         return value or 'Unknown fake generator'
 
 
+@attr.s
 class FakerAnonymizer(object):
     """Returns a deterministically generated fake value that depends on the
     input value. """
+    format_str = attr.ib()
+    postprocessor = attr.ib()
+    locale = attr.ib(default='en_US')
+    postprocessor = attr.ib(default=None)
+    providers = attr.ib(default=None)
 
-    def __init__(self, format_str, locale='en_US', postprocessor=None):
-        self.fake = Faker(locale)
-        self.format_str = format_str
-        self.postprocessor = postprocessor
+    def __attrs_post_init__(self):
+        self.fake = Faker(self.locale)
         self.formatter = FakerFormatter()
+        for p in self._clean_providers(self.providers):
+            self.fake.add_provider(p)
+
+    def _clean_providers(self, providers):
+        """Convert a list of anonymizer providers into classes suitable for
+        adding with faker.add_provider"""
+        if not providers:
+            return []
+
+        if not isinstance(providers, (list, tuple)):
+            providers = [providers]
+
+        cleaned_providers = []
+        for provider in providers:
+            if isinstance(provider, basestring):
+                # dynamically import the provider
+                parts = provider.split('.')
+                if len(parts) > 1:
+                    _module = '.'.join(parts[:-1])
+                    _provider_class = parts[-1]
+                    try:
+                        _mod = importlib.import_module(_module)
+                        _provider = getattr(_mod, _provider_class, None)
+                        if _provider is None:
+                            # TODO: log an issue, provider not found in module
+                            continue
+                        elif not issubclass(_provider, BaseProvider):
+                            # TODO: log an issue, provider not generator
+                            continue
+                        else:
+                            cleaned_providers.append(_provider)
+
+                    except ImportError:
+                        # TODO: log an issue, can't import module
+                        continue
+            elif inspect.isclass(provider) and issubclass(
+                provider, BaseProvider
+            ):
+                cleaned_providers.append(provider)
+            else:
+                # TODO: log an issue, provider is not an importable string
+                #  or a ProviderBase
+                continue
+
+        return cleaned_providers
 
     def __call__(self, value):
         self.fake.seed_instance(hash(value))
