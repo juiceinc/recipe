@@ -353,6 +353,12 @@ oldageorcoolname:
             'THEN foo.age END) AS oldageorcoolname FROM foo'
         )
 
+    def test_count(self):
+        recipe = self.recipe().metrics('age').dimensions('first')
+        assert recipe.total_count() == 1
+        recipe = self.recipe().metrics('age').dimensions('last')
+        assert recipe.total_count() == 2
+
 
 class TestStats(object):
 
