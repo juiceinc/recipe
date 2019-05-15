@@ -263,7 +263,7 @@ GROUP BY foo.first,
             'filters': [{
                 'field': 'age',
                 'gt': 13
-            },]
+            }]
         }
 
         shelf = copy(mytable_shelf)

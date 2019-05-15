@@ -343,7 +343,8 @@ class TestIdValueDimension(object):
         assert extras[1][0] == 'moo_id'
 
     def test_dimension_roles_cauldron_extras(self):
-        """Creating a dimension with roles performs the same as IdValueDimension"""
+        """Creating a dimension with roles performs the same as
+        IdValueDimension"""
         d = Dimension(MyTable.first, id_expression=MyTable.last, id='moo')
         extras = list(d.cauldron_extras)
         assert len(extras) == 1
