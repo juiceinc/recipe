@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import tablib
 from orderedset import OrderedSet
-from sqlalchemy import alias
+from sqlalchemy import alias, func
 from sqlalchemy.sql.elements import BinaryExpression
 from sureberus import normalize_dict, normalize_schema
 
@@ -140,6 +140,20 @@ class Recipe(object):
             ExtensionClass(self) for ExtensionClass in extension_classes
         ]
         self.dynamic_extensions = dynamic_extensions
+
+    def total_count(self):
+        # If there is an ordering we take it off to make this
+        # count run faster, then set the recipe to dirty so the
+        # query is generated again
+        query = self.query()
+        if self._limit:
+            query = query.limit(None)
+        if self._order_bys:
+            query = query.from_self().order_by(None)
+        count_query = self._session.query(
+            func.count('*').label('count')
+        ).select_from(query.subquery())
+        return count_query.scalar()
 
     @classmethod
     def from_config(cls, shelf, obj, **kwargs):
