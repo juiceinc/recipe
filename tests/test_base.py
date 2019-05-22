@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Float, Integer, String, distinct, func
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import Dimension, IdValueDimension, Metric, Shelf, get_oven
+from recipe import Dimension, Metric, Shelf, get_oven
 
 oven = get_oven('sqlite://')
 Base = declarative_base(bind=oven.engine)
@@ -331,10 +331,24 @@ class StateFact(Base):
 mytable_shelf = Shelf({
     'first': Dimension(MyTable.first),
     'last': Dimension(MyTable.last),
-    'firstlast': IdValueDimension(MyTable.first, MyTable.last),
+    'firstlast': Dimension(MyTable.last, id_expression=MyTable.first),
     'age': Metric(func.sum(MyTable.age)),
 })
 
+mytable_extrarole_shelf = Shelf({
+    'first':
+        Dimension(MyTable.first),
+    'last':
+        Dimension(MyTable.last),
+    'firstlastage':
+        Dimension(
+            MyTable.last,
+            id_expression=MyTable.first,
+            age_expression=MyTable.age
+        ),
+    'age':
+        Metric(func.sum(MyTable.age)),
+})
 
 scores_shelf = Shelf({
     'username':

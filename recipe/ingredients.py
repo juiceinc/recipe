@@ -86,7 +86,6 @@ class Ingredient(object):
         """ Formats value using any stored formatters
         """
         for f in self.formatters:
-            # TODO: Add anonymizer caching
             value = f(value)
         return value
 
@@ -262,69 +261,118 @@ class Having(Ingredient):
 
 
 class Dimension(Ingredient):
-    """ A simple dimension created from a single expression and optional
-    id_expression
+    """A Dimension is an Ingredient that adds columns and groups by those
+    columns. Columns should be non-aggregate sqlalchemy expressions
+
+    The required expression supplies the dimension's value role. Additional
+    expressions can be provided in keyword arguments with keys
+    that look like "{role}_expression". The role is suffixed to the
+    end of the SQL column name.
+
+    For instance, the following
+
+        Dimension(Hospitals.name,
+                  latitude_expression=Hospitals.lat
+                  longitude_expression=Hospitals.lng,
+                  id='hospital')
+
+    would add columns named "hospital", "hospital_latitude", and
+    "hospital_longitude" to the recipes results. All three of these expressions
+    would be used as group bys.
+
+    The following additional keyword parameters are also supported:
+
+    :param lookup: dict A dictionary to translate values into
+    :param lookup_default: A default to show if the value can't be found in the
+    lookup dictionary.
     """
 
     def __init__(self, expression, **kwargs):
         super(Dimension, self).__init__(**kwargs)
-        id_expression = kwargs.pop('id_expression', expression)
-        if id_expression is not expression:
-            self.columns = [id_expression, expression]
-            self.group_by = [id_expression, expression]
-        else:
-            self.columns = [expression]
-            self.group_by = [expression]
+
+        # We must always have a value role
+        self.roles = {'value': expression}
+        for k, v in kwargs.items():
+            role = None
+            if k.endswith('_expression'):
+                # Remove _expression to get the role
+                role = k[:-11]
+            if role:
+                if role == 'raw':
+                    raise BadIngredient('raw is a reserved role in dimensions')
+                self.roles[role] = v
+
+        self.columns, self.group_by = [], []
+        self.role_keys = []
+        if 'id' in self.roles:
+            self.columns.append(self.roles['id'])
+            self.group_by.append(self.roles['id'])
+            self.role_keys.append('id')
+        if 'value' in self.roles:
+            self.columns.append(self.roles['value'])
+            self.group_by.append(self.roles['value'])
+            self.role_keys.append('value')
+
+        # Add all the other columns in sorted order of role
+        for k in sorted(self.roles.keys()):
+            if k in ('id', 'value'):
+                continue
+            self.columns.append(self.roles[k])
+            self.group_by.append(self.roles[k])
+            self.role_keys.append(k)
+
+        if 'lookup' in kwargs:
+            self.lookup = kwargs.get('lookup')
+            if not isinstance(self.lookup, dict):
+                raise BadIngredient('lookup must be a dictionary')
+            # Inject a formatter that performs the lookup
+            if 'lookup_default' in kwargs:
+                self.lookup_default = kwargs.get('lookup_default')
+                self.formatters.insert(
+                    0,
+                    lambda value: self.lookup.get(value, self.lookup_default)
+                )
+            else:
+                self.formatters.insert(
+                    0, lambda value: self.lookup.get(value, value)
+                )
 
     @property
     def cauldron_extras(self):
         """ Yield extra tuples containing a field name and a callable that takes
         a row
         """
+        # This will format the value field
         for extra in super(Dimension, self).cauldron_extras:
             yield extra
 
-        if self.formatters:
-            prop = self.id + '_raw'
-        else:
-            prop = self.id_prop
-
-        yield self.id + '_id', lambda row: getattr(row, prop)
+        yield self.id + '_id', lambda row: getattr(row, self.id_prop)
 
     def make_column_suffixes(self):
         """ Make sure we have the right column suffixes. These will be appended
         to `id` when generating the query.
         """
-        if self.column_suffixes:
-            return self.column_suffixes
-
-        if len(self.columns) == 0:
-            return ()
-
-        elif len(self.columns) == 1:
-            if self.formatters:
-                return '_raw',
-            else:
-                return '',
-
-        elif len(self.columns) == 2:
-            if self.formatters:
-                return '_id', '_raw',
-            else:
-                return '_id', '',
+        if self.formatters:
+            value_suffix = '_raw'
         else:
-            raise BadIngredient(
-                'column_suffixes must be supplied if there is '
-                'more than one column'
-            )
+            value_suffix = ''
+
+        return tuple(
+            value_suffix if role == 'value' else '_' + role
+            for role in self.role_keys
+        )
 
     @property
     def id_prop(self):
         """ The label of this dimensions id in the query columns """
-        if len(self.columns) == 1:
-            return self.id
-        else:
+        if 'id' in self.role_keys:
             return self.id + '_id'
+        else:
+            # Use the value dimension
+            if self.formatters:
+                return self.id + '_raw'
+            else:
+                return self.id
 
 
 class IdValueDimension(Dimension):
@@ -335,9 +383,8 @@ class IdValueDimension(Dimension):
 
 
 class LookupDimension(Dimension):
-    """ Returns the expression value looked up in a lookup dictionary
+    """DEPRECATED Returns the expression value looked up in a lookup dictionary
     """
-    SHOW_ORIGINAL = object()
 
     def __init__(self, expression, lookup, **kwargs):
         """A Dimension that replaces values using a lookup table.
@@ -348,26 +395,16 @@ class LookupDimension(Dimension):
            be replaced by values in the value of this Dimension
         :type operator: dict
         :param default: The value to use if a dimension value isn't
-           found in the lookup table. If default is
-           LookupDimension.SHOW_ORIGINAL, values will be
-           unchanged if they don't appear in the lookup table.
-           This is the default behavior.
+           found in the lookup table.  The default behavior is to
+           show the original value if the value isn't found in the
+           lookup table.
         :type default: object
         """
+        if 'default' in kwargs:
+            kwargs['lookup_default'] = kwargs.pop('default')
+        kwargs['lookup'] = lookup
+
         super(LookupDimension, self).__init__(expression, **kwargs)
-        self.lookup = lookup
-        if not isinstance(lookup, dict):
-            raise BadIngredient(
-                'lookup for LookupDimension must be a '
-                'dictionary'
-            )
-        self.default = kwargs.pop('default', LookupDimension.SHOW_ORIGINAL)
-        # Inject a formatter that performs the lookup
-        self.formatters.insert(
-            0, lambda value: self.lookup.get(value, self.default)
-            if self.default != LookupDimension.SHOW_ORIGINAL
-            else self.lookup.get(value, value)
-        )
 
 
 class Metric(Ingredient):

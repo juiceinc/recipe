@@ -44,6 +44,66 @@ GROUP BY foo.first,
         assert recipe.all()[1].age == 5
         assert recipe.stats.rows == 2
 
+    def test_multirole_dimension(self):
+        """Create a dimension with extra roles and lookup"""
+        d = Dimension(
+            MyTable.last,
+            id_expression=MyTable.first,
+            age_expression=MyTable.age,
+            id='d'
+        )
+        recipe = self.recipe().metrics('age').dimensions(d)
+        assert recipe.to_sql() == """SELECT foo.first AS d_id,
+       foo.last AS d,
+       foo.age AS d_age,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first,
+         foo.last,
+         foo.age"""
+        assert recipe.all()[0].d == 'fred'
+        assert recipe.all()[0].d_id == 'hi'
+        assert recipe.all()[0].d_age == 10
+        assert recipe.all()[0].age == 10
+        assert recipe.all()[1].d == 'there'
+        assert recipe.all()[1].d_id == 'hi'
+        assert recipe.all()[1].d_age == 5
+        assert recipe.all()[1].age == 5
+        assert recipe.stats.rows == 2
+
+    def test_multirole_dimension_with_lookup(self):
+        """Create a dimension with extra roles and lookup"""
+        d = Dimension(
+            MyTable.last,
+            id_expression=MyTable.first,
+            age_expression=MyTable.age,
+            id='d',
+            lookup={},
+            lookup_default='DEFAULT'
+        )
+        recipe = self.recipe().metrics('age').dimensions(d)
+
+        assert recipe.to_sql() == """SELECT foo.first AS d_id,
+       foo.last AS d_raw,
+       foo.age AS d_age,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first,
+         foo.last,
+         foo.age"""
+
+        assert recipe.all()[0].d_raw == 'fred'
+        assert recipe.all()[0].d == 'DEFAULT'
+        assert recipe.all()[0].d_id == 'hi'
+        assert recipe.all()[0].d_age == 10
+        assert recipe.all()[0].age == 10
+        assert recipe.all()[1].d_raw == 'there'
+        assert recipe.all()[1].d == 'DEFAULT'
+        assert recipe.all()[1].d_id == 'hi'
+        assert recipe.all()[1].d_age == 5
+        assert recipe.all()[1].age == 5
+        assert recipe.stats.rows == 2
+
     def test_offset(self):
         recipe = self.recipe().metrics('age').dimensions('first').offset(1)
         assert recipe.to_sql() == """SELECT foo.first AS first,
@@ -200,9 +260,10 @@ GROUP BY foo.first,
         config = {
             'dimensions': ['last'],
             'metrics': ['age'],
-            'filters': [
-                {'field': 'age', 'gt': 13},
-            ]
+            'filters': [{
+                'field': 'age',
+                'gt': 13
+            }]
         }
 
         shelf = copy(mytable_shelf)
@@ -221,7 +282,8 @@ GROUP BY foo.last"""
     def test_from_config_extra_kwargs(self):
         config = {'dimensions': ['last'], 'metrics': ['age']}
         recipe = Recipe.from_config(
-            self.shelf, config,
+            self.shelf,
+            config,
             order_by=['last'],
         ).session(self.session)
         assert recipe.to_sql() == """\

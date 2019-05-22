@@ -272,6 +272,45 @@ class TestDimension(object):
         assert extras[0][0] == 'moo'
         assert extras[1][0] == 'moo_id'
 
+    def test_dimension_extra_roles(self):
+        """Creating a dimension with extra roles"""
+        d = Dimension(
+            MyTable.first,
+            id_expression=MyTable.last,
+            age_expression=MyTable.age,
+            id='moo'
+        )
+        extras = list(d.cauldron_extras)
+        assert len(extras) == 1
+        # id gets injected in the response
+        assert extras[0][0] == 'moo_id'
+        assert d.role_keys == ['id', 'value', 'age']
+        assert len(d.group_by) == 3
+        assert len(d.columns) == 3
+        assert d.make_column_suffixes() == ('_id', '', '_age')
+
+    def test_dimension_with_lookup(self):
+        """Creating a dimension with extra roles"""
+        # Dimension lookup should be a dict
+        with pytest.raises(BadIngredient):
+            d = Dimension(MyTable.first, lookup='mouse', id='moo')
+
+        d = Dimension(MyTable.first, lookup={'man': 'mouse'}, id='moo')
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 1
+        assert len(d.formatters) == 1
+
+        # Existing formatters are preserved
+        d = Dimension(
+            MyTable.first,
+            lookup={'man': 'mouse'},
+            id='moo',
+            formatters=[lambda x: x + 'moo']
+        )
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 1
+        assert len(d.formatters) == 2
+
 
 class TestIdValueDimension(object):
 
@@ -303,15 +342,39 @@ class TestIdValueDimension(object):
         assert extras[0][0] == 'moo'
         assert extras[1][0] == 'moo_id'
 
+    def test_dimension_roles_cauldron_extras(self):
+        """Creating a dimension with roles performs the same as
+        IdValueDimension"""
+        d = Dimension(MyTable.first, id_expression=MyTable.last, id='moo')
+        extras = list(d.cauldron_extras)
+        assert len(extras) == 1
+        # id gets injected in the response
+        assert extras[0][0] == 'moo_id'
+
+        d = Dimension(
+            MyTable.first,
+            id_expression=MyTable.last,
+            id='moo',
+            formatters=[lambda x: x + 'moo']
+        )
+        extras = list(d.cauldron_extras)
+        assert len(extras) == 2
+        # formatted value and id gets injected in the response
+        assert extras[0][0] == 'moo'
+        assert extras[1][0] == 'moo_id'
+
 
 class TestLookupDimension(object):
+    """LookupDimension is deprecated and this feature is available in
+    Dimension. See TestDimension.test_dimension_with_lookup for equivalent
+    test on Dimension."""
 
     def test_init(self):
         # IdValueDimension should have two params
         with pytest.raises(TypeError):
             d = LookupDimension(MyTable.first)
 
-        # IdValueDimension lookup should be a dict
+        # Dimension lookup should be a dict
         with pytest.raises(BadIngredient):
             d = LookupDimension(MyTable.first, lookup='mouse')
 
@@ -444,7 +507,7 @@ class TestIngredientFromObj(object):
                 'kind': 'IdValueDimension',
                 'field': 'age',
                 'id_field': 'age'
-            }, '(IdValueDimension)1 MyTable.age'),
+            }, '(IdValueDimension)1 MyTable.age MyTable.age'),
             ({
                 'kind': 'Metric',
                 'field': {
