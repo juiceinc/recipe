@@ -5,8 +5,8 @@ from sureberus import errors as E
 from sureberus import normalize_dict, normalize_schema
 
 from recipe.schemas import (
-    aggregated_field_schema, condition_schema, metric_schema,
-    non_aggregated_field_schema
+    _field_schema, aggregated_field_schema, condition_schema,
+    ingredient_schema, metric_schema, non_aggregated_field_schema
 )
 
 
@@ -41,6 +41,13 @@ def test_aggregated_field_schema():
         allow_unknown=False
     )
     assert x == {'value': 'moo', '_aggregation_fn': ANY, 'aggregation': None}
+
+    x = normalize_schema(
+        aggregated_field_schema, {'value': 'moo',
+                                  'aggregation': 'none'},
+        allow_unknown=False
+    )
+    assert x == {'value': 'moo', '_aggregation_fn': ANY, 'aggregation': 'none'}
 
     with pytest.raises(E.DisallowedValue):
         normalize_schema(
@@ -97,6 +104,28 @@ def test_metric():
         }
     }
 
+    x = normalize_schema(
+        metric_schema, {'field': 'max(foo)'}, allow_unknown=False
+    )
+    assert x == {
+        'field': {
+            'value': 'foo',
+            '_aggregation_fn': ANY,
+            'aggregation': 'max'
+        }
+    }
+
+    x = normalize_schema(
+        metric_schema, {'field': 'squee(foo)'}, allow_unknown=False
+    )
+    assert x == {
+        'field': {
+            'value': 'squee(foo)',
+            '_aggregation_fn': ANY,
+            'aggregation': 'sum'
+        }
+    }
+
 
 def test_valid_metric():
     valid_metrics = [{
@@ -105,6 +134,16 @@ def test_valid_metric():
     }, {
         'field': 'foo',
         'aggregation': 'sum',
+        'icon': 'squee'
+    }, {
+        'field': 'foo',
+        'aggregation': 'none',
+        'icon': 'squee'
+    }, {
+        'field': 'sum(foo)',
+        'icon': 'squee'
+    }, {
+        'field': 'squee(foo)',
         'icon': 'squee'
     }, {
         'field': 'foo',
@@ -129,3 +168,141 @@ def test_invalid_metric():
     for m in invalid_metrics:
         with pytest.raises(Exception):
             normalize_schema(metric_schema, m)
+
+
+def test_condition():
+    x = normalize_schema(
+        condition_schema, {'field': 'foo',
+                           'gt': 22}, allow_unknown=False
+    )
+    assert x == {
+        '_op_value': 22,
+        'field': {
+            '_aggregation_fn': ANY,
+            'aggregation': 'none',
+            'value': 'foo'
+        },
+        '_op': 'gt'
+    }
+
+
+def test_valid_conditions():
+    conditions = [
+        {
+            'field': 'foo',
+            'gt': 22
+        },
+        {
+            'field': 'foo',
+            'gt': 'switch'
+        },
+        {
+            'field': 'foo',
+            'gt': 12342.11
+        },
+        {
+            'field': 'foo',
+            'gt': True
+        },
+        {
+            'field': 'foo',
+            'lte': 22
+        },
+        {
+            'field': 'foo',
+            'eq': 22
+        },
+        {
+            'field': 'foo',
+            'notin': [41]
+        },
+        {
+            'field': 'foo',
+            'in': [22, 44, 55]
+        },
+    ]
+
+    for cond in conditions:
+        normalize_schema(condition_schema, cond, allow_unknown=False)
+
+
+def test_invalid_conditions():
+    conditions = [
+        {
+            'field': 'foo',
+            'gt': [22]
+        },
+        {
+            'field': 'foo',
+            'gt': {
+                'a': 2
+            }
+        },
+        {
+            'field': 'foo',
+            'lte': {
+                'a': 2
+            }
+        },
+        {
+            'field': 'foo',
+            'notin': 41
+        },
+    ]
+
+    for cond in conditions:
+        with pytest.raises(Exception):
+            normalize_schema(condition_schema, cond, allow_unknown=False)
+
+
+def test_ingredient():
+    v = {'kind': 'Metric', 'field': 'foo'}
+    x = normalize_schema(ingredient_schema, v, allow_unknown=False)
+    assert x == {
+        'field': {
+            '_aggregation_fn': ANY,
+            'aggregation': 'sum',
+            'value': 'foo'
+        },
+        'kind': 'Metric'
+    }
+
+    v = {'kind': 'Metric', 'field': 'max(foo)'}
+    x = normalize_schema(ingredient_schema, v, allow_unknown=False)
+    assert x == {
+        'field': {
+            '_aggregation_fn': ANY,
+            'aggregation': 'max',
+            'value': 'foo'
+        },
+        'kind': 'Metric'
+    }
+
+    v = {
+        'kind': 'Metric',
+        'field': {
+            'value': 'foo',
+            'condition': {
+                'field': 'moo',
+                'gt': 'cow'
+            }
+        }
+    }
+    x = normalize_schema(ingredient_schema, v, allow_unknown=False)
+    assert x == {
+        'field': {
+            'value': 'foo',
+            'aggregation': 'sum',
+            'condition': {
+                'field': {
+                    '_aggregation_fn': ANY,
+                    'aggregation': 'none',
+                    'value': 'moo'
+                },
+                '_op': 'gt',
+                '_op_value': 'cow'
+            },
+            '_aggregation_fn': ANY
+        },
+        'kind': 'Metric'
+    }

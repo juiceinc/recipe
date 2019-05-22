@@ -323,7 +323,7 @@ aggr_keys = '|'.join(
     k for k in aggregations.keys() if isinstance(k, basestring)
 )
 # Match patterns like sum(a)
-field_pattern = re.compile('^({})\((.*)\)$'.format(aggr_keys))
+field_pattern = re.compile(r'^({})\((.*)\)$'.format(aggr_keys))
 
 
 def _coerce_string_into_field(value):
@@ -340,9 +340,9 @@ def _coerce_string_into_field(value):
         return value
 
 
-def coerce_aggregations(doc):
-    doc['_aggregation_fn'] = aggregations.get(doc['aggregation'])
-    return doc
+def _inject_aggregation_fn(field):
+    field['_aggregation_fn'] = aggregations.get(field['aggregation'])
+    return field
 
 
 non_aggregation = S.String(
@@ -351,6 +351,7 @@ non_aggregation = S.String(
     default=no_aggregation,
     nullable=True
 )
+
 aggregation = S.String(
     required=False,
     allowed=list(aggregations.keys()),
@@ -359,69 +360,154 @@ aggregation = S.String(
 )
 
 
-def _field_schema(aggregation_strategy):
+def _field_schema(aggregate=True, use_registry=False):
     """Make a field schema that either aggregates or doesn't. """
+    if aggregate:
+        aggr = S.String(
+            required=False,
+            allowed=list(aggregations.keys()),
+            default=default_aggregation,
+            nullable=True
+        )
+    else:
+        aggr = S.String(
+            required=False,
+            allowed=[no_aggregation, None],
+            default=no_aggregation,
+            nullable=True
+        )
+
+    if use_registry:
+        condition = 'condition'
+    else:
+        condition = S.Dict(required=False)
+
     return S.Dict(
         schema={
             'value': S.String(),
-            'aggregation': aggregation_strategy,
-            'condition': S.Dict(required=False)
+            'aggregation': aggr,
+            'condition': condition
         },
         coerce=_coerce_string_into_field,
-        coerce_post=coerce_aggregations,
+        coerce_post=_inject_aggregation_fn,
         allow_unknown=False,
         required=True,
     )
 
 
-aggregated_field_schema = _field_schema(aggregation)
-non_aggregated_field_schema = _field_schema(non_aggregation)
+aggregated_field_schema = _field_schema(aggregate=True)
+non_aggregated_field_schema = _field_schema(aggregate=False)
+
 metric_schema = S.Dict(
     allow_unknown=True, schema={
-        'field': aggregated_field_schema
+        'field': _field_schema(aggregate=True)
     }
 )
 dimension_schema = S.Dict(
     allow_unknown=True, schema={
-        'field': non_aggregated_field_schema
+        'field': _field_schema(aggregate=False)
     }
 )
 
+
+class ConditionPost(object):
+
+    def __init__(self, operator):
+        self.operator = operator
+
+    def __call__(self, value):
+        value['_op'] = self.operator
+        value['_op_value'] = value.get(self.operator)
+        value.pop(self.operator)
+        return value
+
+
+def _condition_schema(operator, scalar=True, use_registry=False):
+    if scalar:
+        allowed_values = [S.Integer(), S.String(), S.Float(), S.Boolean()]
+    else:
+        allowed_values = [S.List()]
+
+    if use_registry:
+        field = 'non_aggregated_field'
+    else:
+        field = non_aggregated_field_schema
+
+    _condition_schema = S.Dict(
+        allow_unknown=False,
+        schema={'field': field,
+                operator: {
+                    'anyof': allowed_values
+                }},
+        coerce_post=ConditionPost(operator)
+    )
+    return _condition_schema
+
+
+def _full_condition_schema(use_registry=False):
+    return S.DictWhenKeyExists({
+        'gt':
+            _condition_schema('gt', use_registry=use_registry),
+        'gte':
+            _condition_schema('gte', use_registry=use_registry),
+        'lt':
+            _condition_schema('lt', use_registry=use_registry),
+        'lte':
+            _condition_schema('lte', use_registry=use_registry),
+        'eq':
+            _condition_schema('eq', use_registry=use_registry),
+        'ne':
+            _condition_schema('ne', use_registry=use_registry),
+        'in':
+            _condition_schema('in', scalar=False, use_registry=use_registry),
+        'notin':
+            _condition_schema(
+                'notin', scalar=False, use_registry=use_registry
+            ),
+    },
+                               required=False,
+                               allow_unknown=False)
+
+
+condition_schema = _full_condition_schema(use_registry=False)
+
+# Create a full schema that uses a registry
 ingredient_schema = S.DictWhenKeyIs(
     'kind', {
-        'Metric': metric_schema,
-        'Dimension': dimension_schema
+        'Metric':
+            S.Dict(
+                allow_unknown=True,
+                schema={
+                    'field': _field_schema(aggregate=True, use_registry=True)
+                }
+            ),
+        'Dimension':
+            S.Dict(
+                allow_unknown=True,
+                schema={
+                    'field': _field_schema(aggregate=False, use_registry=True)
+                }
+            )
+    },
+    registry={
+        'aggregated_field':
+            _field_schema(aggregate=True, use_registry=True),
+        'non_aggregated_field':
+            _field_schema(aggregate=False, use_registry=True),
+        'condition':
+            _full_condition_schema(use_registry=True),
     }
 )
 
+# condition_schema = S.Dict(
+#         allow_unknown=False,
+#         schema={
+#             'field': non_aggregated_field_schema,
+#             'gt': {'anyof': [S.Integer(), S.Number(), S.Boolean()]}
+#         }
+#     )
 
-def _condition_schema():
-    return {
-        # 'registry': {
-        #     'condition': {
-        #         'type': 'dict',
-        #         'schema': {
-        #             'oneof': [
-        #                 'and': {
-        #                     'type': 'list',
-        #                     'schema_ref': 'condition'
-        #                 },
-        #                 'or': {
-        #                     'type': 'list',
-        #                     'schema_ref': 'condition'
-        #                 },
-        #                 'field':  _field_schema()
-        #             ]
-        #         }
-        #     }
-        # },
-        'type': 'dict',
-        'schema': _field_schema,
-        # 'schema_ref': 'condition'
-    }
-
-
-condition_schema = _condition_schema()
+# condition_schema = _condition_schema('gt')
 
 # Operators are an option for fields
 # """
