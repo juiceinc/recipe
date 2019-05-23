@@ -327,7 +327,8 @@ field_pattern = re.compile(r'^({})\((.*)\)$'.format(aggr_keys))
 
 
 def _coerce_string_into_field(value):
-    """ Convert a string into a field """
+    """ Convert a string into a field, potentially parsing a functional
+    form into a value and aggregation """
     if isinstance(value, basestring):
         value = value.strip()
         m = re.match(field_pattern, value)
@@ -343,21 +344,6 @@ def _coerce_string_into_field(value):
 def _inject_aggregation_fn(field):
     field['_aggregation_fn'] = aggregations.get(field['aggregation'])
     return field
-
-
-non_aggregation = S.String(
-    required=False,
-    allowed=[no_aggregation, None],
-    default=no_aggregation,
-    nullable=True
-)
-
-aggregation = S.String(
-    required=False,
-    allowed=list(aggregations.keys()),
-    default=default_aggregation,
-    nullable=True
-)
 
 
 def _field_schema(aggregate=True, use_registry=False):
@@ -382,7 +368,7 @@ def _field_schema(aggregate=True, use_registry=False):
     else:
         condition = S.Dict(required=False)
 
-    return S.Dict(
+    field_schema = S.Dict(
         schema={
             'value': S.String(),
             'aggregation': aggr,
@@ -393,6 +379,31 @@ def _field_schema(aggregate=True, use_registry=False):
         allow_unknown=False,
         required=True,
     )
+
+    # # add, sub, mul, div operators can be performed with fields
+    # add_list_field = S.Dict(
+    #     schema={
+    #         'add': S.List(schema=field_schema)
+    #     }, allow_unknown=False)
+    # mul_list_field = S.Dict(
+    #     schema={
+    #         'mul': S.List(schema=field_schema)
+    #     }, allow_unknown=False)
+    # sub_list_field = S.Dict(
+    #     schema={
+    #         'sub': S.List(maxlength=2, schema=field_schema)
+    #     }, allow_unknown=False)
+    # div_list_field = S.Dict(
+    #     schema={
+    #         'div': S.List(maxlength=2, schema=field_schema)
+    #     }, allow_unknown=False)
+    # return S.Dict(
+    #     anyof=[field_schema, add_list_field, mul_list_field, sub_list_field, div_list_field],
+    #     anyof=[field_schema],
+    #     required=False,
+    #     allow_unknown=False)
+
+    return field_schema
 
 
 aggregated_field_schema = _field_schema(aggregate=True)
@@ -411,6 +422,8 @@ dimension_schema = S.Dict(
 
 
 class ConditionPost(object):
+    """ Convert an operator like 'gt', 'lt' into '_op' and '_op_value'
+    for easier parsing into SQLAlchemy """
 
     def __init__(self, operator):
         self.operator = operator
@@ -445,7 +458,24 @@ def _condition_schema(operator, scalar=True, use_registry=False):
 
 
 def _full_condition_schema(use_registry=False):
-    return S.DictWhenKeyExists({
+    """ Conditions can be a field with an operator, like this yaml example
+
+    condition:
+        field: foo
+        gt: 22
+
+    Or conditions can be a list of and-ed and or-ed conditions
+
+    condition:
+        or:
+            - field: foo
+              gt: 22
+            - field: foo
+              lt: 0
+    """
+
+    # Handle conditions where there's an operator
+    operator_condition = S.DictWhenKeyExists({
         'gt':
             _condition_schema('gt', use_registry=use_registry),
         'gte':
@@ -465,8 +495,24 @@ def _full_condition_schema(use_registry=False):
                 'notin', scalar=False, use_registry=use_registry
             ),
     },
-                               required=False,
-                               allow_unknown=False)
+                                             required=False,
+                                             allow_unknown=False)
+
+    # A list of or-ed conditions
+    or_list_condition = S.Dict(
+        schema={'or': S.List(schema=operator_condition)}, allow_unknown=False
+    )
+
+    # A list of and-ed conditions
+    and_list_condition = S.Dict(
+        schema={'and': S.List(schema=operator_condition)}, allow_unknown=False
+    )
+
+    return S.Dict(
+        anyof=[operator_condition, or_list_condition, and_list_condition],
+        required=False,
+        allow_unknown=False
+    )
 
 
 condition_schema = _full_condition_schema(use_registry=False)
@@ -499,15 +545,7 @@ ingredient_schema = S.DictWhenKeyIs(
     }
 )
 
-# condition_schema = S.Dict(
-#         allow_unknown=False,
-#         schema={
-#             'field': non_aggregated_field_schema,
-#             'gt': {'anyof': [S.Integer(), S.Number(), S.Boolean()]}
-#         }
-#     )
-
-# condition_schema = _condition_schema('gt')
+shelf_schema = S.List(schema=ingredient_schema)
 
 # Operators are an option for fields
 # """
@@ -548,25 +586,3 @@ ingredient_schema = S.DictWhenKeyIs(
 #             - wt
 # # Anywhere a field is displayed
 # """
-
-
-def _operator_schema():
-    return {
-        'registry': {
-            'nested_list': {
-                'type': 'list',
-                'schema': {
-                    'anyof': [
-                        {
-                            'type': 'string'
-                        },
-                        'nested_list',
-                    ],
-                }
-            }
-        },
-        'type': 'dict',
-        'schema': {
-            'things': 'nested_list'
-        },
-    }

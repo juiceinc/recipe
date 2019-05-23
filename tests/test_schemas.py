@@ -1,3 +1,5 @@
+""" Test sureberus schemas """
+
 import pytest
 from mock import ANY
 from sqlalchemy import funcfilter
@@ -186,6 +188,40 @@ def test_condition():
     }
 
 
+def test_and_condition():
+    x = normalize_schema(
+        condition_schema, {
+            'and': [{
+                'field': 'foo',
+                'in': [22, 44, 55]
+            }, {
+                'field': 'foo',
+                'notin': [41]
+            }]
+        },
+        allow_unknown=False
+    )
+    assert x == {
+        'and': [{
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'none',
+                'value': 'foo'
+            },
+            '_op_value': [22, 44, 55],
+            '_op': 'in'
+        }, {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'none',
+                'value': 'foo'
+            },
+            '_op': 'notin',
+            '_op_value': [41]
+        }]
+    }
+
+
 def test_valid_conditions():
     conditions = [
         {
@@ -219,6 +255,15 @@ def test_valid_conditions():
         {
             'field': 'foo',
             'in': [22, 44, 55]
+        },
+        {
+            'and': [{
+                'field': 'foo',
+                'in': [22, 44, 55]
+            }, {
+                'field': 'foo',
+                'notin': [41]
+            }]
         },
     ]
 
