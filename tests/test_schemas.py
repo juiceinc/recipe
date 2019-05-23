@@ -2,9 +2,8 @@
 
 import pytest
 from mock import ANY
-from sqlalchemy import funcfilter
 from sureberus import errors as E
-from sureberus import normalize_dict, normalize_schema
+from sureberus import normalize_schema
 
 from recipe.schemas import (
     aggregated_field_schema, condition_schema, ingredient_schema,
