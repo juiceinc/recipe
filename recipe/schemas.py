@@ -372,7 +372,7 @@ def _field_schema(aggregate=True, use_registry=False):
     if aggregate:
         aggr = S.String(
             required=False,
-            allowed=aggregations.keys(),
+            allowed=list(aggregations.keys()),
             default=default_aggregation,
             nullable=True
         )
