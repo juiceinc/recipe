@@ -512,25 +512,15 @@ def _full_condition_schema(use_registry=False):
             _condition_schema(
                 'notin', 'notin', scalar=False, use_registry=use_registry
             ),
+        'or': S.Dict(schema={'or': S.List(schema='operator_condition')}),
+        'and': S.Dict(schema={'and': S.List(schema='operator_condition')}),
     },
-                                             required=False,
-                                             allow_unknown=False)
+                                             required=False)
 
-    # A list of or-ed conditions
-    or_list_condition = S.Dict(
-        schema={'or': S.List(schema=operator_condition)}, allow_unknown=False
-    )
-
-    # A list of and-ed conditions
-    and_list_condition = S.Dict(
-        schema={'and': S.List(schema=operator_condition)}, allow_unknown=False
-    )
-
-    return S.Dict(
-        anyof=[operator_condition, or_list_condition, and_list_condition],
-        required=False,
-        allow_unknown=False
-    )
+    return {
+        'registry': {'operator_condition': operator_condition},
+        'schema_ref': 'operator_condition',
+    }
 
 
 condition_schema = _full_condition_schema(use_registry=False)
