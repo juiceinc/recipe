@@ -551,7 +551,7 @@ oldage:
         aggregation: null
 '''
         self.make_shelf(content)
-        # null conditions are ignored.
+        # Explicit null aggregations are respected, even in metrics
         assert str(self.shelf['oldage']) == '(Metric)oldage MyTable.age'
 
 

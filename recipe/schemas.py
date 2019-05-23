@@ -243,6 +243,7 @@ def _coerce_filter(v):
     return validator.document
 
 
+# This schema is used with sureberus
 recipe_schema = {
     'type': 'dict',
     'schema': {
