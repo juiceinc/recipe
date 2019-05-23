@@ -4,14 +4,13 @@ from copy import deepcopy
 
 import pytest
 from mock import ANY
-from sureberus import errors as E
 from sureberus import normalize_schema
 
 from recipe.schemas import shelf_schema
 
 
 def test_field_parsing():
-    v = {'foo': {'kind': 'Metric', 'field': {'value': 'foo',}}}
+    v = {'foo': {'kind': 'Metric', 'field': {'value': 'foo'}}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         'foo': {
