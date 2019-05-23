@@ -11,6 +11,8 @@ from cerberus import schema_registry
 from sqlalchemy import distinct, func
 from sureberus import schema as S
 
+from recipe.compat import basestring
+
 logging.captureWarnings(True)
 
 IdValueDimensionFields = OrderedDict()
@@ -281,26 +283,6 @@ recipe_schema = {
     }
 }
 
-condition_schema = {}
-# """
-# state:
-#     kind: LookupDimension
-#     field: state
-#     lookup:
-#         Vermont: "The Green Mountain State"
-#         Tennessee: "The Volunteer State"
-# pop2000:
-#     kind: Metric
-#     field:
-#         value: pop2000
-#         condition:
-#             field: age
-#             gt: 40
-# allthemath:
-#     kind: Metric
-#     field: pop2000+pop2008   - pop2000 * pop2008 /pop2000
-# """
-
 format_lookup = {
     'comma': ',.0f',
     'dollar': '$,.0f',
@@ -431,29 +413,6 @@ def _field_schema(aggregate=True, use_registry=False):
         allow_unknown=False,
         required=True,
     )
-
-    # # add, sub, mul, div operators can be performed with fields
-    # add_list_field = S.Dict(
-    #     schema={
-    #         'add': S.List(schema=field_schema, required=True)
-    #     }, allow_unknown=False)
-    # mul_list_field = S.Dict(
-    #     schema={
-    #         'mul': S.List(schema=field_schema)
-    #     }, allow_unknown=False)
-    # sub_list_field = S.Dict(
-    #     schema={
-    #         'sub': S.List(maxlength=2, schema=field_schema)
-    #     }, allow_unknown=False)
-    # div_list_field = S.Dict(
-    #     schema={
-    #         'div': S.List(maxlength=2, schema=field_schema)
-    #     }, allow_unknown=False)
-    # return S.Dict(
-    #     anyof=[field_schema, add_list_field],
-    #     required=False,
-    #     allow_unknown=False)
-
     return field_schema
 
 
@@ -606,43 +565,3 @@ ingredient_schema = S.DictWhenKeyIs(
 shelf_schema = S.Dict(
     valueschema=ingredient_schema, keyschema=S.String(), allow_unknown=True
 )
-
-# Operators are an option for fields
-# """
-# # sum(mytable.foo+mytable.bar)
-# op:
-#     field:
-#         add:
-#         - value: foo
-#         - value: bar
-#         aggregation: sum
-# # max(mytable.foo - mytable.bar)
-# op2:
-#     field:
-#         sub:
-#         - value: foo
-#         - value: bar
-#         aggregation: max
-# # naive divide, see divide_by for divide w strategy
-# # sum((mytable.x+mytable.y+mytable.z)/(mytable.xx-mytable.yy))
-# # sub,div,mul are binary operators, add is multi
-# op3:
-#     field:
-#         div:
-#             - add:
-#                 - x
-#                 - y
-#                 - x
-#             - sub:
-#                 - xx
-#                 - yy
-# # naive weighted avg expressed w operators
-# op4:
-#     field:
-#         div:
-#             - mul:
-#                 - expr
-#                 - wt
-#             - wt
-# # Anywhere a field is displayed
-# """
