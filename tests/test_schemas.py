@@ -7,8 +7,8 @@ from sureberus import errors as E
 from sureberus import normalize_dict, normalize_schema
 
 from recipe.schemas import (
-    _field_schema, aggregated_field_schema, condition_schema,
-    ingredient_schema, metric_schema, non_aggregated_field_schema
+    aggregated_field_schema, condition_schema, ingredient_schema,
+    metric_schema, non_aggregated_field_schema, shelf_schema
 )
 
 
@@ -24,6 +24,20 @@ def test_field():
     f = aggregated_field_schema
     x = normalize_schema(f, 'max(a)', allow_unknown=False)
     assert x == {'value': 'a', '_aggregation_fn': ANY, 'aggregation': 'max'}
+
+
+def test_field_format():
+    f = aggregated_field_schema
+    x = normalize_schema(
+        f, {'value': 'foo',
+            'format': 'comma'}, allow_unknown=False
+    )
+    assert x == {
+        'value': 'foo',
+        '_aggregation_fn': ANY,
+        'aggregation': 'sum',
+        'format': ',.0f'
+    }
 
 
 def test_aggregated_field_schema():
@@ -184,7 +198,7 @@ def test_condition():
             'aggregation': 'none',
             'value': 'foo'
         },
-        '_op': 'gt'
+        '_op': '__gt__'
     }
 
 
@@ -209,7 +223,7 @@ def test_and_condition():
                 'value': 'foo'
             },
             '_op_value': [22, 44, 55],
-            '_op': 'in'
+            '_op': 'in_'
         }, {
             'field': {
                 '_aggregation_fn': ANY,
@@ -344,10 +358,25 @@ def test_ingredient():
                     'aggregation': 'none',
                     'value': 'moo'
                 },
-                '_op': 'gt',
+                '_op': '__gt__',
                 '_op_value': 'cow'
             },
             '_aggregation_fn': ANY
         },
         'kind': 'Metric'
+    }
+
+
+def test_shelf():
+    v = {'foo': {'kind': 'Metric', 'field': 'foo'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'foo'
+            },
+            'kind': 'Metric'
+        }
     }

@@ -301,6 +301,18 @@ condition_schema = {}
 #     field: pop2000+pop2008   - pop2000 * pop2008 /pop2000
 # """
 
+format_lookup = {
+    'comma': ',.0f',
+    'dollar': '$,.0f',
+    'percent': '.0%',
+    'comma1': ',.1f',
+    'dollar1': '$,.1f',
+    'percent1': '.1%',
+    'comma2': ',.2f',
+    'dollar2': '$,.2f',
+    'percent2': '.2%',
+}
+
 default_aggregation = 'sum'
 no_aggregation = 'none'
 aggregations = {
@@ -370,9 +382,16 @@ def _field_schema(aggregate=True, use_registry=False):
 
     field_schema = S.Dict(
         schema={
-            'value': S.String(),
-            'aggregation': aggr,
-            'condition': condition
+            'value':
+                S.String(),
+            'aggregation':
+                aggr,
+            'condition':
+                condition,
+            'format':
+                S.String(
+                    coerce=lambda v: format_lookup.get(v, v), required=False
+                )
         },
         coerce=_coerce_string_into_field,
         coerce_post=_inject_aggregation_fn,
@@ -425,17 +444,18 @@ class ConditionPost(object):
     """ Convert an operator like 'gt', 'lt' into '_op' and '_op_value'
     for easier parsing into SQLAlchemy """
 
-    def __init__(self, operator):
+    def __init__(self, operator, _op):
         self.operator = operator
+        self._op = _op
 
     def __call__(self, value):
-        value['_op'] = self.operator
+        value['_op'] = self._op
         value['_op_value'] = value.get(self.operator)
         value.pop(self.operator)
         return value
 
 
-def _condition_schema(operator, scalar=True, use_registry=False):
+def _condition_schema(operator, _op, scalar=True, use_registry=False):
     if scalar:
         allowed_values = [S.Integer(), S.String(), S.Float(), S.Boolean()]
     else:
@@ -452,7 +472,7 @@ def _condition_schema(operator, scalar=True, use_registry=False):
                 operator: {
                     'anyof': allowed_values
                 }},
-        coerce_post=ConditionPost(operator)
+        coerce_post=ConditionPost(operator, _op)
     )
     return _condition_schema
 
@@ -477,22 +497,28 @@ def _full_condition_schema(use_registry=False):
     # Handle conditions where there's an operator
     operator_condition = S.DictWhenKeyExists({
         'gt':
-            _condition_schema('gt', use_registry=use_registry),
+            _condition_schema('gt', '__gt__', use_registry=use_registry),
         'gte':
-            _condition_schema('gte', use_registry=use_registry),
+            _condition_schema('gte', '__ge__', use_registry=use_registry),
+        'ge':
+            _condition_schema('ge', '__ge__', use_registry=use_registry),
         'lt':
-            _condition_schema('lt', use_registry=use_registry),
+            _condition_schema('lt', '__lt__', use_registry=use_registry),
         'lte':
-            _condition_schema('lte', use_registry=use_registry),
+            _condition_schema('lte', '__le__', use_registry=use_registry),
+        'le':
+            _condition_schema('le', '__le__', use_registry=use_registry),
         'eq':
-            _condition_schema('eq', use_registry=use_registry),
+            _condition_schema('eq', '__eq__', use_registry=use_registry),
         'ne':
-            _condition_schema('ne', use_registry=use_registry),
+            _condition_schema('ne', '__ne__', use_registry=use_registry),
         'in':
-            _condition_schema('in', scalar=False, use_registry=use_registry),
+            _condition_schema(
+                'in', 'in_', scalar=False, use_registry=use_registry
+            ),
         'notin':
             _condition_schema(
-                'notin', scalar=False, use_registry=use_registry
+                'notin', 'notin', scalar=False, use_registry=use_registry
             ),
     },
                                              required=False,
@@ -545,7 +571,9 @@ ingredient_schema = S.DictWhenKeyIs(
     }
 )
 
-shelf_schema = S.List(schema=ingredient_schema)
+shelf_schema = S.Dict(
+    valueschema=ingredient_schema, keyschema=S.String(), allow_unknown=True
+)
 
 # Operators are an option for fields
 # """
