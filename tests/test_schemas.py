@@ -40,6 +40,44 @@ def test_field_format():
     }
 
 
+def test_field_operators():
+    f = aggregated_field_schema
+    x = normalize_schema(f, 'foo   + moo', allow_unknown=False)
+    assert x == {
+        'value': 'foo',
+        'operators': [{
+            'operator': 'add',
+            'field': {
+                'value': 'moo'
+            }
+        }],
+        '_aggregation_fn': ANY,
+        'aggregation': 'sum'
+    }
+
+    f = aggregated_field_schema
+    x = normalize_schema(f, 'foo   + moo / cows', allow_unknown=False)
+    assert x == {
+        'value':
+            'foo',
+        'operators': [{
+            'operator': 'add',
+            'field': {
+                'value': 'moo'
+            }
+        }, {
+            'operator': 'div',
+            'field': {
+                'value': 'cows'
+            }
+        }],
+        '_aggregation_fn':
+            ANY,
+        'aggregation':
+            'sum'
+    }
+
+
 def test_aggregated_field_schema():
     x = normalize_schema(aggregated_field_schema, 'foo', allow_unknown=False)
     assert x == {'value': 'foo', '_aggregation_fn': ANY, 'aggregation': 'sum'}

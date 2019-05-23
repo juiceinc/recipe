@@ -425,6 +425,19 @@ def parse_sureberus_validated_field(fld, selectable):
 
     field = find_column(selectable, fld['value'])
 
+    operator_lookup = {
+        'add': lambda fld: getattr(fld, '__add__'),
+        'sub': lambda fld: getattr(fld, '__sub__'),
+        'div': lambda fld: getattr(fld, '__div__'),
+        'mul': lambda fld: getattr(fld, '__mul__'),
+    }
+    for operator in fld.get('operators', []):
+        op = operator['operator']
+        other_field = parse_sureberus_validated_field(
+            operator['field'], selectable
+        )
+        field = operator_lookup[op](field)(other_field)
+
     # Apply a condition if it exists
     cond = parse_sureberus_validated_condition(
         fld.get('condition', None), selectable

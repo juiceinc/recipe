@@ -542,6 +542,18 @@ oldage:
         with pytest.raises(Exception):
             self.make_shelf(content)
 
+    def test_null_aggregation(self):
+        content = '''
+oldage:
+    kind: Metric
+    field:
+        value: age
+        aggregation: null
+'''
+        self.make_shelf(content)
+        # null conditions are ignored.
+        assert str(self.shelf['oldage']) == '(Metric)oldage MyTable.age'
+
 
 class TestShelfFromConfig(TestShelfFromValidatedYaml):
 

@@ -338,17 +338,43 @@ aggr_keys = '|'.join(
 field_pattern = re.compile(r'^({})\((.*)\)$'.format(aggr_keys))
 
 
+def find_operators(value):
+    """ Find operators in a field that may look like "a+b-c" """
+    field = re.split('[+-/*]', value)[0]
+
+    operator_lookup = {'-': 'sub', '+': 'add', '/': 'div', '*': 'mul'}
+
+    operators = []
+    for part in re.findall('[+-/*]\w+', value):
+        # TODO: Full validation on other fields
+        other_field = _coerce_string_into_field(part[1:])
+        operators.append({
+            'operator': operator_lookup[part[0]],
+            'field': other_field
+        })
+    return field, operators
+
+
 def _coerce_string_into_field(value):
     """ Convert a string into a field, potentially parsing a functional
     form into a value and aggregation """
     if isinstance(value, basestring):
-        value = value.strip()
+        # Remove all whitespace
+        value = re.sub(r'\s+', '', value, flags=re.UNICODE)
         m = re.match(field_pattern, value)
         if m:
             aggr, value = m.groups()
-            return {'value': value, 'aggregation': aggr}
+            value, operators = find_operators(value)
+            result = {'value': value, 'aggregation': aggr}
+            if operators:
+                result['operators'] = operators
+            return result
         else:
-            return {'value': value}
+            value, operators = find_operators(value)
+            result = {'value': value}
+            if operators:
+                result['operators'] = operators
+            return result
     else:
         return value
 
@@ -363,7 +389,7 @@ def _field_schema(aggregate=True, use_registry=False):
     if aggregate:
         aggr = S.String(
             required=False,
-            allowed=list(aggregations.keys()),
+            allowed=aggregations.keys(),
             default=default_aggregation,
             nullable=True
         )
@@ -380,6 +406,11 @@ def _field_schema(aggregate=True, use_registry=False):
     else:
         condition = S.Dict(required=False)
 
+    operator = S.Dict({
+        'operator': S.String(allowed=['add', 'sub', 'div', 'mul']),
+        'field': S.String()
+    })
+
     field_schema = S.Dict(
         schema={
             'value':
@@ -391,7 +422,9 @@ def _field_schema(aggregate=True, use_registry=False):
             'format':
                 S.String(
                     coerce=lambda v: format_lookup.get(v, v), required=False
-                )
+                ),
+            'operators':
+                S.List(schema=operator, required=False)
         },
         coerce=_coerce_string_into_field,
         coerce_post=_inject_aggregation_fn,
@@ -402,7 +435,7 @@ def _field_schema(aggregate=True, use_registry=False):
     # # add, sub, mul, div operators can be performed with fields
     # add_list_field = S.Dict(
     #     schema={
-    #         'add': S.List(schema=field_schema)
+    #         'add': S.List(schema=field_schema, required=True)
     #     }, allow_unknown=False)
     # mul_list_field = S.Dict(
     #     schema={
@@ -417,8 +450,7 @@ def _field_schema(aggregate=True, use_registry=False):
     #         'div': S.List(maxlength=2, schema=field_schema)
     #     }, allow_unknown=False)
     # return S.Dict(
-    #     anyof=[field_schema, add_list_field, mul_list_field, sub_list_field, div_list_field],
-    #     anyof=[field_schema],
+    #     anyof=[field_schema, add_list_field],
     #     required=False,
     #     allow_unknown=False)
 
