@@ -523,7 +523,7 @@ oldage:
 
 class TestShelfFromValidatedYaml(TestShelfFromYaml):
     """Test that shelves are created correctly using
-    Cerberus validation.
+    sureberus validation.
     """
 
     def make_shelf(self, content, table=MyTable):
@@ -531,7 +531,7 @@ class TestShelfFromValidatedYaml(TestShelfFromYaml):
         self.shelf.Meta.anonymize = False
 
     def test_null_condition(self):
-        """Cerberus validated shelf doesn't accept null."""
+        """sureberus validated shelf doesn't accept null."""
         content = '''
 oldage:
     kind: Metric
@@ -564,7 +564,7 @@ class TestShelfFromConfig(TestShelfFromValidatedYaml):
 
 class TestShelfFromIntrospection(object):
     """Test that shelves are created correctly using
-    Cerberus validation.
+    sureberus validation.
     """
 
     def test_shelf(self):

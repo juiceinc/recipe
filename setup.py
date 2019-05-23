@@ -27,7 +27,6 @@ if sys.argv[-1] == 'test':
 
 # yapf: disable
 install = [
-    'Cerberus>=1.2',
     'orderedset',
     'six',
     'sqlalchemy>=1.2.2',
