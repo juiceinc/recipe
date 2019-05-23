@@ -1,210 +1,162 @@
 """ Test sureberus schemas """
 
+from copy import deepcopy
+
 import pytest
 from mock import ANY
 from sureberus import errors as E
 from sureberus import normalize_schema
 
-from recipe.schemas import (
-    aggregated_field_schema, condition_schema, ingredient_schema,
-    metric_schema, non_aggregated_field_schema, shelf_schema
-)
+from recipe.schemas import shelf_schema
 
 
-def test_field():
-    f = aggregated_field_schema
-    x = normalize_schema(f, {'value': 'foo'}, allow_unknown=False)
-    assert x == {'value': 'foo', '_aggregation_fn': ANY, 'aggregation': 'sum'}
+def test_field_parsing():
+    v = {'foo': {'kind': 'Metric', 'field': {'value': 'foo',}}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'foo'
+            },
+            'kind': 'Metric'
+        }
+    }
 
-    f = aggregated_field_schema
-    x = normalize_schema(f, 'foo', allow_unknown=False)
-    assert x == {'value': 'foo', '_aggregation_fn': ANY, 'aggregation': 'sum'}
+    v = {'foo': {'kind': 'Metric', 'field': 'foo'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'foo'
+            },
+            'kind': 'Metric'
+        }
+    }
 
-    f = aggregated_field_schema
-    x = normalize_schema(f, 'max(a)', allow_unknown=False)
-    assert x == {'value': 'a', '_aggregation_fn': ANY, 'aggregation': 'max'}
+    v = {'foo': {'kind': 'Metric', 'field': 'max(a)'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'max',
+                'value': 'a'
+            },
+            'kind': 'Metric'
+        }
+    }
 
 
 def test_field_format():
-    f = aggregated_field_schema
-    x = normalize_schema(
-        f, {'value': 'foo',
-            'format': 'comma'}, allow_unknown=False
-    )
+    v = {
+        'foo': {
+            'kind': 'Metric',
+            'field': {
+                'value': 'foo',
+            },
+            'format': 'comma'
+        }
+    }
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
-        'value': 'foo',
-        '_aggregation_fn': ANY,
-        'aggregation': 'sum',
-        'format': ',.0f'
+        'foo': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'foo'
+            },
+            'kind': 'Metric',
+            'format': ',.0f'
+        }
     }
 
 
 def test_field_operators():
-    f = aggregated_field_schema
-    x = normalize_schema(f, 'foo   + moo', allow_unknown=False)
+    v = {'foo': {'kind': 'Metric', 'field': 'foo   + moo', 'format': 'comma'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+
     assert x == {
-        'value': 'foo',
-        'operators': [{
-            'operator': 'add',
+        'foo': {
             'field': {
-                'value': 'moo'
-            }
-        }],
-        '_aggregation_fn': ANY,
-        'aggregation': 'sum'
-    }
-
-    f = aggregated_field_schema
-    x = normalize_schema(f, 'foo   + moo / cows', allow_unknown=False)
-    assert x == {
-        'value':
-            'foo',
-        'operators': [{
-            'operator': 'add',
-            'field': {
-                'value': 'moo'
-            }
-        }, {
-            'operator': 'div',
-            'field': {
-                'value': 'cows'
-            }
-        }],
-        '_aggregation_fn':
-            ANY,
-        'aggregation':
-            'sum'
-    }
-
-
-def test_aggregated_field_schema():
-    x = normalize_schema(aggregated_field_schema, 'foo', allow_unknown=False)
-    assert x == {'value': 'foo', '_aggregation_fn': ANY, 'aggregation': 'sum'}
-
-    x = normalize_schema(
-        aggregated_field_schema, {'value': 'moo',
-                                  'aggregation': 'max'},
-        allow_unknown=False
-    )
-    assert x == {'value': 'moo', '_aggregation_fn': ANY, 'aggregation': 'max'}
-
-    x = normalize_schema(
-        aggregated_field_schema, {'value': 'moo',
-                                  'aggregation': None},
-        allow_unknown=False
-    )
-    assert x == {'value': 'moo', '_aggregation_fn': ANY, 'aggregation': None}
-
-    x = normalize_schema(
-        aggregated_field_schema, {'value': 'moo',
-                                  'aggregation': 'none'},
-        allow_unknown=False
-    )
-    assert x == {'value': 'moo', '_aggregation_fn': ANY, 'aggregation': 'none'}
-
-    with pytest.raises(E.DisallowedValue):
-        normalize_schema(
-            aggregated_field_schema, {'value': 'moo',
-                                      'aggregation': 'squee'},
-            allow_unknown=False
-        )
-
-
-def test_non_aggregated_field_schema():
-    x = normalize_schema(
-        non_aggregated_field_schema, 'foo', allow_unknown=False
-    )
-    assert x == {'value': 'foo', '_aggregation_fn': ANY, 'aggregation': 'none'}
-
-    x = normalize_schema(
-        non_aggregated_field_schema, {'value': 'moo',
-                                      'aggregation': 'none'},
-        allow_unknown=False
-    )
-    assert x == {'value': 'moo', '_aggregation_fn': ANY, 'aggregation': 'none'}
-
-    x = normalize_schema(
-        non_aggregated_field_schema, {'value': 'moo',
-                                      'aggregation': None},
-        allow_unknown=False
-    )
-    assert x == {'value': 'moo', '_aggregation_fn': ANY, 'aggregation': None}
-
-    with pytest.raises(E.DisallowedValue):
-        normalize_schema(
-            non_aggregated_field_schema,
-            {'value': 'moo',
-             'aggregation': 'max'},
-            allow_unknown=False
-        )
-
-    with pytest.raises(E.DisallowedValue):
-        normalize_schema(
-            non_aggregated_field_schema,
-            {'value': 'moo',
-             'aggregation': 'squee'},
-            allow_unknown=False
-        )
-
-
-def test_metric():
-    x = normalize_schema(metric_schema, {'field': 'foo'}, allow_unknown=False)
-    assert x == {
-        'field': {
-            'value': 'foo',
-            '_aggregation_fn': ANY,
-            'aggregation': 'sum'
+                'value': 'foo',
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'operators': [{
+                    'operator': 'add',
+                    'field': {
+                        'value': 'moo'
+                    }
+                }]
+            },
+            'kind': 'Metric',
+            'format': ',.0f'
         }
     }
 
-    x = normalize_schema(
-        metric_schema, {'field': 'max(foo)'}, allow_unknown=False
-    )
+    v = {'foo': {'kind': 'Metric', 'field': 'foo   + moo  / cows'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
-        'field': {
-            'value': 'foo',
-            '_aggregation_fn': ANY,
-            'aggregation': 'max'
-        }
-    }
-
-    x = normalize_schema(
-        metric_schema, {'field': 'squee(foo)'}, allow_unknown=False
-    )
-    assert x == {
-        'field': {
-            'value': 'squee(foo)',
-            '_aggregation_fn': ANY,
-            'aggregation': 'sum'
+        'foo': {
+            'field': {
+                'value':
+                    'foo',
+                '_aggregation_fn':
+                    ANY,
+                'aggregation':
+                    'sum',
+                'operators': [{
+                    'operator': 'add',
+                    'field': {
+                        'value': 'moo'
+                    }
+                }, {
+                    'operator': 'div',
+                    'field': {
+                        'value': 'cows'
+                    }
+                }]
+            },
+            'kind': 'Metric'
         }
     }
 
 
 def test_valid_metric():
     valid_metrics = [{
+        'kind': 'Metric',
         'field': 'foo',
         'icon': 'squee'
     }, {
+        'kind': 'Metric',
         'field': 'foo',
         'aggregation': 'sum',
         'icon': 'squee'
     }, {
+        'kind': 'Metric',
         'field': 'foo',
         'aggregation': 'none',
         'icon': 'squee'
     }, {
+        'kind': 'Metric',
         'field': 'sum(foo)',
         'icon': 'squee'
     }, {
+        'kind': 'Metric',
         'field': 'squee(foo)',
         'icon': 'squee'
     }, {
+        'kind': 'Metric',
         'field': 'foo',
         'condition': {}
     }]
 
     for m in valid_metrics:
-        normalize_schema(metric_schema, m)
+        v = {'a': deepcopy(m)}
+        normalize_schema(shelf_schema, v, allow_unknown=False)
 
 
 def test_invalid_metric():
@@ -213,63 +165,103 @@ def test_invalid_metric():
             'value': 'foo',
             'aggregation': 'squee'
         },
+        'kind': 'Metric',
         'icon': 'squee'
     }, {
+        'kind': 'Metric',
         'icon': 'squee'
     }]
 
     for m in invalid_metrics:
         with pytest.raises(Exception):
-            normalize_schema(metric_schema, m)
+            v = {'a': deepcopy(m)}
+            normalize_schema(shelf_schema, v, allow_unknown=False)
 
 
-def test_condition():
-    x = normalize_schema(
-        condition_schema, {'field': 'foo',
-                           'gt': 22}, allow_unknown=False
-    )
+def test_dimension():
+    v = {'a': {'kind': 'Dimension', 'field': 'foo', 'icon': 'squee'}}
+
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
-        '_op_value': 22,
-        'field': {
-            '_aggregation_fn': ANY,
-            'aggregation': 'none',
-            'value': 'foo'
-        },
-        '_op': '__gt__'
+        'a': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'none',
+                'value': 'foo'
+            },
+            'kind': 'Dimension',
+            'icon': 'squee'
+        }
+    }
+
+    v = {'a': {'kind': 'Dimension', 'field': 'foo + moo', 'icon': 'squee'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'a': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'operators': [{
+                    'operator': 'add',
+                    'field': {
+                        'value': 'moo'
+                    }
+                }],
+                'aggregation': 'none',
+                'value': 'foo'
+            },
+            'kind': 'Dimension',
+            'icon': 'squee'
+        }
     }
 
 
 def test_and_condition():
-    x = normalize_schema(
-        condition_schema, {
-            'and': [{
-                'field': 'foo',
-                'in': [22, 44, 55]
-            }, {
-                'field': 'foo',
-                'notin': [41]
-            }]
-        },
-        allow_unknown=False
-    )
+    shelf = {
+        'a': {
+            'kind': 'Metric',
+            'field': {
+                'value': 'a',
+                'condition': {
+                    'and': [{
+                        'field': 'foo',
+                        'in': [22, 44, 55]
+                    }, {
+                        'field': 'foo',
+                        'notin': [41]
+                    }]
+                }
+            }
+        }
+    }
+    x = normalize_schema(shelf_schema, shelf, allow_unknown=False)
     assert x == {
-        'and': [{
+        'a': {
             'field': {
-                '_aggregation_fn': ANY,
-                'aggregation': 'none',
-                'value': 'foo'
+                'value': 'a',
+                'aggregation': 'sum',
+                'condition': {
+                    'and': [{
+                        'field': {
+                            '_aggregation_fn': ANY,
+                            'aggregation': 'none',
+                            'value': 'foo'
+                        },
+                        '_op_value': [22, 44, 55],
+                        '_op': 'in_'
+                    }, {
+                        'field': {
+                            '_aggregation_fn': ANY,
+                            'aggregation': 'none',
+                            'value': 'foo'
+                        },
+                        '_op': 'notin',
+                        '_op_value': [41]
+                    }]
+                },
+                '_aggregation_fn': ANY
             },
-            '_op_value': [22, 44, 55],
-            '_op': 'in_'
-        }, {
-            'field': {
-                '_aggregation_fn': ANY,
-                'aggregation': 'none',
-                'value': 'foo'
-            },
-            '_op': 'notin',
-            '_op_value': [41]
-        }]
+            'kind': 'Metric'
+        }
     }
 
 
@@ -318,8 +310,11 @@ def test_valid_conditions():
         },
     ]
 
+    shelf = {'a': {'kind': 'Metric', 'field': {'value': 'a'}}}
     for cond in conditions:
-        normalize_schema(condition_schema, cond, allow_unknown=False)
+        v = deepcopy(shelf)
+        v['a']['field']['condition'] = cond
+        normalize_schema(shelf_schema, v, allow_unknown=False)
 
 
 def test_invalid_conditions():
@@ -346,61 +341,72 @@ def test_invalid_conditions():
         },
     ]
 
+    shelf = {'a': {'kind': 'Metric', 'field': {'value': 'a'}}}
     for cond in conditions:
+        v = deepcopy(shelf)
+        v['a']['field']['condition'] = cond
         with pytest.raises(Exception):
-            normalize_schema(condition_schema, cond, allow_unknown=False)
+            normalize_schema(shelf_schema, v, allow_unknown=False)
 
 
 def test_ingredient():
-    v = {'kind': 'Metric', 'field': 'foo'}
-    x = normalize_schema(ingredient_schema, v, allow_unknown=False)
+    v = {'a': {'kind': 'Metric', 'field': 'foo'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
-        'field': {
-            '_aggregation_fn': ANY,
-            'aggregation': 'sum',
-            'value': 'foo'
-        },
-        'kind': 'Metric'
+        'a': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'foo'
+            },
+            'kind': 'Metric'
+        }
     }
 
-    v = {'kind': 'Metric', 'field': 'max(foo)'}
-    x = normalize_schema(ingredient_schema, v, allow_unknown=False)
+    v = {'a': {'kind': 'Metric', 'field': 'max(foo)'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
-        'field': {
-            '_aggregation_fn': ANY,
-            'aggregation': 'max',
-            'value': 'foo'
-        },
-        'kind': 'Metric'
+        'a': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'max',
+                'value': 'foo'
+            },
+            'kind': 'Metric'
+        }
     }
 
     v = {
-        'kind': 'Metric',
-        'field': {
-            'value': 'foo',
-            'condition': {
-                'field': 'moo',
-                'gt': 'cow'
+        'a': {
+            'kind': 'Metric',
+            'field': {
+                'value': 'foo',
+                'condition': {
+                    'field': 'moo',
+                    'gt': 'cow'
+                }
             }
         }
     }
-    x = normalize_schema(ingredient_schema, v, allow_unknown=False)
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
-        'field': {
-            'value': 'foo',
-            'aggregation': 'sum',
-            'condition': {
-                'field': {
-                    '_aggregation_fn': ANY,
-                    'aggregation': 'none',
-                    'value': 'moo'
+        'a': {
+            'field': {
+                'value': 'foo',
+                'aggregation': 'sum',
+                'condition': {
+                    'field': {
+                        '_aggregation_fn': ANY,
+                        'aggregation': 'none',
+                        'value': 'moo'
+                    },
+                    '_op': '__gt__',
+                    '_op_value': 'cow'
                 },
-                '_op': '__gt__',
-                '_op_value': 'cow'
+                '_aggregation_fn': ANY
             },
-            '_aggregation_fn': ANY
-        },
-        'kind': 'Metric'
+            'kind': 'Metric'
+        }
     }
 
 

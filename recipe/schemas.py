@@ -367,7 +367,7 @@ def _inject_aggregation_fn(field):
     return field
 
 
-def _field_schema(aggregate=True, use_registry=False):
+def _field_schema(aggregate=True):
     """Make a field schema that either aggregates or doesn't. """
     if aggregate:
         aggr = S.String(
@@ -384,52 +384,23 @@ def _field_schema(aggregate=True, use_registry=False):
             nullable=True
         )
 
-    if use_registry:
-        condition = 'condition'
-    else:
-        condition = S.Dict(required=False)
-
     operator = S.Dict({
         'operator': S.String(allowed=['add', 'sub', 'div', 'mul']),
         'field': S.String()
     })
 
-    field_schema = S.Dict(
+    return S.Dict(
         schema={
-            'value':
-                S.String(),
-            'aggregation':
-                aggr,
-            'condition':
-                condition,
-            'format':
-                S.String(
-                    coerce=lambda v: format_lookup.get(v, v), required=False
-                ),
-            'operators':
-                S.List(schema=operator, required=False)
+            'value': S.String(),
+            'aggregation': aggr,
+            'condition': 'condition',
+            'operators': S.List(schema=operator, required=False)
         },
         coerce=_coerce_string_into_field,
         coerce_post=_inject_aggregation_fn,
         allow_unknown=False,
         required=True,
     )
-    return field_schema
-
-
-aggregated_field_schema = _field_schema(aggregate=True)
-non_aggregated_field_schema = _field_schema(aggregate=False)
-
-metric_schema = S.Dict(
-    allow_unknown=True, schema={
-        'field': _field_schema(aggregate=True)
-    }
-)
-dimension_schema = S.Dict(
-    allow_unknown=True, schema={
-        'field': _field_schema(aggregate=False)
-    }
-)
 
 
 class ConditionPost(object):
@@ -447,29 +418,26 @@ class ConditionPost(object):
         return value
 
 
-def _condition_schema(operator, _op, scalar=True, use_registry=False):
+def _condition_schema(operator, _op, scalar=True):
     if scalar:
         allowed_values = [S.Integer(), S.String(), S.Float(), S.Boolean()]
     else:
         allowed_values = [S.List()]
 
-    if use_registry:
-        field = 'non_aggregated_field'
-    else:
-        field = non_aggregated_field_schema
-
     _condition_schema = S.Dict(
         allow_unknown=False,
-        schema={'field': field,
-                operator: {
-                    'anyof': allowed_values
-                }},
+        schema={
+            'field': 'non_aggregated_field',
+            operator: {
+                'anyof': allowed_values
+            }
+        },
         coerce_post=ConditionPost(operator, _op)
     )
     return _condition_schema
 
 
-def _full_condition_schema(use_registry=False):
+def _full_condition_schema():
     """ Conditions can be a field with an operator, like this yaml example
 
     condition:
@@ -488,42 +456,32 @@ def _full_condition_schema(use_registry=False):
 
     # Handle conditions where there's an operator
     operator_condition = S.DictWhenKeyExists({
-        'gt':
-            _condition_schema('gt', '__gt__', use_registry=use_registry),
-        'gte':
-            _condition_schema('gte', '__ge__', use_registry=use_registry),
-        'ge':
-            _condition_schema('ge', '__ge__', use_registry=use_registry),
-        'lt':
-            _condition_schema('lt', '__lt__', use_registry=use_registry),
-        'lte':
-            _condition_schema('lte', '__le__', use_registry=use_registry),
-        'le':
-            _condition_schema('le', '__le__', use_registry=use_registry),
-        'eq':
-            _condition_schema('eq', '__eq__', use_registry=use_registry),
-        'ne':
-            _condition_schema('ne', '__ne__', use_registry=use_registry),
-        'in':
-            _condition_schema(
-                'in', 'in_', scalar=False, use_registry=use_registry
-            ),
-        'notin':
-            _condition_schema(
-                'notin', 'notin', scalar=False, use_registry=use_registry
-            ),
-        'or': S.Dict(schema={'or': S.List(schema='operator_condition')}),
-        'and': S.Dict(schema={'and': S.List(schema='operator_condition')}),
+        'gt': _condition_schema('gt', '__gt__'),
+        'gte': _condition_schema('gte', '__ge__'),
+        'ge': _condition_schema('ge', '__ge__'),
+        'lt': _condition_schema('lt', '__lt__'),
+        'lte': _condition_schema('lte', '__le__'),
+        'le': _condition_schema('le', '__le__'),
+        'eq': _condition_schema('eq', '__eq__'),
+        'ne': _condition_schema('ne', '__ne__'),
+        'in': _condition_schema('in', 'in_', scalar=False),
+        'notin': _condition_schema('notin', 'notin', scalar=False),
+        'or': S.Dict(schema={
+            'or': S.List(schema='condition')
+        }),
+        'and': S.Dict(schema={
+            'and': S.List(schema='condition')
+        }),
     },
                                              required=False)
 
     return {
-        'registry': {'operator_condition': operator_condition},
-        'schema_ref': 'operator_condition',
+        'registry': {
+            'condition': operator_condition
+        },
+        'schema_ref': 'condition',
     }
 
-
-condition_schema = _full_condition_schema(use_registry=False)
 
 # Create a full schema that uses a registry
 ingredient_schema = S.DictWhenKeyIs(
@@ -532,24 +490,33 @@ ingredient_schema = S.DictWhenKeyIs(
             S.Dict(
                 allow_unknown=True,
                 schema={
-                    'field': _field_schema(aggregate=True, use_registry=True)
+                    'field':
+                        'aggregated_field',
+                    'format':
+                        S.String(
+                            coerce=lambda v: format_lookup.get(v, v),
+                            required=False
+                        )
                 }
             ),
         'Dimension':
             S.Dict(
                 allow_unknown=True,
                 schema={
-                    'field': _field_schema(aggregate=False, use_registry=True)
-                }
+                    'field':
+                        'non_aggregated_field',
+                    'format':
+                        S.String(
+                            coerce=lambda v: format_lookup.get(v, v),
+                            required=False
+                        )
+                },
             )
     },
     registry={
-        'aggregated_field':
-            _field_schema(aggregate=True, use_registry=True),
-        'non_aggregated_field':
-            _field_schema(aggregate=False, use_registry=True),
-        'condition':
-            _full_condition_schema(use_registry=True),
+        'aggregated_field': _field_schema(aggregate=True),
+        'non_aggregated_field': _field_schema(aggregate=False),
+        'condition': _full_condition_schema(),
     }
 )
 
