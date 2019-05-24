@@ -1,10 +1,7 @@
-from collections import OrderedDict
 from copy import copy
 
 from six import iteritems
-from sqlalchemy import (
-    Float, Integer, String, Table, and_, case, distinct, func, or_
-)
+from sqlalchemy import Float, Integer, String, Table, and_, case, distinct, or_
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.util import lightweight_named_tuple
@@ -15,7 +12,7 @@ from recipe import ingredients
 from recipe.compat import basestring
 from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric
-from recipe.schemas import shelf_schema
+from recipe.schemas import condition_schema, shelf_schema
 
 # Ensure case and distinct don't get reaped. We need it in scope for
 # creating Metrics
