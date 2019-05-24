@@ -1,7 +1,9 @@
 from copy import copy
 
 from six import iteritems
-from sqlalchemy import Float, Integer, String, Table, and_, case, distinct, or_
+from sqlalchemy import (
+    Float, Integer, String, Table, and_, case, cast, distinct, func, or_
+)
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.util import lightweight_named_tuple
@@ -135,6 +137,9 @@ def parse_validated_field(fld, selectable):
     if fld is None:
         return
 
+    if fld.pop('_use_raw_value', False):
+        return float(fld['value'])
+
     field = find_column(selectable, fld['value'])
 
     operator_lookup = {
@@ -154,7 +159,17 @@ def parse_validated_field(fld, selectable):
         field = case([(cond, field)])
 
     aggr_fn = fld.get('_aggregation_fn', lambda x: x)
-    return aggr_fn(field)
+    field = aggr_fn(field)
+
+    cast_to_datatype = fld.get('_cast_to_datatype')
+    if cast_to_datatype is not None:
+        field = cast(field, cast_to_datatype)
+
+    coalesce_to_value = fld.get('_coalesce_to_value')
+    if coalesce_to_value is not None:
+        field = func.coalesce(field, coalesce_to_value)
+
+    return field
 
 
 def ingredient_from_validated_dict(ingr_dict, selectable):

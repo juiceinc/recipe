@@ -2,6 +2,7 @@
 Registers recipe schemas
 """
 
+import inspect
 import logging
 import re
 
@@ -11,6 +12,23 @@ from sureberus import schema as S
 from recipe.compat import basestring
 
 logging.captureWarnings(True)
+
+
+def _make_sqlalchemy_datatype_lookup():
+    """ Build a dictionary of the allowed sqlalchemy casts """
+    from sqlalchemy.sql import sqltypes
+    d = {}
+    for name in dir(sqltypes):
+        sqltype = getattr(sqltypes, name)
+        if name.lower() not in d and name[0] != '_' and name != 'NULLTYPE':
+            if inspect.isclass(sqltype) and issubclass(
+                sqltype, sqltypes.TypeEngine
+            ):
+                d[name.lower()] = sqltype
+    return d
+
+
+sqlalchemy_datatypes = _make_sqlalchemy_datatype_lookup()
 
 format_lookup = {
     'comma': ',.0f',
@@ -51,17 +69,23 @@ field_pattern = re.compile(r'^({})\((.*)\)$'.format(aggr_keys))
 
 def find_operators(value):
     """ Find operators in a field that may look like "a+b-c" """
-    field = re.split('[+-/*]', value)[0]
+    parts = re.split('[+-\/\*]', value)
+    field, operators = parts[0], []
+    if len(parts) == 1:
+        return field, operators
 
-    operators = []
-    for part in re.findall('[+-/*]\w+', value):
-        # TODO: Full validation on other fields
-        other_field = _coerce_string_into_field(part[1:])
-        operators.append({'operator': part[0], 'field': other_field})
+    remaining_value = value[len(field):]
+    if remaining_value:
+        for part in re.findall('[+-\/\*][\w\.]+', remaining_value):
+            # TODO: Full validation on other fields
+            other_field = _coerce_string_into_field(
+                part[1:], search_for_operators=False
+            )
+            operators.append({'operator': part[0], 'field': other_field})
     return field, operators
 
 
-def _coerce_string_into_field(value):
+def _coerce_string_into_field(value, search_for_operators=True):
     """ Convert a string into a field, potentially parsing a functional
     form into a value and aggregation """
     if isinstance(value, basestring):
@@ -70,14 +94,25 @@ def _coerce_string_into_field(value):
         m = re.match(field_pattern, value)
         if m:
             aggr, value = m.groups()
-            value, operators = find_operators(value)
+            operators = []
+            if search_for_operators:
+                value, operators = find_operators(value)
             result = {'value': value, 'aggregation': aggr}
             if operators:
                 result['operators'] = operators
             return result
+
         else:
-            value, operators = find_operators(value)
-            result = {'value': value}
+            operators = []
+            if search_for_operators:
+                value, operators = find_operators(value)
+
+            # Check for a number
+            try:
+                float(value)
+                result = {'value': value, '_use_raw_value': True}
+            except ValueError:
+                result = {'value': value}
             if operators:
                 result['operators'] = operators
             return result
@@ -85,9 +120,28 @@ def _coerce_string_into_field(value):
         return value
 
 
-def _inject_aggregation_fn(field):
+def _field_post(field):
+    """Add sqlalchemy conversion helper info
+
+    Convert aggregation -> _aggregation_fn,
+    as -> _cast_to_datatype and
+    default -> _coalesce_to_value"""
     field['_aggregation_fn'] = aggregations.get(field['aggregation'])
+
+    if 'as' in field:
+        field['_cast_to_datatype'] = sqlalchemy_datatypes.get(field.pop('as'))
+
+    if 'default' in field:
+        field['_coalesce_to_value'] = field.pop('default')
+
     return field
+
+
+def _to_lowercase(value):
+    if isinstance(value, basestring):
+        return value.lower()
+    else:
+        return value
 
 
 def _field_schema(aggr=True):
@@ -114,13 +168,35 @@ def _field_schema(aggr=True):
 
     return S.Dict(
         schema={
-            'value': S.String(),
-            'aggregation': ag,
-            'condition': 'condition',
-            'operators': S.List(schema=operator, required=False)
+            'value':
+                S.String(),
+            'aggregation':
+                ag,
+            'condition':
+                'condition',
+            'operators':
+                S.List(schema=operator, required=False),
+            # Performs casting
+            'as':
+                S.String(
+                    required=False,
+                    allowed=list(sqlalchemy_datatypes.keys()),
+                    coerce=_to_lowercase
+                ),
+            # Performs coalescing
+            'default': {
+                'anyof': [S.Integer(),
+                          S.String(),
+                          S.Float(),
+                          S.Boolean()],
+                'required': False
+            },
+            # Should the value be used directly in sql
+            '_use_raw_value':
+                S.Boolean(required=False)
         },
         coerce=_coerce_string_into_field,
-        coerce_post=_inject_aggregation_fn,
+        coerce_post=_field_post,
         allow_unknown=False,
         required=True,
     )
