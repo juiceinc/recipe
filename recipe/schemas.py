@@ -350,6 +350,16 @@ def _adjust_kinds(value):
 
 condition_schema = _full_condition_schema(aggr=False)
 
+quickfilter_schema = S.List(
+    required=False,
+    schema=S.Dict(
+        schema={
+            'condition': 'condition',
+            'name': S.String(required=True)
+        }
+    )
+)
+
 # Create a full schema that uses a registry
 ingredient_schema = S.DictWhenKeyIs(
     'kind',
@@ -366,7 +376,9 @@ ingredient_schema = S.DictWhenKeyIs(
                         S.String(
                             coerce=lambda v: format_lookup.get(v, v),
                             required=False
-                        )
+                        ),
+                    'quickfilters':
+                        quickfilter_schema
                 }
             ),
         'Dimension':
@@ -390,7 +402,9 @@ ingredient_schema = S.DictWhenKeyIs(
                         S.String(
                             coerce=lambda v: format_lookup.get(v, v),
                             required=False
-                        )
+                        ),
+                    'quickfilters':
+                        quickfilter_schema
                 },
             ),
         'Filter':
