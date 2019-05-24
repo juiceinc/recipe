@@ -51,6 +51,59 @@ def test_field_parsing():
     }
 
 
+def test_field_as():
+    v = {'foo': {'kind': 'Metric', 'field': {'value': 'foo', 'as': 'integer'}}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'field': {
+                '_cast_to_datatype': ANY,
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'foo'
+            },
+            'kind': 'Metric'
+        }
+    }
+
+    # Bad data type to cast to
+    v = {'foo': {'kind': 'Metric', 'field': {'value': 'foo', 'as': 'squee'}}}
+    with pytest.raises(E.DisallowedValue):
+        normalize_schema(shelf_schema, v, allow_unknown=False)
+
+
+def test_field_default():
+    defaults = [24, True, 11.21243, 'heythere']
+
+    for d in defaults:
+        v = {
+            'foo': {
+                'kind': 'Metric',
+                'field': {
+                    'value': 'foo',
+                    'default': d
+                }
+            }
+        }
+        x = normalize_schema(shelf_schema, v, allow_unknown=False)
+        assert x == {
+            'foo': {
+                'field': {
+                    '_aggregation_fn': ANY,
+                    '_coalesce_to_value': d,
+                    'aggregation': 'sum',
+                    'value': 'foo'
+                },
+                'kind': 'Metric'
+            }
+        }
+
+    # Bad data type for default
+    v = {'foo': {'kind': 'Metric', 'field': {'value': 'foo', 'default': {}}}}
+    with pytest.raises(E.NoneMatched):
+        normalize_schema(shelf_schema, v, allow_unknown=False)
+
+
 def test_field_format():
     v = {
         'foo': {
@@ -78,7 +131,6 @@ def test_field_format():
 def test_field_operators():
     v = {'foo': {'kind': 'Metric', 'field': 'foo   + moo', 'format': 'comma'}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
-
     assert x == {
         'foo': {
             'field': {
@@ -119,6 +171,65 @@ def test_field_operators():
                         'value': 'cows'
                     }
                 }]
+            },
+            'kind': 'Metric'
+        }
+    }
+
+    # numeric values are supported
+    v = {'foo': {'kind': 'Metric', 'field': 'foo   + 1.02'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'field': {
+                '_aggregation_fn':
+                    ANY,
+                'operators': [{
+                    'operator': '+',
+                    'field': {
+                        '_use_raw_value': True,
+                        'value': '1.02'
+                    }
+                }],
+                'aggregation':
+                    'sum',
+                'value':
+                    'foo'
+            },
+            'kind': 'Metric'
+        }
+    }
+
+    # numeric values are supported
+    v = {'foo': {'kind': 'Metric', 'field': 'foo   + 1.02 + moo  / 523.5'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'field': {
+                '_aggregation_fn':
+                    ANY,
+                'operators': [{
+                    'operator': '+',
+                    'field': {
+                        '_use_raw_value': True,
+                        'value': '1.02'
+                    }
+                }, {
+                    'operator': '+',
+                    'field': {
+                        'value': 'moo'
+                    }
+                }, {
+                    'operator': '/',
+                    'field': {
+                        '_use_raw_value': True,
+                        'value': '523.5'
+                    }
+                }],
+                'aggregation':
+                    'sum',
+                'value':
+                    'foo'
             },
             'kind': 'Metric'
         }

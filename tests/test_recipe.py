@@ -367,6 +367,53 @@ oldage:
             'THEN foo.age END) AS oldage FROM foo'
         )
 
+    def test_cast(self):
+        yaml = '''
+intage:
+    kind: Metric
+    field:
+        value: age
+        as: integer
+'''
+        shelf = Shelf.from_validated_yaml(yaml, MyTable)
+        recipe = Recipe(shelf=shelf, session=self.session).metrics('intage')
+        assert (
+            ' '.join(
+                recipe.to_sql().split()
+            ) == 'SELECT CAST(sum(foo.age) AS INTEGER) AS intage FROM foo'
+        )
+
+    def test_coalesce(self):
+        yaml = '''
+defaultage:
+    kind: Metric
+    field:
+        value: age
+        default: 0.1
+'''
+        shelf = Shelf.from_validated_yaml(yaml, MyTable)
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).metrics('defaultage')
+        assert (
+            ' '.join(
+                recipe.to_sql().split()
+            ) == 'SELECT coalesce(sum(foo.age), 0.1) AS defaultage FROM foo'
+        )
+
+    def test_field_with_add_float(self):
+        yaml = '''
+addage:
+    kind: Metric
+    field: 'age + 1.24'
+'''
+        shelf = Shelf.from_validated_yaml(yaml, MyTable)
+        recipe = Recipe(shelf=shelf, session=self.session).metrics('addage')
+        assert (
+            ' '.join(recipe.to_sql().split()
+                    ) == 'SELECT sum(foo.age + 1.24) AS addage FROM foo'
+        )
+
     def test_compound_and_condition(self):
         yaml = '''
 oldageandcoolname:
