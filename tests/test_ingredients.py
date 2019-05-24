@@ -533,11 +533,6 @@ class TestIngredientFromObj(object):
             {
                 'kind': 'Metric'
             },
-            # {
-            #     'kind': 'IdValueDimension',
-            #     'field': 'age'
-            # },
-
             # Bad kind
             {
                 'kind': 'MooCow',
