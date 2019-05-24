@@ -112,10 +112,10 @@ def parse_validated_field(fld, selectable):
     field = find_column(selectable, fld['value'])
 
     operator_lookup = {
-        'add': lambda fld: getattr(fld, '__add__'),
-        'sub': lambda fld: getattr(fld, '__sub__'),
-        'div': lambda fld: getattr(fld, '__div__'),
-        'mul': lambda fld: getattr(fld, '__mul__'),
+        '+': lambda fld: getattr(fld, '__add__'),
+        '-': lambda fld: getattr(fld, '__sub__'),
+        '/': lambda fld: getattr(fld, '__div__'),
+        '*': lambda fld: getattr(fld, '__mul__'),
     }
     for operator in fld.get('operators', []):
         op = operator['operator']
@@ -145,6 +145,11 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
     args = []
     field = ingr_dict.pop('field', None)
     args.append(parse_validated_field(field, selectable))
+
+    # Each extra field contains a name and a field
+    for extra in ingr_dict.pop('extra_fields', []):
+        ingr_dict[extra.get('name')] = \
+            parse_validated_field(extra.get('field'), selectable)
 
     return IngredientClass(*args, **ingr_dict)
 

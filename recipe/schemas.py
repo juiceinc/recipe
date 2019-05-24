@@ -108,10 +108,8 @@ def _field_schema(aggr=True):
         )
 
     operator = S.Dict({
-        'operator':
-            S.String(allowed=['add', 'sub', 'div', 'mul', '+', '-', '/', '*']),
-        'field':
-            S.String()
+        'operator': S.String(allowed=['+', '-', '/', '*']),
+        'field': S.String()
     })
 
     return S.Dict(
@@ -242,10 +240,17 @@ def _move_extra_fields(value):
     return value
 
 
-def _add_metric_kind(value):
+def _adjust_kinds(value):
     if isinstance(value, dict):
         if 'kind' not in value:
             value['kind'] = 'Metric'
+
+        if value.get('kind') == 'IdValueDimension':
+            value['kind'] = 'Dimension'
+
+        if value.get('kind') == 'Dimension':
+            value['kind'] == 'Dimension'
+
     return value
 
 
@@ -315,7 +320,7 @@ ingredient_schema = S.DictWhenKeyIs(
                 )
         }
     ),
-    coerce=_add_metric_kind,
+    coerce=_adjust_kinds,
     registry={
         'aggregated_field': _field_schema(aggr=True),
         'non_aggregated_field': _field_schema(aggr=False),
