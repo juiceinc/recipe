@@ -193,7 +193,7 @@ WHEN (census.age > 40) THEN census.pop2000
 END) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS popdivide
 FROM census
 GROUP BY census.state
-ORDER BY census.state'''
+ORDER BY census.state'''  # noqa: E501
         self.assert_recipe_csv(
            recipe, '''state_raw,popdivide,state,state_id
 Tennessee,0.3856763995010324,The Volunteer State,Tennessee
