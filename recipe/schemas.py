@@ -310,18 +310,8 @@ ingredient_schema = S.DictWhenKeyIs(
                 }
             )
     },
-    # If the kind can't be find, default to metric
-    default_choice=S.Dict(
-        allow_unknown=True,
-        schema={
-            'field':
-                'aggregated_field',
-            'format':
-                S.String(
-                    coerce=lambda v: format_lookup.get(v, v), required=False
-                )
-        }
-    ),
+    # If the kind can't be found, default to metric
+    default_choice='Metric',
     coerce=_adjust_kinds,
     registry={
         'aggregated_field': _field_schema(aggr=True),
