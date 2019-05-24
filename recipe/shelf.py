@@ -183,10 +183,18 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
     if IngredientClass is None:
         raise BadIngredient('Unknown ingredient kind')
 
-    args = []
     field = ingr_dict.pop('field', None)
-    args.append(parse_validated_field(field, selectable))
+    divide_by = ingr_dict.pop('divide_by', None)
+    field = parse_validated_field(field, selectable)
+    if divide_by is not None:
+        # Perform a divide by zero safe division
+        divide_by = parse_validated_field(divide_by, selectable)
+        epsilon = 0.000000001
+        field = cast(field, Float) / (
+            func.coalesce(cast(divide_by, Float), 0.0) + epsilon
+        )
 
+    args = [field]
     # Each extra field contains a name and a field
     for extra in ingr_dict.pop('extra_fields', []):
         ingr_dict[extra.get('name')] = \

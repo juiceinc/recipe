@@ -236,6 +236,26 @@ def test_field_operators():
     }
 
 
+def test_field_divide_by():
+    v = {'foo': {'kind': 'Metric', 'field': 'foo', 'divide_by': 'moo'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'divide_by': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'moo'
+            },
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'foo'
+            },
+            'kind': 'Metric'
+        }
+    }
+
+
 def test_valid_metric():
     valid_metrics = [{
         'kind': 'Metric',
