@@ -181,6 +181,26 @@ Vermont,620602,The Green Mountain State,Vermont
 '''
         )
 
+    def test_shelf_with_references(self):
+        """Build a recipe that uses metrics and dimensions defined using
+        references."""
+        shelf = self.validated_shelf('census_references.yaml', Census)
+        recipe = Recipe(shelf=shelf, session=self.session).\
+            dimensions('state').metrics('popdivide').order_by('state')
+        assert recipe.to_sql() == '''SELECT census.state AS state_raw,
+CAST(sum(CASE
+WHEN (census.age > 40) THEN census.pop2000
+END) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS popdivide
+FROM census
+GROUP BY census.state
+ORDER BY census.state'''
+        self.assert_recipe_csv(
+           recipe, '''state_raw,popdivide,state,state_id
+Tennessee,0.3856763995010324,The Volunteer State,Tennessee
+Vermont,0.4374284968466095,The Green Mountain State,Vermont
+'''
+       )
+
     def test_bad_census_from_validated_yaml(self):
         """ Test a bad yaml file """
         with pytest.raises(Exception):

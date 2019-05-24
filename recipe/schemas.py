@@ -348,6 +348,32 @@ def _adjust_kinds(value):
     return value
 
 
+def _process_ingredient(ingr, shelf):
+    val = ingr.get('field', {}).get('value', '')
+    if val.startswith('@'):
+        ref = val[1:]
+        if ref in shelf and 'field' in shelf.get(ref):
+            # replace the ingredients field with the reference
+            ingr['field'] = shelf[ref]['field']
+
+    val = ingr.get('divide_by', {}).get('value', '')
+    if val.startswith('@'):
+        ref = val[1:]
+        if ref in shelf and 'field' in shelf.get(ref):
+            # replace the ingredients field with the reference
+            ingr['divide_by'] = shelf[ref]['field']
+
+
+def _replace_references(shelf):
+    """ Iterate over the shelf and replace and field.value: @ references
+    with the field in another ingredient """
+    from pprint import pprint
+    pprint(shelf)
+    for ingr in shelf.values():
+        _process_ingredient(ingr, shelf)
+    return shelf
+
+
 condition_schema = _full_condition_schema(aggr=False)
 
 quickfilter_schema = S.List(
@@ -431,7 +457,10 @@ ingredient_schema = S.DictWhenKeyIs(
 )
 
 shelf_schema = S.Dict(
-    valueschema=ingredient_schema, keyschema=S.String(), allow_unknown=True
+    valueschema=ingredient_schema,
+    keyschema=S.String(),
+    allow_unknown=True,
+    coerce_post=_replace_references
 )
 
 # This schema is used with sureberus
