@@ -43,7 +43,7 @@ hi,15,hi
 ''')
 
     def test_ingredients1_from_yaml(self):
-        shelf = self.unvalidated_shelf('ingredients1.yaml', MyTable)
+        shelf = self.validated_shelf('ingredients1.yaml', MyTable)
         recipe = Recipe(
             shelf=shelf, session=self.session
         ).metrics('age').dimensions('first')

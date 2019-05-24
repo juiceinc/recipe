@@ -473,13 +473,12 @@ oldage:
         with pytest.raises(Exception):
             self.make_shelf(content)
 
-    def test_null_condition(self):
+    def test_missing_condition(self):
         content = '''
 oldage:
     kind: Metric
     field:
         value: age
-        condition: null
 '''
         self.make_shelf(content)
         # null conditions are ignored.
@@ -495,7 +494,7 @@ oldage:
 '''
         self.make_shelf(content)
         # null conditions are ignored.
-        assert str(self.shelf['oldage']) == '(Metric)oldage sum(foo.age)'
+        assert str(self.shelf['oldage']) == '(Metric)oldage MyTable.age'
 
     def test_invalid_aggregations(self):
         for aggr in (24, 1.0, 'foo'):

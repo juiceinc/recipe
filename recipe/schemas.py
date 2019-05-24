@@ -156,7 +156,7 @@ def _condition_schema(operator, _op, scalar=True, aggr=False):
             S.String(),
             S.Float(),
             S.Boolean(),
-            S.List()
+            S.List(),
         ]
 
     if aggr:
@@ -217,7 +217,9 @@ def _full_condition_schema(aggr=False):
 
     return {
         'registry': {
-            'condition': operator_condition
+            'condition': operator_condition,
+            'aggregated_field': _field_schema(aggr=True),
+            'non_aggregated_field': _field_schema(aggr=False),
         },
         'schema_ref': 'condition',
     }

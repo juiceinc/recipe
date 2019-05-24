@@ -5,6 +5,7 @@ from sqlalchemy import Float, Integer, String, Table, and_, case, distinct, or_
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.util import lightweight_named_tuple
+from sureberus import errors as E
 from sureberus import normalize_schema
 from yaml import safe_load
 
@@ -12,7 +13,7 @@ from recipe import ingredients
 from recipe.compat import basestring
 from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric
-from recipe.schemas import condition_schema, shelf_schema
+from recipe.schemas import condition_schema, ingredient_schema, shelf_schema
 
 # Ensure case and distinct don't get reaped. We need it in scope for
 # creating Metrics
@@ -72,13 +73,6 @@ def find_column(selectable, name):
     raise BadIngredient('Can not find {} in {}'.format(name, selectable))
 
 
-def parse_unvalidated_condition(cond, selectable):
-    if cond is None:
-        return
-    cond = normalize_schema(condition_schema, cond, allow_unknown=False)
-    return parse_validated_condition(cond, selectable)
-
-
 def parse_validated_condition(cond, selectable):
     """ Convert a validated condition into a SQLAlchemy boolean expression """
     if cond is None:
@@ -101,6 +95,38 @@ def parse_validated_condition(cond, selectable):
         _op = cond.get('_op')
         _op_value = cond.get('_op_value')
         return getattr(field, _op)(_op_value)
+
+
+def parse_unvalidated_condition(cond, selectable):
+    if cond is None:
+        return
+    try:
+        cond = normalize_schema(condition_schema, cond, allow_unknown=False)
+    except E.SureError as e:
+        raise BadIngredient(str(e))
+    return parse_validated_condition(cond, selectable)
+
+
+def parse_unvalidated_field(unvalidated_fld, selectable, aggregated=True):
+    kind = 'Metric' if aggregated else 'Dimension'
+    ingr = {'field': unvalidated_fld, 'kind': kind}
+    try:
+        ingr_dict = normalize_schema(
+            ingredient_schema, ingr, allow_unknown=True
+        )
+    except E.SureError as e:
+        raise BadIngredient(str(e))
+    return parse_validated_field(ingr_dict['field'], selectable)
+
+
+def ingredient_from_unvalidated_dict(unvalidated_ingr, selectable):
+    try:
+        ingr_dict = normalize_schema(
+            ingredient_schema, unvalidated_ingr, allow_unknown=True
+        )
+    except E.SureError as e:
+        raise BadIngredient(str(e))
+    return ingredient_from_validated_dict(ingr_dict, selectable)
 
 
 def parse_validated_field(fld, selectable):
@@ -373,9 +399,12 @@ class Shelf(object):
                 autoload=True
             )
 
-        validated_shelf = normalize_schema(
-            shelf_schema, obj, allow_unknown=True
-        )
+        try:
+            validated_shelf = normalize_schema(
+                shelf_schema, obj, allow_unknown=True
+            )
+        except E.SureError as e:
+            raise BadIngredient(str(e))
         d = {}
         for k, v in iteritems(validated_shelf):
             d[k] = ingredient_constructor(v, selectable)
@@ -389,7 +418,7 @@ class Shelf(object):
 
         This used to call a different implementation of yaml parsing
         """
-        cls.from_validated_yaml(yaml_str, selectable, **kwargs)
+        return cls.from_validated_yaml(yaml_str, selectable, **kwargs)
 
     @classmethod
     def from_validated_yaml(cls, yaml_str, selectable, **kwargs):
