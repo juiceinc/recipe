@@ -4,285 +4,13 @@ Registers recipe schemas
 
 import logging
 import re
-from collections import OrderedDict
-from copy import deepcopy
 
-from cerberus import schema_registry
 from sqlalchemy import distinct, func
 from sureberus import schema as S
 
 from recipe.compat import basestring
 
 logging.captureWarnings(True)
-
-IdValueDimensionFields = OrderedDict()
-
-
-class RecipeSchemas(object):
-
-    def __init__(
-        self, allowed_aggregations, allowed_operators=['+', '-', '*', '/']
-    ):
-        self.allowed_aggregations = allowed_aggregations
-        self.allowed_operators = allowed_operators
-
-        self.scalar_conditions = ('gt', 'gte', 'lt', 'lte', 'eq', 'ne')
-        self.nonscalar_conditions = ('in',)
-
-        # A structure containing ingredient classes and the required
-        # parameters IN THE ORDER that they are passed to the class
-        # constructor.
-        self.ingredient_kinds = {
-            'Ingredient': {
-                'field': 'field'
-            },
-            'Dimension': {
-                'field': 'field'
-            },
-            'LookupDimension': {
-                'field': 'field'
-            },
-            'IdValueDimension':
-                OrderedDict([('id_field', 'field'), ('field', 'field')]),
-            'Metric': {
-                'field': 'aggregated_field'
-            },
-            'DivideMetric':
-                OrderedDict([('numerator_field', 'aggregated_field'),
-                             ('denominator_field', 'aggregated_field')]),
-            'WtdAvgMetric':
-                OrderedDict([
-                    ('field', 'field'),
-                    ('weight', 'field'),
-                ]),
-            # FIXME: what to do about these guys, field isn't the right
-            # SQLAlchemy structure
-            'Filter': {
-                'field': 'field'
-            },
-            'Having': {
-                'field': 'field'
-            },
-        }
-        self.register_schemas()
-
-    def _register_field_schemas(self):
-        default_field_schema = {
-            'value': {
-                'type': 'string',
-                'required': True,
-            },
-            'operators': {
-                'required': False,
-                'type': 'list',
-                'schema': {
-                    'schema': 'operator',
-                }
-            },
-            'aggregation': {
-                'type': 'string',
-                'required': False,
-                # Allowed values are the keys of
-                # IngredientValidator.aggregation_lookup
-                'allowed': self.allowed_aggregations,
-                'nullable': True,
-                'default': None,
-            },
-            'condition': {
-                'schema': 'condition',
-                'validator': self._validate_condition_keys,
-                'required': False,
-                'allow_unknown': False,
-                'type': 'dict'
-            }
-        }
-
-        # Aggregated fields coerce null values to the default aggregation
-        aggregated_field_schema = deepcopy(default_field_schema)
-        aggregated_field_schema['aggregation']['required'] = True
-        aggregated_field_schema['aggregation']['nullable'] = False
-        aggregated_field_schema['aggregation']['coerce'] = \
-            'to_aggregation_with_default'
-
-        schema_registry.add('field', deepcopy(default_field_schema))
-        schema_registry.add('aggregated_field', aggregated_field_schema)
-
-    def _register_operator_schema(self):
-        operator_schema = {
-            'operator': {
-                'type': 'string',
-                'allowed': self.allowed_operators,
-                'required': True
-            },
-            'field': {
-                'schema': 'field',
-                'type': 'dict',
-                'coerce': 'to_field_dict',
-                'allow_unknown': False,
-                'required': True
-            },
-        }
-
-        schema_registry.add('operator', operator_schema)
-
-    def _validate_condition_keys(self, field, value, error):
-        """
-        Validates that all of the keys in one of the sets of keys are defined
-        as keys of ``value``.
-        """
-        if 'field' in value:
-            operators = self.nonscalar_conditions + self.scalar_conditions
-            matches = sum(1 for k in operators if k in value)
-            if matches == 0:
-                error(field, 'Must contain one of {}'.format(operators))
-                return False
-            elif matches > 1:
-                error(
-                    field,
-                    'Must contain no more than one of {}'.format(operators)
-                )
-                return False
-            return True
-        elif 'and' in value:
-            for condition in value['and']:
-                self._validate_condition_keys(field, condition, error)
-        elif 'or' in value:
-            for condition in value['or']:
-                self._validate_condition_keys(field, condition, error)
-        else:
-            error(field, "Must contain field + operator keys, 'and', or 'or'.")
-            return False
-
-    def _register_condition_schema(self):
-        recursive = {
-            'type': 'dict',
-            'schema': 'condition',
-            'validator': self._validate_condition_keys
-        }
-        condition_schema = {
-            'and': {
-                'type': 'list',
-                'schema': recursive,
-            },
-            'or': {
-                'type': 'list',
-                'schema': recursive,
-            },
-            'field': {
-                'schema': 'field',
-                'type': 'dict',
-                'coerce': 'to_field_dict',
-                'allow_unknown': False,
-                'required': False,
-            },
-        }
-
-        for nonscalar_cond in self.nonscalar_conditions:
-            condition_schema[nonscalar_cond] = {
-                'required': False,
-                'type': 'list',
-                'coerce': 'to_list'
-            }
-        for scalar_cond in self.scalar_conditions:
-            condition_schema[scalar_cond] = {
-                'required': False,
-                'type': 'scalar'
-            }
-
-        schema_registry.add('condition', condition_schema)
-
-    def _register_ingredient_schemas(self):
-        ingredient_schema_root = {
-            'kind': {
-                'type': 'string',
-                'required': True,
-                'allowed': list(self.ingredient_kinds.keys()),
-                'default': 'Metric'
-            },
-            '_fields': {
-                'nullable': True,
-                'readonly': True,
-                'type': 'list',
-                'default': [],
-            },
-            'format': {
-                'type': 'string',
-                'coerce': 'to_format_with_lookup'
-            }
-        }
-
-        for kind, extras in self.ingredient_kinds.items():
-            # Build a schema for each kind of ingredient
-            schema = deepcopy(ingredient_schema_root)
-            schema['_fields']['default'] = list(extras.keys())
-            for field_name, field_schema in extras.items():
-                schema[field_name] = {
-                    'schema': field_schema,
-                    'type': 'dict',
-                    'coerce': 'to_field_dict',
-                    'allow_unknown': False,
-                    'required': True
-                }
-            schema_registry.add(kind, schema)
-
-    def register_schemas(self):
-        self._register_field_schemas()
-        self._register_operator_schema()
-        self._register_condition_schema()
-        self._register_ingredient_schemas()
-
-
-def _coerce_filter(v):
-    # For now, we'll delegate to the validator / normalizer using
-    # Cerberus.
-    from recipe.validators import IngredientValidator
-    validator = IngredientValidator(schema='Filter')
-    if not validator.validate(v):
-        raise Exception(validator.errors)
-    validator.document['kind'] = 'Filter'
-    return validator.document
-
-
-# This schema is used with sureberus
-recipe_schema = {
-    'type': 'dict',
-    'schema': {
-        # These directives correspond with the keyword arguments of Recipe
-        # class.
-        'metrics': {
-            'type': 'list',
-            'schema': {
-                'type': 'string'
-            },
-        },
-        'dimensions': {
-            'type': 'list',
-            'schema': {
-                'type': 'string'
-            },
-        },
-        'filters': {
-            'type': 'list',
-            'schema': {
-                'oneof': [
-                    {
-                        'type': 'string'
-                    },
-                    {
-                        'type': 'dict',
-                        'coerce': _coerce_filter,
-                    },
-                ]
-            },
-        },
-        'order_by': {
-            'type': 'list',
-            'schema': {
-                'type': 'string'
-            },
-        },
-    }
-}
 
 format_lookup = {
     'comma': ',.0f',
@@ -325,16 +53,11 @@ def find_operators(value):
     """ Find operators in a field that may look like "a+b-c" """
     field = re.split('[+-/*]', value)[0]
 
-    operator_lookup = {'-': 'sub', '+': 'add', '/': 'div', '*': 'mul'}
-
     operators = []
     for part in re.findall('[+-/*]\w+', value):
         # TODO: Full validation on other fields
         other_field = _coerce_string_into_field(part[1:])
-        operators.append({
-            'operator': operator_lookup[part[0]],
-            'field': other_field
-        })
+        operators.append({'operator': part[0], 'field': other_field})
     return field, operators
 
 
@@ -367,17 +90,17 @@ def _inject_aggregation_fn(field):
     return field
 
 
-def _field_schema(aggregate=True):
+def _field_schema(aggr=True):
     """Make a field schema that either aggregates or doesn't. """
-    if aggregate:
-        aggr = S.String(
+    if aggr:
+        ag = S.String(
             required=False,
             allowed=list(aggregations.keys()),
             default=default_aggregation,
             nullable=True
         )
     else:
-        aggr = S.String(
+        ag = S.String(
             required=False,
             allowed=[no_aggregation, None],
             default=no_aggregation,
@@ -385,14 +108,14 @@ def _field_schema(aggregate=True):
         )
 
     operator = S.Dict({
-        'operator': S.String(allowed=['add', 'sub', 'div', 'mul']),
+        'operator': S.String(allowed=['+', '-', '/', '*']),
         'field': S.String()
     })
 
     return S.Dict(
         schema={
             'value': S.String(),
-            'aggregation': aggr,
+            'aggregation': ag,
             'condition': 'condition',
             'operators': S.List(schema=operator, required=False)
         },
@@ -407,37 +130,52 @@ class ConditionPost(object):
     """ Convert an operator like 'gt', 'lt' into '_op' and '_op_value'
     for easier parsing into SQLAlchemy """
 
-    def __init__(self, operator, _op):
+    def __init__(self, operator, _op, scalar):
         self.operator = operator
         self._op = _op
+        self.scalar = scalar
 
     def __call__(self, value):
         value['_op'] = self._op
-        value['_op_value'] = value.get(self.operator)
+        _op_value = value.get(self.operator)
+        # Wrap in a list
+        if not self.scalar:
+            if not isinstance(_op_value, list):
+                _op_value = [_op_value]
+        value['_op_value'] = _op_value
         value.pop(self.operator)
         return value
 
 
-def _condition_schema(operator, _op, scalar=True):
+def _condition_schema(operator, _op, scalar=True, aggr=False):
     if scalar:
         allowed_values = [S.Integer(), S.String(), S.Float(), S.Boolean()]
     else:
-        allowed_values = [S.List()]
+        allowed_values = [
+            S.Integer(),
+            S.String(),
+            S.Float(),
+            S.Boolean(),
+            S.List(),
+        ]
+
+    if aggr:
+        field = 'aggregated_field'
+    else:
+        field = 'non_aggregated_field'
 
     _condition_schema = S.Dict(
         allow_unknown=False,
-        schema={
-            'field': 'non_aggregated_field',
-            operator: {
-                'anyof': allowed_values
-            }
-        },
-        coerce_post=ConditionPost(operator, _op)
+        schema={'field': field,
+                operator: {
+                    'anyof': allowed_values
+                }},
+        coerce_post=ConditionPost(operator, _op, scalar)
     )
     return _condition_schema
 
 
-def _full_condition_schema():
+def _full_condition_schema(aggr=False):
     """ Conditions can be a field with an operator, like this yaml example
 
     condition:
@@ -452,20 +190,22 @@ def _full_condition_schema():
               gt: 22
             - field: foo
               lt: 0
+
+    :param aggr: Build the condition with aggregate fields (default is False)
     """
 
     # Handle conditions where there's an operator
     operator_condition = S.DictWhenKeyExists({
-        'gt': _condition_schema('gt', '__gt__'),
-        'gte': _condition_schema('gte', '__ge__'),
-        'ge': _condition_schema('ge', '__ge__'),
-        'lt': _condition_schema('lt', '__lt__'),
-        'lte': _condition_schema('lte', '__le__'),
-        'le': _condition_schema('le', '__le__'),
-        'eq': _condition_schema('eq', '__eq__'),
-        'ne': _condition_schema('ne', '__ne__'),
-        'in': _condition_schema('in', 'in_', scalar=False),
-        'notin': _condition_schema('notin', 'notin', scalar=False),
+        'gt': _condition_schema('gt', '__gt__', aggr=aggr),
+        'gte': _condition_schema('gte', '__ge__', aggr=aggr),
+        'ge': _condition_schema('ge', '__ge__', aggr=aggr),
+        'lt': _condition_schema('lt', '__lt__', aggr=aggr),
+        'lte': _condition_schema('lte', '__le__', aggr=aggr),
+        'le': _condition_schema('le', '__le__', aggr=aggr),
+        'eq': _condition_schema('eq', '__eq__', aggr=aggr),
+        'ne': _condition_schema('ne', '__ne__', aggr=aggr),
+        'in': _condition_schema('in', 'in_', scalar=False, aggr=aggr),
+        'notin': _condition_schema('notin', 'notin', scalar=False, aggr=aggr),
         'or': S.Dict(schema={
             'or': S.List(schema='condition')
         }),
@@ -477,15 +217,51 @@ def _full_condition_schema():
 
     return {
         'registry': {
-            'condition': operator_condition
+            'condition': operator_condition,
+            'aggregated_field': _field_schema(aggr=True),
+            'non_aggregated_field': _field_schema(aggr=False),
         },
         'schema_ref': 'condition',
     }
 
 
+def _move_extra_fields(value):
+    """ Move any fields that look like "{role}_field" into the extra_fields
+    list. These will be processed as fields. Rename them as {role}_expression.
+    """
+    if isinstance(value, dict):
+        keys_to_move = [k for k in value.keys() if k.endswith('_field')]
+        if keys_to_move:
+            value['extra_fields'] = []
+            for k in keys_to_move:
+                value['extra_fields'].append({
+                    'name': k[:-6] + '_expression',
+                    'field': value.pop(k)
+                })
+
+    return value
+
+
+def _adjust_kinds(value):
+    if isinstance(value, dict):
+        if 'kind' not in value:
+            value['kind'] = 'Metric'
+
+        if value.get('kind') == 'IdValueDimension':
+            value['kind'] = 'Dimension'
+
+        if value.get('kind') == 'Dimension':
+            value['kind'] == 'Dimension'
+
+    return value
+
+
+condition_schema = _full_condition_schema(aggr=False)
+
 # Create a full schema that uses a registry
 ingredient_schema = S.DictWhenKeyIs(
-    'kind', {
+    'kind',
+    {
         'Metric':
             S.Dict(
                 allow_unknown=True,
@@ -502,24 +278,71 @@ ingredient_schema = S.DictWhenKeyIs(
         'Dimension':
             S.Dict(
                 allow_unknown=True,
+                coerce=_move_extra_fields,
                 schema={
                     'field':
                         'non_aggregated_field',
+                    'extra_fields':
+                        S.List(
+                            required=False,
+                            schema=S.Dict(
+                                schema={
+                                    'field': 'non_aggregated_field',
+                                    'name': S.String(required=True)
+                                }
+                            )
+                        ),
                     'format':
                         S.String(
                             coerce=lambda v: format_lookup.get(v, v),
                             required=False
                         )
                 },
+            ),
+        'Filter':
+            S.Dict(allow_unknown=True, schema={
+                'condition': 'condition'
+            }),
+        'Having':
+            S.Dict(
+                allow_unknown=True, schema={
+                    'condition': 'having_condition'
+                }
             )
     },
+    # If the kind can't be found, default to metric
+    default_choice='Metric',
+    coerce=_adjust_kinds,
     registry={
-        'aggregated_field': _field_schema(aggregate=True),
-        'non_aggregated_field': _field_schema(aggregate=False),
-        'condition': _full_condition_schema(),
+        'aggregated_field': _field_schema(aggr=True),
+        'non_aggregated_field': _field_schema(aggr=False),
+        'condition': _full_condition_schema(aggr=False),
+        'having_condition': _full_condition_schema(aggr=True),
     }
 )
 
 shelf_schema = S.Dict(
     valueschema=ingredient_schema, keyschema=S.String(), allow_unknown=True
+)
+
+# This schema is used with sureberus
+recipe_schema = S.Dict(
+    schema={
+        'metrics':
+            S.List(schema=S.String(), required=False),
+        'dimensions':
+            S.List(schema=S.String(), required=False),
+        'filters':
+            S.List(
+                schema={'oneof': [S.String(), 'condition']}, required=False
+            ),
+        'order_by':
+            S.List(schema=S.String(), required=False),
+    },
+    registry={
+        'aggregated_field': _field_schema(aggr=True),
+        'non_aggregated_field': _field_schema(aggr=False),
+        'condition': _full_condition_schema(aggr=False),
+        'having_condition': _full_condition_schema(aggr=True),
+    }
 )

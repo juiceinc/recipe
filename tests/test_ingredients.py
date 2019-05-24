@@ -9,7 +9,9 @@ from recipe import (
     Ingredient, LookupDimension, Metric, WtdAvgMetric
 )
 from recipe.compat import str
-from recipe.shelf import ingredient_from_dict, parse_field
+from recipe.shelf import \
+    ingredient_from_unvalidated_dict as ingredient_from_dict
+from recipe.shelf import parse_unvalidated_field as parse_field
 
 
 class TestIngredients(object):
@@ -507,7 +509,7 @@ class TestIngredientFromObj(object):
                 'kind': 'IdValueDimension',
                 'field': 'age',
                 'id_field': 'age'
-            }, '(IdValueDimension)1 MyTable.age MyTable.age'),
+            }, '(Dimension)1 MyTable.age MyTable.age'),
             ({
                 'kind': 'Metric',
                 'field': {
@@ -531,11 +533,6 @@ class TestIngredientFromObj(object):
             {
                 'kind': 'Metric'
             },
-            {
-                'kind': 'IdValueDimension',
-                'field': 'age'
-            },
-
             # Bad kind
             {
                 'kind': 'MooCow',
@@ -618,17 +615,13 @@ class TestParse(object):
             # Conditions
             ({
                 'value': 'age',
-                'condition': None
-            }, func.sum(MyTable.age)),
-            ({
-                'value': 'age',
                 'condition': {
                     'field': 'last',
-                    'in': ('Jones', 'Punjabi')
+                    'in': ['Jones', 'Punjabi']
                 }
             },
              func.sum(
-                 case([(MyTable.last.in_(('Jones', 'Punjabi')), MyTable.age)])
+                 case([(MyTable.last.in_(['Jones', 'Punjabi']), MyTable.age)])
              )),
         ]
         for input_field, expected_result in data:
@@ -679,15 +672,11 @@ class TestParse(object):
             # Conditions
             ({
                 'value': 'age',
-                'condition': None
-            }, MyTable.age),
-            ({
-                'value': 'age',
                 'condition': {
                     'field': 'last',
-                    'in': ('Jones', 'Punjabi')
+                    'in': ['Jones', 'Punjabi']
                 }
-            }, case([(MyTable.last.in_(('Jones', 'Punjabi')), MyTable.age)])),
+            }, case([(MyTable.last.in_(['Jones', 'Punjabi']), MyTable.age)])),
         ]
         for input_field, expected_result in data:
             result = parse_field(
@@ -695,14 +684,17 @@ class TestParse(object):
             )
             assert str(result) == str(expected_result)
 
-    def test_bad_field_string_definitions(self):
-        bad_data = [
-            'first+', 'first-', 'fir st-', 'fir st', 'first+last-',
-            'sum(fir-st)', 'fir st*', 'first/last-', 'foo'
-        ]
-        for input_field in bad_data:
-            with pytest.raises(BadIngredient):
-                parse_field(input_field, MyTable)
+    def test_weird_field_string_definitions(self):
+        data = [('first+', MyTable.first), ('first-', MyTable.first),
+                ('fir st-', MyTable.first), ('fir st', MyTable.first),
+                ('first+last-',
+                 'foo.first || foo.last'), ('fir st*', MyTable.first),
+                ('first/last-', 'foo.first / foo.last')]
+        for input_field, expected_result in data:
+            result = parse_field(
+                input_field, selectable=MyTable, aggregated=False
+            )
+            assert str(result) == str(expected_result)
 
     def test_bad_field_definitions(self):
         bad_data = [
