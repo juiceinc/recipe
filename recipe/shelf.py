@@ -389,6 +389,84 @@ def parse_validated_field(fld, selectable):
     return field
 
 
+def parse_sureberus_validated_condition(cond, selectable):
+    """ Convert a validated condition into a SQLAlchemy boolean expression """
+    if cond is None:
+        return
+
+    if 'and' in cond:
+        conditions = []
+        for c in cond.get('and', []):
+            conditions.append(
+                parse_sureberus_validated_condition(c, selectable)
+            )
+        return and_(*conditions)
+
+    elif 'or' in cond:
+        conditions = []
+        for c in cond.get('or', []):
+            conditions.append(
+                parse_sureberus_validated_condition(c, selectable)
+            )
+        return or_(*conditions)
+
+    elif 'field' in cond:
+        field = parse_sureberus_validated_field(cond.get('field'), selectable)
+        _op = cond.get('_op')
+        _op_value = cond.get('_op_value')
+        return getattr(field, _op)(_op_value)
+
+
+def parse_sureberus_validated_field(fld, selectable):
+    """ Converts a validated field to sqlalchemy. Field references are
+    looked up in selectable """
+    if fld is None:
+        return
+
+    field = find_column(selectable, fld['value'])
+
+    operator_lookup = {
+        'add': lambda fld: getattr(fld, '__add__'),
+        'sub': lambda fld: getattr(fld, '__sub__'),
+        'div': lambda fld: getattr(fld, '__div__'),
+        'mul': lambda fld: getattr(fld, '__mul__'),
+    }
+    for operator in fld.get('operators', []):
+        op = operator['operator']
+        other_field = parse_sureberus_validated_field(
+            operator['field'], selectable
+        )
+        field = operator_lookup[op](field)(other_field)
+
+    # Apply a condition if it exists
+    cond = parse_sureberus_validated_condition(
+        fld.get('condition', None), selectable
+    )
+    if cond is not None:
+        field = case([(cond, field)])
+
+    aggr_fn = fld.get('_aggregation_fn', lambda x: x)
+    return aggr_fn(field)
+
+
+def ingredient_from_sureberus_validated_dict(ingr_dict, selectable):
+    """ Create an ingredient from an dictionary.
+
+    This object will be deserialized from yaml """
+
+    kind = ingr_dict.pop('kind', 'Metric')
+    IngredientClass = ingredient_class_for_name(kind)
+
+    if IngredientClass is None:
+        raise BadIngredient('Unknown ingredient kind')
+
+    args = []
+    field = ingr_dict.pop('field', None)
+    args.append(parse_sureberus_validated_field(field, selectable))
+
+    return IngredientClass(*args, **ingr_dict)
+
+
 def ingredient_from_validated_dict(ingr_dict, selectable):
     """ Create an ingredient from an dictionary.
 
@@ -601,7 +679,7 @@ class Shelf(object):
         cls,
         obj,
         selectable,
-        ingredient_constructor=ingredient_from_validated_dict,
+        ingredient_constructor=ingredient_from_sureberus_validated_dict,
         metadata=None
     ):
         """Create a shelf using a dict shelf definition.
@@ -631,10 +709,22 @@ class Shelf(object):
                 autoload=True
             )
 
-        d = {}
-        for k, v in iteritems(obj):
-            d[k] = ingredient_constructor(v, selectable)
-        shelf = cls(d, select_from=selectable)
+        if ingredient_constructor is ingredient_from_sureberus_validated_dict:
+            from .schemas import shelf_schema
+            from sureberus import normalize_schema
+            validated_shelf = normalize_schema(
+                shelf_schema, obj, allow_unknown=True
+            )
+            d = {}
+            for k, v in iteritems(validated_shelf):
+                d[k] = ingredient_constructor(v, selectable)
+            shelf = cls(d, select_from=selectable)
+        else:
+            d = {}
+            for k, v in iteritems(obj):
+                d[k] = ingredient_constructor(v, selectable)
+            shelf = cls(d, select_from=selectable)
+
         return shelf
 
     @classmethod
