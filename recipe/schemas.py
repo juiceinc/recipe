@@ -349,6 +349,8 @@ def _adjust_kinds(value):
 
 
 def _process_ingredient(ingr, shelf):
+    # TODO: Support condition references (to filters, dimension/metric
+    #  quickfilters, and to field conditions)
     val = ingr.get('field', {}).get('value', '')
     if val.startswith('@'):
         ref = val[1:]
@@ -367,8 +369,6 @@ def _process_ingredient(ingr, shelf):
 def _replace_references(shelf):
     """ Iterate over the shelf and replace and field.value: @ references
     with the field in another ingredient """
-    from pprint import pprint
-    pprint(shelf)
     for ingr in shelf.values():
         _process_ingredient(ingr, shelf)
     return shelf
