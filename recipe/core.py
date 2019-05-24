@@ -13,9 +13,9 @@ from recipe.compat import str
 from recipe.dynamic_extensions import run_hooks
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Filter, Having, Metric
-from recipe.shelf import Shelf, parse_condition
-from recipe.utils import prettyprintable_sql
 from recipe.schemas import recipe_schema
+from recipe.shelf import Shelf, parse_unvalidated_condition
+from recipe.utils import prettyprintable_sql
 
 ALLOW_QUERY_CACHING = True
 
@@ -153,9 +153,8 @@ class Recipe(object):
             query = query.limit(None)
         if self._order_bys:
             query = query.from_self().order_by(None)
-        count_query = self._session.query(
-            func.count('*').label('count')
-        ).select_from(query.subquery())
+        count_query = self._session.query(func.count('*').label('count')
+                                         ).select_from(query.subquery())
         return count_query.scalar()
 
     @classmethod
@@ -170,6 +169,7 @@ class Recipe(object):
         Additionally, each RecipeExtension can extract and handle data from the
         configuration.
         """
+
         def subdict(d, keys):
             new = {}
             for k in keys:
@@ -180,9 +180,8 @@ class Recipe(object):
         core_kwargs = subdict(obj, recipe_schema['schema'].keys())
         core_kwargs = normalize_schema(recipe_schema, core_kwargs)
         core_kwargs['filters'] = [
-            parse_condition(filter, shelf.Meta.select_from)
-            if isinstance(filter, dict)
-            else filter
+            parse_unvalidated_condition(filter, shelf.Meta.select_from)
+            if isinstance(filter, dict) else filter
             for filter in obj.get('filters', [])
         ]
         core_kwargs.update(kwargs)

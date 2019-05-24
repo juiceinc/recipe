@@ -8,13 +8,14 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.util import lightweight_named_tuple
+from sureberus import normalize_schema
 from yaml import safe_load
 
 from recipe import ingredients
 from recipe.compat import basestring
 from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric
-from recipe.validators import IngredientValidator
+from recipe.schemas import shelf_schema
 
 # Ensure case and distinct don't get reaped. We need it in scope for
 # creating Metrics
@@ -27,97 +28,6 @@ _POP_DEFAULT = object()
 def ingredient_class_for_name(class_name):
     """Get the class in the recipe.ingredients module with the given name."""
     return getattr(ingredients, class_name, None)
-
-
-def parse_condition(
-    cond, selectable, aggregated=False, default_aggregation='sum'
-):
-    """Create a SQLAlchemy clause from a condition."""
-    if cond is None:
-        return None
-
-    else:
-        if 'and' in cond:
-            conditions = [
-                parse_condition(
-                    c, selectable, aggregated, default_aggregation
-                ) for c in cond['and']
-            ]
-            return and_(*conditions)
-        elif 'or' in cond:
-            conditions = [
-                parse_condition(
-                    c, selectable, aggregated, default_aggregation
-                ) for c in cond['or']
-            ]
-            return or_(*conditions)
-        elif 'field' not in cond:
-            raise BadIngredient('field must be defined in condition')
-        field = parse_field(
-            cond['field'],
-            selectable,
-            aggregated=aggregated,
-            default_aggregation=default_aggregation
-        )
-        if 'in' in cond:
-            value = cond['in']
-            if isinstance(value, dict):
-                raise BadIngredient('value for in must be a list')
-            condition_expression = getattr(field, 'in_')(tuple(value))
-        elif 'gt' in cond:
-            value = cond['gt']
-            if isinstance(value, (list, dict)):
-                raise BadIngredient('conditional value must be a scalar')
-            condition_expression = getattr(field, '__gt__')(value)
-        elif 'gte' in cond:
-            value = cond['gte']
-            if isinstance(value, (list, dict)):
-                raise BadIngredient('conditional value must be a scalar')
-            condition_expression = getattr(field, '__ge__')(value)
-        elif 'lt' in cond:
-            value = cond['lt']
-            if isinstance(value, (list, dict)):
-                raise BadIngredient('conditional value must be a scalar')
-            condition_expression = getattr(field, '__lt__')(value)
-        elif 'lte' in cond:
-            value = cond['lte']
-            if isinstance(value, (list, dict)):
-                raise BadIngredient('conditional value must be a scalar')
-            condition_expression = getattr(field, '__le__')(value)
-        elif 'eq' in cond:
-            value = cond['eq']
-            if isinstance(value, (list, dict)):
-                raise BadIngredient('conditional value must be a scalar')
-            condition_expression = getattr(field, '__eq__')(value)
-        elif 'ne' in cond:
-            value = cond['ne']
-            if isinstance(value, (list, dict)):
-                raise BadIngredient('conditional value must be a scalar')
-            condition_expression = getattr(field, '__ne__')(value)
-        else:
-            raise BadIngredient('Bad condition')
-
-        return condition_expression
-
-
-def tokenize(s):
-    """ Tokenize a string by splitting it by + and -
-
-    >>> tokenize('this + that')
-    ['this', 'PLUS', 'that']
-
-    >>> tokenize('this+that')
-    ['this', 'PLUS', 'that']
-
-    >>> tokenize('this+that-other')
-    ['this', 'PLUS', 'that', 'MINUS', 'other']
-    """
-
-    # Crude tokenization
-    s = s.replace('+', ' PLUS ').replace('-', ' MINUS ') \
-        .replace('/', ' DIVIDE ').replace('*', ' MULTIPLY ')
-    words = [w for w in s.split(' ') if w]
-    return words
 
 
 def _find_in_columncollection(columns, name):
@@ -165,231 +75,14 @@ def find_column(selectable, name):
     raise BadIngredient('Can not find {} in {}'.format(name, selectable))
 
 
-def parse_field(fld, selectable, aggregated=True, default_aggregation='sum'):
-    """ Parse a field object from yaml into a sqlalchemy expression """
-    # An aggregation is a callable that takes a single field expression
-    # None will perform no aggregation
-    aggregation_lookup = {
-        'sum': func.sum,
-        'min': func.min,
-        'max': func.max,
-        'avg': func.avg,
-        'count': func.count,
-        'count_distinct': lambda fld: func.count(distinct(fld)),
-        'month': lambda fld: func.date_trunc('month', fld),
-        'week': lambda fld: func.date_trunc('week', fld),
-        'year': lambda fld: func.date_trunc('year', fld),
-        'quarter': lambda fld: func.date_trunc('quarter', fld),
-        'age': lambda fld: func.date_part('year', func.age(fld)),
-        None: lambda fld: fld,
-    }
-
-    # Ensure that the dictionary contains:
-    # {
-    #     'value': str,
-    #     'aggregation': str|None,
-    #     'condition': dict|None
-    # }
-    if isinstance(fld, basestring):
-        fld = {
-            'value': fld,
-        }
-    if not isinstance(fld, dict):
-        raise BadIngredient('fields must be a string or a dict')
-    if 'value' not in fld:
-        raise BadIngredient('fields must contain a value')
-    if not isinstance(fld['value'], basestring):
-        raise BadIngredient('field value must be a string')
-
-    # Ensure a condition
-    if 'condition' in fld:
-        if not isinstance(fld['condition'], dict) and \
-                not fld['condition'] is None:
-            raise BadIngredient('condition must be null or an object')
-    else:
-        fld['condition'] = None
-
-    # Ensure an aggregation
-    initial_aggregation = default_aggregation if aggregated else None
-    if 'aggregation' in fld:
-        if not isinstance(fld['aggregation'], basestring) and \
-                not fld['aggregation'] is None:
-            raise BadIngredient('aggregation must be null or an string')
-        if fld['aggregation'] is None:
-            fld['aggregation'] = initial_aggregation
-    else:
-        fld['aggregation'] = initial_aggregation
-
-    value = fld.get('value', None)
-    if value is None:
-        raise BadIngredient('field value is not defined')
-
-    field_parts = []
-    for word in tokenize(value):
-        if word in ('MINUS', 'PLUS', 'DIVIDE', 'MULTIPLY'):
-            field_parts.append(word)
-        else:
-            field_parts.append(find_column(selectable, word))
-
-    if len(field_parts) is None:
-        raise BadIngredient('field is not defined.')
-    # Fields should have an odd number of parts
-    if len(field_parts) % 2 != 1:
-        raise BadIngredient('field does not have the right number of parts')
-
-    field = field_parts[0]
-    if len(field_parts) > 1:
-        # if we need to add and subtract from the field
-        # join the field parts into pairs, for instance if field parts is
-        # [MyTable.first, 'MINUS', MyTable.second, 'PLUS', MyTable.third]
-        # we will get two pairs here
-        # [('MINUS', MyTable.second), ('PLUS', MyTable.third)]
-        for operator, other_field in zip(field_parts[1::2], field_parts[2::2]):
-            if operator == 'PLUS':
-                field = field.__add__(other_field)
-            elif operator == 'MINUS':
-                field = field.__sub__(other_field)
-            elif operator == 'DIVIDE':
-                field = field.__div__(other_field)
-            elif operator == 'MULTIPLY':
-                field = field.__mul__(other_field)
-            else:
-                raise BadIngredient('Unknown operator {}'.format(operator))
-
-    # Handle the aggregator
-    aggr = fld.get('aggregation', 'sum')
-    if aggr is not None:
-        aggr = aggr.strip()
-
-    if aggr not in aggregation_lookup:
-        raise BadIngredient('unknown aggregation {}'.format(aggr))
-
-    aggregator = aggregation_lookup[aggr]
-
-    condition = parse_condition(
-        fld.get('condition', None),
-        selectable,
-        aggregated=False,
-        default_aggregation=default_aggregation
-    )
-
-    if condition is not None:
-        field = case([(condition, field)])
-
-    return aggregator(field)
+def parse_unvalidated_condition(cond, selectable):
+    if cond is None:
+        return
+    cond = normalize_schema(condition_schema, cond, allow_unknown=False)
+    return parse_validated_condition(cond, selectable)
 
 
-def ingredient_from_dict(ingr_dict, selectable):
-    """Create an ingredient from an dictionary.
-
-    This object will be deserialized from yaml """
-
-    # TODO: This is deprecated in favor of
-    # ingredient_from_validated_dict
-
-    # Describe the required params for each kind of ingredient
-    # The key is the parameter name, the value is one of
-    # field: A parse_field with aggregation=False
-    # aggregated_field: A parse_field with aggregation=True
-    # condition: A parse_condition
-
-    params_lookup = {
-        'Dimension': {
-            'field': 'field'
-        },
-        'LookupDimension': {
-            'field': 'field'
-        },
-        'IdValueDimension':
-            OrderedDict(id_field='field', field='field'),
-        'Metric': {
-            'field': 'aggregated_field'
-        },
-        'DivideMetric':
-            OrderedDict(
-                numerator_field='aggregated_field',
-                denominator_field='aggregated_field'
-            ),
-        'WtdAvgMetric':
-            OrderedDict(field='field', weight='field')
-    }
-
-    format_lookup = {
-        'comma': ',.0f',
-        'dollar': '$,.0f',
-        'percent': '.0%',
-        'comma1': ',.1f',
-        'dollar1': '$,.1f',
-        'percent1': '.1%',
-        'comma2': ',.2f',
-        'dollar2': '$,.2f',
-        'percent2': '.2%',
-    }
-
-    kind = ingr_dict.pop('kind', 'Metric')
-    IngredientClass = ingredient_class_for_name(kind)
-
-    if IngredientClass is None:
-        raise BadIngredient('Unknown ingredient kind')
-
-    params = params_lookup.get(kind, {'field': 'field'})
-
-    args = []
-    for k, v in iteritems(params):
-        # All the params must be in the dict
-        if k not in ingr_dict:
-            raise BadIngredient(
-                '{} must be defined to make a {}'.format(k, kind)
-            )
-        if v == 'field':
-            statement = parse_field(
-                ingr_dict.pop(k, None), selectable, aggregated=False
-            )
-        elif v == 'aggregated_field':
-            statement = parse_field(
-                ingr_dict.pop(k, None), selectable, aggregated=True
-            )
-        elif v == 'condition':
-            statement = parse_condition(
-                ingr_dict.pop(k, None), selectable, aggregated=True
-            )
-        else:
-            raise BadIngredient('Do not know what this is')
-
-        args.append(statement)
-    # Remaining properties in ingr_dict are treated as keyword args
-
-    # If the format string exists in format_lookup, use the value otherwise
-    # use the original format
-    if 'format' in ingr_dict:
-        ingr_dict['format'] = format_lookup.get(
-            ingr_dict['format'], ingr_dict['format']
-        )
-    return IngredientClass(*args, **ingr_dict)
-
-
-def parse_validated_field(fld, selectable):
-    """ Converts a validated field to sqlalchemy. Field references are
-    looked up in selectable """
-    aggr_fn = IngredientValidator.aggregation_lookup[fld['aggregation']]
-
-    field = find_column(selectable, fld['value'])
-
-    for operator in fld.get('operators', []):
-        op = operator['operator']
-        other_field = parse_validated_field(operator['field'], selectable)
-        field = IngredientValidator.operator_lookup[op](field)(other_field)
-
-    condition = fld.get('condition', None)
-    if condition:
-        condition = parse_condition(condition, selectable)
-        field = case([(condition, field)])
-
-    field = aggr_fn(field)
-    return field
-
-
-def parse_sureberus_validated_condition(cond, selectable):
+def parse_validated_condition(cond, selectable):
     """ Convert a validated condition into a SQLAlchemy boolean expression """
     if cond is None:
         return
@@ -397,27 +90,23 @@ def parse_sureberus_validated_condition(cond, selectable):
     if 'and' in cond:
         conditions = []
         for c in cond.get('and', []):
-            conditions.append(
-                parse_sureberus_validated_condition(c, selectable)
-            )
+            conditions.append(parse_validated_condition(c, selectable))
         return and_(*conditions)
 
     elif 'or' in cond:
         conditions = []
         for c in cond.get('or', []):
-            conditions.append(
-                parse_sureberus_validated_condition(c, selectable)
-            )
+            conditions.append(parse_validated_condition(c, selectable))
         return or_(*conditions)
 
     elif 'field' in cond:
-        field = parse_sureberus_validated_field(cond.get('field'), selectable)
+        field = parse_validated_field(cond.get('field'), selectable)
         _op = cond.get('_op')
         _op_value = cond.get('_op_value')
         return getattr(field, _op)(_op_value)
 
 
-def parse_sureberus_validated_field(fld, selectable):
+def parse_validated_field(fld, selectable):
     """ Converts a validated field to sqlalchemy. Field references are
     looked up in selectable """
     if fld is None:
@@ -433,15 +122,11 @@ def parse_sureberus_validated_field(fld, selectable):
     }
     for operator in fld.get('operators', []):
         op = operator['operator']
-        other_field = parse_sureberus_validated_field(
-            operator['field'], selectable
-        )
+        other_field = parse_validated_field(operator['field'], selectable)
         field = operator_lookup[op](field)(other_field)
 
     # Apply a condition if it exists
-    cond = parse_sureberus_validated_condition(
-        fld.get('condition', None), selectable
-    )
+    cond = parse_validated_condition(fld.get('condition', None), selectable)
     if cond is not None:
         field = case([(cond, field)])
 
@@ -449,7 +134,7 @@ def parse_sureberus_validated_field(fld, selectable):
     return aggr_fn(field)
 
 
-def ingredient_from_sureberus_validated_dict(ingr_dict, selectable):
+def ingredient_from_validated_dict(ingr_dict, selectable):
     """ Create an ingredient from an dictionary.
 
     This object will be deserialized from yaml """
@@ -462,30 +147,7 @@ def ingredient_from_sureberus_validated_dict(ingr_dict, selectable):
 
     args = []
     field = ingr_dict.pop('field', None)
-    args.append(parse_sureberus_validated_field(field, selectable))
-
-    return IngredientClass(*args, **ingr_dict)
-
-
-def ingredient_from_validated_dict(ingr_dict, selectable):
-    """ Create an ingredient from an dictionary.
-
-    This object will be deserialized from yaml """
-
-    validator = IngredientValidator(schema=ingr_dict['kind'])
-    if not validator.validate(ingr_dict):
-        raise Exception(validator.errors)
-    ingr_dict = validator.document
-
-    kind = ingr_dict.pop('kind', 'Metric')
-    IngredientClass = ingredient_class_for_name(kind)
-
-    if IngredientClass is None:
-        raise BadIngredient('Unknown ingredient kind')
-
-    args = []
-    for fld in ingr_dict.pop('_fields', []):
-        args.append(parse_validated_field(ingr_dict.pop(fld), selectable))
+    args.append(parse_validated_field(field, selectable))
 
     return IngredientClass(*args, **ingr_dict)
 
@@ -679,7 +341,7 @@ class Shelf(object):
         cls,
         obj,
         selectable,
-        ingredient_constructor=ingredient_from_sureberus_validated_dict,
+        ingredient_constructor=ingredient_from_validated_dict,
         metadata=None
     ):
         """Create a shelf using a dict shelf definition.
@@ -709,40 +371,23 @@ class Shelf(object):
                 autoload=True
             )
 
-        if ingredient_constructor is ingredient_from_sureberus_validated_dict:
-            from .schemas import shelf_schema
-            from sureberus import normalize_schema
-            validated_shelf = normalize_schema(
-                shelf_schema, obj, allow_unknown=True
-            )
-            d = {}
-            for k, v in iteritems(validated_shelf):
-                d[k] = ingredient_constructor(v, selectable)
-            shelf = cls(d, select_from=selectable)
-        else:
-            d = {}
-            for k, v in iteritems(obj):
-                d[k] = ingredient_constructor(v, selectable)
-            shelf = cls(d, select_from=selectable)
+        validated_shelf = normalize_schema(
+            shelf_schema, obj, allow_unknown=True
+        )
+        d = {}
+        for k, v in iteritems(validated_shelf):
+            d[k] = ingredient_constructor(v, selectable)
+        shelf = cls(d, select_from=selectable)
 
         return shelf
 
     @classmethod
     def from_yaml(cls, yaml_str, selectable, **kwargs):
-        """Create a shelf using a yaml shelf definition.
+        """ Shim that calls from_validated_yaml.
 
-        :param yaml_str: A string containing yaml ingredient definitions.
-        :param selectable: A SQLAlchemy Table, a Recipe, or a SQLAlchemy
-            join to select from.
-        :return: A shelf that contains the ingredients defined in yaml_str.
+        This used to call a different implementation of yaml parsing
         """
-        obj = safe_load(yaml_str)
-        return cls.from_config(
-            obj,
-            selectable,
-            ingredient_constructor=ingredient_from_dict,
-            **kwargs
-        )
+        cls.from_validated_yaml(yaml_str, selectable, **kwargs)
 
     @classmethod
     def from_validated_yaml(cls, yaml_str, selectable, **kwargs):

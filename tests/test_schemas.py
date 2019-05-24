@@ -4,9 +4,10 @@ from copy import deepcopy
 
 import pytest
 from mock import ANY
+from sureberus import errors as E
 from sureberus import normalize_schema
 
-from recipe.schemas import shelf_schema
+from recipe.schemas import aggregations, recipe_schema, shelf_schema
 
 
 def test_field_parsing():
@@ -85,7 +86,7 @@ def test_field_operators():
                 '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'operators': [{
-                    'operator': 'add',
+                    'operator': '+',
                     'field': {
                         'value': 'moo'
                     }
@@ -108,12 +109,12 @@ def test_field_operators():
                 'aggregation':
                     'sum',
                 'operators': [{
-                    'operator': 'add',
+                    'operator': '+',
                     'field': {
                         'value': 'moo'
                     }
                 }, {
-                    'operator': 'div',
+                    'operator': '/',
                     'field': {
                         'value': 'cows'
                     }
@@ -200,7 +201,7 @@ def test_dimension():
             'field': {
                 '_aggregation_fn': ANY,
                 'operators': [{
-                    'operator': 'add',
+                    'operator': '+',
                     'field': {
                         'value': 'moo'
                     }
@@ -336,7 +337,7 @@ def test_invalid_conditions():
         },
         {
             'field': 'foo',
-            'notin': 41
+            'notin': {}
         },
     ]
 
@@ -422,3 +423,476 @@ def test_shelf():
             'kind': 'Metric'
         }
     }
+
+
+def test_valid_ingredients():
+    examples = [
+        ({
+            'kind': 'Metric',
+            'field': 'moo',
+            'format': 'comma'
+        }, {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'moo'
+            },
+            'kind': 'Metric',
+            'format': ',.0f'
+        }),
+        #
+        ({
+            'kind': 'Metric',
+            'field': 'moo+foo',
+            'format': 'comma'
+        }, {
+            'field': {
+                '_aggregation_fn': ANY,
+                'operators': [{
+                    'operator': '+',
+                    'field': {
+                        'value': 'foo'
+                    }
+                }],
+                'aggregation': 'sum',
+                'value': 'moo'
+            },
+            'kind': 'Metric',
+            'format': ',.0f'
+        }),
+        #
+        ({
+            'kind': 'Metric',
+            'field': 'moo+foo-coo+cow',
+            'format': 'comma'
+        }, {
+            'field': {
+                '_aggregation_fn':
+                    ANY,
+                'operators': [{
+                    'operator': '+',
+                    'field': {
+                        'value': 'foo'
+                    }
+                }, {
+                    'operator': '-',
+                    'field': {
+                        'value': 'coo'
+                    }
+                }, {
+                    'operator': '+',
+                    'field': {
+                        'value': 'cow'
+                    }
+                }],
+                'aggregation':
+                    'sum',
+                'value':
+                    'moo'
+            },
+            'kind': 'Metric',
+            'format': ',.0f'
+        }),
+        #
+        ({
+            'kind': 'Metric',
+            'format': 'comma',
+            'icon': 'foo',
+            'field': {
+                'value': 'cow',
+                'condition': {
+                    'field': 'moo2',
+                    'in': 'wo',
+                }
+            }
+        }, {
+            'field': {
+                '_aggregation_fn': ANY,
+                'condition': {
+                    'field': {
+                        '_aggregation_fn': ANY,
+                        'aggregation': 'none',
+                        'value': 'moo2'
+                    },
+                    '_op_value': ['wo'],
+                    '_op': 'in_'
+                },
+                'aggregation': 'sum',
+                'value': 'cow'
+            },
+            'kind': 'Metric',
+            'format': ',.0f',
+            'icon': 'foo'
+        }),
+    ]
+
+    for ingr, expected_output in examples:
+        v = {'a': deepcopy(ingr)}
+        x = normalize_schema(shelf_schema, v, allow_unknown=False)
+        assert expected_output == x['a']
+
+
+def test_invalid_ingredients():
+    examples = [
+        ({
+            'kind': 'asa',
+            'field': 'moo'
+        }, E.DisallowedValue),
+        ({
+            'kind': 'Sque',
+            'field': 'moo'
+        }, E.DisallowedValue),
+    ]
+
+    for ingr, expected_exception in examples:
+        v = {'a': deepcopy(ingr)}
+        with pytest.raises(expected_exception):
+            normalize_schema(shelf_schema, v, allow_unknown=False)
+
+
+def test_valid_ingredients_format():
+    examples = [
+        ({
+            'format': 'comma',
+            'field': 'moo',
+        }, {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'moo'
+            },
+            'kind': 'Metric',
+            'format': ',.0f'
+        }),
+        ({
+            'format': ',.0f',
+            'field': 'moo'
+        }, {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'moo'
+            },
+            'kind': 'Metric',
+            'format': ',.0f'
+        }),
+        ({
+            'format': 'cow',
+            'field': 'moo'
+        }, {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'moo'
+            },
+            'kind': 'Metric',
+            'format': 'cow'
+        }),
+        ({
+            'format': 'cow',
+            'field': 'grass'
+        }, {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'grass'
+            },
+            'kind': 'Metric',
+            'format': 'cow'
+        }),
+    ]
+
+    for ingr, expected_output in examples:
+        v = {'a': deepcopy(ingr)}
+        x = normalize_schema(shelf_schema, v, allow_unknown=False)
+        assert expected_output == x['a']
+
+
+def test_invalid_ingredients_format():
+    """ A variety of bad formats """
+    examples = [
+        ({
+            'format': 2,
+            'field': 'moo',
+        }, E.BadType),
+        ({
+            'format': [],
+            'field': 'moo',
+        }, E.CoerceUnexpectedError),
+        ({
+            'format': ['comma'],
+            'field': 'moo',
+        }, E.CoerceUnexpectedError),
+    ]
+
+    for ingr, expected_exception in examples:
+        v = {'a': deepcopy(ingr)}
+        with pytest.raises(expected_exception):
+            normalize_schema(shelf_schema, v, allow_unknown=False)
+
+
+def test_invalid_ingredients_field():
+    """ A variety of bad fields. """
+    examples = [({
+        'field': 2
+    }, E.BadType), ({
+        'field': 2.1
+    }, E.BadType), ({
+        'field': tuple()
+    }, E.BadType), ({
+        'field': []
+    }, E.BadType)]
+
+    for ingr, expected_exception in examples:
+        v = {'a': deepcopy(ingr)}
+        with pytest.raises(expected_exception):
+            normalize_schema(shelf_schema, v, allow_unknown=False)
+
+
+def test_valid_ingredients_field():
+    """ A variety of good fields. """
+    examples = [
+        ({
+            'value': 'foo'
+        }, {
+            '_aggregation_fn': ANY,
+            'aggregation': 'sum',
+            'value': 'foo'
+        }),
+        ({
+            'value': 'foo',
+            'aggregation': 'sum'
+        }, {
+            '_aggregation_fn': ANY,
+            'aggregation': 'sum',
+            'value': 'foo'
+        }),
+    ]
+
+    for fld, expected in examples:
+        v = {'a': {'field': deepcopy(fld)}}
+        x = normalize_schema(shelf_schema, v, allow_unknown=False)
+        assert x['a']['field'] == expected
+
+
+def test_valid_ingredients_field_aggregation():
+    """ A variety of good fields. """
+    examples = [
+        # Aggregation gets injected
+        ({
+            'value': 'moo'
+        }, {
+            '_aggregation_fn': ANY,
+            'aggregation': 'sum',
+            'value': 'moo'
+        }),
+        # Explicit None DOES NOT GET overridden with default_aggregation
+        ({
+            'value': 'qoo',
+            'aggregation': None
+        }, {
+            '_aggregation_fn': ANY,
+            'aggregation': None,
+            'value': 'qoo'
+        }),
+        ({
+            'value': 'foo',
+            'aggregation': 'none'
+        }, {
+            '_aggregation_fn': ANY,
+            'aggregation': 'none',
+            'value': 'foo'
+        }),
+        # Other aggregations are untouched
+        ({
+            'value': 'foo',
+            'aggregation': 'sum'
+        }, {
+            '_aggregation_fn': ANY,
+            'aggregation': 'sum',
+            'value': 'foo'
+        }),
+        ({
+            'value': 'foo',
+            'aggregation': 'count'
+        }, {
+            '_aggregation_fn': ANY,
+            'aggregation': 'count',
+            'value': 'foo'
+        }),
+    ]
+
+    for fld, expected in examples:
+        v = {'a': {'field': deepcopy(fld)}}
+        x = normalize_schema(shelf_schema, v, allow_unknown=False)
+        assert x['a']['field'] == expected
+
+    # Test ALL the aggregations
+    for k in aggregations.keys():
+        v = {'a': {'field': {'value': 'moo', 'aggregation': k}}}
+        expected = {'_aggregation_fn': ANY, 'aggregation': k, 'value': 'moo'}
+        x = normalize_schema(shelf_schema, v, allow_unknown=False)
+        assert x['a']['field'] == expected
+
+
+def test_valid_ingredients_field_condition():
+    """ A variety of good field conditions. """
+    examples = [
+        # Aggregation gets injected
+        ({
+            'field': 'cow',
+            'in': ['1', '2']
+        }, {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'none',
+                'value': 'cow'
+            },
+            '_op_value': ['1', '2'],
+            '_op': 'in_'
+        }),
+        ({
+            'field': 'foo',
+            'in': ['1', '2']
+        }, {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'none',
+                'value': 'foo'
+            },
+            '_op_value': ['1', '2'],
+            '_op': 'in_'
+        }),
+        # Scalars get turned into lists where appropriate
+        ({
+            'field': 'foo',
+            'in': '1'
+        }, {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'none',
+                'value': 'foo'
+            },
+            '_op_value': ['1'],
+            '_op': 'in_'
+        })
+    ]
+
+    for cond, expected in examples:
+        v = {
+            'a': {
+                'field': {
+                    'value': 'moo',
+                    'aggregation': 'sum',
+                    'condition': deepcopy(cond)
+                }
+            }
+        }
+        x = normalize_schema(shelf_schema, v, allow_unknown=False)
+        assert x['a']['field']['condition'] == expected
+
+
+def test_invalid_ingredients_field_condition():
+    """ A variety of bad field conditions. """
+    examples = [
+        (
+            {
+                # A condition without a predicate
+                'value': 'moo',
+                'aggregation': 'sum',
+                'condition': {
+                    'field': 'cow'
+                }
+            },
+            E.ExpectedOneField
+        ),
+        (
+            {
+                # A condition with two operators
+                'value': 'moo',
+                'aggregation': 'sum',
+                'condition': {
+                    'field': 'cow',
+                    'in': 1,
+                    'gt': 2
+                }
+            },
+            E.DisallowedField
+        ),
+    ]
+
+    for ingr, expected_exception in examples:
+        v = {'a': {'field': deepcopy(ingr)}}
+        with pytest.raises(expected_exception):
+            normalize_schema(shelf_schema, v, allow_unknown=False)
+
+
+class TestValidateRecipe(object):
+
+    def test_nothing_required(self):
+        config = {}
+        assert normalize_schema(recipe_schema, config) == {}
+
+    def test_disallow_unknown(self):
+        config = {'foo': 'bar'}
+        with pytest.raises(E.UnknownFields):
+            normalize_schema(recipe_schema, config)
+
+    def test_ingredient_names(self):
+        config = {
+            'metrics': ['foo'],
+            'dimensions': ['bar'],
+            'filters': ['baz']
+        }
+        assert normalize_schema(recipe_schema, config) == config
+
+    def test_filter_objects(self):
+        """Recipes can have in-line filters, since it's common for those to be
+        specific to a particular Recipe.
+        """
+        config = {
+            'metrics': ['foo'],
+            'dimensions': ['bar'],
+            'filters': [{
+                'field': 'xyzzy',
+                'gt': 3
+            }]
+        }
+        print(normalize_schema(recipe_schema, config))
+        assert normalize_schema(recipe_schema, config) == {
+            'metrics': ['foo'],
+            'dimensions': ['bar'],
+            'filters': [{
+                'field': {
+                    '_aggregation_fn': ANY,
+                    'aggregation': 'none',
+                    'value': 'xyzzy'
+                },
+                '_op': '__gt__',
+                '_op_value': 3
+            }]
+        }
+
+    def test_bad_filter_objects(self):
+        """Recipes can have in-line filters, since it's common for those to be
+        specific to a particular Recipe.
+        """
+        config = {
+            'metrics': ['foo'],
+            'dimensions': ['bar'],
+            'filters': [{
+                'field': 'xyzzy',
+                'gt': 3,
+                'lt': 1
+            }]
+        }
+
+        with pytest.raises(E.NoneMatched):
+            normalize_schema(recipe_schema, config) == {
+                'metrics': ['foo'],
+                'dimensions': ['bar'],
+                'filters': [{
+                    'field': 'xyzzy',
+                    'gt': 3
+                }]
+            }
