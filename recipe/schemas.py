@@ -109,7 +109,7 @@ def _coerce_string_into_field(value, search_for_operators=True):
 
             # Check for a number
             try:
-                x = float(value)
+                float(value)
                 result = {'value': value, '_use_raw_value': True}
             except ValueError:
                 result = {'value': value}
