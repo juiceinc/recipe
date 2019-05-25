@@ -133,7 +133,6 @@ def test_field_format():
 def test_field_ref():
     v = {'foo': {'kind': 'Metric', 'field': '@foo'}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
-    print(x)
     assert x == {
         'foo': {
             'field': {
@@ -202,7 +201,6 @@ def test_find_operators():
 
         fld, operators = find_operators(v)
         operators = map(process_operator, operators)
-        print fld, operators
         assert fld == expected_fld
         assert operators == expected_operators
 
@@ -1094,7 +1092,6 @@ class TestValidateRecipe(object):
                 'gt': 3
             }]
         }
-        print(normalize_schema(recipe_schema, config))
         assert normalize_schema(recipe_schema, config) == {
             'metrics': ['foo'],
             'dimensions': ['bar'],

@@ -386,28 +386,34 @@ def _replace_refs_in_field(fld, shelf):
         ref = fld['ref']
         if ref in shelf:
             # FIXME: what to do if you can't find the ref
-            fld = shelf[ref]['field']
+            try:
+                fld = shelf[ref]['field']
+            except Exception as e:
+                pass
+    else:
+        # Replace conditions and operators within the field
+        if 'condition' in fld and isinstance(fld['condition'], dict):
+            cond = fld['condition']
+            if 'ref' in cond:
+                cond_ref = cond['ref']
+                # FIXME: what to do if you can't find the ref
+                # What if the field doesn't have a condition
+                try:
+                    new_cond = shelf[cond_ref]['field'].get('condition')
+                    if new_cond is None:
+                        fld.pop('condition', None)
+                    else:
+                        fld['condition'] = new_cond
+                except Exception as e:
+                    pass
 
-    # Replace conditions
-    if 'condition' in fld and isinstance(fld['condition'], dict):
-        cond = fld['condition']
-        if 'ref' in cond:
-            cond_ref = cond['ref']
-            # FIXME: what to do if you can't find the ref
-            # What if the field doesn't have a condition
-            new_cond = shelf[cond_ref]['field'].get('condition')
-            if new_cond is None:
-                fld.pop('condition', None)
-            else:
-                fld['condition'] = new_cond
-
-    if 'operators' in fld:
-        # Walk the operators and replace field references
-        new_operators = [{
-            'operator': op['operator'],
-            'field': _replace_refs_in_field(op['field'], shelf)
-        } for op in fld['operators']]
-        fld['operators'] = new_operators
+        if 'operators' in fld:
+            # Walk the operators and replace field references
+            new_operators = [{
+                'operator': op['operator'],
+                'field': _replace_refs_in_field(op['field'], shelf)
+            } for op in fld['operators']]
+            fld['operators'] = new_operators
 
     return fld
 
