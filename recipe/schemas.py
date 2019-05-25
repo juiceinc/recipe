@@ -381,18 +381,30 @@ def _adjust_kinds(value):
     return value
 
 
+def _replace_refs_in_field(fld, shelf):
+    if 'ref' in fld:
+        ref = fld['ref']
+        if ref in shelf:
+            # FIXME: what to do if you can't find the ref
+            fld = shelf[ref]['field']
+
+    if 'operators' in fld:
+        # Walk the operators and replace field references
+        new_operators = [{
+            'operator': op['operator'],
+            'field': _replace_refs_in_field(op['field'], shelf)
+        } for op in fld['operators']]
+        fld['operators'] = new_operators
+
+    return fld
+
+
 def _process_ingredient(ingr, shelf):
     # TODO: Support condition references (to filters, dimension/metric
     #  quickfilters, and to field conditions)
-    ref = ingr.get('field', {}).get('ref', '')
-    if ref and ref in shelf and 'field' in shelf.get(ref):
-        # replace the ingredients field with the reference
-        ingr['field'] = shelf[ref]['field']
-
-    ref = ingr.get('divide_by', {}).get('ref', '')
-    if ref and ref in shelf and 'field' in shelf.get(ref):
-        # replace the ingredients field with the reference
-        ingr['divide_by'] = shelf[ref]['field']
+    for k, fld in ingr.items():
+        if (k.endswith('field') or k == 'divide_by') and isinstance(fld, dict):
+            ingr[k] = _replace_refs_in_field(fld, shelf)
 
 
 def _replace_references(shelf):
