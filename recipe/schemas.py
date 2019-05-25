@@ -76,7 +76,7 @@ def find_operators(value):
 
     remaining_value = value[len(field):]
     if remaining_value:
-        for part in re.findall('[+-\/\*][\w\.]+', remaining_value):
+        for part in re.findall('[+-\/\*][\@\w\.]+', remaining_value):
             # TODO: Full validation on other fields
             other_field = _coerce_string_into_field(
                 part[1:], search_for_operators=False
@@ -90,7 +90,9 @@ def _coerce_string_into_field(value, search_for_operators=True):
     form into a value and aggregation """
     if isinstance(value, basestring):
         if value.startswith('@'):
-            return {'value': value[1:], 'ref': value[1:]}
+            result = _coerce_string_into_field(value[1:])
+            result['ref'] = result['value']
+            return result
 
         # Remove all whitespace
         value = re.sub(r'\s+', '', value, flags=re.UNICODE)

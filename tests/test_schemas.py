@@ -1,5 +1,5 @@
 """ Test sureberus schemas """
-
+import re
 from copy import deepcopy
 
 import pytest
@@ -133,6 +133,7 @@ def test_field_format():
 def test_field_ref():
     v = {'foo': {'kind': 'Metric', 'field': '@foo'}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    print(x)
     assert x == {
         'foo': {
             'field': {
@@ -145,32 +146,65 @@ def test_field_ref():
         }
     }
 
-    # v = {'foo': {'kind': 'Metric', 'field': '@foo + @moo'}}
-    # x = normalize_schema(shelf_schema, v, allow_unknown=False)
-    # print(x)
-    # assert x == {
-    #     'foo': {
-    #         'field': {
-    #             '_aggregation_fn': ANY,
-    #             'ref': 'foo',
-    #             'aggregation': 'sum',
-    #             'value': 'foo'
-    #         },
-    #         'kind': 'Metric'
-    #     }
-    # }
+    v = {'foo': {'kind': 'Metric', 'field': '@foo + @moo'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'field': {
+                '_aggregation_fn':
+                    ANY,
+                'operators': [{
+                    'operator': '+',
+                    'field': {
+                        'ref': 'moo',
+                        'value': 'moo'
+                    }
+                }],
+                'ref':
+                    'foo',
+                'aggregation':
+                    'sum',
+                'value':
+                    'foo'
+            },
+            'kind': 'Metric'
+        }
+    }
 
 
-#
-# def test_find_operators():
-#     examples = [
-#         ('a+b', ('a', [{'operator': '+', 'field': 'b'}]))
-#     ]
-#
-#     for v, expected in examples:
-#         result = find_operators(v)
-#         print result
-#         assert result == expected
+def test_find_operators():
+
+    def process_operator(op):
+        """ Make the operators easier to read """
+        prefix = ''
+        if 'ref' in op['field']:
+            prefix = '(ref)'
+        elif '_use_raw_value' in op['field']:
+            prefix = '(raw)'
+        return op['operator'] + prefix + op['field']['value']
+
+    examples = [
+        ('a +b ', 'a', ['+b']),
+        ('foo + @moo ', 'foo', ['+(ref)moo']),
+        ('a+   1.0', 'a', ['+(raw)1.0']),
+        ('a+1.0-2.  4', 'a', ['+(raw)1.0', '-(raw)2.4']),
+        ('a+1.0-2.4', 'a', ['+(raw)1.0', '-(raw)2.4']),
+        ('a+1.0-2.4/@b', 'a', ['+(raw)1.0', '-(raw)2.4', '/(ref)b']),
+        # Only if the field starts with '@' will it be evaled as a ref
+        ('a+1.0-2.4/2@b', 'a', ['+(raw)1.0', '-(raw)2.4', '/2@b']),
+        # If the number doesn't eval to a float, treat it as a reference
+        ('a+1.0.0', 'a', ['+1.0.0']),
+        ('a+.01', 'a', ['+(raw).01']),
+    ]
+
+    for v, expected_fld, expected_operators in examples:
+        v = re.sub(r'\s+', '', v, flags=re.UNICODE)
+
+        fld, operators = find_operators(v)
+        operators = map(process_operator, operators)
+        print fld, operators
+        assert fld == expected_fld
+        assert operators == expected_operators
 
 
 def test_field_operators():
