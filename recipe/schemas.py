@@ -89,6 +89,9 @@ def _coerce_string_into_field(value, search_for_operators=True):
     """ Convert a string into a field, potentially parsing a functional
     form into a value and aggregation """
     if isinstance(value, basestring):
+        if value.startswith('@'):
+            return {'value': value[1:], 'ref': value[1:]}
+
         # Remove all whitespace
         value = re.sub(r'\s+', '', value, flags=re.UNICODE)
         m = re.match(field_pattern, value)
@@ -172,6 +175,8 @@ def _field_schema(aggr=True, required=True):
                 S.String(),
             'aggregation':
                 ag,
+            'ref':
+                S.String(required=False),
             'condition':
                 'condition',
             'operators':
@@ -377,19 +382,15 @@ def _adjust_kinds(value):
 def _process_ingredient(ingr, shelf):
     # TODO: Support condition references (to filters, dimension/metric
     #  quickfilters, and to field conditions)
-    val = ingr.get('field', {}).get('value', '')
-    if val.startswith('@'):
-        ref = val[1:]
-        if ref in shelf and 'field' in shelf.get(ref):
-            # replace the ingredients field with the reference
-            ingr['field'] = shelf[ref]['field']
+    ref = ingr.get('field', {}).get('ref', '')
+    if ref and ref in shelf and 'field' in shelf.get(ref):
+        # replace the ingredients field with the reference
+        ingr['field'] = shelf[ref]['field']
 
-    val = ingr.get('divide_by', {}).get('value', '')
-    if val.startswith('@'):
-        ref = val[1:]
-        if ref in shelf and 'field' in shelf.get(ref):
-            # replace the ingredients field with the reference
-            ingr['divide_by'] = shelf[ref]['field']
+    ref = ingr.get('divide_by', {}).get('ref', '')
+    if ref and ref in shelf and 'field' in shelf.get(ref):
+        # replace the ingredients field with the reference
+        ingr['divide_by'] = shelf[ref]['field']
 
 
 def _replace_references(shelf):

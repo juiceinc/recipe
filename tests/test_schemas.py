@@ -7,7 +7,9 @@ from mock import ANY
 from sureberus import errors as E
 from sureberus import normalize_schema
 
-from recipe.schemas import aggregations, recipe_schema, shelf_schema
+from recipe.schemas import (
+    aggregations, find_operators, recipe_schema, shelf_schema
+)
 
 
 def test_field_parsing():
@@ -126,6 +128,49 @@ def test_field_format():
             'format': ',.0f'
         }
     }
+
+
+def test_field_ref():
+    v = {'foo': {'kind': 'Metric', 'field': '@foo'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'ref': 'foo',
+                'aggregation': 'sum',
+                'value': 'foo'
+            },
+            'kind': 'Metric'
+        }
+    }
+
+    # v = {'foo': {'kind': 'Metric', 'field': '@foo + @moo'}}
+    # x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    # print(x)
+    # assert x == {
+    #     'foo': {
+    #         'field': {
+    #             '_aggregation_fn': ANY,
+    #             'ref': 'foo',
+    #             'aggregation': 'sum',
+    #             'value': 'foo'
+    #         },
+    #         'kind': 'Metric'
+    #     }
+    # }
+
+
+#
+# def test_find_operators():
+#     examples = [
+#         ('a+b', ('a', [{'operator': '+', 'field': 'b'}]))
+#     ]
+#
+#     for v, expected in examples:
+#         result = find_operators(v)
+#         print result
+#         assert result == expected
 
 
 def test_field_operators():
