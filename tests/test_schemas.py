@@ -396,6 +396,32 @@ def test_and_condition():
     }
 
 
+def test_condition_ref():
+    shelf = {
+        'a': {
+            'kind': 'Metric',
+            'field': {
+                'value': 'a',
+                'condition': '@foo'
+            }
+        }
+    }
+    x = normalize_schema(shelf_schema, shelf, allow_unknown=False)
+    assert x == {
+        'a': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'condition': {
+                    'ref': 'foo'
+                },
+                'aggregation': 'sum',
+                'value': 'a'
+            },
+            'kind': 'Metric'
+        }
+    }
+
+
 def test_valid_conditions():
     conditions = [
         {

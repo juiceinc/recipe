@@ -254,6 +254,12 @@ def _condition_schema(operator, _op, scalar=True, aggr=False):
     return _condition_schema
 
 
+def _coerce_string_into_condition_ref(cond):
+    if isinstance(cond, basestring) and cond.startswith('@'):
+        return {'ref': cond[1:]}
+    return cond
+
+
 def _full_condition_schema(aggr=False):
     """ Conditions can be a field with an operator, like this yaml example
 
@@ -274,25 +280,45 @@ def _full_condition_schema(aggr=False):
     """
 
     # Handle conditions where there's an operator
-    operator_condition = S.DictWhenKeyExists({
-        'gt': _condition_schema('gt', '__gt__', aggr=aggr),
-        'gte': _condition_schema('gte', '__ge__', aggr=aggr),
-        'ge': _condition_schema('ge', '__ge__', aggr=aggr),
-        'lt': _condition_schema('lt', '__lt__', aggr=aggr),
-        'lte': _condition_schema('lte', '__le__', aggr=aggr),
-        'le': _condition_schema('le', '__le__', aggr=aggr),
-        'eq': _condition_schema('eq', '__eq__', aggr=aggr),
-        'ne': _condition_schema('ne', '__ne__', aggr=aggr),
-        'in': _condition_schema('in', 'in_', scalar=False, aggr=aggr),
-        'notin': _condition_schema('notin', 'notin', scalar=False, aggr=aggr),
-        'or': S.Dict(schema={
-            'or': S.List(schema='condition')
-        }),
-        'and': S.Dict(schema={
-            'and': S.List(schema='condition')
-        }),
-    },
-                                             required=False)
+    operator_condition = S.DictWhenKeyExists(
+        {
+            'gt':
+                _condition_schema('gt', '__gt__', aggr=aggr),
+            'gte':
+                _condition_schema('gte', '__ge__', aggr=aggr),
+            'ge':
+                _condition_schema('ge', '__ge__', aggr=aggr),
+            'lt':
+                _condition_schema('lt', '__lt__', aggr=aggr),
+            'lte':
+                _condition_schema('lte', '__le__', aggr=aggr),
+            'le':
+                _condition_schema('le', '__le__', aggr=aggr),
+            'eq':
+                _condition_schema('eq', '__eq__', aggr=aggr),
+            'ne':
+                _condition_schema('ne', '__ne__', aggr=aggr),
+            'in':
+                _condition_schema('in', 'in_', scalar=False, aggr=aggr),
+            'notin':
+                _condition_schema('notin', 'notin', scalar=False, aggr=aggr),
+            'or':
+                S.Dict(schema={
+                    'or': S.List(schema='condition')
+                }),
+            'and':
+                S.Dict(schema={
+                    'and': S.List(schema='condition')
+                }),
+            # A reference to another condition
+            'ref':
+                S.Dict(schema={
+                    'ref': S.String()
+                })
+        },
+        required=False,
+        coerce=_coerce_string_into_condition_ref
+    )
 
     return {
         'registry': {
