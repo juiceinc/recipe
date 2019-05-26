@@ -121,6 +121,11 @@ def _coerce_string_into_field(value, search_for_operators=True):
             if operators:
                 result['operators'] = operators
             return result
+    elif isinstance(value, dict):
+        # Removing these fields which are added in validation allows
+        # a schema to be validated more than once without harm
+        value.pop('_aggregation_fn', None)
+        return value
     else:
         return value
 
@@ -229,7 +234,6 @@ class ConditionPost(object):
             if not isinstance(_op_value, list):
                 _op_value = [_op_value]
         value['_op_value'] = _op_value
-        value.pop(self.operator)
         return value
 
 
@@ -264,6 +268,12 @@ def _condition_schema(operator, _op, scalar=True, aggr=False):
 def _coerce_string_into_condition_ref(cond):
     if isinstance(cond, basestring) and cond.startswith('@'):
         return {'ref': cond[1:]}
+    elif isinstance(cond, dict):
+        # Removing these fields which are added in validation allows
+        # a schema to be validated more than once without harm
+        cond.pop('_op', None)
+        cond.pop('_op_value', None)
+
     return cond
 
 
@@ -382,6 +392,7 @@ def _adjust_kinds(value):
 
 
 def _replace_refs_in_field(fld, shelf):
+    """ Replace refs in fields"""
     if 'ref' in fld:
         ref = fld['ref']
         if ref in shelf:

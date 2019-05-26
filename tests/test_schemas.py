@@ -454,6 +454,7 @@ def test_and_condition():
                             'aggregation': 'none',
                             'value': 'foo'
                         },
+                        'in': [22, 44, 55],
                         '_op_value': [22, 44, 55],
                         '_op': 'in_'
                     }, {
@@ -462,6 +463,7 @@ def test_and_condition():
                             'aggregation': 'none',
                             'value': 'foo'
                         },
+                        'notin': [41],
                         '_op': 'notin',
                         '_op_value': [41]
                     }]
@@ -634,6 +636,7 @@ def test_ingredient():
                         'aggregation': 'none',
                         'value': 'moo'
                     },
+                    'gt': 'cow',
                     '_op': '__gt__',
                     '_op_value': 'cow'
                 },
@@ -748,6 +751,7 @@ def test_valid_ingredients():
                         'aggregation': 'none',
                         'value': 'moo2'
                     },
+                    'in': 'wo',
                     '_op_value': ['wo'],
                     '_op': 'in_'
                 },
@@ -764,6 +768,13 @@ def test_valid_ingredients():
         v = {'a': deepcopy(ingr)}
         x = normalize_schema(shelf_schema, v, allow_unknown=False)
         assert expected_output == x['a']
+
+    # Test that a schema can be validated more than once without harm
+    for ingr, expected_output in examples:
+        v = {'a': deepcopy(ingr)}
+        x = normalize_schema(shelf_schema, v, allow_unknown=False)
+        y = normalize_schema(shelf_schema, x, allow_unknown=False)
+        assert expected_output == y['a']
 
 
 def test_invalid_ingredients():
@@ -982,6 +993,7 @@ def test_valid_ingredients_field_condition():
                 'aggregation': 'none',
                 'value': 'cow'
             },
+            'in': ['1', '2'],
             '_op_value': ['1', '2'],
             '_op': 'in_'
         }),
@@ -994,6 +1006,7 @@ def test_valid_ingredients_field_condition():
                 'aggregation': 'none',
                 'value': 'foo'
             },
+            'in': ['1', '2'],
             '_op_value': ['1', '2'],
             '_op': 'in_'
         }),
@@ -1007,6 +1020,7 @@ def test_valid_ingredients_field_condition():
                 'aggregation': 'none',
                 'value': 'foo'
             },
+            'in': '1',
             '_op_value': ['1'],
             '_op': 'in_'
         })
@@ -1101,6 +1115,7 @@ class TestValidateRecipe(object):
                     'aggregation': 'none',
                     'value': 'xyzzy'
                 },
+                'gt': 3,
                 '_op': '__gt__',
                 '_op_value': 3
             }]
