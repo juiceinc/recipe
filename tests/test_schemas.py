@@ -200,7 +200,7 @@ def test_find_operators():
         v = re.sub(r'\s+', '', v, flags=re.UNICODE)
 
         fld, operators = find_operators(v)
-        operators = map(process_operator, operators)
+        operators = list(map(process_operator, operators))
         assert fld == expected_fld
         assert operators == expected_operators
 
