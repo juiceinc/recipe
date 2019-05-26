@@ -43,6 +43,7 @@ class Ingredient(object):
         self.havings = kwargs.pop('havings', [])
         self.group_by = kwargs.pop('group_by', [])
         self.formatters = kwargs.pop('formatters', [])
+        self.quickfilters = kwargs.pop('quickfilters', [])
         self.column_suffixes = kwargs.pop('column_suffixes', None)
         self.cache_context = kwargs.pop('cache_context', '')
         self.anonymize = False
@@ -166,7 +167,8 @@ class Ingredient(object):
         :type operator: str
         """
         scalar_ops = [
-            'ne', 'lt', 'lte', 'gt', 'gte', 'eq', 'is', 'isnot', None
+            'ne', 'lt', 'lte', 'gt', 'gte', 'eq', 'is', 'isnot', 'quickfilter',
+            None
         ]
         non_scalar_ops = ['notin', 'between', 'in', None]
 
@@ -189,6 +191,14 @@ class Ingredient(object):
                 return Filter(filter_column.is_(value))
             elif operator == 'isnot':
                 return Filter(filter_column.isnot(value))
+            elif operator == 'quickfilter':
+                for qf in self.quickfilters:
+                    if qf.get('name') == value:
+                        return Filter(qf.get('condition'))
+                raise ValueError(
+                    'quickfilter {} was not found in '
+                    'ingredient {}'.format(value, self.id)
+                )
             return Filter(filter_column == value)
         elif not is_scalar and operator in non_scalar_ops:
             if operator == 'notin':
