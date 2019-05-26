@@ -8,7 +8,7 @@ import os
 import pytest
 from tests.test_base import Census, MyTable, oven
 
-from recipe import BadIngredient, Recipe, Shelf
+from recipe import AutomaticFilters, BadIngredient, Recipe, Shelf
 
 
 class TestRecipeIngredientsYaml(object):
@@ -134,6 +134,51 @@ ORDER BY census.state'''
             recipe, '''state_raw,pop2000,state,state_id
 Tennessee,2392122,The Volunteer State,Tennessee
 Vermont,271469,The Green Mountain State,Vermont
+'''
+        )
+
+    def test_complex_census_quickfilter_from_validated_yaml(self):
+        """Build a recipe that uses complex definitions dimensions and
+        metrics and quickfilters"""
+        shelf = self.validated_shelf('census_complex.yaml', Census)
+        recipe = Recipe(
+            shelf=shelf,
+            session=self.session,
+            extension_classes=(AutomaticFilters,)
+        ).dimensions('state').metrics('pop2008'
+                                     ).order_by('state').automatic_filters({
+                                         'state__quickfilter': 'younger'
+                                     })
+        assert recipe.to_sql() == '''SELECT census.state AS state_raw,
+       sum(census.pop2008) AS pop2008
+FROM census
+WHERE census.age < 40
+GROUP BY census.state
+ORDER BY census.state'''
+        self.assert_recipe_csv(
+            recipe, '''state_raw,pop2008,state,state_id
+Tennessee,3297299,The Volunteer State,Tennessee
+Vermont,300605,The Green Mountain State,Vermont
+'''
+        )
+        recipe = Recipe(
+            shelf=shelf,
+            session=self.session,
+            extension_classes=(AutomaticFilters,)
+        ).dimensions('state').metrics('pop2008'
+                                     ).order_by('state').automatic_filters({
+                                         'state__quickfilter': 'vermontier'
+                                     })
+        assert recipe.to_sql() == '''SELECT census.state AS state_raw,
+       sum(census.pop2008) AS pop2008
+FROM census
+WHERE census.state = 'Vermont'
+GROUP BY census.state
+ORDER BY census.state'''
+        print recipe.dataset.csv
+        self.assert_recipe_csv(
+            recipe, '''state_raw,pop2008,state,state_id
+Vermont,620602,The Green Mountain State,Vermont
 '''
         )
 
