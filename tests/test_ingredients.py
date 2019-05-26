@@ -210,7 +210,6 @@ class TestIngredientBuildFilter(object):
 
         with pytest.raises(ValueError):
             filt = d.build_filter('c', operator='quickfilter')
-            print str(filt.filters[0])
 
 
 class TestFilter(object):
