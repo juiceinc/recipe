@@ -399,7 +399,7 @@ def _replace_refs_in_field(fld, shelf):
             # FIXME: what to do if you can't find the ref
             try:
                 fld = shelf[ref]['field']
-            except Exception as e:
+            except Exception:
                 pass
     else:
         # Replace conditions and operators within the field
@@ -415,7 +415,7 @@ def _replace_refs_in_field(fld, shelf):
                         fld.pop('condition', None)
                     else:
                         fld['condition'] = new_cond
-                except Exception as e:
+                except Exception:
                     pass
 
         if 'operators' in fld:
