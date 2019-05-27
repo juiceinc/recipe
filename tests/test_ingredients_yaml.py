@@ -175,7 +175,6 @@ FROM census
 WHERE census.state = 'Vermont'
 GROUP BY census.state
 ORDER BY census.state'''
-        print recipe.dataset.csv
         self.assert_recipe_csv(
             recipe, '''state_raw,pop2008,state,state_id
 Vermont,620602,The Green Mountain State,Vermont
