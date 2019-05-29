@@ -397,10 +397,7 @@ def _replace_refs_in_field(fld, shelf):
         ref = fld['ref']
         if ref in shelf:
             # FIXME: what to do if you can't find the ref
-            try:
-                fld = shelf[ref]['field']
-            except Exception:
-                pass
+            fld = shelf[ref]['field']
     else:
         # Replace conditions and operators within the field
         if 'condition' in fld and isinstance(fld['condition'], dict):
@@ -409,14 +406,11 @@ def _replace_refs_in_field(fld, shelf):
                 cond_ref = cond['ref']
                 # FIXME: what to do if you can't find the ref
                 # What if the field doesn't have a condition
-                try:
-                    new_cond = shelf[cond_ref]['field'].get('condition')
-                    if new_cond is None:
-                        fld.pop('condition', None)
-                    else:
-                        fld['condition'] = new_cond
-                except Exception:
-                    pass
+                new_cond = shelf[cond_ref]['field'].get('condition')
+                if new_cond is None:
+                    fld.pop('condition', None)
+                else:
+                    fld['condition'] = new_cond
 
         if 'operators' in fld:
             # Walk the operators and replace field references

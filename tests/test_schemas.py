@@ -483,6 +483,9 @@ def test_condition_ref():
                 'value': 'a',
                 'condition': '@foo'
             }
+        },
+        'foo': {
+            'field': 'b'
         }
     }
     x = normalize_schema(shelf_schema, shelf, allow_unknown=False)
@@ -490,11 +493,16 @@ def test_condition_ref():
         'a': {
             'field': {
                 '_aggregation_fn': ANY,
-                'condition': {
-                    'ref': 'foo'
-                },
                 'aggregation': 'sum',
                 'value': 'a'
+            },
+            'kind': 'Metric'
+        },
+        'foo': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'b'
             },
             'kind': 'Metric'
         }
