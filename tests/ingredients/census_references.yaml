@@ -1,0 +1,25 @@
+state:
+    kind: Dimension
+    field: state
+    lookup:
+        Vermont: "The Green Mountain State"
+        Tennessee: "The Volunteer State"
+pop2000:
+    kind: Metric
+    field:
+        value: pop2000
+        condition:
+            field: age
+            gt: 40
+pop2008:
+    kind: Metric
+    field: pop2008
+pop2008oldsters:
+    kind: Metric
+    field:
+        value: pop2008
+        condition: '@pop2000'
+popdivide:
+    kind: Metric
+    field: '@pop2000'
+    divide_by: '@pop2008'

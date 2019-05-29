@@ -1,5 +1,5 @@
 """ Test sureberus schemas """
-
+import re
 from copy import deepcopy
 
 import pytest
@@ -7,7 +7,9 @@ from mock import ANY
 from sureberus import errors as E
 from sureberus import normalize_schema
 
-from recipe.schemas import aggregations, recipe_schema, shelf_schema
+from recipe.schemas import (
+    aggregations, find_operators, recipe_schema, shelf_schema
+)
 
 
 def test_field_parsing():
@@ -126,6 +128,81 @@ def test_field_format():
             'format': ',.0f'
         }
     }
+
+
+def test_field_ref():
+    v = {'foo': {'kind': 'Metric', 'field': '@foo'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'ref': 'foo',
+                'aggregation': 'sum',
+                'value': 'foo'
+            },
+            'kind': 'Metric'
+        }
+    }
+
+    v = {'foo': {'kind': 'Metric', 'field': '@foo + @moo'}}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'field': {
+                '_aggregation_fn':
+                    ANY,
+                'operators': [{
+                    'operator': '+',
+                    'field': {
+                        'ref': 'moo',
+                        'value': 'moo'
+                    }
+                }],
+                'ref':
+                    'foo',
+                'aggregation':
+                    'sum',
+                'value':
+                    'foo'
+            },
+            'kind': 'Metric'
+        }
+    }
+
+
+def test_find_operators():
+
+    def process_operator(op):
+        """ Make the operators easier to read """
+        prefix = ''
+        if 'ref' in op['field']:
+            prefix = '(ref)'
+        elif '_use_raw_value' in op['field']:
+            prefix = '(raw)'
+        return op['operator'] + prefix + op['field']['value']
+
+    examples = [
+        ('a +b ', 'a', ['+b']),
+        ('foo + @moo ', 'foo', ['+(ref)moo']),
+        ('a+   1.0', 'a', ['+(raw)1.0']),
+        ('a+1.0-2.  4', 'a', ['+(raw)1.0', '-(raw)2.4']),
+        ('a+1.0-2.4', 'a', ['+(raw)1.0', '-(raw)2.4']),
+        ('a+1.0-2.4/@b', 'a', ['+(raw)1.0', '-(raw)2.4', '/(ref)b']),
+        # Only if the field starts with '@' will it be evaled as a ref
+        ('a+1.0-2.4/2@b', 'a', ['+(raw)1.0', '-(raw)2.4', '/2@b']),
+        # If the number doesn't eval to a float, treat it as a reference
+        ('a+1.0.0', 'a', ['+1.0.0']),
+        ('a+.01', 'a', ['+(raw).01']),
+    ]
+
+    for v, expected_fld, expected_operators in examples:
+        v = re.sub(r'\s+', '', v, flags=re.UNICODE)
+
+        fld, operators = find_operators(v)
+        operators = list(map(process_operator, operators))
+        assert fld == expected_fld
+        assert operators == expected_operators
 
 
 def test_field_operators():
@@ -377,6 +454,7 @@ def test_and_condition():
                             'aggregation': 'none',
                             'value': 'foo'
                         },
+                        'in': [22, 44, 55],
                         '_op_value': [22, 44, 55],
                         '_op': 'in_'
                     }, {
@@ -385,11 +463,46 @@ def test_and_condition():
                             'aggregation': 'none',
                             'value': 'foo'
                         },
+                        'notin': [41],
                         '_op': 'notin',
                         '_op_value': [41]
                     }]
                 },
                 '_aggregation_fn': ANY
+            },
+            'kind': 'Metric'
+        }
+    }
+
+
+def test_condition_ref():
+    shelf = {
+        'a': {
+            'kind': 'Metric',
+            'field': {
+                'value': 'a',
+                'condition': '@foo'
+            }
+        },
+        'foo': {
+            'field': 'b'
+        }
+    }
+    x = normalize_schema(shelf_schema, shelf, allow_unknown=False)
+    assert x == {
+        'a': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'a'
+            },
+            'kind': 'Metric'
+        },
+        'foo': {
+            'field': {
+                '_aggregation_fn': ANY,
+                'aggregation': 'sum',
+                'value': 'b'
             },
             'kind': 'Metric'
         }
@@ -531,6 +644,7 @@ def test_ingredient():
                         'aggregation': 'none',
                         'value': 'moo'
                     },
+                    'gt': 'cow',
                     '_op': '__gt__',
                     '_op_value': 'cow'
                 },
@@ -645,6 +759,7 @@ def test_valid_ingredients():
                         'aggregation': 'none',
                         'value': 'moo2'
                     },
+                    'in': 'wo',
                     '_op_value': ['wo'],
                     '_op': 'in_'
                 },
@@ -661,6 +776,13 @@ def test_valid_ingredients():
         v = {'a': deepcopy(ingr)}
         x = normalize_schema(shelf_schema, v, allow_unknown=False)
         assert expected_output == x['a']
+
+    # Test that a schema can be validated more than once without harm
+    for ingr, expected_output in examples:
+        v = {'a': deepcopy(ingr)}
+        x = normalize_schema(shelf_schema, v, allow_unknown=False)
+        y = normalize_schema(shelf_schema, x, allow_unknown=False)
+        assert expected_output == y['a']
 
 
 def test_invalid_ingredients():
@@ -879,6 +1001,7 @@ def test_valid_ingredients_field_condition():
                 'aggregation': 'none',
                 'value': 'cow'
             },
+            'in': ['1', '2'],
             '_op_value': ['1', '2'],
             '_op': 'in_'
         }),
@@ -891,6 +1014,7 @@ def test_valid_ingredients_field_condition():
                 'aggregation': 'none',
                 'value': 'foo'
             },
+            'in': ['1', '2'],
             '_op_value': ['1', '2'],
             '_op': 'in_'
         }),
@@ -904,6 +1028,7 @@ def test_valid_ingredients_field_condition():
                 'aggregation': 'none',
                 'value': 'foo'
             },
+            'in': '1',
             '_op_value': ['1'],
             '_op': 'in_'
         })
@@ -989,7 +1114,6 @@ class TestValidateRecipe(object):
                 'gt': 3
             }]
         }
-        print(normalize_schema(recipe_schema, config))
         assert normalize_schema(recipe_schema, config) == {
             'metrics': ['foo'],
             'dimensions': ['bar'],
@@ -999,6 +1123,7 @@ class TestValidateRecipe(object):
                     'aggregation': 'none',
                     'value': 'xyzzy'
                 },
+                'gt': 3,
                 '_op': '__gt__',
                 '_op_value': 3
             }]

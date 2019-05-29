@@ -76,7 +76,7 @@ def find_operators(value):
 
     remaining_value = value[len(field):]
     if remaining_value:
-        for part in re.findall('[+-\/\*][\w\.]+', remaining_value):
+        for part in re.findall('[+-\/\*][\@\w\.]+', remaining_value):
             # TODO: Full validation on other fields
             other_field = _coerce_string_into_field(
                 part[1:], search_for_operators=False
@@ -89,6 +89,11 @@ def _coerce_string_into_field(value, search_for_operators=True):
     """ Convert a string into a field, potentially parsing a functional
     form into a value and aggregation """
     if isinstance(value, basestring):
+        if value.startswith('@'):
+            result = _coerce_string_into_field(value[1:])
+            result['ref'] = result['value']
+            return result
+
         # Remove all whitespace
         value = re.sub(r'\s+', '', value, flags=re.UNICODE)
         m = re.match(field_pattern, value)
@@ -116,6 +121,11 @@ def _coerce_string_into_field(value, search_for_operators=True):
             if operators:
                 result['operators'] = operators
             return result
+    elif isinstance(value, dict):
+        # Removing these fields which are added in validation allows
+        # a schema to be validated more than once without harm
+        value.pop('_aggregation_fn', None)
+        return value
     else:
         return value
 
@@ -172,6 +182,8 @@ def _field_schema(aggr=True, required=True):
                 S.String(),
             'aggregation':
                 ag,
+            'ref':
+                S.String(required=False),
             'condition':
                 'condition',
             'operators':
@@ -222,7 +234,6 @@ class ConditionPost(object):
             if not isinstance(_op_value, list):
                 _op_value = [_op_value]
         value['_op_value'] = _op_value
-        value.pop(self.operator)
         return value
 
 
@@ -254,6 +265,18 @@ def _condition_schema(operator, _op, scalar=True, aggr=False):
     return _condition_schema
 
 
+def _coerce_string_into_condition_ref(cond):
+    if isinstance(cond, basestring) and cond.startswith('@'):
+        return {'ref': cond[1:]}
+    elif isinstance(cond, dict):
+        # Removing these fields which are added in validation allows
+        # a schema to be validated more than once without harm
+        cond.pop('_op', None)
+        cond.pop('_op_value', None)
+
+    return cond
+
+
 def _full_condition_schema(aggr=False):
     """ Conditions can be a field with an operator, like this yaml example
 
@@ -274,25 +297,45 @@ def _full_condition_schema(aggr=False):
     """
 
     # Handle conditions where there's an operator
-    operator_condition = S.DictWhenKeyExists({
-        'gt': _condition_schema('gt', '__gt__', aggr=aggr),
-        'gte': _condition_schema('gte', '__ge__', aggr=aggr),
-        'ge': _condition_schema('ge', '__ge__', aggr=aggr),
-        'lt': _condition_schema('lt', '__lt__', aggr=aggr),
-        'lte': _condition_schema('lte', '__le__', aggr=aggr),
-        'le': _condition_schema('le', '__le__', aggr=aggr),
-        'eq': _condition_schema('eq', '__eq__', aggr=aggr),
-        'ne': _condition_schema('ne', '__ne__', aggr=aggr),
-        'in': _condition_schema('in', 'in_', scalar=False, aggr=aggr),
-        'notin': _condition_schema('notin', 'notin', scalar=False, aggr=aggr),
-        'or': S.Dict(schema={
-            'or': S.List(schema='condition')
-        }),
-        'and': S.Dict(schema={
-            'and': S.List(schema='condition')
-        }),
-    },
-                                             required=False)
+    operator_condition = S.DictWhenKeyExists(
+        {
+            'gt':
+                _condition_schema('gt', '__gt__', aggr=aggr),
+            'gte':
+                _condition_schema('gte', '__ge__', aggr=aggr),
+            'ge':
+                _condition_schema('ge', '__ge__', aggr=aggr),
+            'lt':
+                _condition_schema('lt', '__lt__', aggr=aggr),
+            'lte':
+                _condition_schema('lte', '__le__', aggr=aggr),
+            'le':
+                _condition_schema('le', '__le__', aggr=aggr),
+            'eq':
+                _condition_schema('eq', '__eq__', aggr=aggr),
+            'ne':
+                _condition_schema('ne', '__ne__', aggr=aggr),
+            'in':
+                _condition_schema('in', 'in_', scalar=False, aggr=aggr),
+            'notin':
+                _condition_schema('notin', 'notin', scalar=False, aggr=aggr),
+            'or':
+                S.Dict(schema={
+                    'or': S.List(schema='condition')
+                }),
+            'and':
+                S.Dict(schema={
+                    'and': S.List(schema='condition')
+                }),
+            # A reference to another condition
+            'ref':
+                S.Dict(schema={
+                    'ref': S.String()
+                })
+        },
+        required=False,
+        coerce=_coerce_string_into_condition_ref
+    )
 
     return {
         'registry': {
@@ -346,6 +389,54 @@ def _adjust_kinds(value):
             value['divide_by'] = wt
 
     return value
+
+
+def _replace_refs_in_field(fld, shelf):
+    """ Replace refs in fields"""
+    if 'ref' in fld:
+        ref = fld['ref']
+        if ref in shelf:
+            # FIXME: what to do if you can't find the ref
+            fld = shelf[ref]['field']
+    else:
+        # Replace conditions and operators within the field
+        if 'condition' in fld and isinstance(fld['condition'], dict):
+            cond = fld['condition']
+            if 'ref' in cond:
+                cond_ref = cond['ref']
+                # FIXME: what to do if you can't find the ref
+                # What if the field doesn't have a condition
+                new_cond = shelf[cond_ref]['field'].get('condition')
+                if new_cond is None:
+                    fld.pop('condition', None)
+                else:
+                    fld['condition'] = new_cond
+
+        if 'operators' in fld:
+            # Walk the operators and replace field references
+            new_operators = [{
+                'operator': op['operator'],
+                'field': _replace_refs_in_field(op['field'], shelf)
+            } for op in fld['operators']]
+            fld['operators'] = new_operators
+
+    return fld
+
+
+def _process_ingredient(ingr, shelf):
+    # TODO: Support condition references (to filters, dimension/metric
+    #  quickfilters, and to field conditions)
+    for k, fld in ingr.items():
+        if (k.endswith('field') or k == 'divide_by') and isinstance(fld, dict):
+            ingr[k] = _replace_refs_in_field(fld, shelf)
+
+
+def _replace_references(shelf):
+    """ Iterate over the shelf and replace and field.value: @ references
+    with the field in another ingredient """
+    for ingr in shelf.values():
+        _process_ingredient(ingr, shelf)
+    return shelf
 
 
 condition_schema = _full_condition_schema(aggr=False)
@@ -431,7 +522,10 @@ ingredient_schema = S.DictWhenKeyIs(
 )
 
 shelf_schema = S.Dict(
-    valueschema=ingredient_schema, keyschema=S.String(), allow_unknown=True
+    valueschema=ingredient_schema,
+    keyschema=S.String(),
+    allow_unknown=True,
+    coerce_post=_replace_references
 )
 
 # This schema is used with sureberus
