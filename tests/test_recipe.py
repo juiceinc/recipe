@@ -462,6 +462,38 @@ oldageorcoolname:
             'THEN foo.age END) AS oldageorcoolname FROM foo'
         )
 
+    def test_divide_by(self):
+        yaml = '''
+divider:
+    kind: Metric
+    field: age
+    divide_by: age
+'''
+        shelf = Shelf.from_validated_yaml(yaml, MyTable)
+        recipe = Recipe(shelf=shelf, session=self.session).metrics('divider')
+        assert (
+            ' '.join(recipe.to_sql().split()
+                    ) == 'SELECT CAST(sum(foo.age) AS FLOAT) / '
+            '(coalesce(CAST(sum(foo.age) AS FLOAT), 0.0) + 1e-09) '
+            'AS divider FROM foo'
+        )
+
+    def test_wtd_avg(self):
+        yaml = '''
+divider:
+    kind: Metric
+    field: age*age
+    divide_by: age
+'''
+        shelf = Shelf.from_validated_yaml(yaml, MyTable)
+        recipe = Recipe(shelf=shelf, session=self.session).metrics('divider')
+        assert (
+            ' '.join(recipe.to_sql().split()
+                    ) == 'SELECT CAST(sum(foo.age * foo.age) AS FLOAT) / '
+            '(coalesce(CAST(sum(foo.age) AS FLOAT), 0.0) + 1e-09) '
+            'AS divider FROM foo'
+        )
+
     def test_count(self):
         recipe = self.recipe().metrics('age').dimensions('first')
         assert recipe.total_count() == 1

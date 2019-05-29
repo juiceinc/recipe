@@ -144,7 +144,7 @@ def _to_lowercase(value):
         return value
 
 
-def _field_schema(aggr=True):
+def _field_schema(aggr=True, required=True):
     """Make a field schema that either aggregates or doesn't. """
     if aggr:
         ag = S.String(
@@ -176,6 +176,9 @@ def _field_schema(aggr=True):
                 'condition',
             'operators':
                 S.List(schema=operator, required=False),
+            # Performs a dividebyzero safe sql division
+            'divide_by':
+                S.Dict(required=False, schema='aggregated_field'),
             # Performs casting
             'as':
                 S.String(
@@ -198,7 +201,7 @@ def _field_schema(aggr=True):
         coerce=_coerce_string_into_field,
         coerce_post=_field_post,
         allow_unknown=False,
-        required=True,
+        required=required,
     )
 
 
@@ -329,6 +332,19 @@ def _adjust_kinds(value):
         if value.get('kind') == 'Dimension':
             value['kind'] == 'Dimension'
 
+        if value.get('kind') == 'DivideMetric':
+            value['kind'] == 'Metric'
+            value['field'] = value.pop('numerator_field')
+            value['divide_by'] = value.pop('denominator_field')
+
+        if value.get('kind') == 'WtdAvgMetric':
+            value['kind'] == 'Metric'
+            fld = value.pop('field')
+            wt = value.pop('weight')
+            # assumes both field and weight are strings
+            value['field'] = '{}*{}'.format(fld, wt)
+            value['divide_by'] = wt
+
     return value
 
 
@@ -344,6 +360,8 @@ ingredient_schema = S.DictWhenKeyIs(
                 schema={
                     'field':
                         'aggregated_field',
+                    'divide_by':
+                        'optional_aggregated_field',
                     'format':
                         S.String(
                             coerce=lambda v: format_lookup.get(v, v),
@@ -391,6 +409,7 @@ ingredient_schema = S.DictWhenKeyIs(
     coerce=_adjust_kinds,
     registry={
         'aggregated_field': _field_schema(aggr=True),
+        'optional_aggregated_field': _field_schema(aggr=True, required=False),
         'non_aggregated_field': _field_schema(aggr=False),
         'condition': _full_condition_schema(aggr=False),
         'having_condition': _full_condition_schema(aggr=True),
@@ -417,6 +436,7 @@ recipe_schema = S.Dict(
     },
     registry={
         'aggregated_field': _field_schema(aggr=True),
+        'optional_aggregated_field': _field_schema(aggr=True, required=False),
         'non_aggregated_field': _field_schema(aggr=False),
         'condition': _full_condition_schema(aggr=False),
         'having_condition': _full_condition_schema(aggr=True),
