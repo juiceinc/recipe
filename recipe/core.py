@@ -1,6 +1,7 @@
 import logging
 import time
 import warnings
+from functools import wraps
 from uuid import uuid4
 
 import tablib
@@ -22,6 +23,31 @@ ALLOW_QUERY_CACHING = True
 warnings.simplefilter('always', DeprecationWarning)
 
 logger = logging.getLogger(__name__)
+
+
+def recipe_arg(*args):
+    """Decorator for recipe builder arguments. Prevents these methods
+    from being called after the recipe has fetched data.
+
+    Promotes builder pattern by returning self.
+    """
+
+    def decorator(func):
+
+        @wraps(func)
+        def wrapper(self, *_args, **_kwargs):
+            if self._query is not None:
+                raise BadRecipe(
+                    'A Recipe can not be changed after it has '
+                    'fetched data'
+                )
+
+            func(self, *_args, **_kwargs)
+            return self
+
+        return wrapper
+
+    return decorator
 
 
 class Stats(object):
@@ -101,6 +127,8 @@ class Recipe(object):
         extension_classes=(),
         dynamic_extensions=None
     ):
+        self._query = None
+        self._all = None
 
         self._select_from = None
         self._id = str(uuid4())[:8]
@@ -128,13 +156,6 @@ class Recipe(object):
         self._offset = 0
 
         self._is_postgres_engine = None
-        # Store cached results in _query and _all
-        # setting dirty to true invalidates these caches
-        self.dirty = True
-        # Have the rows been fetched
-        self.all_dirty = True
-        self._query = None
-        self._all = []
 
         self.recipe_extensions = [
             ExtensionClass(self) for ExtensionClass in extension_classes
@@ -155,7 +176,16 @@ class Recipe(object):
             query = query.from_self().order_by(None)
         count_query = self._session.query(func.count('*').label('count')
                                          ).select_from(query.subquery())
-        return count_query.scalar()
+        cnt = count_query.scalar()
+
+        # Clear the query so it is regenerated
+        self.reset()
+        return cnt
+
+    def reset(self):
+        self._query = None
+        self._all = None
+        return self
 
     @classmethod
     def from_config(cls, shelf, obj, **kwargs):
@@ -230,6 +260,19 @@ class Recipe(object):
 
         return proxy_callable
 
+    @property
+    def metric_ids(self):
+        return self._cauldron.metric_ids
+
+    @property
+    def dimension_ids(self):
+        return self._cauldron.dimension_ids
+
+    @property
+    def filter_ids(self):
+        return self._cauldron.filter_ids
+
+    @recipe_arg()
     def shelf(self, shelf=None):
         """ Defines a shelf to use for this recipe """
         if shelf is None:
@@ -244,8 +287,8 @@ class Recipe(object):
         if self._select_from is None and \
             self._shelf.Meta.select_from is not None:
             self._select_from = self._shelf.Meta.select_from
-        return self
 
+    @recipe_arg()
     def metrics(self, *metrics):
         """ Add a list of Metric ingredients to the query. These can either be
         Metric objects or strings representing metrics on the shelf.
@@ -260,13 +303,8 @@ class Recipe(object):
         """
         for m in metrics:
             self._cauldron.use(self._shelf.find(m, Metric))
-        self.dirty = True
-        return self
 
-    @property
-    def metric_ids(self):
-        return self._cauldron.metric_ids
-
+    @recipe_arg()
     def dimensions(self, *dimensions):
         """ Add a list of Dimension ingredients to the query. These can either be
         Dimension objects or strings representing dimensions on the shelf.
@@ -282,13 +320,7 @@ class Recipe(object):
         for d in dimensions:
             self._cauldron.use(self._shelf.find(d, Dimension))
 
-        self.dirty = True
-        return self
-
-    @property
-    def dimension_ids(self):
-        return self._cauldron.dimension_ids
-
+    @recipe_arg()
     def filters(self, *filters):
         """
         Add a list of Filter ingredients to the query. These can either be
@@ -317,13 +349,7 @@ class Recipe(object):
                 )
             )
 
-        self.dirty = True
-        return self
-
-    @property
-    def filter_ids(self):
-        return self._cauldron.filter_ids
-
+    @recipe_arg()
     def order_by(self, *order_bys):
         """ Add a list of ingredients to order by to the query. These can
         either be Dimension or Metric objects or strings representing
@@ -345,19 +371,15 @@ class Recipe(object):
             order_by = self._shelf.find(ingr, (Dimension, Metric))
             self._order_bys.append(order_by)
 
-        self.dirty = True
-        return self
-
+    @recipe_arg()
     def select_from(self, selectable):
-        self.dirty = True
         self._select_from = selectable
-        return self
 
+    @recipe_arg()
     def session(self, session):
-        self.dirty = True
         self._session = session
-        return self
 
+    @recipe_arg()
     def limit(self, limit):
         """ Limit the number of rows returned from the database.
 
@@ -365,11 +387,9 @@ class Recipe(object):
                       return all rows.
         :type limit: int
         """
-        if self._limit != limit:
-            self.dirty = True
-            self._limit = limit
-        return self
+        self._limit = limit
 
+    @recipe_arg()
     def offset(self, offset):
         """ Offset a number of rows before returning rows from the database.
 
@@ -377,10 +397,7 @@ class Recipe(object):
                        return from the first available row
         :type offset: int
         """
-        if self._offset != offset:
-            self.dirty = True
-            self._offset = offset
-        return self
+        self._offset = offset
 
     # ------
     # Utility functions
@@ -424,10 +441,11 @@ class Recipe(object):
 
         :return: A SQLAlchemy query
         """
+        if self._query is not None:
+            return self._query
+
         if len(self._cauldron.ingredients()) == 0:
             raise BadRecipe('No ingredients have been added to this recipe')
-        if not self.dirty and self._query:
-            return self._query
 
         # Step 1: Gather up global filters and user filters and
         # apply them as if they had been added to recipe().filters(...)
@@ -486,36 +504,11 @@ class Recipe(object):
         if self._offset and self._offset > 0:
             recipe_parts['query'] = recipe_parts['query'].offset(self._offset)
 
-        # Step 5:  Clear the dirty flag,
         # Patch the query if there's a comparison query
         # cache results
 
         self._query = recipe_parts['query']
-        self.dirty = False
         return self._query
-
-    @property
-    def dirty(self):
-        """ The recipe is dirty if it is flagged dirty or any extensions are
-        flagged dirty """
-        if self._dirty:
-            return True
-        else:
-            for extension in self.recipe_extensions:
-                if extension.dirty:
-                    return True
-        return False
-
-    @dirty.setter
-    def dirty(self, value):
-        """ If dirty is true set the recipe to dirty flag. If false,
-        clear the recipe and all extension dirty flags """
-        if value:
-            self._dirty = True
-        else:
-            self._dirty = False
-            for extension in self.recipe_extensions:
-                extension.dirty = False
 
     def _table(self):
         """ A convenience method to determine the table the query is
@@ -550,28 +543,24 @@ class Recipe(object):
         """ Return a (potentially cached) list of result objects.
         """
         starttime = fetchtime = enchanttime = time.time()
-        fetched_from_cache = False
+        self.query()
 
-        if self.dirty or self.all_dirty:
-            query = self.query()
-            self._all = query.all()
+        fetched_from_cache = True
+        if self._all is None:
+            fetched_from_cache = False
+
             # If we're using a caching query and that query did not
             # save new values to cache, we got the cached results
             # This is not 100% accurate; it only reports if the caching query
             # attempts to save to cache not the internal state of the cache
             # and whether the cache save actually occurred.
-            if not getattr(query, 'saved_to_cache', True):
+            if not getattr(self._query, 'saved_to_cache', True):
                 fetched_from_cache = True
             fetchtime = time.time()
             self._all = self._cauldron.enchant(
-                self._all, cache_context=self.cache_context
+                self._query.all(), cache_context=self.cache_context
             )
             enchanttime = time.time()
-
-            self.all_dirty = False
-        else:
-            # In this case we are using the object self._all as cache
-            fetched_from_cache = True
 
         self.stats.set_stats(
             len(self._all), fetchtime - starttime, enchanttime - fetchtime,
@@ -589,6 +578,11 @@ class Recipe(object):
         else:
             return []
 
+    def first(self):
+        """ Return the first element on the result
+        """
+        return self.one()
+
     @property
     def dataset(self):
         rows = self.all()
@@ -597,8 +591,3 @@ class Recipe(object):
             return tablib.Dataset(*rows, headers=first_row._fields)
         else:
             return tablib.Dataset([], headers=[])
-
-    def first(self):
-        """ Return the first element on the result
-        """
-        return self.one()

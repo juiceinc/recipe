@@ -143,11 +143,10 @@ GROUP BY foo.first"""
         assert recipe.all()[0].first == 'hi'
         assert recipe.all()[0].age == 15
         assert recipe.stats.rows == 1
-        assert recipe.dirty is False
 
         sess = oven.Session()
+        recipe.reset()
         recipe.session(sess)
-        assert recipe.dirty is True
 
     def test_shelf(self):
         recipe = self.recipe().metrics('age').dimensions('first')
