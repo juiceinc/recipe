@@ -3,7 +3,6 @@ import re
 from copy import deepcopy
 
 import pytest
-from mock import ANY
 from sureberus import errors as E
 from sureberus import normalize_schema
 
@@ -18,7 +17,6 @@ def test_field_parsing():
     assert x == {
         'foo': {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'foo'
             },
@@ -31,7 +29,6 @@ def test_field_parsing():
     assert x == {
         'foo': {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'foo'
             },
@@ -44,7 +41,6 @@ def test_field_parsing():
     assert x == {
         'foo': {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'max',
                 'value': 'a'
             },
@@ -59,8 +55,7 @@ def test_field_as():
     assert x == {
         'foo': {
             'field': {
-                '_cast_to_datatype': ANY,
-                '_aggregation_fn': ANY,
+                '_cast_to_datatype': 'integer',
                 'aggregation': 'sum',
                 'value': 'foo'
             },
@@ -91,7 +86,6 @@ def test_field_default():
         assert x == {
             'foo': {
                 'field': {
-                    '_aggregation_fn': ANY,
                     '_coalesce_to_value': d,
                     'aggregation': 'sum',
                     'value': 'foo'
@@ -120,7 +114,6 @@ def test_field_format():
     assert x == {
         'foo': {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'foo'
             },
@@ -136,7 +129,6 @@ def test_field_ref():
     assert x == {
         'foo': {
             'field': {
-                '_aggregation_fn': ANY,
                 'ref': 'foo',
                 'aggregation': 'sum',
                 'value': 'foo'
@@ -150,8 +142,6 @@ def test_field_ref():
     assert x == {
         'foo': {
             'field': {
-                '_aggregation_fn':
-                    ANY,
                 'operators': [{
                     'operator': '+',
                     'field': {
@@ -212,7 +202,6 @@ def test_field_operators():
         'foo': {
             'field': {
                 'value': 'foo',
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'operators': [{
                     'operator': '+',
@@ -233,8 +222,6 @@ def test_field_operators():
             'field': {
                 'value':
                     'foo',
-                '_aggregation_fn':
-                    ANY,
                 'aggregation':
                     'sum',
                 'operators': [{
@@ -259,8 +246,6 @@ def test_field_operators():
     assert x == {
         'foo': {
             'field': {
-                '_aggregation_fn':
-                    ANY,
                 'operators': [{
                     'operator': '+',
                     'field': {
@@ -283,8 +268,6 @@ def test_field_operators():
     assert x == {
         'foo': {
             'field': {
-                '_aggregation_fn':
-                    ANY,
                 'operators': [{
                     'operator': '+',
                     'field': {
@@ -319,12 +302,10 @@ def test_field_divide_by():
     assert x == {
         'foo': {
             'divide_by': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'moo'
             },
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'foo'
             },
@@ -393,7 +374,6 @@ def test_dimension():
     assert x == {
         'a': {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'none',
                 'value': 'foo'
             },
@@ -407,7 +387,6 @@ def test_dimension():
     assert x == {
         'a': {
             'field': {
-                '_aggregation_fn': ANY,
                 'operators': [{
                     'operator': '+',
                     'field': {
@@ -450,7 +429,6 @@ def test_and_condition():
                 'condition': {
                     'and': [{
                         'field': {
-                            '_aggregation_fn': ANY,
                             'aggregation': 'none',
                             'value': 'foo'
                         },
@@ -459,7 +437,6 @@ def test_and_condition():
                         '_op': 'in_'
                     }, {
                         'field': {
-                            '_aggregation_fn': ANY,
                             'aggregation': 'none',
                             'value': 'foo'
                         },
@@ -468,7 +445,6 @@ def test_and_condition():
                         '_op_value': [41]
                     }]
                 },
-                '_aggregation_fn': ANY
             },
             'kind': 'Metric'
         }
@@ -492,7 +468,6 @@ def test_condition_ref():
     assert x == {
         'a': {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'a'
             },
@@ -500,7 +475,6 @@ def test_condition_ref():
         },
         'foo': {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'b'
             },
@@ -599,7 +573,6 @@ def test_ingredient():
     assert x == {
         'a': {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'foo'
             },
@@ -612,7 +585,6 @@ def test_ingredient():
     assert x == {
         'a': {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'max',
                 'value': 'foo'
             },
@@ -640,7 +612,6 @@ def test_ingredient():
                 'aggregation': 'sum',
                 'condition': {
                     'field': {
-                        '_aggregation_fn': ANY,
                         'aggregation': 'none',
                         'value': 'moo'
                     },
@@ -648,7 +619,6 @@ def test_ingredient():
                     '_op': '__gt__',
                     '_op_value': 'cow'
                 },
-                '_aggregation_fn': ANY
             },
             'kind': 'Metric'
         }
@@ -661,7 +631,6 @@ def test_shelf():
     assert x == {
         'foo': {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'foo'
             },
@@ -678,7 +647,6 @@ def test_valid_ingredients():
             'format': 'comma'
         }, {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'moo'
             },
@@ -692,7 +660,6 @@ def test_valid_ingredients():
             'format': 'comma'
         }, {
             'field': {
-                '_aggregation_fn': ANY,
                 'operators': [{
                     'operator': '+',
                     'field': {
@@ -712,8 +679,6 @@ def test_valid_ingredients():
             'format': 'comma'
         }, {
             'field': {
-                '_aggregation_fn':
-                    ANY,
                 'operators': [{
                     'operator': '+',
                     'field': {
@@ -752,10 +717,8 @@ def test_valid_ingredients():
             }
         }, {
             'field': {
-                '_aggregation_fn': ANY,
                 'condition': {
                     'field': {
-                        '_aggregation_fn': ANY,
                         'aggregation': 'none',
                         'value': 'moo2'
                     },
@@ -810,7 +773,6 @@ def test_valid_ingredients_format():
             'field': 'moo',
         }, {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'moo'
             },
@@ -822,7 +784,6 @@ def test_valid_ingredients_format():
             'field': 'moo'
         }, {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'moo'
             },
@@ -834,7 +795,6 @@ def test_valid_ingredients_format():
             'field': 'moo'
         }, {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'moo'
             },
@@ -846,7 +806,6 @@ def test_valid_ingredients_format():
             'field': 'grass'
         }, {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'sum',
                 'value': 'grass'
             },
@@ -908,7 +867,6 @@ def test_valid_ingredients_field():
         ({
             'value': 'foo'
         }, {
-            '_aggregation_fn': ANY,
             'aggregation': 'sum',
             'value': 'foo'
         }),
@@ -916,7 +874,6 @@ def test_valid_ingredients_field():
             'value': 'foo',
             'aggregation': 'sum'
         }, {
-            '_aggregation_fn': ANY,
             'aggregation': 'sum',
             'value': 'foo'
         }),
@@ -935,7 +892,6 @@ def test_valid_ingredients_field_aggregation():
         ({
             'value': 'moo'
         }, {
-            '_aggregation_fn': ANY,
             'aggregation': 'sum',
             'value': 'moo'
         }),
@@ -944,7 +900,6 @@ def test_valid_ingredients_field_aggregation():
             'value': 'qoo',
             'aggregation': None
         }, {
-            '_aggregation_fn': ANY,
             'aggregation': None,
             'value': 'qoo'
         }),
@@ -952,7 +907,6 @@ def test_valid_ingredients_field_aggregation():
             'value': 'foo',
             'aggregation': 'none'
         }, {
-            '_aggregation_fn': ANY,
             'aggregation': 'none',
             'value': 'foo'
         }),
@@ -961,7 +915,6 @@ def test_valid_ingredients_field_aggregation():
             'value': 'foo',
             'aggregation': 'sum'
         }, {
-            '_aggregation_fn': ANY,
             'aggregation': 'sum',
             'value': 'foo'
         }),
@@ -969,7 +922,6 @@ def test_valid_ingredients_field_aggregation():
             'value': 'foo',
             'aggregation': 'count'
         }, {
-            '_aggregation_fn': ANY,
             'aggregation': 'count',
             'value': 'foo'
         }),
@@ -983,7 +935,7 @@ def test_valid_ingredients_field_aggregation():
     # Test ALL the aggregations
     for k in aggregations.keys():
         v = {'a': {'field': {'value': 'moo', 'aggregation': k}}}
-        expected = {'_aggregation_fn': ANY, 'aggregation': k, 'value': 'moo'}
+        expected = {'aggregation': k, 'value': 'moo'}
         x = normalize_schema(shelf_schema, v, allow_unknown=False)
         assert x['a']['field'] == expected
 
@@ -997,7 +949,6 @@ def test_valid_ingredients_field_condition():
             'in': ['1', '2']
         }, {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'none',
                 'value': 'cow'
             },
@@ -1010,7 +961,6 @@ def test_valid_ingredients_field_condition():
             'in': ['1', '2']
         }, {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'none',
                 'value': 'foo'
             },
@@ -1024,7 +974,6 @@ def test_valid_ingredients_field_condition():
             'in': '1'
         }, {
             'field': {
-                '_aggregation_fn': ANY,
                 'aggregation': 'none',
                 'value': 'foo'
             },
@@ -1119,7 +1068,6 @@ class TestValidateRecipe(object):
             'dimensions': ['bar'],
             'filters': [{
                 'field': {
-                    '_aggregation_fn': ANY,
                     'aggregation': 'none',
                     'value': 'xyzzy'
                 },
