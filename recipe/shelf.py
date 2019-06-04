@@ -15,7 +15,10 @@ from recipe import ingredients
 from recipe.compat import basestring
 from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric
-from recipe.schemas import condition_schema, ingredient_schema, shelf_schema
+from recipe.schemas import (
+    aggregations, condition_schema, ingredient_schema, shelf_schema,
+    sqlalchemy_datatypes
+)
 
 # Ensure case and distinct don't get reaped. We need it in scope for
 # creating Metrics
@@ -158,10 +161,12 @@ def parse_validated_field(fld, selectable):
     if cond is not None:
         field = case([(cond, field)])
 
-    aggr_fn = fld.get('_aggregation_fn', lambda x: x)
+    # Lookup the aggregation function
+    aggr_fn = aggregations.get(fld.get('aggregation'))
     field = aggr_fn(field)
 
-    cast_to_datatype = fld.get('_cast_to_datatype')
+    # lookup the sqlalchemy_datatypes
+    cast_to_datatype = sqlalchemy_datatypes.get(fld.get('_cast_to_datatype'))
     if cast_to_datatype is not None:
         field = cast(field, cast_to_datatype)
 
