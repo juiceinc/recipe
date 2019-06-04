@@ -511,15 +511,9 @@ class TestStats(object):
 
     def test_stats(self):
         recipe = self.recipe().metrics('age').dimensions('last')
-
-        assert recipe.stats.ready is False
-        with pytest.raises(BadRecipe):
-            assert recipe.stats.rows == 5
-
         recipe.all()
 
         # Stats are ready after the recipe is run
-        assert recipe.stats.ready is True
         assert recipe.stats.rows == 2
         assert recipe.stats.dbtime < 1.0
         assert recipe.stats.enchanttime < 1.0

@@ -4,6 +4,7 @@ import warnings
 from functools import wraps
 from uuid import uuid4
 
+import attr
 import tablib
 from orderedset import OrderedSet
 from sqlalchemy import alias, func
@@ -50,43 +51,12 @@ def recipe_arg(*args):
     return decorator
 
 
+@attr.s()
 class Stats(object):
-
-    def __init__(self):
-        self.ready = False
-
-    def set_stats(self, rows, dbtime, enchanttime, from_cache):
-        self.ready = True
-        self._rows = rows
-        self._dbtime = dbtime
-        self._enchanttime = enchanttime
-        self._from_cache = from_cache
-
-    def _get_value(self, prop):
-        if self.ready:
-            return getattr(self, prop)
-        else:
-            raise BadRecipe("Can't access stats before the query has run")
-
-    @property
-    def rows(self):
-        """ The number of rows in this result. """
-        return self._get_value('_rows')
-
-    @property
-    def dbtime(self):
-        """ The amount of time the database took to process. """
-        return self._get_value('_dbtime')
-
-    @property
-    def enchanttime(self):
-        """ The amount of time the database took to process. """
-        return self._get_value('_enchanttime')
-
-    @property
-    def from_cache(self):
-        """ Was this result cached """
-        return self._get_value('_from_cache')
+    rows = attr.ib(default=0)
+    dbtime = attr.ib(default=0.0)
+    enchanttime = attr.ib(default=0.0)
+    from_cache = attr.ib(default=False)
 
 
 class Recipe(object):
@@ -127,11 +97,11 @@ class Recipe(object):
         extension_classes=(),
         dynamic_extensions=None
     ):
+        self._id = str(uuid4())[:8]
         self._query = None
         self._all = None
 
         self._select_from = None
-        self._id = str(uuid4())[:8]
         self.shelf(shelf)
 
         # Stores all ingredients used in the recipe
@@ -562,10 +532,10 @@ class Recipe(object):
             )
             enchanttime = time.time()
 
-        self.stats.set_stats(
-            len(self._all), fetchtime - starttime, enchanttime - fetchtime,
-            fetched_from_cache
-        )
+        self.stats.rows = len(self._all)
+        self.stats.dbtime = fetchtime - starttime
+        self.stats.enchanttime = enchanttime - fetchtime
+        self.stats.from_cache = fetched_from_cache
 
         return self._all
 
