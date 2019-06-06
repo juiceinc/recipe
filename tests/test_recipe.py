@@ -19,6 +19,8 @@ class TestRecipeIngredients(object):
         return Recipe(shelf=self.shelf, session=self.session, **kwargs)
 
     def test_dimension(self):
+        recipe = self.recipe().dimensions('first_bucket')
+        print('*' * 88), recipe.to_sql()
         recipe = self.recipe().metrics('age').dimensions('first')
         assert recipe.to_sql() == """SELECT foo.first AS first,
        sum(foo.age) AS age

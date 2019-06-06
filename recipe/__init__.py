@@ -15,7 +15,7 @@ from recipe.extensions import (
     SummarizeOver
 )
 from recipe.ingredients import (
-    Dimension, DivideMetric, Filter, Having, IdValueDimension, Ingredient,
+    Dimension, DivideMetric, Filter, Having, IdValueDimension, Ingredient, BucketDimension,
     LookupDimension, Metric, WtdAvgMetric
 )
 from recipe.oven import get_oven
@@ -46,6 +46,7 @@ __all__ = [
     'Dimension',
     'LookupDimension',
     'IdValueDimension',
+    'BucketDimension',
     'Metric',
     'DivideMetric',
     'WtdAvgMetric',

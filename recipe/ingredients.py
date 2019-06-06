@@ -1,7 +1,7 @@
 from functools import total_ordering
 from uuid import uuid4
 
-from sqlalchemy import Float, between, case, cast, func
+from sqlalchemy import Float, between, case, cast, func, and_
 
 from recipe.compat import basestring, str
 from recipe.exceptions import BadIngredient
@@ -368,6 +368,18 @@ class LookupDimension(Dimension):
             if self.default != LookupDimension.SHOW_ORIGINAL
             else self.lookup.get(value, value)
         )
+
+
+class BucketDimension(Dimension):
+
+    def __init__(self, expression, buckets):
+        cases = []
+        for bucket in buckets:
+            condition = bucket['condition']
+            lower, upper = condition['between']
+            value = bucket['value']
+            cases.append([and_(expression >= lower, expression <= upper), value])
+        super(BucketDimension, self).__init__(case(cases))
 
 
 class Metric(Ingredient):

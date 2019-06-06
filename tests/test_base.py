@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Float, Integer, String, distinct, func
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import Dimension, IdValueDimension, Metric, Shelf, get_oven
+from recipe import Dimension, IdValueDimension, BucketDimension, Metric, Shelf, get_oven
 
 oven = get_oven('sqlite://')
 Base = declarative_base(bind=oven.engine)
@@ -327,12 +327,22 @@ class StateFact(Base):
     __tablename__ = 'state_fact'
     __table_args__ = {'extend_existing': True}
 
+buckets = [
+    {
+        'value': 'first',
+        'condition': {
+            'between': [1, 5]
+        }
+    }
+]
+
 
 mytable_shelf = Shelf({
     'first': Dimension(MyTable.first),
     'last': Dimension(MyTable.last),
     'firstlast': IdValueDimension(MyTable.first, MyTable.last),
     'age': Metric(func.sum(MyTable.age)),
+    'first_bucket': BucketDimension(MyTable. first, buckets)
 })
 
 

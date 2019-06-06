@@ -5,7 +5,7 @@ from sqlalchemy import case, distinct, func
 from tests.test_base import MyTable, mytable_shelf
 
 from recipe import (
-    BadIngredient, Dimension, DivideMetric, Filter, Having, IdValueDimension,
+    BadIngredient, Dimension, DivideMetric, Filter, Having, IdValueDimension, BucketDimension,
     Ingredient, LookupDimension, Metric, WtdAvgMetric
 )
 from recipe.compat import str
@@ -342,6 +342,29 @@ class TestLookupDimension(object):
         assert len(d.group_by) == 1
         assert len(d.formatters) == 2
         assert d.formatters[-1] is fmt
+
+
+class TestBucketDimension(object):
+
+    def test_init(self):
+        # BucketDimension should have two params
+        with pytest.raises(TypeError):
+            d = BuckeetDimension(MyTable.first)
+        buckets = [
+            {
+                'value': 'first',
+                'condition': {
+                    'between': [1, 5]
+                }
+            },
+            {
+                'value': 'second',
+                'condition': {
+                    'between': [5, 9]
+                }
+            }
+        ]
+        d = BucketDimension(MyTable.first, buckets)
 
 
 class TestMetric(object):
