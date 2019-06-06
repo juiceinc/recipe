@@ -1,5 +1,3 @@
-from functools import wraps
-
 from sqlalchemy import and_, func, text
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -7,31 +5,9 @@ from recipe.compat import basestring
 from recipe.core import Recipe
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Metric
-from recipe.utils import FakerAnonymizer
+from recipe.utils import FakerAnonymizer, recipe_arg
 
 Base = declarative_base()
-
-
-def recipe_extension_arg(*args):
-    """Decorator for recipe builder arguments on extensions. Prevents these
-    methods from being called after the recipe has fetched data.
-
-    Promotes builder pattern by returning self.
-    """
-
-    def decorator(func):
-
-        @wraps(func)
-        def wrapper(self, *_args, **_kwargs):
-            if self.recipe._query is not None:
-                self.recipe.reset()
-
-            func(self, *_args, **_kwargs)
-            return self.recipe
-
-        return wrapper
-
-    return decorator
 
 
 class RecipeExtension(object):
@@ -191,7 +167,7 @@ class AutomaticFilters(RecipeExtension):
         self.exclude_keys = None
         self.include_keys = None
 
-    @recipe_extension_arg()
+    @recipe_arg()
     def from_config(self, obj):
         handle_directives(
             obj, {
@@ -227,7 +203,7 @@ class AutomaticFilters(RecipeExtension):
                 # make a Filter and add it to filters
                 self.recipe.filters(dimension.build_filter(values, operator))
 
-    @recipe_extension_arg()
+    @recipe_arg()
     def apply_automatic_filters(self, value):
         """Toggles whether automatic filters are applied to a recipe. The
         following will disable automatic filters for this recipe::
@@ -236,7 +212,7 @@ class AutomaticFilters(RecipeExtension):
         """
         self.apply = value
 
-    @recipe_extension_arg()
+    @recipe_arg()
     def automatic_filters(self, value):
         """Sets a dictionary of automatic filters to apply to this recipe.
         If your recipe uses a shelf that has dimensions 'state' and 'gender'
@@ -295,7 +271,7 @@ class AutomaticFilters(RecipeExtension):
         assert isinstance(value, dict)
         self._automatic_filters = value
 
-    @recipe_extension_arg()
+    @recipe_arg()
     def exclude_automatic_filter_keys(self, *keys):
         """A "blacklist" of automatic filter keys to exclude. The following will
         cause ``'state'`` to be ignored if it is present in the
@@ -306,7 +282,7 @@ class AutomaticFilters(RecipeExtension):
 
         self.exclude_keys = keys
 
-    @recipe_extension_arg()
+    @recipe_arg()
     def include_automatic_filter_keys(self, *keys):
         """A "whitelist" of automatic filter keys to use. The following will
         **only use** ``'state'`` for automatic filters regardless of what is
@@ -336,11 +312,11 @@ class SummarizeOver(RecipeExtension):
         super(SummarizeOver, self).__init__(*args, **kwargs)
         self._summarize_over = None
 
-    @recipe_extension_arg()
+    @recipe_arg()
     def from_config(self, obj):
         handle_directives(obj, {'summarize_over': self.summarize_over})
 
-    @recipe_extension_arg()
+    @recipe_arg()
     def summarize_over(self, dimension_key):
         self._summarize_over = dimension_key
 
@@ -436,11 +412,11 @@ class Anonymize(RecipeExtension):
         super(Anonymize, self).__init__(*args, **kwargs)
         self._anonymize = False
 
-    @recipe_extension_arg()
+    @recipe_arg()
     def from_config(self, obj):
         handle_directives(obj, {'anonymize': self.anonymize})
 
-    @recipe_extension_arg()
+    @recipe_arg()
     def anonymize(self, value):
         """ Should this recipe be anonymized"""
         assert isinstance(value, bool)
@@ -509,7 +485,7 @@ class BlendRecipe(RecipeExtension):
         self.blend_types = []
         self.blend_criteria = []
 
-    @recipe_extension_arg()
+    @recipe_arg()
     def blend(self, blend_recipe, join_base, join_blend):
         """Blend a recipe into the base recipe.
         This performs an inner join of the blend_recipe to the
@@ -521,7 +497,7 @@ class BlendRecipe(RecipeExtension):
         self.blend_types.append('inner')
         self.blend_criteria.append((join_base, join_blend))
 
-    @recipe_extension_arg()
+    @recipe_arg()
     def full_blend(self, blend_recipe, join_base, join_blend):
         """Blend a recipe into the base recipe preserving
         values from both recipes.
@@ -633,7 +609,7 @@ class CompareRecipe(RecipeExtension):
         self.compare_recipe = []
         self.suffix = []
 
-    @recipe_extension_arg()
+    @recipe_arg()
     def compare(self, compare_recipe, suffix='_compare'):
         """Adds a comparison recipe to a base recipe."""
         assert isinstance(compare_recipe, Recipe)

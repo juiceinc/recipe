@@ -1,7 +1,6 @@
 import logging
 import time
 import warnings
-from functools import wraps
 from uuid import uuid4
 
 import attr
@@ -17,35 +16,13 @@ from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Filter, Having, Metric
 from recipe.schemas import recipe_schema
 from recipe.shelf import Shelf, parse_unvalidated_condition
-from recipe.utils import prettyprintable_sql
+from recipe.utils import prettyprintable_sql, recipe_arg
 
 ALLOW_QUERY_CACHING = True
 
 warnings.simplefilter('always', DeprecationWarning)
 
 logger = logging.getLogger(__name__)
-
-
-def recipe_arg(*args):
-    """Decorator for recipe builder arguments. Prevents these methods
-    from being called after the recipe has fetched data.
-
-    Promotes builder pattern by returning self.
-    """
-
-    def decorator(func):
-
-        @wraps(func)
-        def wrapper(self, *_args, **_kwargs):
-            if self._query is not None:
-                self.reset()
-
-            func(self, *_args, **_kwargs)
-            return self
-
-        return wrapper
-
-    return decorator
 
 
 @attr.s()
