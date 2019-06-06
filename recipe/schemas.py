@@ -136,10 +136,8 @@ def _field_post(field):
     Convert aggregation -> _aggregation_fn,
     as -> _cast_to_datatype and
     default -> _coalesce_to_value"""
-    field['_aggregation_fn'] = aggregations.get(field['aggregation'])
-
     if 'as' in field:
-        field['_cast_to_datatype'] = sqlalchemy_datatypes.get(field.pop('as'))
+        field['_cast_to_datatype'] = field.pop('as')
 
     if 'default' in field:
         field['_coalesce_to_value'] = field.pop('default')
