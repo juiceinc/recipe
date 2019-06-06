@@ -313,6 +313,10 @@ def _full_condition_schema(aggr=False):
                 _condition_schema('eq', '__eq__', aggr=aggr),
             'ne':
                 _condition_schema('ne', '__ne__', aggr=aggr),
+            'like':
+                _condition_schema('like', 'like', aggr=aggr),
+            'ilike':
+                _condition_schema('ilike', 'ilike', aggr=aggr),
             'in':
                 _condition_schema('in', 'in_', scalar=False, aggr=aggr),
             'notin':
