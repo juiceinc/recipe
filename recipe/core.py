@@ -38,10 +38,7 @@ def recipe_arg(*args):
         @wraps(func)
         def wrapper(self, *_args, **_kwargs):
             if self._query is not None:
-                raise BadRecipe(
-                    'A Recipe can not be changed after it has '
-                    'fetched data'
-                )
+                self.reset()
 
             func(self, *_args, **_kwargs)
             return self

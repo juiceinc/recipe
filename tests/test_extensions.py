@@ -180,7 +180,6 @@ FROM foo
 WHERE foo.first IN ('foo')
 GROUP BY foo.first"""
 
-        recipe.reset()
         with pytest.raises(AssertionError):
             # Automatic filters must be a dict
             recipe.automatic_filters(2)
