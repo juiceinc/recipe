@@ -5,7 +5,7 @@ from recipe.compat import basestring
 from recipe.core import Recipe
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Metric
-from recipe.utils import FakerAnonymizer
+from recipe.utils import FakerAnonymizer, recipe_arg
 
 Base = declarative_base()
 
@@ -15,13 +15,9 @@ class RecipeExtension(object):
     Recipe extensions plug into the recipe builder pattern and can modify the
     generated query.
 
-    The extension should mark itself as ``dirty`` if it has changes which
-    change the current recipe results.
-
     recipe generates a query in the following way
 
-        (RECIPE) recipe checks its dirty state and all extension dirty
-        states to determine if the cached query needs to be regenerated
+        (RECIPE) recipe checks if a query has been generated
 
         (EXTENSIONS) all extension ``add_ingredients`` run to inject
         ingredients directly on the recipe
@@ -50,9 +46,7 @@ class RecipeExtension(object):
 
         (RECIPE) recipe applies limits and offsets on the query
 
-        (RECIPE) recipe caches completed query and sets all dirty flags to
-        False.
-
+        (RECIPE) recipe caches completed query
 
     When the recipe fetches data the results will be ``enchanted`` to add
     fields to the result. ``RecipeExtensions`` can modify result rows with
@@ -66,7 +60,6 @@ class RecipeExtension(object):
     """
 
     def __init__(self, recipe):
-        self.dirty = True
         self.recipe = recipe
 
     def add_ingredients(self):
@@ -174,6 +167,7 @@ class AutomaticFilters(RecipeExtension):
         self.exclude_keys = None
         self.include_keys = None
 
+    @recipe_arg()
     def from_config(self, obj):
         handle_directives(
             obj, {
@@ -187,7 +181,6 @@ class AutomaticFilters(RecipeExtension):
                     lambda v: self.exclude_automatic_filter_keys(*v),
             }
         )
-        return self.recipe
 
     def add_ingredients(self):
         if self.apply:
@@ -210,17 +203,16 @@ class AutomaticFilters(RecipeExtension):
                 # make a Filter and add it to filters
                 self.recipe.filters(dimension.build_filter(values, operator))
 
+    @recipe_arg()
     def apply_automatic_filters(self, value):
         """Toggles whether automatic filters are applied to a recipe. The
         following will disable automatic filters for this recipe::
 
             recipe.apply_automatic_filters(False)
         """
-        if self.apply != value:
-            self.dirty = True
-            self.apply = value
-        return self.recipe
+        self.apply = value
 
+    @recipe_arg()
     def automatic_filters(self, value):
         """Sets a dictionary of automatic filters to apply to this recipe.
         If your recipe uses a shelf that has dimensions 'state' and 'gender'
@@ -278,9 +270,8 @@ class AutomaticFilters(RecipeExtension):
         """
         assert isinstance(value, dict)
         self._automatic_filters = value
-        self.dirty = True
-        return self.recipe
 
+    @recipe_arg()
     def exclude_automatic_filter_keys(self, *keys):
         """A "blacklist" of automatic filter keys to exclude. The following will
         cause ``'state'`` to be ignored if it is present in the
@@ -290,8 +281,8 @@ class AutomaticFilters(RecipeExtension):
         """
 
         self.exclude_keys = keys
-        return self.recipe
 
+    @recipe_arg()
     def include_automatic_filter_keys(self, *keys):
         """A "whitelist" of automatic filter keys to use. The following will
         **only use** ``'state'`` for automatic filters regardless of what is
@@ -300,7 +291,6 @@ class AutomaticFilters(RecipeExtension):
             recipe.include_automatic_filter_keys('state')
         """
         self.include_keys = keys
-        return self.recipe
 
 
 class UserFilters(RecipeExtension):
@@ -322,14 +312,13 @@ class SummarizeOver(RecipeExtension):
         super(SummarizeOver, self).__init__(*args, **kwargs)
         self._summarize_over = None
 
+    @recipe_arg()
     def from_config(self, obj):
         handle_directives(obj, {'summarize_over': self.summarize_over})
-        return self.recipe
 
+    @recipe_arg()
     def summarize_over(self, dimension_key):
-        self.dirty = True
         self._summarize_over = dimension_key
-        return self.recipe
 
     def modify_postquery_parts(self, postquery_parts):
         """
@@ -423,20 +412,15 @@ class Anonymize(RecipeExtension):
         super(Anonymize, self).__init__(*args, **kwargs)
         self._anonymize = False
 
+    @recipe_arg()
     def from_config(self, obj):
         handle_directives(obj, {'anonymize': self.anonymize})
-        return self.recipe
 
+    @recipe_arg()
     def anonymize(self, value):
         """ Should this recipe be anonymized"""
         assert isinstance(value, bool)
-
-        if self._anonymize != value:
-            self.dirty = True
-            self._anonymize = value
-
-        # Builder pattern must return the recipe
-        return self.recipe
+        self._anonymize = value
 
     def add_ingredients(self):
         """ Put the anonymizers in the last position of formatters """
@@ -501,6 +485,7 @@ class BlendRecipe(RecipeExtension):
         self.blend_types = []
         self.blend_criteria = []
 
+    @recipe_arg()
     def blend(self, blend_recipe, join_base, join_blend):
         """Blend a recipe into the base recipe.
         This performs an inner join of the blend_recipe to the
@@ -511,9 +496,8 @@ class BlendRecipe(RecipeExtension):
         self.blend_recipes.append(blend_recipe)
         self.blend_types.append('inner')
         self.blend_criteria.append((join_base, join_blend))
-        self.dirty = True
-        return self.recipe
 
+    @recipe_arg()
     def full_blend(self, blend_recipe, join_base, join_blend):
         """Blend a recipe into the base recipe preserving
         values from both recipes.
@@ -525,8 +509,6 @@ class BlendRecipe(RecipeExtension):
         self.blend_recipes.append(blend_recipe)
         self.blend_types.append('outer')
         self.blend_criteria.append((join_base, join_blend))
-        self.dirty = True
-        return self.recipe
 
     def modify_postquery_parts(self, postquery_parts):
         """
@@ -627,14 +609,13 @@ class CompareRecipe(RecipeExtension):
         self.compare_recipe = []
         self.suffix = []
 
+    @recipe_arg()
     def compare(self, compare_recipe, suffix='_compare'):
         """Adds a comparison recipe to a base recipe."""
         assert isinstance(compare_recipe, Recipe)
         assert isinstance(suffix, basestring)
         self.compare_recipe.append(compare_recipe)
         self.suffix.append(suffix)
-        self.dirty = True
-        return self.recipe
 
     def modify_postquery_parts(self, postquery_parts):
         """Make the comparison recipe a subquery that is left joined to the
