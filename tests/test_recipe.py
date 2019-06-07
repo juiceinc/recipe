@@ -46,6 +46,66 @@ GROUP BY foo.first,
         assert recipe.all()[1].age == 5
         assert recipe.stats.rows == 2
 
+    def test_multirole_dimension(self):
+        """Create a dimension with extra roles and lookup"""
+        d = Dimension(
+            MyTable.last,
+            id_expression=MyTable.first,
+            age_expression=MyTable.age,
+            id='d'
+        )
+        recipe = self.recipe().metrics('age').dimensions(d)
+        assert recipe.to_sql() == """SELECT foo.first AS d_id,
+       foo.last AS d,
+       foo.age AS d_age,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first,
+         foo.last,
+         foo.age"""
+        assert recipe.all()[0].d == 'fred'
+        assert recipe.all()[0].d_id == 'hi'
+        assert recipe.all()[0].d_age == 10
+        assert recipe.all()[0].age == 10
+        assert recipe.all()[1].d == 'there'
+        assert recipe.all()[1].d_id == 'hi'
+        assert recipe.all()[1].d_age == 5
+        assert recipe.all()[1].age == 5
+        assert recipe.stats.rows == 2
+
+    def test_multirole_dimension_with_lookup(self):
+        """Create a dimension with extra roles and lookup"""
+        d = Dimension(
+            MyTable.last,
+            id_expression=MyTable.first,
+            age_expression=MyTable.age,
+            id='d',
+            lookup={},
+            lookup_default='DEFAULT'
+        )
+        recipe = self.recipe().metrics('age').dimensions(d)
+
+        assert recipe.to_sql() == """SELECT foo.first AS d_id,
+       foo.last AS d_raw,
+       foo.age AS d_age,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first,
+         foo.last,
+         foo.age"""
+
+        assert recipe.all()[0].d_raw == 'fred'
+        assert recipe.all()[0].d == 'DEFAULT'
+        assert recipe.all()[0].d_id == 'hi'
+        assert recipe.all()[0].d_age == 10
+        assert recipe.all()[0].age == 10
+        assert recipe.all()[1].d_raw == 'there'
+        assert recipe.all()[1].d == 'DEFAULT'
+        assert recipe.all()[1].d_id == 'hi'
+        assert recipe.all()[1].d_age == 5
+        assert recipe.all()[1].age == 5
+        assert recipe.stats.rows == 2
+
     def test_offset(self):
         recipe = self.recipe().metrics('age').dimensions('first').offset(1)
         assert recipe.to_sql() == """SELECT foo.first AS first,
@@ -202,9 +262,10 @@ GROUP BY foo.first,
         config = {
             'dimensions': ['last'],
             'metrics': ['age'],
-            'filters': [
-                {'field': 'age', 'gt': 13},
-            ]
+            'filters': [{
+                'field': 'age',
+                'gt': 13
+            }]
         }
 
         shelf = copy(mytable_shelf)
@@ -223,7 +284,8 @@ GROUP BY foo.last"""
     def test_from_config_extra_kwargs(self):
         config = {'dimensions': ['last'], 'metrics': ['age']}
         recipe = Recipe.from_config(
-            self.shelf, config,
+            self.shelf,
+            config,
             order_by=['last'],
         ).session(self.session)
         assert recipe.to_sql() == """\
@@ -307,6 +369,53 @@ oldage:
             'THEN foo.age END) AS oldage FROM foo'
         )
 
+    def test_cast(self):
+        yaml = '''
+intage:
+    kind: Metric
+    field:
+        value: age
+        as: integer
+'''
+        shelf = Shelf.from_validated_yaml(yaml, MyTable)
+        recipe = Recipe(shelf=shelf, session=self.session).metrics('intage')
+        assert (
+            ' '.join(
+                recipe.to_sql().split()
+            ) == 'SELECT CAST(sum(foo.age) AS INTEGER) AS intage FROM foo'
+        )
+
+    def test_coalesce(self):
+        yaml = '''
+defaultage:
+    kind: Metric
+    field:
+        value: age
+        default: 0.1
+'''
+        shelf = Shelf.from_validated_yaml(yaml, MyTable)
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).metrics('defaultage')
+        assert (
+            ' '.join(
+                recipe.to_sql().split()
+            ) == 'SELECT coalesce(sum(foo.age), 0.1) AS defaultage FROM foo'
+        )
+
+    def test_field_with_add_float(self):
+        yaml = '''
+addage:
+    kind: Metric
+    field: 'age + 1.24'
+'''
+        shelf = Shelf.from_validated_yaml(yaml, MyTable)
+        recipe = Recipe(shelf=shelf, session=self.session).metrics('addage')
+        assert (
+            ' '.join(recipe.to_sql().split()
+                    ) == 'SELECT sum(foo.age + 1.24) AS addage FROM foo'
+        )
+
     def test_compound_and_condition(self):
         yaml = '''
 oldageandcoolname:
@@ -354,6 +463,44 @@ oldageorcoolname:
             ) == "SELECT sum(CASE WHEN (foo.age > 60 OR foo.first = 'radix') "
             'THEN foo.age END) AS oldageorcoolname FROM foo'
         )
+
+    def test_divide_by(self):
+        yaml = '''
+divider:
+    kind: Metric
+    field: age
+    divide_by: age
+'''
+        shelf = Shelf.from_validated_yaml(yaml, MyTable)
+        recipe = Recipe(shelf=shelf, session=self.session).metrics('divider')
+        assert (
+            ' '.join(recipe.to_sql().split()
+                    ) == 'SELECT CAST(sum(foo.age) AS FLOAT) / '
+            '(coalesce(CAST(sum(foo.age) AS FLOAT), 0.0) + 1e-09) '
+            'AS divider FROM foo'
+        )
+
+    def test_wtd_avg(self):
+        yaml = '''
+divider:
+    kind: Metric
+    field: age*age
+    divide_by: age
+'''
+        shelf = Shelf.from_validated_yaml(yaml, MyTable)
+        recipe = Recipe(shelf=shelf, session=self.session).metrics('divider')
+        assert (
+            ' '.join(recipe.to_sql().split()
+                    ) == 'SELECT CAST(sum(foo.age * foo.age) AS FLOAT) / '
+            '(coalesce(CAST(sum(foo.age) AS FLOAT), 0.0) + 1e-09) '
+            'AS divider FROM foo'
+        )
+
+    def test_count(self):
+        recipe = self.recipe().metrics('age').dimensions('first')
+        assert recipe.total_count() == 1
+        recipe = self.recipe().metrics('age').dimensions('last')
+        assert recipe.total_count() == 2
 
 
 class TestStats(object):

@@ -183,7 +183,7 @@ class TestShelf(object):
     def test_repr(self):
         """ Find ingredients on the shelf """
         assert self.shelf.__repr__() == """(Dimension)first MyTable.first
-(IdValueDimension)firstlast MyTable.first MyTable.last
+(Dimension)firstlast MyTable.first MyTable.last
 (Dimension)last MyTable.last
 (Metric)age sum(foo.age)"""
 
@@ -473,13 +473,12 @@ oldage:
         with pytest.raises(Exception):
             self.make_shelf(content)
 
-    def test_null_condition(self):
+    def test_missing_condition(self):
         content = '''
 oldage:
     kind: Metric
     field:
         value: age
-        condition: null
 '''
         self.make_shelf(content)
         # null conditions are ignored.
@@ -495,7 +494,7 @@ oldage:
 '''
         self.make_shelf(content)
         # null conditions are ignored.
-        assert str(self.shelf['oldage']) == '(Metric)oldage sum(foo.age)'
+        assert str(self.shelf['oldage']) == '(Metric)oldage MyTable.age'
 
     def test_invalid_aggregations(self):
         for aggr in (24, 1.0, 'foo'):
@@ -523,7 +522,7 @@ oldage:
 
 class TestShelfFromValidatedYaml(TestShelfFromYaml):
     """Test that shelves are created correctly using
-    Cerberus validation.
+    sureberus validation.
     """
 
     def make_shelf(self, content, table=MyTable):
@@ -531,7 +530,7 @@ class TestShelfFromValidatedYaml(TestShelfFromYaml):
         self.shelf.Meta.anonymize = False
 
     def test_null_condition(self):
-        """Cerberus validated shelf doesn't accept null."""
+        """sureberus validated shelf doesn't accept null."""
         content = '''
 oldage:
     kind: Metric
@@ -541,6 +540,18 @@ oldage:
 '''
         with pytest.raises(Exception):
             self.make_shelf(content)
+
+    def test_null_aggregation(self):
+        content = '''
+oldage:
+    kind: Metric
+    field:
+        value: age
+        aggregation: null
+'''
+        self.make_shelf(content)
+        # Explicit null aggregations are respected, even in metrics
+        assert str(self.shelf['oldage']) == '(Metric)oldage MyTable.age'
 
 
 class TestShelfFromConfig(TestShelfFromValidatedYaml):
@@ -552,7 +563,7 @@ class TestShelfFromConfig(TestShelfFromValidatedYaml):
 
 class TestShelfFromIntrospection(object):
     """Test that shelves are created correctly using
-    Cerberus validation.
+    sureberus validation.
     """
 
     def test_shelf(self):

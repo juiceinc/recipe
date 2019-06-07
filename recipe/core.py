@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import tablib
 from orderedset import OrderedSet
-from sqlalchemy import alias
+from sqlalchemy import alias, func
 from sqlalchemy.sql.elements import BinaryExpression
 from sureberus import normalize_dict, normalize_schema
 
@@ -13,9 +13,9 @@ from recipe.compat import str
 from recipe.dynamic_extensions import run_hooks
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Filter, Having, Metric
-from recipe.shelf import Shelf, parse_condition
-from recipe.utils import prettyprintable_sql
 from recipe.schemas import recipe_schema
+from recipe.shelf import Shelf, parse_unvalidated_condition
+from recipe.utils import prettyprintable_sql
 
 ALLOW_QUERY_CACHING = True
 
@@ -141,6 +141,22 @@ class Recipe(object):
         ]
         self.dynamic_extensions = dynamic_extensions
 
+    def total_count(self):
+        """Return the number of rows that would be returned by this Recipe,
+        ignoring any `limit` that has been applied.
+        """
+        # If there is an ordering we take it off to make this
+        # count run faster, then set the recipe to dirty so the
+        # query is generated again
+        query = self.query()
+        if self._limit:
+            query = query.limit(None)
+        if self._order_bys:
+            query = query.from_self().order_by(None)
+        count_query = self._session.query(func.count('*').label('count')
+                                         ).select_from(query.subquery())
+        return count_query.scalar()
+
     @classmethod
     def from_config(cls, shelf, obj, **kwargs):
         """
@@ -153,6 +169,7 @@ class Recipe(object):
         Additionally, each RecipeExtension can extract and handle data from the
         configuration.
         """
+
         def subdict(d, keys):
             new = {}
             for k in keys:
@@ -163,9 +180,8 @@ class Recipe(object):
         core_kwargs = subdict(obj, recipe_schema['schema'].keys())
         core_kwargs = normalize_schema(recipe_schema, core_kwargs)
         core_kwargs['filters'] = [
-            parse_condition(filter, shelf.Meta.select_from)
-            if isinstance(filter, dict)
-            else filter
+            parse_unvalidated_condition(filter, shelf.Meta.select_from)
+            if isinstance(filter, dict) else filter
             for filter in obj.get('filters', [])
         ]
         core_kwargs.update(kwargs)

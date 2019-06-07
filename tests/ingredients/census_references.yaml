@@ -4,15 +4,6 @@ state:
     lookup:
         Vermont: "The Green Mountain State"
         Tennessee: "The Volunteer State"
-    quickfilters:
-        - name: younger
-          condition:
-              field: age
-              lt: 40
-        - name: vermontier
-          condition:
-              field: state
-              eq: Vermont
 pop2000:
     kind: Metric
     field:
@@ -23,6 +14,12 @@ pop2000:
 pop2008:
     kind: Metric
     field: pop2008
-allthemath:
+pop2008oldsters:
     kind: Metric
-    field: pop2000+pop2008   - pop2000 * pop2008 /pop2000
+    field:
+        value: pop2008
+        condition: '@pop2000'
+popdivide:
+    kind: Metric
+    field: '@pop2000'
+    divide_by: '@pop2008'

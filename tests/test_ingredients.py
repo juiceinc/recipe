@@ -9,7 +9,9 @@ from recipe import (
     Ingredient, LookupDimension, Metric, WtdAvgMetric
 )
 from recipe.compat import str
-from recipe.shelf import ingredient_from_dict, parse_field
+from recipe.shelf import \
+    ingredient_from_unvalidated_dict as ingredient_from_dict
+from recipe.shelf import parse_unvalidated_field as parse_field
 
 
 class TestIngredients(object):
@@ -185,6 +187,30 @@ class TestIngredientBuildFilter(object):
         with pytest.raises(ValueError):
             filt = d.build_filter(['moo'], operator='between')
 
+    def test_quickfilters(self):
+        d = Dimension(
+            MyTable.first,
+            quickfilters=[
+                {
+                    'name': 'a',
+                    'condition': MyTable.first == 'a'
+                },
+                {
+                    'name': 'b',
+                    'condition': MyTable.last == 'b'
+                },
+            ]
+        )
+
+        # Test building scalar filters
+        filt = d.build_filter('a', operator='quickfilter')
+        assert str(filt.filters[0]) == 'foo.first = :first_1'
+        filt = d.build_filter('b', operator='quickfilter')
+        assert str(filt.filters[0]) == 'foo.last = :last_1'
+
+        with pytest.raises(ValueError):
+            filt = d.build_filter('c', operator='quickfilter')
+
 
 class TestFilter(object):
 
@@ -272,6 +298,45 @@ class TestDimension(object):
         assert extras[0][0] == 'moo'
         assert extras[1][0] == 'moo_id'
 
+    def test_dimension_extra_roles(self):
+        """Creating a dimension with extra roles"""
+        d = Dimension(
+            MyTable.first,
+            id_expression=MyTable.last,
+            age_expression=MyTable.age,
+            id='moo'
+        )
+        extras = list(d.cauldron_extras)
+        assert len(extras) == 1
+        # id gets injected in the response
+        assert extras[0][0] == 'moo_id'
+        assert d.role_keys == ['id', 'value', 'age']
+        assert len(d.group_by) == 3
+        assert len(d.columns) == 3
+        assert d.make_column_suffixes() == ('_id', '', '_age')
+
+    def test_dimension_with_lookup(self):
+        """Creating a dimension with extra roles"""
+        # Dimension lookup should be a dict
+        with pytest.raises(BadIngredient):
+            d = Dimension(MyTable.first, lookup='mouse', id='moo')
+
+        d = Dimension(MyTable.first, lookup={'man': 'mouse'}, id='moo')
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 1
+        assert len(d.formatters) == 1
+
+        # Existing formatters are preserved
+        d = Dimension(
+            MyTable.first,
+            lookup={'man': 'mouse'},
+            id='moo',
+            formatters=[lambda x: x + 'moo']
+        )
+        assert len(d.columns) == 1
+        assert len(d.group_by) == 1
+        assert len(d.formatters) == 2
+
 
 class TestIdValueDimension(object):
 
@@ -303,15 +368,39 @@ class TestIdValueDimension(object):
         assert extras[0][0] == 'moo'
         assert extras[1][0] == 'moo_id'
 
+    def test_dimension_roles_cauldron_extras(self):
+        """Creating a dimension with roles performs the same as
+        IdValueDimension"""
+        d = Dimension(MyTable.first, id_expression=MyTable.last, id='moo')
+        extras = list(d.cauldron_extras)
+        assert len(extras) == 1
+        # id gets injected in the response
+        assert extras[0][0] == 'moo_id'
+
+        d = Dimension(
+            MyTable.first,
+            id_expression=MyTable.last,
+            id='moo',
+            formatters=[lambda x: x + 'moo']
+        )
+        extras = list(d.cauldron_extras)
+        assert len(extras) == 2
+        # formatted value and id gets injected in the response
+        assert extras[0][0] == 'moo'
+        assert extras[1][0] == 'moo_id'
+
 
 class TestLookupDimension(object):
+    """LookupDimension is deprecated and this feature is available in
+    Dimension. See TestDimension.test_dimension_with_lookup for equivalent
+    test on Dimension."""
 
     def test_init(self):
         # IdValueDimension should have two params
         with pytest.raises(TypeError):
             d = LookupDimension(MyTable.first)
 
-        # IdValueDimension lookup should be a dict
+        # Dimension lookup should be a dict
         with pytest.raises(BadIngredient):
             d = LookupDimension(MyTable.first, lookup='mouse')
 
@@ -467,7 +556,7 @@ class TestIngredientFromObj(object):
                 'kind': 'IdValueDimension',
                 'field': 'age',
                 'id_field': 'age'
-            }, '(IdValueDimension)1 MyTable.age'),
+            }, '(Dimension)1 MyTable.age MyTable.age'),
             ({
                 'kind': 'Metric',
                 'field': {
@@ -491,11 +580,6 @@ class TestIngredientFromObj(object):
             {
                 'kind': 'Metric'
             },
-            {
-                'kind': 'IdValueDimension',
-                'field': 'age'
-            },
-
             # Bad kind
             {
                 'kind': 'MooCow',
@@ -578,17 +662,13 @@ class TestParse(object):
             # Conditions
             ({
                 'value': 'age',
-                'condition': None
-            }, func.sum(MyTable.age)),
-            ({
-                'value': 'age',
                 'condition': {
                     'field': 'last',
-                    'in': ('Jones', 'Punjabi')
+                    'in': ['Jones', 'Punjabi']
                 }
             },
              func.sum(
-                 case([(MyTable.last.in_(('Jones', 'Punjabi')), MyTable.age)])
+                 case([(MyTable.last.in_(['Jones', 'Punjabi']), MyTable.age)])
              )),
         ]
         for input_field, expected_result in data:
@@ -639,15 +719,11 @@ class TestParse(object):
             # Conditions
             ({
                 'value': 'age',
-                'condition': None
-            }, MyTable.age),
-            ({
-                'value': 'age',
                 'condition': {
                     'field': 'last',
-                    'in': ('Jones', 'Punjabi')
+                    'in': ['Jones', 'Punjabi']
                 }
-            }, case([(MyTable.last.in_(('Jones', 'Punjabi')), MyTable.age)])),
+            }, case([(MyTable.last.in_(['Jones', 'Punjabi']), MyTable.age)])),
         ]
         for input_field, expected_result in data:
             result = parse_field(
@@ -655,14 +731,17 @@ class TestParse(object):
             )
             assert str(result) == str(expected_result)
 
-    def test_bad_field_string_definitions(self):
-        bad_data = [
-            'first+', 'first-', 'fir st-', 'fir st', 'first+last-',
-            'sum(fir-st)', 'fir st*', 'first/last-', 'foo'
-        ]
-        for input_field in bad_data:
-            with pytest.raises(BadIngredient):
-                parse_field(input_field, MyTable)
+    def test_weird_field_string_definitions(self):
+        data = [('first+', MyTable.first), ('first-', MyTable.first),
+                ('fir st-', MyTable.first), ('fir st', MyTable.first),
+                ('first+last-',
+                 'foo.first || foo.last'), ('fir st*', MyTable.first),
+                ('first/last-', 'foo.first / foo.last')]
+        for input_field, expected_result in data:
+            result = parse_field(
+                input_field, selectable=MyTable, aggregated=False
+            )
+            assert str(result) == str(expected_result)
 
     def test_bad_field_definitions(self):
         bad_data = [

@@ -340,11 +340,25 @@ buckets = [
 mytable_shelf = Shelf({
     'first': Dimension(MyTable.first),
     'last': Dimension(MyTable.last),
-    'firstlast': IdValueDimension(MyTable.first, MyTable.last),
+    'firstlast': Dimension(MyTable.last, id_expression=MyTable.first),
     'age': Metric(func.sum(MyTable.age)),
     'first_bucket': BucketDimension(MyTable. first, buckets)
 })
 
+mytable_extrarole_shelf = Shelf({
+    'first':
+        Dimension(MyTable.first),
+    'last':
+        Dimension(MyTable.last),
+    'firstlastage':
+        Dimension(
+            MyTable.last,
+            id_expression=MyTable.first,
+            age_expression=MyTable.age
+        ),
+    'age':
+        Metric(func.sum(MyTable.age)),
+})
 
 scores_shelf = Shelf({
     'username':

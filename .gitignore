@@ -65,3 +65,4 @@ docs/_build
 *.bak
 .vscode
 .envrc
+*.ipynb
