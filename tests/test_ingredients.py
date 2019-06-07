@@ -734,7 +734,7 @@ class TestParse(object):
                 (
                     'first/last-',
                     MyTable.first / (
-                        func.coalesce(cast(MyTable.last, Float), 0.0) \
+                        func.coalesce(cast(MyTable.last, Float), 0.0)
                         + SAFE_DIVISON_EPSILON
                     )
                 )]
