@@ -82,7 +82,11 @@ class Recipe(object):
         self._cauldron = Shelf()
         self._order_bys = []
 
+        # Cache options
         self.cache_context = None
+        self._cache_region = 'default'
+        self._use_cache = True
+
         self.stats = Stats()
 
         if metrics is not None:
@@ -215,6 +219,16 @@ class Recipe(object):
     @property
     def filter_ids(self):
         return self._cauldron.filter_ids
+
+    @recipe_arg()
+    def cache_region(self, value):
+        assert isinstance(value, basestring)
+        self._cache_region = value
+
+    @recipe_arg()
+    def use_cache(self, value):
+        assert isinstance(value, bool)
+        self._use_cache = value
 
     @recipe_arg()
     def shelf(self, shelf=None):
@@ -494,6 +508,13 @@ class Recipe(object):
             if not getattr(self._query, 'saved_to_cache', True):
                 fetched_from_cache = True
             fetchtime = time.time()
+            if not self._use_cache:
+                # Invalidate this query in the cache
+                # to ensure it gets fresh data from the database
+                if hasattr(self._query, 'invalidate'):
+                    fetched_from_cache = False
+                    self._query.invalidate()
+
             self._all = self._cauldron.enchant(
                 self._query.all(), cache_context=self.cache_context
             )
