@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from sqlalchemy import case, distinct, func
+from sqlalchemy import case, distinct, func, cast, Float
 from tests.test_base import MyTable, mytable_shelf
 
 from recipe import (
@@ -12,6 +12,7 @@ from recipe.compat import str
 from recipe.shelf import \
     ingredient_from_unvalidated_dict as ingredient_from_dict
 from recipe.shelf import parse_unvalidated_field as parse_field
+from recipe.shelf import SAFE_DIVISON_EPSILON
 
 
 class TestIngredients(object):
@@ -690,7 +691,14 @@ class TestParse(object):
                 func.sum(MyTable.first - MyTable.last - MyTable.first)
             ),
             ('first*last', func.sum(MyTable.first * MyTable.last)),
-            ('first/last', func.sum(MyTable.first / MyTable.last)),
+            (
+                'first/last',
+                func.sum(
+                    MyTable.first /
+                    (func.coalesce(cast(MyTable.last, Float), 0.0) \
+                        + SAFE_DIVISON_EPSILON)
+                )
+            ),
             (
                 'first*last-first',
                 func.sum(MyTable.first * MyTable.last - MyTable.first)
@@ -703,10 +711,20 @@ class TestParse(object):
                 func.sum(MyTable.first - MyTable.last - MyTable.first)
             ),
             ('first  *last', func.sum(MyTable.first * MyTable.last)),
-            ('first/  last', func.sum(MyTable.first / MyTable.last)),
+            (
+                'first/  last',
+                func.sum(
+                    MyTable.first /
+                    (func.coalesce(cast(MyTable.last, Float), 0.0) \
+                        + SAFE_DIVISON_EPSILON))
+            ),
             (
                 'first*  last /first',
-                func.sum(MyTable.first * MyTable.last / MyTable.first)
+                func.sum(
+                    MyTable.first * MyTable.last /
+                    (func.coalesce(cast(MyTable.first, Float), 0.0) \
+                        + SAFE_DIVISON_EPSILON)
+                )
             ),
         ]
         for input_field, expected_result in data:
@@ -741,7 +759,13 @@ class TestParse(object):
                 ('fir st-', MyTable.first), ('fir st', MyTable.first),
                 ('first+last-',
                  'foo.first || foo.last'), ('fir st*', MyTable.first),
-                ('first/last-', 'foo.first / foo.last')]
+                (
+                    'first/last-',
+                    MyTable.first / (
+                        func.coalesce(cast(MyTable.last, Float), 0.0) +
+                        SAFE_DIVISON_EPSILON
+                    )
+                )]
         for input_field, expected_result in data:
             result = parse_field(
                 input_field, selectable=MyTable, aggregated=False

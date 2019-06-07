@@ -27,6 +27,9 @@ _case = case
 
 _POP_DEFAULT = object()
 
+# constant used for ensuring safe division
+SAFE_DIVISON_EPSILON = 0.000000001
+
 
 def ingredient_class_for_name(class_name):
     """Get the class in the recipe.ingredients module with the given name."""
@@ -154,6 +157,9 @@ def parse_validated_field(fld, selectable):
     for operator in fld.get('operators', []):
         op = operator['operator']
         other_field = parse_validated_field(operator['field'], selectable)
+        if op == '/':
+            other_field = func.coalesce(cast(other_field, Float), 0.0) \
+                + SAFE_DIVISON_EPSILON
         field = operator_lookup[op](field)(other_field)
 
     # Apply a condition if it exists
@@ -194,9 +200,8 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
     if divide_by is not None:
         # Perform a divide by zero safe division
         divide_by = parse_validated_field(divide_by, selectable)
-        epsilon = 0.000000001
         field = cast(field, Float) / (
-            func.coalesce(cast(divide_by, Float), 0.0) + epsilon
+            func.coalesce(cast(divide_by, Float), 0.0) + SAFE_DIVISON_EPSILON
         )
 
     quickfilters = ingr_dict.pop('quickfilters', None)
