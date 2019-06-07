@@ -5,6 +5,7 @@ import inspect
 import re
 import string
 import unicodedata
+from functools import wraps
 
 import attr
 import sqlalchemy.orm
@@ -21,6 +22,39 @@ from recipe.compat import basestring, integer_types, str
 __all__ = [
     'prettyprintable_sql', 'clean_unicode', 'FakerAnonymizer', 'FakerFormatter'
 ]
+
+
+def recipe_arg(*args):
+    """Decorator for recipe builder arguments.
+
+    Promotes builder pattern by returning self.
+    """
+
+    def decorator(func):
+
+        @wraps(func)
+        def wrapper(self, *_args, **_kwargs):
+            from recipe import Recipe, RecipeExtension, BadRecipe
+
+            if isinstance(self, Recipe):
+                recipe = self
+            elif isinstance(self, RecipeExtension):
+                recipe = self.recipe
+            else:
+                raise BadRecipe(
+                    'recipe_arg can only be applied to'
+                    'methods of Recipe or RecipeExtension'
+                )
+
+            if recipe._query is not None:
+                recipe.reset()
+
+            func(self, *_args, **_kwargs)
+            return recipe
+
+        return wrapper
+
+    return decorator
 
 
 class TestProvider(BaseProvider):
