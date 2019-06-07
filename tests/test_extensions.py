@@ -129,7 +129,6 @@ class TestAutomaticFiltersExtension(object):
         recipe = recipe.apply_automatic_filters(False)
 
         assert recipe.recipe_extensions[0].apply is False
-        assert recipe.recipe_extensions[0].dirty is True
 
         recipe = self.recipe().metrics('age').dimensions('first')
         recipe = recipe.include_automatic_filter_keys('first')
@@ -190,7 +189,6 @@ GROUP BY foo.first"""
         recipe = recipe.automatic_filters({
             'first': ['foo']
         }).apply_automatic_filters(False)
-        assert recipe.recipe_extensions[0].dirty is True
         assert recipe.to_sql() == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
