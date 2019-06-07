@@ -666,10 +666,11 @@ class TestParse(object):
             (
                 'first/last',
                 func.sum(
-                    MyTable.first / 
+                    MyTable.first /
                     (func.coalesce(cast(MyTable.last, Float), 0.0) \
-                        + SAFE_DIVISON_EPSILON))
-                ),
+                        + SAFE_DIVISON_EPSILON)
+                )
+            ),
             (
                 'first*last-first',
                 func.sum(MyTable.first * MyTable.last - MyTable.first)
@@ -692,7 +693,7 @@ class TestParse(object):
             (
                 'first*  last /first',
                 func.sum(
-                    MyTable.first * MyTable.last / 
+                    MyTable.first * MyTable.last /
                     (func.coalesce(cast(MyTable.first, Float), 0.0) \
                         + SAFE_DIVISON_EPSILON)
                 )
@@ -732,8 +733,10 @@ class TestParse(object):
                  'foo.first || foo.last'), ('fir st*', MyTable.first),
                 (
                     'first/last-',
-                    MyTable.first / (func.coalesce(cast(MyTable.last, Float), 0.0) \
-                        + SAFE_DIVISON_EPSILON)
+                    MyTable.first / (
+                        func.coalesce(cast(MyTable.last, Float), 0.0) \
+                        + SAFE_DIVISON_EPSILON
+                    )
                 )]
         for input_field, expected_result in data:
             result = parse_field(
