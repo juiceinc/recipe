@@ -25,4 +25,4 @@ pop2008:
     field: pop2008
 allthemath:
     kind: Metric
-    field: pop2000+pop2008   - pop2000 * pop2008 /pop2000
+    field: avg(pop2000+pop2008   - pop2000 * pop2008 /pop2000)
