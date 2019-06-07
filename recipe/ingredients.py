@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from sqlalchemy import Float, and_, between, case, cast, func, or_
 
-from recipe.compat import basestring, str
+from recipe.compat import str
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict
 
@@ -156,6 +156,95 @@ class Ingredient(object):
         """
         return not (self._order() == other._order())
 
+    def _build_scalar_filter(self, value, operator=None):
+        """ Scalar filters take a single value. """
+        filter_column = self.columns[0]
+
+        if operator is None or operator == 'eq':
+            # Default operator is 'eq' so if no operator is provided, handle
+            # like an 'eq'
+            if value is None:
+                return Filter(filter_column.is_(value))
+            else:
+                return Filter(filter_column == value)
+        if operator == 'ne':
+            return Filter(filter_column != value)
+        elif operator == 'lt':
+            return Filter(filter_column < value)
+        elif operator == 'lte':
+            return Filter(filter_column <= value)
+        elif operator == 'gt':
+            return Filter(filter_column > value)
+        elif operator == 'gte':
+            return Filter(filter_column >= value)
+        elif operator == 'is':
+            return Filter(filter_column.is_(value))
+        elif operator == 'isnot':
+            return Filter(filter_column.isnot(value))
+        elif operator == 'like':
+            return Filter(filter_column.like(value))
+        elif operator == 'ilike':
+            return Filter(filter_column.ilike(value))
+        elif operator == 'quickfilter':
+            for qf in self.quickfilters:
+                if qf.get('name') == value:
+                    return Filter(qf.get('condition'))
+            raise ValueError(
+                'quickfilter {} was not found in '
+                'ingredient {}'.format(value, self.id)
+            )
+        else:
+            raise ValueError('Unknown operator {}'.format(operator))
+
+    def _build_vector_filter(self, value, operator=None):
+        """ Vector filters take a list or tuple of values """
+        filter_column = self.columns[0]
+
+        if operator is None or operator == 'in':
+            # Default operator is 'in' so if no operator is provided, handle
+            # like an 'in'
+            value = sorted(value)
+            if None in value:
+                # filter out the Nones
+                non_none_value = [v for v in value if v is not None]
+                if non_none_value:
+                    return Filter(
+                        or_(
+                            filter_column.is_(None),
+                            filter_column.in_(non_none_value)
+                        )
+                    )
+                else:
+                    return Filter(filter_column.is_(None))
+            else:
+                return Filter(filter_column.in_(value))
+        elif operator == 'notin':
+            value = sorted(value)
+            if None in value:
+                # filter out the Nones
+                non_none_value = [v for v in value if v is not None]
+                if non_none_value:
+                    return Filter(
+                        and_(
+                            filter_column.isnot(None),
+                            filter_column.notin_(non_none_value)
+                        )
+                    )
+                else:
+                    return Filter(filter_column.isnot(None))
+            else:
+                return Filter(filter_column.notin_(value))
+        elif operator == 'between':
+            if len(value) != 2:
+                ValueError(
+                    'When using between, you can only supply a '
+                    'lower and upper bounds.'
+                )
+            lower_bound, upper_bound = value
+            return Filter(between(filter_column, lower_bound, upper_bound))
+        else:
+            raise ValueError('Unknown operator {}'.format(operator))
+
     def build_filter(self, value, operator=None):
         """ Builds a filter based on a supplied value and optional operator. If
         no operator is supplied an ``in`` filter will be used for a list and a
@@ -166,98 +255,12 @@ class Ingredient(object):
         :param operator: An operator to override the default interaction
         :type operator: str
         """
-        scalar_ops = [
-            None, 'eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'is', 'isnot', 'like',
-            'ilike', 'quickfilter'
-        ]
-        non_scalar_ops = [None, 'notin', 'between', 'in']
+        value_is_scalar = not isinstance(value, (list, tuple))
 
-        is_scalar = isinstance(value, (int, basestring, type(None)))
-
-        filter_column = self.columns[0]
-
-        if is_scalar and operator in scalar_ops:
-            if operator is None or operator == 'eq':
-                if value is None:
-                    return Filter(filter_column.is_(value))
-                else:
-                    return Filter(filter_column == value)
-            if operator == 'ne':
-                return Filter(filter_column != value)
-            elif operator == 'lt':
-                return Filter(filter_column < value)
-            elif operator == 'lte':
-                return Filter(filter_column <= value)
-            elif operator == 'gt':
-                return Filter(filter_column > value)
-            elif operator == 'gte':
-                return Filter(filter_column >= value)
-            elif operator == 'is':
-                return Filter(filter_column.is_(value))
-            elif operator == 'isnot':
-                return Filter(filter_column.isnot(value))
-            elif operator == 'like':
-                return Filter(filter_column.like(value))
-            elif operator == 'ilike':
-                return Filter(filter_column.ilike(value))
-            elif operator == 'quickfilter':
-                for qf in self.quickfilters:
-                    if qf.get('name') == value:
-                        return Filter(qf.get('condition'))
-                raise ValueError(
-                    'quickfilter {} was not found in '
-                    'ingredient {}'.format(value, self.id)
-                )
-            else:
-                raise ValueError('Unknown operator {}'.format(operator))
-        elif not is_scalar and operator in non_scalar_ops:
-            if operator is None or operator == 'in':
-                value = sorted(value)
-                if None in value:
-                    # filter out the Nones
-                    non_none_value = [v for v in value if v is not None]
-                    if non_none_value:
-                        return Filter(
-                            or_(
-                                filter_column.is_(None),
-                                filter_column.in_(non_none_value)
-                            )
-                        )
-                    else:
-                        return Filter(filter_column.is_(None))
-                else:
-                    return Filter(filter_column.in_(value))
-            elif operator == 'notin':
-                value = sorted(value)
-                if None in value:
-                    # filter out the Nones
-                    non_none_value = [v for v in value if v is not None]
-                    if non_none_value:
-                        return Filter(
-                            and_(
-                                filter_column.isnot(None),
-                                filter_column.notin_(non_none_value)
-                            )
-                        )
-                    else:
-                        return Filter(filter_column.isnot(None))
-                else:
-                    return Filter(filter_column.notin_(value))
-            elif operator == 'between':
-                if len(value) != 2:
-                    ValueError(
-                        'When using between, you can only supply a '
-                        'lower and upper bounds.'
-                    )
-                lower_bound, upper_bound = value
-                return Filter(between(filter_column, lower_bound, upper_bound))
-            else:
-                raise ValueError('Unknown operator {}'.format(operator))
+        if value_is_scalar:
+            return self._build_scalar_filter(value, operator=operator)
         else:
-            raise ValueError(
-                '{} is not a valid operator for the '
-                'supplied value'.format(operator)
-            )
+            return self._build_vector_filter(value, operator=operator)
 
     @property
     def expression(self):
