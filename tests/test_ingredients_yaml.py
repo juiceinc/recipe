@@ -147,8 +147,7 @@ Vermont,271469,The Green Mountain State,Vermont
         assert recipe.to_sql() == '''SELECT census.state AS state_raw,
        sum((((census.pop2000 + census.pop2008) - census.pop2000) * census.pop2008) / (coalesce(CAST(census.pop2000 AS FLOAT), 0.0) + 1e-09)) AS allthemath
 FROM census
-GROUP BY census.state'''
-
+GROUP BY census.state'''  # noqa: E501
 
     def test_complex_census_quickfilter_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and

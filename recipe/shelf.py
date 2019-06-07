@@ -158,7 +158,8 @@ def parse_validated_field(fld, selectable):
         op = operator['operator']
         other_field = parse_validated_field(operator['field'], selectable)
         if op == '/':
-            other_field = func.coalesce(cast(other_field, Float), 0.0) + SAFE_DIVISON_EPSILON
+            other_field = func.coalesce(cast(other_field, Float), 0.0) \
+                + SAFE_DIVISON_EPSILON
         field = operator_lookup[op](field)(other_field)
 
     # Apply a condition if it exists

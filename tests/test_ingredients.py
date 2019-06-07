@@ -665,7 +665,11 @@ class TestParse(object):
             ('first*last', func.sum(MyTable.first * MyTable.last)),
             (
                 'first/last',
-                func.sum(MyTable.first / (func.coalesce(cast(MyTable.last, Float), 0.0) + SAFE_DIVISON_EPSILON))),
+                func.sum(
+                    MyTable.first / 
+                    (func.coalesce(cast(MyTable.last, Float), 0.0) \
+                        + SAFE_DIVISON_EPSILON))
+                ),
             (
                 'first*last-first',
                 func.sum(MyTable.first * MyTable.last - MyTable.first)
@@ -680,13 +684,17 @@ class TestParse(object):
             ('first  *last', func.sum(MyTable.first * MyTable.last)),
             (
                 'first/  last',
-                func.sum(MyTable.first / (func.coalesce(cast(MyTable.last, Float), 0.0) + SAFE_DIVISON_EPSILON))
+                func.sum(
+                    MyTable.first /
+                    (func.coalesce(cast(MyTable.last, Float), 0.0) \
+                        + SAFE_DIVISON_EPSILON))
             ),
             (
                 'first*  last /first',
                 func.sum(
                     MyTable.first * MyTable.last / 
-                    (func.coalesce(cast(MyTable.first, Float), 0.0) + SAFE_DIVISON_EPSILON)
+                    (func.coalesce(cast(MyTable.first, Float), 0.0) \
+                        + SAFE_DIVISON_EPSILON)
                 )
             ),
         ]
@@ -722,7 +730,11 @@ class TestParse(object):
                 ('fir st-', MyTable.first), ('fir st', MyTable.first),
                 ('first+last-',
                  'foo.first || foo.last'), ('fir st*', MyTable.first),
-                ('first/last-', MyTable.first / (func.coalesce(cast(MyTable.last, Float), 0.0) + SAFE_DIVISON_EPSILON))]
+                (
+                    'first/last-',
+                    MyTable.first / (func.coalesce(cast(MyTable.last, Float), 0.0) \
+                        + SAFE_DIVISON_EPSILON)
+                )]
         for input_field, expected_result in data:
             result = parse_field(
                 input_field, selectable=MyTable, aggregated=False
