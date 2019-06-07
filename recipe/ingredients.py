@@ -419,14 +419,14 @@ class LookupDimension(Dimension):
 
 class BucketDimension(Dimension):
 
-    def __init__(self, expression, buckets):
+    def __init__(self, expression, buckets, default=None):
         cases = []
         for bucket in buckets:
             condition = bucket['condition']
             lower, upper = condition['between']
             value = bucket['value']
             cases.append([and_(expression >= lower, expression <= upper), value])
-        super(BucketDimension, self).__init__(case(cases))
+        super(BucketDimension, self).__init__(case(cases, else_=default))
 
 
 class Metric(Ingredient):

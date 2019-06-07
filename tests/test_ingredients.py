@@ -438,7 +438,7 @@ class TestBucketDimension(object):
     def test_init(self):
         # BucketDimension should have two params
         with pytest.raises(TypeError):
-            d = BuckeetDimension(MyTable.first)
+            d = BucketDimension(MyTable.first)
         buckets = [
             {
                 'value': 'first',

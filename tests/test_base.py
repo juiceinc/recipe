@@ -329,9 +329,9 @@ class StateFact(Base):
 
 buckets = [
     {
-        'value': 'first',
+        'value': 'teenager',
         'condition': {
-            'between': [1, 5]
+            'between': [13, 17]
         }
     }
 ]
@@ -342,7 +342,7 @@ mytable_shelf = Shelf({
     'last': Dimension(MyTable.last),
     'firstlast': Dimension(MyTable.last, id_expression=MyTable.first),
     'age': Metric(func.sum(MyTable.age)),
-    'first_bucket': BucketDimension(MyTable. first, buckets)
+    'bucket': BucketDimension(MyTable.age, buckets, default='other')
 })
 
 mytable_extrarole_shelf = Shelf({

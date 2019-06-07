@@ -182,14 +182,15 @@ class TestShelf(object):
 
     def test_repr(self):
         """ Find ingredients on the shelf """
-        assert self.shelf.__repr__() == """(Dimension)first MyTable.first
+        assert self.shelf.__repr__() == """(BucketDimension)bucket CASE WHEN (foo.age >= :age_1 AND foo.age <= :age_2) THEN :param_1 ELSE :param_2 END
+(Dimension)first MyTable.first
 (Dimension)firstlast MyTable.first MyTable.last
 (Dimension)last MyTable.last
 (Metric)age sum(foo.age)"""
 
     def test_keys(self):
         assert sorted(self.shelf.keys()) == [
-            'age', 'first', 'firstlast', 'last'
+            'age', 'bucket', 'first', 'firstlast', 'last'
         ]
 
     def test_update(self):
@@ -197,29 +198,29 @@ class TestShelf(object):
         new_shelf = Shelf({
             'squee': Dimension(MyTable.first),
         })
-        assert len(self.shelf) == 4
-        self.shelf.update(new_shelf)
         assert len(self.shelf) == 5
+        self.shelf.update(new_shelf)
+        assert len(self.shelf) == 6
 
     def test_update_key_value(self):
         """ Shelves can be built with key_values and updated """
         new_shelf = Shelf(squee=Dimension(MyTable.first))
-        assert len(self.shelf) == 4
-        self.shelf.update(new_shelf)
         assert len(self.shelf) == 5
+        self.shelf.update(new_shelf)
+        assert len(self.shelf) == 6
         assert isinstance(self.shelf.get('squee'), Dimension)
 
     def test_update_key_value_direct(self):
         """ Shelves can be updated directly with key_value"""
-        assert len(self.shelf) == 4
-        self.shelf.update(squee=Dimension(MyTable.first))
         assert len(self.shelf) == 5
+        self.shelf.update(squee=Dimension(MyTable.first))
+        assert len(self.shelf) == 6
         assert isinstance(self.shelf.get('squee'), Dimension)
 
     def test_brew(self):
         recipe_parts = self.shelf.brew_query_parts()
-        assert len(recipe_parts['columns']) == 5
-        assert len(recipe_parts['group_bys']) == 4
+        assert len(recipe_parts['columns']) == 6
+        assert len(recipe_parts['group_bys']) == 5
         assert len(recipe_parts['filters']) == 0
         assert len(recipe_parts['havings']) == 0
 
@@ -270,14 +271,14 @@ class TestShelf(object):
             self.shelf.use(3)
 
     def test_clear(self):
-        assert len(self.shelf) == 4
+        assert len(self.shelf) == 5
         self.shelf.clear()
         assert len(self.shelf) == 0
 
     def test_dimension_ids(self):
-        assert len(self.shelf.dimension_ids) == 3
+        assert len(self.shelf.dimension_ids) == 4
         assert sorted(self.shelf.dimension_ids) == \
-            ['first', 'firstlast', 'last']
+            ['bucket', 'first', 'firstlast', 'last']
 
     def test_metric_ids(self):
         assert len(self.shelf.metric_ids) == 1

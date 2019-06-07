@@ -19,8 +19,6 @@ class TestRecipeIngredients(object):
         return Recipe(shelf=self.shelf, session=self.session, **kwargs)
 
     def test_dimension(self):
-        recipe = self.recipe().dimensions('first_bucket')
-        print('*' * 88), recipe.to_sql()
         recipe = self.recipe().metrics('age').dimensions('first')
         assert recipe.to_sql() == """SELECT foo.first AS first,
        sum(foo.age) AS age
@@ -45,6 +43,28 @@ GROUP BY foo.first,
         assert recipe.all()[1].firstlast_id == 'hi'
         assert recipe.all()[1].age == 5
         assert recipe.stats.rows == 2
+
+    def test_bucketdimension(self):
+        recipe = self.recipe().metrics('age').dimensions('bucket')
+        assert recipe.to_sql() == """SELECT CASE
+           WHEN (foo.age >= 13
+                 AND foo.age <= 17) THEN 'teenager'
+           ELSE 'other'
+       END AS bucket,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY CASE
+             WHEN (foo.age >= 13
+                   AND foo.age <= 17) THEN 'teenager'
+             ELSE 'other'
+         END"""
+        # assert recipe.all()[0].firstlast == 'fred'
+        # assert recipe.all()[0].firstlast_id == 'hi'
+        # assert recipe.all()[0].age == 10
+        # assert recipe.all()[1].firstlast == 'there'
+        # assert recipe.all()[1].firstlast_id == 'hi'
+        # assert recipe.all()[1].age == 5
+        # assert recipe.stats.rows == 2
 
     def test_multirole_dimension(self):
         """Create a dimension with extra roles and lookup"""
@@ -153,11 +173,11 @@ GROUP BY foo.first"""
 
     def test_shelf(self):
         recipe = self.recipe().metrics('age').dimensions('first')
-        assert len(recipe._shelf) == 4
+        assert len(recipe._shelf) == 5
         recipe.shelf(None)
         assert len(recipe._shelf) == 0
         recipe.shelf(self.shelf)
-        assert len(recipe._shelf) == 4
+        assert len(recipe._shelf) == 5  
         recipe.shelf({})
         assert len(recipe._shelf) == 0
         with pytest.raises(BadRecipe):
