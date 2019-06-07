@@ -690,30 +690,3 @@ class CompareRecipe(RecipeExtension):
                 .outerjoin(comparison_subq, join_clause)
 
         return postquery_parts
-
-
-class CacheOptions(RecipeExtension):
-    """ Save a custom region which can be used by recipe_caching.
-    Also support query invalidation.
-    """
-
-    recipe_schema = {
-        'cache_region': {
-            'type': 'string'
-        },
-        'use_cache': {
-            'type': 'boolean'
-        },
-    }
-
-    def __init__(self, *args, **kwargs):
-        super(RecipeExtension, self).__init__(*args, **kwargs)
-        self.recipe._cache_region = 'default'
-        self.recipe.use_cache = True
-
-    def cache_region(self, value):
-        self.recipe._cache_region = value
-
-    def use_cache(self):
-        self.recipe.use_cache = False
-        return self.recipe
