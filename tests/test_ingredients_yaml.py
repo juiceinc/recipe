@@ -145,7 +145,7 @@ Vermont,271469,The Green Mountain State,Vermont
             shelf=shelf, session=self.session
         ).dimensions('state').metrics('allthemath')
         assert recipe.to_sql() == '''SELECT census.state AS state_raw,
-       avg((((census.pop2000 + census.pop2008) - census.pop2000) * census.pop2008) / (coalesce(CAST(census.pop2000 AS FLOAT), 0.0) + 1e-09)) AS allthemath
+       sum((((census.pop2000 + census.pop2008) - census.pop2000) * census.pop2008) / (coalesce(CAST(census.pop2000 AS FLOAT), 0.0) + 1e-09)) AS allthemath
 FROM census
 GROUP BY census.state'''
 
