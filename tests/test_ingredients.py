@@ -439,6 +439,37 @@ class TestBucketDimension(object):
         # BucketDimension should have two params
         with pytest.raises(TypeError):
             d = BucketDimension(MyTable.first)
+
+        # bucket with invalid value in `bewtween`
+        buckets = [
+            {
+                'value': 'first',
+                'condition': {
+                    'between': [1, 'five']
+                }
+            }
+        ]
+        with pytest.raises(ValueError):
+            d = BucketDimension(MyTable.first, buckets)
+
+        # bucket with overlapping value ranges
+        buckets = [
+            {
+                'value': 'first',
+                'condition': {
+                    'between': [1, 5]
+                }
+            },
+            {
+                'value': 'second',
+                'condition': {
+                    'between': [4, 9]
+                }
+            }
+        ]
+        with pytest.raises(ValueError):
+            d = BucketDimension(MyTable.first, buckets)
+
         buckets = [
             {
                 'value': 'first',
@@ -453,6 +484,7 @@ class TestBucketDimension(object):
                 }
             }
         ]
+
         d = BucketDimension(MyTable.first, buckets)
 
 

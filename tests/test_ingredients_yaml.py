@@ -75,6 +75,24 @@ Vermont,609480,1230082,Vermont
 '''
         )
 
+    def test_census_bucket_dimension_from_validated_yaml(self):
+        shelf = self.validated_shelf('census.yaml', Census)
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).dimensions('age_bucket').metrics('pop2000')
+        assert recipe.to_sql() == """SELECT CASE
+           WHEN (census.age >= 13
+                 AND census.age <= 19) THEN 'teenager'
+           ELSE 'other'
+       END AS age_bucket,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY CASE
+             WHEN (census.age >= 13
+                   AND census.age <= 19) THEN 'teenager'
+             ELSE 'other'
+         END"""
+
     def test_nested_census_from_validated_yaml(self):
         """Build a recipe that depends on the results of another recipe """
         shelf = self.validated_shelf('census.yaml', Census)

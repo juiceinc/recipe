@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Float, Integer, String, distinct, func
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import Dimension, IdValueDimension, BucketDimension, Metric, Shelf, get_oven
+from recipe import Dimension, BucketDimension, Metric, Shelf, get_oven
 
 oven = get_oven('sqlite://')
 Base = declarative_base(bind=oven.engine)
@@ -331,7 +331,7 @@ buckets = [
     {
         'value': 'teenager',
         'condition': {
-            'between': [13, 17]
+            'between': [13, 19]
         }
     }
 ]

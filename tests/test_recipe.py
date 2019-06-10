@@ -48,14 +48,14 @@ GROUP BY foo.first,
         recipe = self.recipe().metrics('age').dimensions('bucket')
         assert recipe.to_sql() == """SELECT CASE
            WHEN (foo.age >= 13
-                 AND foo.age <= 17) THEN 'teenager'
+                 AND foo.age <= 19) THEN 'teenager'
            ELSE 'other'
        END AS bucket,
        sum(foo.age) AS age
 FROM foo
 GROUP BY CASE
              WHEN (foo.age >= 13
-                   AND foo.age <= 17) THEN 'teenager'
+                   AND foo.age <= 19) THEN 'teenager'
              ELSE 'other'
          END"""
         # assert recipe.all()[0].firstlast == 'fred'

@@ -496,6 +496,37 @@ ingredient_schema = S.DictWhenKeyIs(
                         quickfilter_schema
                 },
             ),
+        'BucketDimension':
+            S.Dict(
+                allow_unknown=True,
+                coerce=_move_extra_fields,
+                schema={
+                    'field':
+                        'non_aggregated_field',
+                    'buckets':
+                        S.List(
+                            schema=S.Dict(
+                                schema={
+                                    # FIXME should allow any value?
+                                    # need to make sure all values are of the same value if we do so
+                                    'value': S.String(), 
+                                    'condition': S.Dict(
+                                        schema={
+                                            'between': S.List(schema=S.Number())
+                                        }
+                                    )
+                                }
+                            )
+                        ),
+                    'format':
+                        S.String(
+                            coerce=lambda v: format_lookup.get(v, v),
+                            required=False
+                        ),
+                    'quickfilters':
+                        quickfilter_schema
+                },
+            ),
         'Filter':
             S.Dict(allow_unknown=True, schema={
                 'condition': 'condition'

@@ -16,3 +16,13 @@ pop2008:
 ttlpop:
     kind: Metric
     field: pop2000 + pop2008
+age_bucket:
+    kind: BucketDimension
+    field: age
+    default: other
+    buckets:
+     - value: teenager
+       condition:
+        between:
+          - 13
+          - 19
