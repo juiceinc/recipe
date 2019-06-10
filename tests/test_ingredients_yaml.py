@@ -168,7 +168,7 @@ Vermont,271469,The Green Mountain State,Vermont
                                          'state__quickfilter': 'younger'
                                      })
         assert recipe.to_sql() == '''SELECT census.state AS state_raw,
-       sum(census.pop2008) AS pop2008
+       sum(census.pop2008) AS pop2009
 FROM census
 WHERE census.age < 40
 GROUP BY census.state
