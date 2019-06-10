@@ -5,8 +5,8 @@ from sqlalchemy import case, distinct, func
 from tests.test_base import MyTable, mytable_shelf
 
 from recipe import (
-    BadIngredient, Dimension, DivideMetric, Filter, Having, IdValueDimension, BucketDimension,
-    Ingredient, LookupDimension, Metric, WtdAvgMetric
+    BadIngredient, Dimension, DivideMetric, Filter, Having, IdValueDimension,
+    BucketDimension, Ingredient, LookupDimension, Metric, WtdAvgMetric
 )
 from recipe.compat import str
 from recipe.shelf import \
@@ -485,7 +485,7 @@ class TestBucketDimension(object):
             }
         ]
 
-        d = BucketDimension(MyTable.first, buckets)
+        d = BucketDimension(MyTable.first, buckets)  # noqa: F841
 
 
 class TestMetric(object):

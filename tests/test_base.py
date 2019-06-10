@@ -327,6 +327,7 @@ class StateFact(Base):
     __tablename__ = 'state_fact'
     __table_args__ = {'extend_existing': True}
 
+
 buckets = [
     {
         'value': 'teenager',

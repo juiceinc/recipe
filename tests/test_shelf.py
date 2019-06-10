@@ -186,7 +186,7 @@ class TestShelf(object):
 (Dimension)first MyTable.first
 (Dimension)firstlast MyTable.first MyTable.last
 (Dimension)last MyTable.last
-(Metric)age sum(foo.age)"""
+(Metric)age sum(foo.age)"""  # noqa: E501
 
     def test_keys(self):
         assert sorted(self.shelf.keys()) == [

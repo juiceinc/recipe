@@ -508,11 +508,12 @@ ingredient_schema = S.DictWhenKeyIs(
                             schema=S.Dict(
                                 schema={
                                     # FIXME should allow any value?
-                                    # need to make sure all values are of the same value if we do so
-                                    'value': S.String(), 
+                                    'value': S.String(),
                                     'condition': S.Dict(
                                         schema={
-                                            'between': S.List(schema=S.Number())
+                                            'between': S.List(
+                                                schema=S.Number()
+                                            )
                                         }
                                     )
                                 }

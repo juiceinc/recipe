@@ -15,8 +15,8 @@ from recipe.extensions import (
     SummarizeOver
 )
 from recipe.ingredients import (
-    Dimension, DivideMetric, Filter, Having, IdValueDimension, Ingredient, BucketDimension,
-    LookupDimension, Metric, WtdAvgMetric
+    Dimension, DivideMetric, Filter, Having, IdValueDimension, Ingredient,
+    BucketDimension, LookupDimension, Metric, WtdAvgMetric
 )
 from recipe.oven import get_oven
 from recipe.shelf import AutomaticShelf, Shelf

@@ -177,7 +177,7 @@ GROUP BY foo.first"""
         recipe.shelf(None)
         assert len(recipe._shelf) == 0
         recipe.shelf(self.shelf)
-        assert len(recipe._shelf) == 5  
+        assert len(recipe._shelf) == 5
         recipe.shelf({})
         assert len(recipe._shelf) == 0
         with pytest.raises(BadRecipe):
