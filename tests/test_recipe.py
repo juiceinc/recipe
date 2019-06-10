@@ -58,13 +58,6 @@ GROUP BY CASE
                    AND foo.age <= 19) THEN 'teenager'
              ELSE 'other'
          END"""
-        # assert recipe.all()[0].firstlast == 'fred'
-        # assert recipe.all()[0].firstlast_id == 'hi'
-        # assert recipe.all()[0].age == 10
-        # assert recipe.all()[1].firstlast == 'there'
-        # assert recipe.all()[1].firstlast_id == 'hi'
-        # assert recipe.all()[1].age == 5
-        # assert recipe.stats.rows == 2
 
     def test_multirole_dimension(self):
         """Create a dimension with extra roles and lookup"""
