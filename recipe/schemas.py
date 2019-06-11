@@ -5,7 +5,6 @@ Registers recipe schemas
 import inspect
 import logging
 import re
-from copy import copy
 
 from sqlalchemy import distinct, func
 from sureberus import schema as S
