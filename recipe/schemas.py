@@ -5,6 +5,7 @@ Registers recipe schemas
 import inspect
 import logging
 import re
+from copy import copy
 
 from sqlalchemy import distinct, func
 from sureberus import schema as S
@@ -370,16 +371,16 @@ def _adjust_kinds(value):
         if value.get('kind') == 'IdValueDimension':
             value['kind'] = 'Dimension'
 
-        if value.get('kind') == 'Dimension':
-            value['kind'] == 'Dimension'
+        if value.get('kind') == 'LookupDimension':
+            value['kind'] = 'Dimension'
 
         if value.get('kind') == 'DivideMetric':
-            value['kind'] == 'Metric'
+            value['kind'] = 'Metric'
             value['field'] = value.pop('numerator_field')
             value['divide_by'] = value.pop('denominator_field')
 
         if value.get('kind') == 'WtdAvgMetric':
-            value['kind'] == 'Metric'
+            value['kind'] = 'Metric'
             fld = value.pop('field')
             wt = value.pop('weight')
             # assumes both field and weight are strings
