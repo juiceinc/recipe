@@ -251,3 +251,95 @@ Vermont,311842,The Green Mountain State,Vermont
         """ Test a bad yaml file """
         with pytest.raises(BadIngredient):
             self.unvalidated_shelf('census_bad_in.yaml', Census)
+
+    def test_deprecated_ingredients_dividemetric(self):
+        """ Test deprecated ingredient kinds in a yaml file """
+        shelf = self.validated_shelf('census_deprecated.yaml', Census)
+
+        # We can DivideMetric
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).dimensions('state').metrics('popchg').order_by('state')
+        assert recipe.to_sql() == '''SELECT census.state AS state,
+       CAST(sum(census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS popchg
+FROM census
+GROUP BY census.state
+ORDER BY census.state'''  # noqa: E501
+        self.assert_recipe_csv(
+            recipe, '''state,popchg,state_id
+Tennessee,0.9166167263773563,Tennessee
+Vermont,0.9820786913351858,Vermont
+'''
+        )
+
+    def test_deprecated_ingredients_lookupdimension(self):
+        """ Test deprecated ingredient kinds in a yaml file """
+        shelf = self.validated_shelf('census_deprecated.yaml', Census)
+
+        # We can LookupDimension
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).dimensions('state_characteristic'
+                    ).metrics('pop2000').order_by('state_characteristic')
+        assert recipe.to_sql() == '''SELECT census.state AS state_characteristic_raw,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state
+ORDER BY census.state'''  # noqa: E501
+        self.assert_recipe_csv(
+            recipe,
+            '''state_characteristic_raw,pop2000,state_characteristic,state_characteristic_id
+Tennessee,5685230,Volunteery,Tennessee
+Vermont,609480,Taciturny,Vermont
+'''
+        )
+
+    def test_deprecated_ingredients_idvaluedimension(self):
+        """ Test deprecated ingredient kinds in a yaml file """
+        shelf = self.validated_shelf('census_deprecated.yaml', Census)
+
+        # We can IdValueDimension
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).dimensions('state_idval').metrics('pop2000').order_by('state_idval'
+                                                               ).limit(5)
+        assert recipe.to_sql() == '''SELECT census.pop2000 AS state_idval_id,
+       census.state AS state_idval,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.pop2000,
+         census.state
+ORDER BY census.state,
+         census.pop2000 LIMIT 5
+OFFSET 0'''  # noqa: E501
+        self.assert_recipe_csv(
+            recipe, '''state_idval_id,state_idval,pop2000,state_idval_id
+5033,Tennessee,5033,5033
+5562,Tennessee,5562,5562
+6452,Tennessee,6452,6452
+7322,Tennessee,7322,7322
+8598,Tennessee,8598,8598
+'''
+        )
+
+    def test_deprecated_ingredients_wtdavgmetric(self):
+        """ Test deprecated ingredient kinds in a yaml file """
+        shelf = self.validated_shelf('census_deprecated.yaml', Census)
+
+        # We can IdValueDimension
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).dimensions('state').metrics('avgage').order_by('state_idval')
+        assert recipe.to_sql() == '''SELECT census.state AS state,
+       CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS avgage
+FROM census
+GROUP BY census.state
+ORDER BY census.state,
+         census.pop2000'''  # noqa: E501
+
+        self.assert_recipe_csv(
+            recipe, '''state,avgage,state_id
+Tennessee,36.24667550829078,Tennessee
+Vermont,37.0597968760254,Vermont
+'''
+        )

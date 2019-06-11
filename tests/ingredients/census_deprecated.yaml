@@ -1,0 +1,26 @@
+# Test deprecated ingredient kinds
+# These all get turned into regular dimensions and metrics
+popchg:
+    kind: DivideMetric
+    numerator_field: pop2000
+    denominator_field: pop2008
+avgage:
+    kind: WtdAvgMetric
+    field: age
+    weight: pop2000
+state:
+    kind: Dimension
+    field: state
+state_idval:
+    kind: IdValueDimension
+    field: state
+    id_field: pop2000
+pop2000:
+    kind: Metric
+    field: pop2000
+state_characteristic:
+    kind: LookupDimension
+    field: state
+    lookup:
+        Tennessee: Volunteery
+        Vermont: Taciturny
