@@ -521,12 +521,12 @@ ingredient_schema = S.DictWhenKeyIs(
     default_choice='Metric',
     coerce=_adjust_kinds,
     registry={
-        'aggregated_field': _field_schema(aggr=True),
+        'aggregated_field': _field_schema(aggr=True, required=True),
         'optional_aggregated_field': _field_schema(aggr=True, required=False),
-        'non_aggregated_field': _field_schema(aggr=False),
+        'non_aggregated_field': _field_schema(aggr=False, required=True),
         'condition': _full_condition_schema(aggr=False, label_required=False),
         'condition_label_required': _full_condition_schema(aggr=False, label_required=True),
-        'having_condition': _full_condition_schema(aggr=True),
+        'having_condition': _full_condition_schema(aggr=True, label_required=False)
     }
 )
 
@@ -552,10 +552,11 @@ recipe_schema = S.Dict(
             S.List(schema=S.String(), required=False),
     },
     registry={
-        'aggregated_field': _field_schema(aggr=True),
+        'aggregated_field': _field_schema(aggr=True, required=True),
         'optional_aggregated_field': _field_schema(aggr=True, required=False),
-        'non_aggregated_field': _field_schema(aggr=False),
-        'condition': _full_condition_schema(aggr=False),
-        'having_condition': _full_condition_schema(aggr=True),
+        'non_aggregated_field': _field_schema(aggr=False, required=True),
+        'condition': _full_condition_schema(aggr=False, label_required=False),
+        'condition_label_required': _full_condition_schema(aggr=False, label_required=True),
+        'having_condition': _full_condition_schema(aggr=True, label_required=False)
     }
 )
