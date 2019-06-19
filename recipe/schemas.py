@@ -501,6 +501,11 @@ ingredient_schema = S.DictWhenKeyIs(
                                 }
                             )
                         ),
+                    'buckets': S.List(required=False, schema='labeled_condition'),
+                    'buckets_default_label': {
+                        'anyof': SCALAR_TYPES,
+                        'required': False
+                    },
                     'format':
                         S.String(
                             coerce=lambda v: format_lookup.get(v, v),
@@ -525,7 +530,7 @@ ingredient_schema = S.DictWhenKeyIs(
         'optional_aggregated_field': _field_schema(aggr=True, required=False),
         'non_aggregated_field': _field_schema(aggr=False, required=True),
         'condition': _full_condition_schema(aggr=False, label_required=False),
-        'condition_label_required': _full_condition_schema(aggr=False, label_required=True),
+        'labeled_condition': _full_condition_schema(aggr=False, label_required=True),
         'having_condition': _full_condition_schema(aggr=True, label_required=False)
     }
 )
@@ -556,7 +561,7 @@ recipe_schema = S.Dict(
         'optional_aggregated_field': _field_schema(aggr=True, required=False),
         'non_aggregated_field': _field_schema(aggr=False, required=True),
         'condition': _full_condition_schema(aggr=False, label_required=False),
-        'condition_label_required': _full_condition_schema(aggr=False, label_required=True),
+        'labeled_condition': _full_condition_schema(aggr=False, label_required=True),
         'having_condition': _full_condition_schema(aggr=True, label_required=False)
     }
 )
