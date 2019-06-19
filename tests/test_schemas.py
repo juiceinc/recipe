@@ -161,6 +161,67 @@ def test_field_ref():
     }
 
 
+def test_field_buckets_ref():
+    v = {
+        'foo': {
+            'kind': 'Dimension',
+            'field': {
+                'value': 'foo',
+                'condition': {
+                    'field': 'foo',
+                    'label': 'foo < 200',
+                    'lt': 200
+                }
+            }
+        },
+        'moo': {
+            'kind': 'Dimension',
+            'field': 'moo',
+            'buckets': [
+                { 'ref': 'foo'}
+            ]
+        }
+
+    }
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'field': {
+                'aggregation': 'none',
+                'condition': {
+                    '_op': '__lt__',
+                    '_op_value': 200,
+                    'field': {
+                        'aggregation': 'none',
+                        'value': 'foo'
+                    },
+                    'label': 'foo < 200',
+                    'lt': 200
+                },
+                'value': 'foo'
+            },
+            'kind': 'Dimension'
+        },
+        'moo': {
+            'field': {
+                'aggregation': 'none',
+                'buckets': [{
+                    '_op': '__lt__',
+                    '_op_value': 200,
+                    'field': {
+                        'aggregation': 'none',
+                        'value': 'foo'
+                    },
+                    'label': 'foo < 200',
+                    'lt': 200
+                }],
+                'value': 'moo'
+            },
+            'kind': 'Dimension'
+        }
+    }
+
+
 def test_find_operators():
 
     def process_operator(op):
@@ -402,7 +463,7 @@ def test_dimension():
     }
 
 
-def test_dimension_bucket():
+def test_dimension_buckets():
     v = {'a': {'kind': 'Dimension', 'field': 'foo', 'icon': 'squee', 'buckets': [
      {   'gt': 20,
         'label': 'over20'}

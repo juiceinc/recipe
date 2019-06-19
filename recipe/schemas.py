@@ -439,11 +439,12 @@ def _replace_refs_in_field(fld, shelf):
                     # FIXME: what to do if you can't find the ref
                     # What if the field doesn't have a condition
                     new_cond = shelf[cond_ref]['field'].get('condition')
-                    for k in cond.keys():
-                        cond.pop(k)
-                    cond.update(new_cond)
-                    if 'label' not in cond:
-                        cond['label'] = cond_ref
+                    if new_cond:
+                        for k in list(cond.keys()):
+                            cond.pop(k)
+                        cond.update(new_cond)
+                        if 'label' not in cond:
+                            cond['label'] = cond_ref
 
         if 'condition' in fld and isinstance(fld['condition'], dict):
             cond = fld['condition']
