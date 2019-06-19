@@ -402,6 +402,38 @@ def test_dimension():
     }
 
 
+def test_dimension_bucket():
+    v = {'a': {'kind': 'Dimension', 'field': 'foo', 'icon': 'squee', 'buckets': [
+     {   'gt': 20,
+        'label': 'over20'}
+    ]}}
+
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+
+    # The dimension field gets inserted into the buckets
+    assert x == {
+        'a': {
+            'field': {
+                'aggregation': 'none',
+                'buckets': [{
+                    '_op': '__gt__',
+                    '_op_value': 20,
+                    'field': {
+                        'aggregation': 'none',
+                        'value': 'foo'
+                    },
+                    'gt': 20,
+                    'label': 'over20'
+                }],
+                'value': 'foo'
+            },
+            'icon': 'squee',
+            'kind': 'Dimension'
+        }
+    }
+
+
+
 def test_and_condition():
     shelf = {
         'a': {

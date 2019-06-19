@@ -360,6 +360,19 @@ def _full_condition_schema(**kwargs):
     }
 
 
+def _move_buckets_to_field(value):
+    """ Move buckets from a dimension into the field """
+    # return value
+    buckets = value.pop('buckets', None)
+    buckets_default_label = value.pop('buckets_default_label', None)
+    if buckets:
+        if 'field' in value:
+            value['field']['buckets'] = buckets
+            if buckets_default_label is not None:
+                value['field']['buckets_default_label'] = buckets_default_label
+    return value
+
+
 def _move_extra_fields(value):
     """ Move any fields that look like "{role}_field" into the extra_fields
     list. These will be processed as fields. Rename them as {role}_expression.
@@ -494,6 +507,7 @@ ingredient_schema = S.DictWhenKeyIs(
             S.Dict(
                 allow_unknown=True,
                 coerce=_move_extra_fields,
+                coerce_post=_move_buckets_to_field,
                 schema={
                     'field':
                         'non_aggregated_field',
