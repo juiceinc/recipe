@@ -13,6 +13,8 @@ from recipe.compat import basestring
 
 logging.captureWarnings(True)
 
+SCALAR_TYPES = [S.Integer(), S.String(), S.Float(), S.Boolean()]
+
 
 def _make_sqlalchemy_datatype_lookup():
     """ Build a dictionary of the allowed sqlalchemy casts """
@@ -21,9 +23,8 @@ def _make_sqlalchemy_datatype_lookup():
     for name in dir(sqltypes):
         sqltype = getattr(sqltypes, name)
         if name.lower() not in d and name[0] != '_' and name != 'NULLTYPE':
-            if inspect.isclass(sqltype) and issubclass(
-                sqltype, sqltypes.TypeEngine
-            ):
+            if inspect.isclass(sqltype
+                              ) and issubclass(sqltype, sqltypes.TypeEngine):
                 d[name.lower()] = sqltype
     return d
 
@@ -198,10 +199,7 @@ def _field_schema(aggr=True, required=True):
                 ),
             # Performs coalescing
             'default': {
-                'anyof': [S.Integer(),
-                          S.String(),
-                          S.Float(),
-                          S.Boolean()],
+                'anyof': SCALAR_TYPES,
                 'required': False
             },
             # Should the value be used directly in sql
@@ -237,15 +235,9 @@ class ConditionPost(object):
 
 def _condition_schema(operator, _op, scalar=True, aggr=False):
     if scalar:
-        allowed_values = [S.Integer(), S.String(), S.Float(), S.Boolean()]
+        allowed_values = SCALAR_TYPES
     else:
-        allowed_values = [
-            S.Integer(),
-            S.String(),
-            S.Float(),
-            S.Boolean(),
-            S.List(),
-        ]
+        allowed_values = SCALAR_TYPES + [S.List()]
 
     if aggr:
         field = 'aggregated_field'
@@ -254,10 +246,12 @@ def _condition_schema(operator, _op, scalar=True, aggr=False):
 
     _condition_schema = S.Dict(
         allow_unknown=False,
-        schema={'field': field,
-                operator: {
-                    'anyof': allowed_values
-                }},
+        schema={
+            'field': field,
+            operator: {
+                'anyof': allowed_values
+            }
+        },
         coerce_post=ConditionPost(operator, _op, scalar)
     )
     return _condition_schema
@@ -318,18 +312,12 @@ def _full_condition_schema(aggr=False):
             'notin':
                 _condition_schema('notin', 'notin', scalar=False, aggr=aggr),
             'or':
-                S.Dict(schema={
-                    'or': S.List(schema='condition')
-                }),
+                S.Dict(schema={'or': S.List(schema='condition')}),
             'and':
-                S.Dict(schema={
-                    'and': S.List(schema='condition')
-                }),
+                S.Dict(schema={'and': S.List(schema='condition')}),
             # A reference to another condition
             'ref':
-                S.Dict(schema={
-                    'ref': S.String()
-                })
+                S.Dict(schema={'ref': S.String()})
         },
         required=False,
         coerce=_coerce_string_into_condition_ref
@@ -497,14 +485,10 @@ ingredient_schema = S.DictWhenKeyIs(
                 },
             ),
         'Filter':
-            S.Dict(allow_unknown=True, schema={
-                'condition': 'condition'
-            }),
+            S.Dict(allow_unknown=True, schema={'condition': 'condition'}),
         'Having':
             S.Dict(
-                allow_unknown=True, schema={
-                    'condition': 'having_condition'
-                }
+                allow_unknown=True, schema={'condition': 'having_condition'}
             )
     },
     # If the kind can't be found, default to metric
