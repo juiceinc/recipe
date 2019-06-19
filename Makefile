@@ -20,6 +20,9 @@ precommit:
 flake8:
 	flake8 --exit-zero
 
+docs:
+	pydocmd generate docs
+
 release:
 	# 1) Make sure tests pass
 	# 2) run flake8
