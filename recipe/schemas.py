@@ -431,6 +431,20 @@ def _replace_refs_in_field(fld, shelf):
             fld = shelf[ref]['field']
     else:
         # Replace conditions and operators within the field
+        if 'buckets' in fld:
+            for cond in fld['buckets']:
+                if 'ref' in cond:
+                    # Update the condition in place
+                    cond_ref = cond.pop('ref')
+                    # FIXME: what to do if you can't find the ref
+                    # What if the field doesn't have a condition
+                    new_cond = shelf[cond_ref]['field'].get('condition')
+                    for k in cond.keys():
+                        cond.pop(k)
+                    cond.update(new_cond)
+                    if 'label' not in cond:
+                        cond['label'] = cond_ref
+
         if 'condition' in fld and isinstance(fld['condition'], dict):
             cond = fld['condition']
             if 'ref' in cond:
