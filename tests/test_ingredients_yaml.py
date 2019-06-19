@@ -303,6 +303,7 @@ Vermont,609480,Taciturny,Vermont
             shelf=shelf, session=self.session
         ).dimensions('state_idval').metrics('pop2000').order_by('state_idval'
                                                                ).limit(5)
+        print(recipe.to_sql())
         assert recipe.to_sql() == '''SELECT census.pop2000 AS state_idval_id,
        census.state AS state_idval,
        sum(census.pop2000) AS pop2000
