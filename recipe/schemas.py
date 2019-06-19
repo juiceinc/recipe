@@ -233,25 +233,35 @@ class ConditionPost(object):
         return value
 
 
-def _condition_schema(operator, _op, scalar=True, aggr=False):
-    if scalar:
-        allowed_values = SCALAR_TYPES
-    else:
-        allowed_values = SCALAR_TYPES + [S.List()]
+def _condition_schema(
+    operator, _op, scalar=True, aggr=False, label_required=False
+):
+    """Build a schema that expresses an (optionally labeled) booolean 
+    expression.
 
-    if aggr:
-        field = 'aggregated_field'
-    else:
-        field = 'non_aggregated_field'
+    For instance:
+
+    condition:
+      field: age
+      label: 'over 80'
+      gt: 80
+
+    """
+
+    allowed_values = SCALAR_TYPES if scalar else SCALAR_TYPES + [S.List()]
+    field = 'aggregated_field' if aggr else 'non_aggregated_field'
+
+    cond_schema = {
+        'field': field,
+        'label': S.String(required=label_required),
+        operator: {
+            'anyof': allowed_values
+        }
+    }
 
     _condition_schema = S.Dict(
         allow_unknown=False,
-        schema={
-            'field': field,
-            operator: {
-                'anyof': allowed_values
-            }
-        },
+        schema=cond_schema,
         coerce_post=ConditionPost(operator, _op, scalar)
     )
     return _condition_schema
@@ -269,7 +279,7 @@ def _coerce_string_into_condition_ref(cond):
     return cond
 
 
-def _full_condition_schema(aggr=False):
+def _full_condition_schema(**kwargs):
     """ Conditions can be a field with an operator, like this yaml example
 
     condition:
@@ -288,33 +298,49 @@ def _full_condition_schema(aggr=False):
     :param aggr: Build the condition with aggregate fields (default is False)
     """
 
+    label_required = kwargs.get('label_required', False)
+
     # Handle conditions where there's an operator
     operator_condition = S.DictWhenKeyExists(
         {
             'gt':
-                _condition_schema('gt', '__gt__', aggr=aggr),
+                _condition_schema('gt', '__gt__', **kwargs),
             'gte':
-                _condition_schema('gte', '__ge__', aggr=aggr),
+                _condition_schema('gte', '__ge__', **kwargs),
             'ge':
-                _condition_schema('ge', '__ge__', aggr=aggr),
+                _condition_schema('ge', '__ge__', **kwargs),
             'lt':
-                _condition_schema('lt', '__lt__', aggr=aggr),
+                _condition_schema('lt', '__lt__', **kwargs),
             'lte':
-                _condition_schema('lte', '__le__', aggr=aggr),
+                _condition_schema('lte', '__le__', **kwargs),
             'le':
-                _condition_schema('le', '__le__', aggr=aggr),
+                _condition_schema('le', '__le__', **kwargs),
             'eq':
-                _condition_schema('eq', '__eq__', aggr=aggr),
+                _condition_schema('eq', '__eq__', **kwargs),
             'ne':
-                _condition_schema('ne', '__ne__', aggr=aggr),
+                _condition_schema('ne', '__ne__', **kwargs),
             'in':
-                _condition_schema('in', 'in_', scalar=False, aggr=aggr),
+                _condition_schema('in', 'in_', scalar=False, **kwargs),
             'notin':
-                _condition_schema('notin', 'notin', scalar=False, aggr=aggr),
+                _condition_schema('notin', 'notin', scalar=False, **kwargs),
+            'between':
+                _condition_schema(
+                    'between', 'between', scalar=False, **kwargs
+                ),
             'or':
-                S.Dict(schema={'or': S.List(schema='condition')}),
+                S.Dict(
+                    schema={
+                        'or': S.List(schema='condition'),
+                        'label': S.String(required=label_required)
+                    }
+                ),
             'and':
-                S.Dict(schema={'and': S.List(schema='condition')}),
+                S.Dict(
+                    schema={
+                        'and': S.List(schema='condition'),
+                        'label': S.String(required=label_required)
+                    }
+                ),
             # A reference to another condition
             'ref':
                 S.Dict(schema={'ref': S.String()})
@@ -498,7 +524,8 @@ ingredient_schema = S.DictWhenKeyIs(
         'aggregated_field': _field_schema(aggr=True),
         'optional_aggregated_field': _field_schema(aggr=True, required=False),
         'non_aggregated_field': _field_schema(aggr=False),
-        'condition': _full_condition_schema(aggr=False),
+        'condition': _full_condition_schema(aggr=False, label_required=False),
+        'condition_label_required': _full_condition_schema(aggr=False, label_required=True),
         'having_condition': _full_condition_schema(aggr=True),
     }
 )
