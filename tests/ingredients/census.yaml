@@ -13,6 +13,17 @@ pop2000:
 pop2008:
     kind: Metric
     field: pop2008
+age_buckets:
+    kind: Dimension
+    field: age
+    buckets:
+    - label: 'babies'
+      lt: 2
+    - label: 'children'
+      lt: 13
+    - label: 'teens'
+      lt: 20
+    buckets_default_label: 'oldsters'
 ttlpop:
     kind: Metric
     field: pop2000 + pop2008

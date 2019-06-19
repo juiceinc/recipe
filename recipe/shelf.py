@@ -146,7 +146,16 @@ def parse_validated_field(fld, selectable):
     if fld.pop('_use_raw_value', False):
         return float(fld['value'])
 
-    field = find_column(selectable, fld['value'])
+    if 'buckets' in fld:
+        # Buckets only appear in dimensions
+        buckets_default_label = fld.get('buckets_default_label')
+        conditions = [
+            (parse_validated_condition(cond, selectable), cond.get('label'))
+            for cond in fld.get('buckets', [])
+        ]
+        field = case(conditions, else_=buckets_default_label)
+    else:
+        field = find_column(selectable, fld['value'])
 
     operator_lookup = {
         '+': lambda fld: getattr(fld, '__add__'),

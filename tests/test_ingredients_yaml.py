@@ -116,6 +116,33 @@ FROM
 '''
         )
 
+    def test_census_buckets(self):
+        shelf = self.unvalidated_shelf('census.yaml', Census)
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).dimensions('age_buckets').metrics('pop2000')
+        assert recipe.to_sql() == """SELECT CASE
+           WHEN (census.age < 2) THEN 'babies'
+           WHEN (census.age < 13) THEN 'children'
+           WHEN (census.age < 20) THEN 'teens'
+           ELSE 'oldsters'
+       END AS age_buckets,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY CASE
+             WHEN (census.age < 2) THEN 'babies'
+             WHEN (census.age < 13) THEN 'children'
+             WHEN (census.age < 20) THEN 'teens'
+             ELSE 'oldsters'
+         END"""
+        self.assert_recipe_csv(
+            recipe, '''age_buckets,pop2000,age_buckets_id
+babies,164043,babies
+children,948240,children
+oldsters,4567879,oldsters
+teens,614548,teens
+''')
+
     def test_complex_census_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
         metrics """
