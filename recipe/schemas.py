@@ -6,6 +6,7 @@ import inspect
 import logging
 import re
 
+from copy import copy
 from sqlalchemy import distinct, func
 from sureberus import schema as S
 
@@ -373,6 +374,11 @@ def _move_extra_fields(value):
                     'field': value.pop(k)
                 })
 
+        if 'buckets' in value:
+            for b in value['buckets']:
+                if 'field' not in b:
+                    b['field'] = copy(value.get('field'))
+
     return value
 
 
@@ -501,7 +507,8 @@ ingredient_schema = S.DictWhenKeyIs(
                                 }
                             )
                         ),
-                    'buckets': S.List(required=False, schema='labeled_condition'),
+                    'buckets':
+                        S.List(required=False, schema='labeled_condition'),
                     'buckets_default_label': {
                         'anyof': SCALAR_TYPES,
                         'required': False
@@ -526,12 +533,18 @@ ingredient_schema = S.DictWhenKeyIs(
     default_choice='Metric',
     coerce=_adjust_kinds,
     registry={
-        'aggregated_field': _field_schema(aggr=True, required=True),
-        'optional_aggregated_field': _field_schema(aggr=True, required=False),
-        'non_aggregated_field': _field_schema(aggr=False, required=True),
-        'condition': _full_condition_schema(aggr=False, label_required=False),
-        'labeled_condition': _full_condition_schema(aggr=False, label_required=True),
-        'having_condition': _full_condition_schema(aggr=True, label_required=False)
+        'aggregated_field':
+            _field_schema(aggr=True, required=True),
+        'optional_aggregated_field':
+            _field_schema(aggr=True, required=False),
+        'non_aggregated_field':
+            _field_schema(aggr=False, required=True),
+        'condition':
+            _full_condition_schema(aggr=False, label_required=False),
+        'labeled_condition':
+            _full_condition_schema(aggr=False, label_required=True),
+        'having_condition':
+            _full_condition_schema(aggr=True, label_required=False)
     }
 )
 
@@ -557,11 +570,17 @@ recipe_schema = S.Dict(
             S.List(schema=S.String(), required=False),
     },
     registry={
-        'aggregated_field': _field_schema(aggr=True, required=True),
-        'optional_aggregated_field': _field_schema(aggr=True, required=False),
-        'non_aggregated_field': _field_schema(aggr=False, required=True),
-        'condition': _full_condition_schema(aggr=False, label_required=False),
-        'labeled_condition': _full_condition_schema(aggr=False, label_required=True),
-        'having_condition': _full_condition_schema(aggr=True, label_required=False)
+        'aggregated_field':
+            _field_schema(aggr=True, required=True),
+        'optional_aggregated_field':
+            _field_schema(aggr=True, required=False),
+        'non_aggregated_field':
+            _field_schema(aggr=False, required=True),
+        'condition':
+            _full_condition_schema(aggr=False, label_required=False),
+        'labeled_condition':
+            _full_condition_schema(aggr=False, label_required=True),
+        'having_condition':
+            _full_condition_schema(aggr=True, label_required=False)
     }
 )
