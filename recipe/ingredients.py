@@ -203,10 +203,9 @@ class Ingredient(object):
         if operator is None or operator == 'in':
             # Default operator is 'in' so if no operator is provided, handle
             # like an 'in'
-            value = sorted(value)
             if None in value:
                 # filter out the Nones
-                non_none_value = [v for v in value if v is not None]
+                non_none_value = sorted([v for v in value if v is not None])
                 if non_none_value:
                     return Filter(
                         or_(
@@ -217,12 +216,13 @@ class Ingredient(object):
                 else:
                     return Filter(filter_column.is_(None))
             else:
+                # Sort to generate deterministic query sql for caching
+                value = sorted(value)
                 return Filter(filter_column.in_(value))
         elif operator == 'notin':
-            value = sorted(value)
             if None in value:
                 # filter out the Nones
-                non_none_value = [v for v in value if v is not None]
+                non_none_value = sorted([v for v in value if v is not None])
                 if non_none_value:
                     return Filter(
                         and_(
@@ -233,6 +233,8 @@ class Ingredient(object):
                 else:
                     return Filter(filter_column.isnot(None))
             else:
+                # Sort to generate deterministic query sql for caching
+                value = sorted(value)
                 return Filter(filter_column.notin_(value))
         elif operator == 'between':
             if len(value) != 2:
