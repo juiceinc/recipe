@@ -366,16 +366,9 @@ class Recipe(object):
         order_bys = OrderedSet()
         if self._order_bys:
             for ingredient in self._order_bys:
-                if isinstance(ingredient, Dimension):
-                    # Reverse the ordering columns so that dimensions
-                    # order by their label rather than their id
-                    columns = reversed(ingredient.columns)
-                else:
-                    columns = ingredient.columns
-                for c in columns:
-                    order_by = c.desc() if ingredient.ordering == 'desc' else c
-                    if str(order_by) not in [str(o) for o in order_bys]:
-                        order_bys.add(order_by)
+                for c in ingredient.order_by_columns:
+                    if str(c) not in [str(o) for o in order_bys]:
+                        order_bys.add(c)
 
         return list(order_bys)
 

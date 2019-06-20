@@ -119,6 +119,16 @@ class Ingredient(object):
             yield column.label(self.id + suffix)
 
     @property
+    def order_by_columns(self):
+        """ Yield columns to be used in an order by using this ingredient
+        """
+        for c in self.columns:
+            if self.ordering == 'desc':
+                yield c.desc()
+            else:
+                yield c
+
+    @property
     def cauldron_extras(self):
         """ Yield extra tuples containing a field name and a callable that takes
         a row
@@ -312,16 +322,29 @@ class Dimension(Ingredient):
                     raise BadIngredient('raw is a reserved role in dimensions')
                 self.roles[role] = v
 
-        self.columns, self.group_by = [], []
+        # An optional exprssion to use instead of the value expression
+        # when ordering
+        self.order_by_expression = kwargs.pop('order_by_value', None)
+
+        self.columns = []
+        self.group_by = []
+        self._order_by_columns = []
         self.role_keys = []
         if 'id' in self.roles:
             self.columns.append(self.roles['id'])
             self.group_by.append(self.roles['id'])
             self.role_keys.append('id')
+            self._order_by_columns.append(self.roles['id'])
         if 'value' in self.roles:
             self.columns.append(self.roles['value'])
             self.group_by.append(self.roles['value'])
             self.role_keys.append('value')
+            # Order by columns are in order of value, id
+            # Extra roles are ignored
+            if self.order_by_expression is not None:
+                self._order_by_columns.insert(0, self.order_by_expression)
+            else:
+                self._order_by_columns.insert(0, self.roles['value'])
 
         # Add all the other columns in sorted order of role
         for k in sorted(self.roles.keys()):
@@ -357,6 +380,16 @@ class Dimension(Ingredient):
             yield extra
 
         yield self.id + '_id', lambda row: getattr(row, self.id_prop)
+
+    @property
+    def order_by_columns(self):
+        """ Yield columns to be used in an order by using this ingredient
+        """
+        for c in self._order_by_columns:
+            if self.ordering == 'desc':
+                yield c.desc()
+            else:
+                yield c
 
     def make_column_suffixes(self):
         """ Make sure we have the right column suffixes. These will be appended
