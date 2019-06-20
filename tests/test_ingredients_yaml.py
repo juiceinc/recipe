@@ -147,7 +147,8 @@ teens,614548,teens
         shelf = self.unvalidated_shelf('census.yaml', Census)
         recipe = Recipe(
             shelf=shelf, session=self.session
-        ).dimensions('mixed_buckets').metrics('pop2000').order_by('-mixed_buckets')
+        ).dimensions('mixed_buckets').metrics('pop2000').order_by(
+            '-mixed_buckets')
         assert recipe.to_sql() == """SELECT CASE
            WHEN (census.state IN ('Vermont',
                                   'New Hampshire')) THEN 'northeast'
@@ -245,7 +246,6 @@ teens,614548,teens
 children,948240,children
 babies,164043,babies
 ''')
-
 
     def test_complex_census_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and

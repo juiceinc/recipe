@@ -149,12 +149,9 @@ def test_field_ref():
                         'value': 'moo'
                     }
                 }],
-                'ref':
-                    'foo',
-                'aggregation':
-                    'sum',
-                'value':
-                    'foo'
+                'ref': 'foo',
+                'aggregation': 'sum',
+                'value': 'foo'
             },
             'kind': 'Metric'
         }
@@ -177,11 +174,10 @@ def test_field_buckets_ref():
         'moo': {
             'kind': 'Dimension',
             'field': 'moo',
-            'buckets': [
-                { 'ref': 'foo'}
-            ]
+            'buckets': [{
+                'ref': 'foo'
+            }]
         }
-
     }
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
@@ -314,10 +310,8 @@ def test_field_operators():
                         'value': '1.02'
                     }
                 }],
-                'aggregation':
-                    'sum',
-                'value':
-                    'foo'
+                'aggregation': 'sum',
+                'value': 'foo'
             },
             'kind': 'Metric'
         }
@@ -347,10 +341,8 @@ def test_field_operators():
                         'value': '523.5'
                     }
                 }],
-                'aggregation':
-                    'sum',
-                'value':
-                    'foo'
+                'aggregation': 'sum',
+                'value': 'foo'
             },
             'kind': 'Metric'
         }
@@ -464,10 +456,17 @@ def test_dimension():
 
 
 def test_dimension_buckets():
-    v = {'a': {'kind': 'Dimension', 'field': 'foo', 'icon': 'squee', 'buckets': [
-     {   'gt': 20,
-        'label': 'over20'}
-    ]}}
+    v = {
+        'a': {
+            'kind': 'Dimension',
+            'field': 'foo',
+            'icon': 'squee',
+            'buckets': [{
+                'gt': 20,
+                'label': 'over20'
+            }]
+        }
+    }
 
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
 
@@ -492,7 +491,6 @@ def test_dimension_buckets():
             'kind': 'Dimension'
         }
     }
-
 
 
 def test_and_condition():
@@ -788,10 +786,8 @@ def test_valid_ingredients():
                         'value': 'cow'
                     }
                 }],
-                'aggregation':
-                    'sum',
-                'value':
-                    'moo'
+                'aggregation': 'sum',
+                'value': 'moo'
             },
             'kind': 'Metric',
             'format': ',.0f'

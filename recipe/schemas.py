@@ -237,7 +237,7 @@ class ConditionPost(object):
 def _condition_schema(
     operator, _op, scalar=True, aggr=False, label_required=False
 ):
-    """Build a schema that expresses an (optionally labeled) booolean 
+    """Build a schema that expresses an (optionally labeled) boolean
     expression.
 
     For instance:
@@ -546,7 +546,7 @@ ingredient_schema = S.DictWhenKeyIs(
                         S.String(
                             coerce=lambda v: format_lookup.get(v, v),
                             required=False
-                        ),
+                        ),  # noqa: E123
                     'quickfilters':
                         quickfilter_schema
                 },

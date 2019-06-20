@@ -7,10 +7,6 @@ from recipe.compat import basestring, str
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict
 
-# TODO: How do we avoid attaching significance to particular
-# indices in columns
-# Should dimensions having ids be an extension to recipe?
-
 
 @total_ordering
 class Ingredient(object):
@@ -312,7 +308,7 @@ class Dimension(Ingredient):
 
         # An optional exprssion to use instead of the value expression
         # when ordering
-        order_by_expression = kwargs.pop('order_by_expression', None)        
+        order_by_expression = kwargs.pop('order_by_expression', None)
 
         # We must always have a value role
         self.roles = {'value': expression}
@@ -325,7 +321,6 @@ class Dimension(Ingredient):
                 if role == 'raw':
                     raise BadIngredient('raw is a reserved role in dimensions')
                 self.roles[role] = v
-
 
         self.columns = []
         self.group_by = []
@@ -363,8 +358,8 @@ class Dimension(Ingredient):
             if 'lookup_default' in kwargs:
                 self.lookup_default = kwargs.get('lookup_default')
                 self.formatters.insert(
-                    0,
-                    lambda value: self.lookup.get(value, self.lookup_default)
+                    0, lambda value: self.lookup.
+                    get(value, self.lookup_default)
                 )
             else:
                 self.formatters.insert(
@@ -481,10 +476,9 @@ class DivideMetric(Metric):
         else:
             # If the denominator is zero, return the ifzero value otherwise do
             # the division
-            expression = case(
-                ((cast(denominator, Float) == 0.0, ifzero),),
-                else_=cast(numerator, Float) / cast(denominator, Float)
-            )
+            expression = case(((cast(denominator, Float) == 0.0, ifzero),),
+                              else_=cast(numerator, Float) /
+                              cast(denominator, Float))
         super(DivideMetric, self).__init__(expression, **kwargs)
 
 

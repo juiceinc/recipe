@@ -68,8 +68,8 @@ def find_column(selectable, name):
             return col
 
     # Selectable is a sqlalchemy subquery
-    elif hasattr(selectable, 'c'
-                ) and isinstance(selectable.c, ImmutableColumnCollection):
+    elif hasattr(selectable,
+                 'c') and isinstance(selectable.c, ImmutableColumnCollection):
         col = getattr(selectable.c, name, None)
         if col is not None:
             return col
@@ -138,7 +138,7 @@ def ingredient_from_unvalidated_dict(unvalidated_ingr, selectable):
 
 
 def parse_validated_field(fld, selectable, use_bucket_labels=True):
-    """ Converts a validated field to a sqlalchemy expression. 
+    """ Converts a validated field to a sqlalchemy expression.
     Field references are looked up in selectable """
     if fld is None:
         return
@@ -150,12 +150,13 @@ def parse_validated_field(fld, selectable, use_bucket_labels=True):
 
     if 'buckets' in fld:
         # Buckets only appear in dimensions
-        buckets_default_label = fld.get('buckets_default_label') if use_bucket_labels else 9999
-        conditions = [
-            (parse_validated_condition(cond, selectable), 
-             cond.get('label') if use_bucket_labels else idx)
-            for idx,cond in enumerate(fld.get('buckets', []))
-        ]
+        buckets_default_label = fld.get(
+            'buckets_default_label'
+        ) if use_bucket_labels else 9999
+        conditions = [(
+            parse_validated_condition(cond, selectable),
+            cond.get('label') if use_bucket_labels else idx
+        ) for idx, cond in enumerate(fld.get('buckets', []))]
         field = case(conditions, else_=buckets_default_label)
     else:
         field = find_column(selectable, fld['value'])
@@ -208,10 +209,14 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
 
     field_defn = ingr_dict.pop('field', None)
     divide_by_defn = ingr_dict.pop('divide_by', None)
-    
-    field = parse_validated_field(field_defn, selectable, use_bucket_labels=True)
+
+    field = parse_validated_field(
+        field_defn, selectable, use_bucket_labels=True
+    )
     if isinstance(field_defn, dict) and 'buckets' in field_defn:
-        ingr_dict['order_by_expression'] = parse_validated_field(field_defn, selectable, use_bucket_labels=False)
+        ingr_dict['order_by_expression'] = parse_validated_field(
+            field_defn, selectable, use_bucket_labels=False
+        )
 
     if divide_by_defn is not None:
         # Perform a divide by zero safe division
