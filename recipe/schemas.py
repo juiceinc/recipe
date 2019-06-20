@@ -374,16 +374,16 @@ def _adjust_kinds(value):
         if value.get('kind') == 'IdValueDimension':
             value['kind'] = 'Dimension'
 
-        if value.get('kind') == 'Dimension':
-            value['kind'] == 'Dimension'
+        if value.get('kind') == 'LookupDimension':
+            value['kind'] = 'Dimension'
 
         if value.get('kind') == 'DivideMetric':
-            value['kind'] == 'Metric'
+            value['kind'] = 'Metric'
             value['field'] = value.pop('numerator_field')
             value['divide_by'] = value.pop('denominator_field')
 
         if value.get('kind') == 'WtdAvgMetric':
-            value['kind'] == 'Metric'
+            value['kind'] = 'Metric'
             fld = value.pop('field')
             wt = value.pop('weight')
             # assumes both field and weight are strings
