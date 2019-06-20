@@ -4,7 +4,7 @@ orderedset==2.0.1
 py==1.4.32
 six==1.10.0
 SQLAlchemy==1.2.2
-sqlparse==0.2.2
+sqlparse==0.3.0
 stevedore==1.27.1
 tablib==0.12.1
 pyyaml>=4.2b1

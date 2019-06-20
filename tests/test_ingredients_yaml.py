@@ -310,7 +310,8 @@ FROM census
 GROUP BY census.pop2000,
          census.state
 ORDER BY census.state,
-         census.pop2000 LIMIT 5
+         census.pop2000
+LIMIT 5
 OFFSET 0'''  # noqa: E501
         self.assert_recipe_csv(
             recipe, '''state_idval_id,state_idval,pop2000,state_idval_id
