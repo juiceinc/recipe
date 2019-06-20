@@ -222,11 +222,13 @@ class Recipe(object):
 
     @recipe_arg()
     def cache_region(self, value):
+        """Set a cache region for recipe-caching to use """
         assert isinstance(value, basestring)
         self._cache_region = value
 
     @recipe_arg()
     def use_cache(self, value):
+        """If False, invalidate the cache before fetching data."""
         assert isinstance(value, bool)
         self._use_cache = value
 
