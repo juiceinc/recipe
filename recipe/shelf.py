@@ -137,7 +137,7 @@ def ingredient_from_unvalidated_dict(unvalidated_ingr, selectable):
     return ingredient_from_validated_dict(ingr_dict, selectable)
 
 
-def parse_validated_field(fld, selectable):
+def parse_validated_field(fld, selectable, use_bucket_labels=True):
     """ Converts a validated field to sqlalchemy. Field references are
     looked up in selectable """
     if fld is None:
@@ -150,8 +150,9 @@ def parse_validated_field(fld, selectable):
         # Buckets only appear in dimensions
         buckets_default_label = fld.get('buckets_default_label')
         conditions = [
-            (parse_validated_condition(cond, selectable), cond.get('label'))
-            for cond in fld.get('buckets', [])
+            (parse_validated_condition(cond, selectable), 
+             cond.get('label') if use_bucket_labels else idx)
+            for idx,cond in enumerate(fld.get('buckets', []))
         ]
         field = case(conditions, else_=buckets_default_label)
     else:
@@ -205,7 +206,17 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
 
     field = ingr_dict.pop('field', None)
     divide_by = ingr_dict.pop('divide_by', None)
-    field = parse_validated_field(field, selectable)
+
+    field = parse_validated_field(field, selectable, use_bucket_labels=True)
+    # order_by_value_field = parse_validated_field(deepcopy(field), selectable, use_bucket_labels=False)
+    # if 'buckets' in field:
+    #     ingr_dict['order_by_value'] = parse_validated_field(field, selectable)
+    #     idx = 0
+    #     for cond in field['buckets']:
+    #         cond['label'] = idx
+    #         idx += 1
+    #     # # Generate an ordering expression
+    #     # ingr_dict['order_by_value'] = parse_validated_field(field, selectable)
     if divide_by is not None:
         # Perform a divide by zero safe division
         divide_by = parse_validated_field(divide_by, selectable)
