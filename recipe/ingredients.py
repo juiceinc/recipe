@@ -310,6 +310,10 @@ class Dimension(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Dimension, self).__init__(**kwargs)
 
+        # An optional exprssion to use instead of the value expression
+        # when ordering
+        order_by_expression = kwargs.pop('order_by_expression', None)        
+
         # We must always have a value role
         self.roles = {'value': expression}
         for k, v in kwargs.items():
@@ -322,9 +326,6 @@ class Dimension(Ingredient):
                     raise BadIngredient('raw is a reserved role in dimensions')
                 self.roles[role] = v
 
-        # An optional exprssion to use instead of the value expression
-        # when ordering
-        self.order_by_expression = kwargs.pop('order_by_value', None)
 
         self.columns = []
         self.group_by = []
@@ -341,8 +342,8 @@ class Dimension(Ingredient):
             self.role_keys.append('value')
             # Order by columns are in order of value, id
             # Extra roles are ignored
-            if self.order_by_expression is not None:
-                self._order_by_columns.insert(0, self.order_by_expression)
+            if order_by_expression is not None:
+                self._order_by_columns.insert(0, order_by_expression)
             else:
                 self._order_by_columns.insert(0, self.roles['value'])
 

@@ -209,6 +209,46 @@ ORDER BY sum(foo.age) DESC"""
         assert recipe.all()[0].age == 10
         assert recipe.stats.rows == 2
 
+        # Idvalue dimension
+        recipe = self.recipe().metrics('age')\
+            .dimensions('firstlast').order_by('firstlast')
+        assert recipe.to_sql() == """SELECT foo.first AS firstlast_id,
+       foo.last AS firstlast,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first,
+         foo.last
+ORDER BY foo.last,
+         foo.first"""
+        recipe = self.recipe().metrics('age')\
+            .dimensions('firstlast').order_by('-firstlast')
+        assert recipe.to_sql() == """SELECT foo.first AS firstlast_id,
+       foo.last AS firstlast,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first,
+         foo.last
+ORDER BY foo.last DESC,
+         foo.first DESC"""
+
+        # Dimensions can define their own ordering
+        d = Dimension(
+            MyTable.last,
+            id='d',
+            id_expression=MyTable.first,
+            order_by_expression=func.upper(MyTable.last)
+        )
+        recipe = self.recipe().metrics('age')\
+            .dimensions(d).order_by(d)
+        assert recipe.to_sql() == """SELECT foo.first AS d_id,
+       foo.last AS d,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first,
+         foo.last
+ORDER BY upper(foo.last),
+         foo.first"""
+
     def test_recipe_init(self):
         """Test that all options can be passed in the init"""
         recipe = self.recipe(

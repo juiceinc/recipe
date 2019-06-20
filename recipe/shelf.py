@@ -1,4 +1,4 @@
-from copy import copy
+from copy import copy, deepcopy
 
 from six import iteritems
 from sqlalchemy import (
@@ -138,17 +138,19 @@ def ingredient_from_unvalidated_dict(unvalidated_ingr, selectable):
 
 
 def parse_validated_field(fld, selectable, use_bucket_labels=True):
-    """ Converts a validated field to sqlalchemy. Field references are
-    looked up in selectable """
+    """ Converts a validated field to a sqlalchemy expression. 
+    Field references are looked up in selectable """
     if fld is None:
         return
+
+    fld = deepcopy(fld)
 
     if fld.pop('_use_raw_value', False):
         return float(fld['value'])
 
     if 'buckets' in fld:
         # Buckets only appear in dimensions
-        buckets_default_label = fld.get('buckets_default_label')
+        buckets_default_label = fld.get('buckets_default_label') if use_bucket_labels else 9999
         conditions = [
             (parse_validated_condition(cond, selectable), 
              cond.get('label') if use_bucket_labels else idx)
@@ -204,22 +206,16 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
     if IngredientClass is None:
         raise BadIngredient('Unknown ingredient kind')
 
-    field = ingr_dict.pop('field', None)
-    divide_by = ingr_dict.pop('divide_by', None)
+    field_defn = ingr_dict.pop('field', None)
+    divide_by_defn = ingr_dict.pop('divide_by', None)
+    
+    field = parse_validated_field(field_defn, selectable, use_bucket_labels=True)
+    if isinstance(field_defn, dict) and 'buckets' in field_defn:
+        ingr_dict['order_by_expression'] = parse_validated_field(field_defn, selectable, use_bucket_labels=False)
 
-    field = parse_validated_field(field, selectable, use_bucket_labels=True)
-    # order_by_value_field = parse_validated_field(deepcopy(field), selectable, use_bucket_labels=False)
-    # if 'buckets' in field:
-    #     ingr_dict['order_by_value'] = parse_validated_field(field, selectable)
-    #     idx = 0
-    #     for cond in field['buckets']:
-    #         cond['label'] = idx
-    #         idx += 1
-    #     # # Generate an ordering expression
-    #     # ingr_dict['order_by_value'] = parse_validated_field(field, selectable)
-    if divide_by is not None:
+    if divide_by_defn is not None:
         # Perform a divide by zero safe division
-        divide_by = parse_validated_field(divide_by, selectable)
+        divide_by = parse_validated_field(divide_by_defn, selectable)
         field = cast(field, Float) / (
             func.coalesce(cast(divide_by, Float), 0.0) + SAFE_DIVISON_EPSILON
         )
