@@ -23,7 +23,6 @@ __all__ = [
     'prettyprintable_sql', 'clean_unicode', 'FakerAnonymizer', 'FakerFormatter'
 ]
 
-
 def recipe_arg(*args):
     """Decorator for recipe builder arguments.
 
