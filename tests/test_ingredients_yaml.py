@@ -143,6 +143,46 @@ oldsters,4567879,oldsters
 teens,614548,teens
 ''')
 
+    def test_census_mixed_buckets(self):
+        shelf = self.unvalidated_shelf('census.yaml', Census)
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).dimensions('mixed_buckets').metrics('pop2000').order_by('-mixed_buckets')
+        assert recipe.to_sql() == """SELECT CASE
+           WHEN (census.state IN ('Vermont',
+                                  'New Hampshire')) THEN 'northeast'
+           WHEN (census.age < 2) THEN 'babies'
+           WHEN (census.age < 13) THEN 'children'
+           WHEN (census.age < 20) THEN 'teens'
+           ELSE 'oldsters'
+       END AS mixed_buckets,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY CASE
+             WHEN (census.state IN ('Vermont',
+                                    'New Hampshire')) THEN 'northeast'
+             WHEN (census.age < 2) THEN 'babies'
+             WHEN (census.age < 13) THEN 'children'
+             WHEN (census.age < 20) THEN 'teens'
+             ELSE 'oldsters'
+         END
+ORDER BY CASE
+             WHEN (census.state IN ('Vermont',
+                                    'New Hampshire')) THEN 0
+             WHEN (census.age < 2) THEN 1
+             WHEN (census.age < 13) THEN 2
+             WHEN (census.age < 20) THEN 3
+             ELSE 9999
+         END DESC"""
+        self.assert_recipe_csv(
+            recipe, '''mixed_buckets,pop2000,mixed_buckets_id
+oldsters,4124620,oldsters
+teens,550515,teens
+children,859206,children
+babies,150889,babies
+northeast,609480,northeast
+''')
+
     def test_census_buckets_ordering(self):
         shelf = self.unvalidated_shelf('census.yaml', Census)
         recipe = Recipe(
@@ -394,7 +434,6 @@ Vermont,609480,Taciturny,Vermont
             shelf=shelf, session=self.session
         ).dimensions('state_idval').metrics('pop2000').order_by('state_idval'
                                                                ).limit(5)
-        print(recipe.to_sql())
         assert recipe.to_sql() == '''SELECT census.pop2000 AS state_idval_id,
        census.state AS state_idval,
        sum(census.pop2000) AS pop2000
