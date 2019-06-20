@@ -153,6 +153,13 @@ class TestIngredientBuildFilter(object):
         assert str(filt.filters[0]) == 'foo.first IS :first_1'
         filt = d.build_filter('moo', 'isnot')
         assert str(filt.filters[0]) == 'foo.first IS NOT :first_1'
+        filt = d.build_filter('moo', 'like')
+        assert str(filt.filters[0]) == 'foo.first LIKE :first_1'
+        filt = d.build_filter('moo', 'ilike')
+        assert str(filt.filters[0]) == 'lower(foo.first) LIKE lower(:first_1)'
+        # None values get converted to IS
+        filt = d.build_filter(None, 'eq')
+        assert str(filt.filters[0]) == 'foo.first IS NULL'
 
         # str filter values are acceptable
         filt = d.build_filter(u'Τη γλώσ')
@@ -164,18 +171,39 @@ class TestIngredientBuildFilter(object):
         with pytest.raises(ValueError):
             filt = d.build_filter(['moo'], 'lt')
 
+        # Unknown operator
+        with pytest.raises(ValueError):
+            filt = d.build_filter(['moo'], 'cows')
+
     def test_vector_filter(self):
         d = Dimension(MyTable.first)
 
         # Test building scalar filters
         filt = d.build_filter(['moo'])
         assert str(filt.filters[0]) == 'foo.first IN (:first_1)'
+        filt = d.build_filter(['moo', None])
+        assert str(filt.filters[0]
+                  ) == 'foo.first IS NULL OR foo.first IN (:first_1)'
+        filt = d.build_filter([None, 'moo', None, None])
+        assert str(filt.filters[0]
+                  ) == 'foo.first IS NULL OR foo.first IN (:first_1)'
+        filt = d.build_filter([None, None])
+        assert str(filt.filters[0]) == 'foo.first IS NULL'
+
         filt = d.build_filter(['moo', 'foo'])
         assert str(filt.filters[0]) == 'foo.first IN (:first_1, :first_2)'
         filt = d.build_filter(['moo'], operator='in')
         assert str(filt.filters[0]) == 'foo.first IN (:first_1)'
         filt = d.build_filter(['moo'], operator='notin')
         assert str(filt.filters[0]) == 'foo.first NOT IN (:first_1)'
+        filt = d.build_filter(['moo', None], operator='notin')
+        assert str(filt.filters[0]
+                  ) == 'foo.first IS NOT NULL AND foo.first NOT IN (:first_1)'
+        filt = d.build_filter([None, 'moo', None], operator='notin')
+        assert str(filt.filters[0]
+                  ) == 'foo.first IS NOT NULL AND foo.first NOT IN (:first_1)'
+        filt = d.build_filter([None, None], operator='notin')
+        assert str(filt.filters[0]) == 'foo.first IS NOT NULL'
         filt = d.build_filter(['moo', 'foo'], operator='between')
         assert str(filt.filters[0]) \
             == 'foo.first BETWEEN :first_1 AND :first_2'
