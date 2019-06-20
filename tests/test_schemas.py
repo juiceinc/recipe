@@ -602,11 +602,23 @@ def test_valid_conditions():
         },
         {
             'field': 'foo',
+            'like': 'moo%'
+        },
+        {
+            'field': 'foo',
+            'ilike': '%cows%'
+        },
+        {
+            'field': 'foo',
             'notin': [41]
         },
         {
             'field': 'foo',
             'in': [22, 44, 55]
+        },
+        {
+            'field': 'foo',
+            'in': [22, 44, 55, None]
         },
         {
             'and': [{

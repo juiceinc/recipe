@@ -184,6 +184,16 @@ GROUP BY foo.first"""
             # Automatic filters must be a dict
             recipe.automatic_filters(2)
 
+        recipe = self.recipe().metrics('age').dimensions('first')
+        recipe = recipe.automatic_filters({'first': [None]})
+
+        assert recipe.recipe_extensions[0].apply is True
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.first IS NULL
+GROUP BY foo.first"""
+
     def test_apply_automatic_filters(self):
         recipe = self.recipe().metrics('age').dimensions('first')
         recipe = recipe.automatic_filters({

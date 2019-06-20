@@ -320,6 +320,10 @@ def _full_condition_schema(**kwargs):
                 _condition_schema('eq', '__eq__', **kwargs),
             'ne':
                 _condition_schema('ne', '__ne__', **kwargs),
+            'like':
+                _condition_schema('like', 'like', **kwargs),
+            'ilike':
+                _condition_schema('ilike', 'ilike', **kwargs),
             'in':
                 _condition_schema('in', 'in_', scalar=False, **kwargs),
             'notin':
