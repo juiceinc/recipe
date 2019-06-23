@@ -121,6 +121,21 @@ OFFSET 1"""
         recipe = self.recipe().metrics('age')
         assert recipe._is_postgres() is False
 
+    def test_expression_type(self):
+        age = self.shelf['first']
+        c = age.columns[0]
+        for x in dir(c):
+            try:
+                val = getattr(c, x)
+            except:
+                val = 'unknown'
+            print(x, val)
+        print(dir(age.columns[0]))
+        print()
+        print(age.columns[0].type)
+        print(type(age.columns[0].type))
+        assert age == 1
+
     def test_dataset(self):
         recipe = self.recipe().metrics('age').dimensions('first')
         assert recipe.dataset.json == '[{"first": "hi", "age": 15, ' \

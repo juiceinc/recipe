@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Float, Integer, String, distinct, func
+from sqlalchemy import (
+    Column, Date, DateTime, Float, Integer, String, distinct, func
+)
 from sqlalchemy.ext.declarative import declarative_base
 
 from recipe import Dimension, Metric, Shelf, get_oven
@@ -10,12 +12,14 @@ TABLEDEF = '''
         CREATE TABLE IF NOT EXISTS foo
         (first text,
          last text,
-         age int);
+         age int,
+         birth_date date,
+         dt datetime);
 '''
 
 oven.engine.execute(TABLEDEF)
 oven.engine.execute(
-    "insert into foo values ('hi', 'there', 5), ('hi', 'fred', 10)"
+    "insert into foo values ('hi', 'there', 5, '2000-01-01', '2000-01-01 12:15:00'), ('hi', 'fred', 10, '2015-05-15', '2013-10-15 05:20:10')"
 )
 
 # Create a table for testing summarization
@@ -268,6 +272,8 @@ class MyTable(Base):
     first = Column('first', String(), primary_key=True)
     last = Column('last', String())
     age = Column('age', Integer())
+    birth_date = Column('birth_date', Date())
+    dt = Column('dt', DateTime())
 
     __tablename__ = 'foo'
     __table_args__ = {'extend_existing': True}

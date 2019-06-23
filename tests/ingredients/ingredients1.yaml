@@ -7,3 +7,21 @@ last:
 age:
     kind: Metric
     field: age
+date_between:
+    kind: Metric
+    field:
+        value: age
+        condition:
+            field: birth_date
+            between:
+            - 20 years ago
+            - now
+dt_between:
+    kind: Metric
+    field:
+        value: age
+        condition:
+            field: dt
+            between:
+            - 20 years ago
+            - now

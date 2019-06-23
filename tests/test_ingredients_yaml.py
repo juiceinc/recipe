@@ -5,6 +5,7 @@ Test recipes built from yaml files in the ingredients directory.
 
 import os
 
+from datetime import date, datetime, timedelta
 import pytest
 from tests.test_base import Census, MyTable, oven
 
@@ -49,6 +50,40 @@ hi,15,hi
         ).metrics('age').dimensions('first')
         self.assert_recipe_csv(recipe, '''first,age,first_id
 hi,15,hi
+''')
+
+    def test_ingredients1_between_dates(self):
+        shelf = self.validated_shelf('ingredients1.yaml', MyTable)
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).metrics('date_between')
+        today = date.today()
+        assert recipe.to_sql() == '''SELECT sum(CASE
+               WHEN (foo.birth_date BETWEEN '{}' AND '{}') THEN foo.age
+           END) AS date_between
+FROM foo'''.format(date(today.year-20, today.month, today.day), today)
+        self.assert_recipe_csv(recipe, '''date_between
+15
+''')
+
+        # dt_between is a datetime, it generates the same query with
+        # exact datetimes, we don't try to check the exact sql but it will
+        # look like
+        #         SELECT sum(CASE
+        #                WHEN (foo.dt BETWEEN '1999-06-23 12:13:01.819190' AND '2019-06-23 12:13:01.820635') THEN foo.age
+        #            END) AS dt_between
+        # FROM foo
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).metrics('dt_between')
+        assert recipe.to_sql() != '''SELECT sum(CASE
+               WHEN (foo.birth_date BETWEEN '{}' AND '{}') THEN foo.age
+           END) AS date_between
+FROM foo'''.format(date(today.year-20, today.month, today.day), today)
+        assert str(date(today.year-20, today.month, today.day)) in recipe.to_sql()
+        assert str(today) in recipe.to_sql()
+        self.assert_recipe_csv(recipe, '''dt_between
+15
 ''')
 
     def test_census_from_validated_yaml(self):
@@ -141,6 +176,32 @@ babies,164043,babies
 children,948240,children
 oldsters,4567879,oldsters
 teens,614548,teens
+''')
+
+    def test_census_condition_between(self):
+        shelf = self.unvalidated_shelf('census.yaml', Census)
+        recipe = Recipe(shelf=shelf, session=self.session)\
+            .metrics('teenagers')
+        assert recipe.to_sql() == """SELECT sum(CASE
+               WHEN (census.age BETWEEN 13 AND 19) THEN census.pop2000
+           END) AS teenagers
+FROM census"""
+        self.assert_recipe_csv(
+            recipe, '''teenagers
+614548
+''')
+
+    def test_census_condition_between_dates(self):
+        shelf = self.unvalidated_shelf('census.yaml', Census)
+        recipe = Recipe(shelf=shelf, session=self.session)\
+            .metrics('teenagers')
+        assert recipe.to_sql() == """SELECT sum(CASE
+               WHEN (census.age BETWEEN 13 AND 19) THEN census.pop2000
+           END) AS teenagers
+FROM census"""
+        self.assert_recipe_csv(
+            recipe, '''teenagers
+614548
 ''')
 
     def test_census_mixed_buckets(self):
