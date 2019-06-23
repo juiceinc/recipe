@@ -116,6 +116,137 @@ FROM
 '''
         )
 
+    def test_census_buckets(self):
+        shelf = self.unvalidated_shelf('census.yaml', Census)
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).dimensions('age_buckets').metrics('pop2000')
+        assert recipe.to_sql() == """SELECT CASE
+           WHEN (census.age < 2) THEN 'babies'
+           WHEN (census.age < 13) THEN 'children'
+           WHEN (census.age < 20) THEN 'teens'
+           ELSE 'oldsters'
+       END AS age_buckets,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY CASE
+             WHEN (census.age < 2) THEN 'babies'
+             WHEN (census.age < 13) THEN 'children'
+             WHEN (census.age < 20) THEN 'teens'
+             ELSE 'oldsters'
+         END"""
+        self.assert_recipe_csv(
+            recipe, '''age_buckets,pop2000,age_buckets_id
+babies,164043,babies
+children,948240,children
+oldsters,4567879,oldsters
+teens,614548,teens
+''')
+
+    def test_census_mixed_buckets(self):
+        shelf = self.unvalidated_shelf('census.yaml', Census)
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).dimensions('mixed_buckets').metrics('pop2000').order_by(
+            '-mixed_buckets')
+        assert recipe.to_sql() == """SELECT CASE
+           WHEN (census.state IN ('Vermont',
+                                  'New Hampshire')) THEN 'northeast'
+           WHEN (census.age < 2) THEN 'babies'
+           WHEN (census.age < 13) THEN 'children'
+           WHEN (census.age < 20) THEN 'teens'
+           ELSE 'oldsters'
+       END AS mixed_buckets,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY CASE
+             WHEN (census.state IN ('Vermont',
+                                    'New Hampshire')) THEN 'northeast'
+             WHEN (census.age < 2) THEN 'babies'
+             WHEN (census.age < 13) THEN 'children'
+             WHEN (census.age < 20) THEN 'teens'
+             ELSE 'oldsters'
+         END
+ORDER BY CASE
+             WHEN (census.state IN ('Vermont',
+                                    'New Hampshire')) THEN 0
+             WHEN (census.age < 2) THEN 1
+             WHEN (census.age < 13) THEN 2
+             WHEN (census.age < 20) THEN 3
+             ELSE 9999
+         END DESC"""
+        self.assert_recipe_csv(
+            recipe, '''mixed_buckets,pop2000,mixed_buckets_id
+oldsters,4124620,oldsters
+teens,550515,teens
+children,859206,children
+babies,150889,babies
+northeast,609480,northeast
+''')
+
+    def test_census_buckets_ordering(self):
+        shelf = self.unvalidated_shelf('census.yaml', Census)
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).dimensions('age_buckets').metrics('pop2000').order_by('age_buckets')
+        assert recipe.to_sql() == """SELECT CASE
+           WHEN (census.age < 2) THEN 'babies'
+           WHEN (census.age < 13) THEN 'children'
+           WHEN (census.age < 20) THEN 'teens'
+           ELSE 'oldsters'
+       END AS age_buckets,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY CASE
+             WHEN (census.age < 2) THEN 'babies'
+             WHEN (census.age < 13) THEN 'children'
+             WHEN (census.age < 20) THEN 'teens'
+             ELSE 'oldsters'
+         END
+ORDER BY CASE
+             WHEN (census.age < 2) THEN 0
+             WHEN (census.age < 13) THEN 1
+             WHEN (census.age < 20) THEN 2
+             ELSE 9999
+         END"""
+        self.assert_recipe_csv(
+            recipe, '''age_buckets,pop2000,age_buckets_id
+babies,164043,babies
+children,948240,children
+teens,614548,teens
+oldsters,4567879,oldsters
+''')
+        recipe = Recipe(
+            shelf=shelf, session=self.session
+        ).dimensions('age_buckets').metrics('pop2000').order_by('-age_buckets')
+        assert recipe.to_sql() == """SELECT CASE
+           WHEN (census.age < 2) THEN 'babies'
+           WHEN (census.age < 13) THEN 'children'
+           WHEN (census.age < 20) THEN 'teens'
+           ELSE 'oldsters'
+       END AS age_buckets,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY CASE
+             WHEN (census.age < 2) THEN 'babies'
+             WHEN (census.age < 13) THEN 'children'
+             WHEN (census.age < 20) THEN 'teens'
+             ELSE 'oldsters'
+         END
+ORDER BY CASE
+             WHEN (census.age < 2) THEN 0
+             WHEN (census.age < 13) THEN 1
+             WHEN (census.age < 20) THEN 2
+             ELSE 9999
+         END DESC"""
+        self.assert_recipe_csv(
+            recipe, '''age_buckets,pop2000,age_buckets_id
+oldsters,4567879,oldsters
+teens,614548,teens
+children,948240,children
+babies,164043,babies
+''')
+
     def test_complex_census_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
         metrics """

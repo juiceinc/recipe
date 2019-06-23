@@ -6,12 +6,15 @@ import inspect
 import logging
 import re
 
+from copy import copy
 from sqlalchemy import distinct, func
 from sureberus import schema as S
 
 from recipe.compat import basestring
 
 logging.captureWarnings(True)
+
+SCALAR_TYPES = [S.Integer(), S.String(), S.Float(), S.Boolean()]
 
 
 def _make_sqlalchemy_datatype_lookup():
@@ -21,9 +24,8 @@ def _make_sqlalchemy_datatype_lookup():
     for name in dir(sqltypes):
         sqltype = getattr(sqltypes, name)
         if name.lower() not in d and name[0] != '_' and name != 'NULLTYPE':
-            if inspect.isclass(sqltype) and issubclass(
-                sqltype, sqltypes.TypeEngine
-            ):
+            if inspect.isclass(sqltype
+                              ) and issubclass(sqltype, sqltypes.TypeEngine):
                 d[name.lower()] = sqltype
     return d
 
@@ -198,10 +200,7 @@ def _field_schema(aggr=True, required=True):
                 ),
             # Performs coalescing
             'default': {
-                'anyof': [S.Integer(),
-                          S.String(),
-                          S.Float(),
-                          S.Boolean()],
+                'anyof': SCALAR_TYPES,
                 'required': False
             },
             # Should the value be used directly in sql
@@ -235,29 +234,35 @@ class ConditionPost(object):
         return value
 
 
-def _condition_schema(operator, _op, scalar=True, aggr=False):
-    if scalar:
-        allowed_values = [S.Integer(), S.String(), S.Float(), S.Boolean()]
-    else:
-        allowed_values = [
-            S.Integer(),
-            S.String(),
-            S.Float(),
-            S.Boolean(),
-            S.List(),
-        ]
+def _condition_schema(
+    operator, _op, scalar=True, aggr=False, label_required=False
+):
+    """Build a schema that expresses an (optionally labeled) boolean
+    expression.
 
-    if aggr:
-        field = 'aggregated_field'
-    else:
-        field = 'non_aggregated_field'
+    For instance:
+
+    condition:
+      field: age
+      label: 'over 80'
+      gt: 80
+
+    """
+
+    allowed_values = SCALAR_TYPES if scalar else SCALAR_TYPES + [S.List()]
+    field = 'aggregated_field' if aggr else 'non_aggregated_field'
+
+    cond_schema = {
+        'field': field,
+        'label': S.String(required=label_required),
+        operator: {
+            'anyof': allowed_values
+        }
+    }
 
     _condition_schema = S.Dict(
         allow_unknown=False,
-        schema={'field': field,
-                operator: {
-                    'anyof': allowed_values
-                }},
+        schema=cond_schema,
         coerce_post=ConditionPost(operator, _op, scalar)
     )
     return _condition_schema
@@ -275,7 +280,7 @@ def _coerce_string_into_condition_ref(cond):
     return cond
 
 
-def _full_condition_schema(aggr=False):
+def _full_condition_schema(**kwargs):
     """ Conditions can be a field with an operator, like this yaml example
 
     condition:
@@ -294,46 +299,56 @@ def _full_condition_schema(aggr=False):
     :param aggr: Build the condition with aggregate fields (default is False)
     """
 
+    label_required = kwargs.get('label_required', False)
+
     # Handle conditions where there's an operator
     operator_condition = S.DictWhenKeyExists(
         {
             'gt':
-                _condition_schema('gt', '__gt__', aggr=aggr),
+                _condition_schema('gt', '__gt__', **kwargs),
             'gte':
-                _condition_schema('gte', '__ge__', aggr=aggr),
+                _condition_schema('gte', '__ge__', **kwargs),
             'ge':
-                _condition_schema('ge', '__ge__', aggr=aggr),
+                _condition_schema('ge', '__ge__', **kwargs),
             'lt':
-                _condition_schema('lt', '__lt__', aggr=aggr),
+                _condition_schema('lt', '__lt__', **kwargs),
             'lte':
-                _condition_schema('lte', '__le__', aggr=aggr),
+                _condition_schema('lte', '__le__', **kwargs),
             'le':
-                _condition_schema('le', '__le__', aggr=aggr),
+                _condition_schema('le', '__le__', **kwargs),
             'eq':
-                _condition_schema('eq', '__eq__', aggr=aggr),
+                _condition_schema('eq', '__eq__', **kwargs),
             'ne':
-                _condition_schema('ne', '__ne__', aggr=aggr),
+                _condition_schema('ne', '__ne__', **kwargs),
             'like':
-                _condition_schema('like', 'like', aggr=aggr),
+                _condition_schema('like', 'like', **kwargs),
             'ilike':
-                _condition_schema('ilike', 'ilike', aggr=aggr),
+                _condition_schema('ilike', 'ilike', **kwargs),
             'in':
-                _condition_schema('in', 'in_', scalar=False, aggr=aggr),
+                _condition_schema('in', 'in_', scalar=False, **kwargs),
             'notin':
-                _condition_schema('notin', 'notin', scalar=False, aggr=aggr),
+                _condition_schema('notin', 'notin', scalar=False, **kwargs),
+            'between':
+                _condition_schema(
+                    'between', 'between', scalar=False, **kwargs
+                ),
             'or':
-                S.Dict(schema={
-                    'or': S.List(schema='condition')
-                }),
+                S.Dict(
+                    schema={
+                        'or': S.List(schema='condition'),
+                        'label': S.String(required=label_required)
+                    }
+                ),
             'and':
-                S.Dict(schema={
-                    'and': S.List(schema='condition')
-                }),
+                S.Dict(
+                    schema={
+                        'and': S.List(schema='condition'),
+                        'label': S.String(required=label_required)
+                    }
+                ),
             # A reference to another condition
             'ref':
-                S.Dict(schema={
-                    'ref': S.String()
-                })
+                S.Dict(schema={'ref': S.String()})
         },
         required=False,
         coerce=_coerce_string_into_condition_ref
@@ -349,6 +364,19 @@ def _full_condition_schema(aggr=False):
     }
 
 
+def _move_buckets_to_field(value):
+    """ Move buckets from a dimension into the field """
+    # return value
+    buckets = value.pop('buckets', None)
+    buckets_default_label = value.pop('buckets_default_label', None)
+    if buckets:
+        if 'field' in value:
+            value['field']['buckets'] = buckets
+            if buckets_default_label is not None:
+                value['field']['buckets_default_label'] = buckets_default_label
+    return value
+
+
 def _move_extra_fields(value):
     """ Move any fields that look like "{role}_field" into the extra_fields
     list. These will be processed as fields. Rename them as {role}_expression.
@@ -362,6 +390,11 @@ def _move_extra_fields(value):
                     'name': k[:-6] + '_expression',
                     'field': value.pop(k)
                 })
+
+        if 'buckets' in value:
+            for b in value['buckets']:
+                if 'field' not in b:
+                    b['field'] = copy(value.get('field'))
 
     return value
 
@@ -402,6 +435,21 @@ def _replace_refs_in_field(fld, shelf):
             fld = shelf[ref]['field']
     else:
         # Replace conditions and operators within the field
+        if 'buckets' in fld:
+            for cond in fld['buckets']:
+                if 'ref' in cond:
+                    # Update the condition in place
+                    cond_ref = cond.pop('ref')
+                    # FIXME: what to do if you can't find the ref
+                    # What if the field doesn't have a condition
+                    new_cond = shelf[cond_ref]['field'].get('condition')
+                    if new_cond:
+                        for k in list(cond.keys()):
+                            cond.pop(k)
+                        cond.update(new_cond)
+                        if 'label' not in cond:
+                            cond['label'] = cond_ref
+
         if 'condition' in fld and isinstance(fld['condition'], dict):
             cond = fld['condition']
             if 'ref' in cond:
@@ -478,6 +526,7 @@ ingredient_schema = S.DictWhenKeyIs(
             S.Dict(
                 allow_unknown=True,
                 coerce=_move_extra_fields,
+                coerce_post=_move_buckets_to_field,
                 schema={
                     'field':
                         'non_aggregated_field',
@@ -491,35 +540,44 @@ ingredient_schema = S.DictWhenKeyIs(
                                 }
                             )
                         ),
+                    'buckets':
+                        S.List(required=False, schema='labeled_condition'),
+                    'buckets_default_label': {
+                        'anyof': SCALAR_TYPES,
+                        'required': False
+                    },
                     'format':
                         S.String(
                             coerce=lambda v: format_lookup.get(v, v),
                             required=False
-                        ),
+                        ),  # noqa: E123
                     'quickfilters':
                         quickfilter_schema
                 },
             ),
         'Filter':
-            S.Dict(allow_unknown=True, schema={
-                'condition': 'condition'
-            }),
+            S.Dict(allow_unknown=True, schema={'condition': 'condition'}),
         'Having':
             S.Dict(
-                allow_unknown=True, schema={
-                    'condition': 'having_condition'
-                }
+                allow_unknown=True, schema={'condition': 'having_condition'}
             )
     },
     # If the kind can't be found, default to metric
     default_choice='Metric',
     coerce=_adjust_kinds,
     registry={
-        'aggregated_field': _field_schema(aggr=True),
-        'optional_aggregated_field': _field_schema(aggr=True, required=False),
-        'non_aggregated_field': _field_schema(aggr=False),
-        'condition': _full_condition_schema(aggr=False),
-        'having_condition': _full_condition_schema(aggr=True),
+        'aggregated_field':
+            _field_schema(aggr=True, required=True),
+        'optional_aggregated_field':
+            _field_schema(aggr=True, required=False),
+        'non_aggregated_field':
+            _field_schema(aggr=False, required=True),
+        'condition':
+            _full_condition_schema(aggr=False, label_required=False),
+        'labeled_condition':
+            _full_condition_schema(aggr=False, label_required=True),
+        'having_condition':
+            _full_condition_schema(aggr=True, label_required=False)
     }
 )
 
@@ -545,10 +603,17 @@ recipe_schema = S.Dict(
             S.List(schema=S.String(), required=False),
     },
     registry={
-        'aggregated_field': _field_schema(aggr=True),
-        'optional_aggregated_field': _field_schema(aggr=True, required=False),
-        'non_aggregated_field': _field_schema(aggr=False),
-        'condition': _full_condition_schema(aggr=False),
-        'having_condition': _full_condition_schema(aggr=True),
+        'aggregated_field':
+            _field_schema(aggr=True, required=True),
+        'optional_aggregated_field':
+            _field_schema(aggr=True, required=False),
+        'non_aggregated_field':
+            _field_schema(aggr=False, required=True),
+        'condition':
+            _full_condition_schema(aggr=False, label_required=False),
+        'labeled_condition':
+            _full_condition_schema(aggr=False, label_required=True),
+        'having_condition':
+            _full_condition_schema(aggr=True, label_required=False)
     }
 )

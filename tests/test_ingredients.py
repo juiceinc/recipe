@@ -311,6 +311,32 @@ class TestDimension(object):
         assert len(d.columns) == 2
         assert len(d.group_by) == 2
 
+    def test_dimension_order_by(self):
+        d = Dimension(MyTable.first)
+        assert len(list(d.order_by_columns)) == 1
+
+        # Dimension with different id and value expressions
+        d = Dimension(MyTable.first, id_expression=MyTable.last)
+        assert len(list(d.order_by_columns)) == 2
+        # Order by value expression then id expression
+        assert list(d.order_by_columns) == [
+            MyTable.first,
+            MyTable.last,
+        ]
+
+        # Extra roles do not participate in ordering
+        d = Dimension(
+            MyTable.first,
+            id_expression=MyTable.last,
+            age_expression=MyTable.age,
+            id='moo'
+        )
+        assert len(list(d.order_by_columns)) == 2
+        assert list(d.order_by_columns) == [
+            MyTable.first,
+            MyTable.last,
+        ]
+
     def test_dimension_cauldron_extras(self):
         d = Dimension(MyTable.first, id='moo')
         extras = list(d.cauldron_extras)

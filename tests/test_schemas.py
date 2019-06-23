@@ -149,14 +149,71 @@ def test_field_ref():
                         'value': 'moo'
                     }
                 }],
-                'ref':
-                    'foo',
-                'aggregation':
-                    'sum',
-                'value':
-                    'foo'
+                'ref': 'foo',
+                'aggregation': 'sum',
+                'value': 'foo'
             },
             'kind': 'Metric'
+        }
+    }
+
+
+def test_field_buckets_ref():
+    v = {
+        'foo': {
+            'kind': 'Dimension',
+            'field': {
+                'value': 'foo',
+                'condition': {
+                    'field': 'foo',
+                    'label': 'foo < 200',
+                    'lt': 200
+                }
+            }
+        },
+        'moo': {
+            'kind': 'Dimension',
+            'field': 'moo',
+            'buckets': [{
+                'ref': 'foo'
+            }]
+        }
+    }
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        'foo': {
+            'field': {
+                'aggregation': 'none',
+                'condition': {
+                    '_op': '__lt__',
+                    '_op_value': 200,
+                    'field': {
+                        'aggregation': 'none',
+                        'value': 'foo'
+                    },
+                    'label': 'foo < 200',
+                    'lt': 200
+                },
+                'value': 'foo'
+            },
+            'kind': 'Dimension'
+        },
+        'moo': {
+            'field': {
+                'aggregation': 'none',
+                'buckets': [{
+                    '_op': '__lt__',
+                    '_op_value': 200,
+                    'field': {
+                        'aggregation': 'none',
+                        'value': 'foo'
+                    },
+                    'label': 'foo < 200',
+                    'lt': 200
+                }],
+                'value': 'moo'
+            },
+            'kind': 'Dimension'
         }
     }
 
@@ -253,10 +310,8 @@ def test_field_operators():
                         'value': '1.02'
                     }
                 }],
-                'aggregation':
-                    'sum',
-                'value':
-                    'foo'
+                'aggregation': 'sum',
+                'value': 'foo'
             },
             'kind': 'Metric'
         }
@@ -286,10 +341,8 @@ def test_field_operators():
                         'value': '523.5'
                     }
                 }],
-                'aggregation':
-                    'sum',
-                'value':
-                    'foo'
+                'aggregation': 'sum',
+                'value': 'foo'
             },
             'kind': 'Metric'
         }
@@ -398,6 +451,44 @@ def test_dimension():
             },
             'kind': 'Dimension',
             'icon': 'squee'
+        }
+    }
+
+
+def test_dimension_buckets():
+    v = {
+        'a': {
+            'kind': 'Dimension',
+            'field': 'foo',
+            'icon': 'squee',
+            'buckets': [{
+                'gt': 20,
+                'label': 'over20'
+            }]
+        }
+    }
+
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+
+    # The dimension field gets inserted into the buckets
+    assert x == {
+        'a': {
+            'field': {
+                'aggregation': 'none',
+                'buckets': [{
+                    '_op': '__gt__',
+                    '_op_value': 20,
+                    'field': {
+                        'aggregation': 'none',
+                        'value': 'foo'
+                    },
+                    'gt': 20,
+                    'label': 'over20'
+                }],
+                'value': 'foo'
+            },
+            'icon': 'squee',
+            'kind': 'Dimension'
         }
     }
 
@@ -707,10 +798,8 @@ def test_valid_ingredients():
                         'value': 'cow'
                     }
                 }],
-                'aggregation':
-                    'sum',
-                'value':
-                    'moo'
+                'aggregation': 'sum',
+                'value': 'moo'
             },
             'kind': 'Metric',
             'format': ',.0f'

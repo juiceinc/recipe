@@ -7,10 +7,6 @@ from recipe.compat import str
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict
 
-# TODO: How do we avoid attaching significance to particular
-# indices in columns
-# Should dimensions having ids be an extension to recipe?
-
 
 @total_ordering
 class Ingredient(object):
@@ -117,6 +113,16 @@ class Ingredient(object):
         """
         for column, suffix in zip(self.columns, self.make_column_suffixes()):
             yield column.label(self.id + suffix)
+
+    @property
+    def order_by_columns(self):
+        """ Yield columns to be used in an order by using this ingredient
+        """
+        for c in self.columns:
+            if self.ordering == 'desc':
+                yield c.desc()
+            else:
+                yield c
 
     @property
     def cauldron_extras(self):
@@ -346,6 +352,10 @@ class Dimension(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Dimension, self).__init__(**kwargs)
 
+        # An optional exprssion to use instead of the value expression
+        # when ordering
+        order_by_expression = kwargs.pop('order_by_expression', None)
+
         # We must always have a value role
         self.roles = {'value': expression}
         for k, v in kwargs.items():
@@ -358,16 +368,25 @@ class Dimension(Ingredient):
                     raise BadIngredient('raw is a reserved role in dimensions')
                 self.roles[role] = v
 
-        self.columns, self.group_by = [], []
+        self.columns = []
+        self.group_by = []
+        self._order_by_columns = []
         self.role_keys = []
         if 'id' in self.roles:
             self.columns.append(self.roles['id'])
             self.group_by.append(self.roles['id'])
             self.role_keys.append('id')
+            self._order_by_columns.append(self.roles['id'])
         if 'value' in self.roles:
             self.columns.append(self.roles['value'])
             self.group_by.append(self.roles['value'])
             self.role_keys.append('value')
+            # Order by columns are in order of value, id
+            # Extra roles are ignored
+            if order_by_expression is not None:
+                self._order_by_columns.insert(0, order_by_expression)
+            else:
+                self._order_by_columns.insert(0, self.roles['value'])
 
         # Add all the other columns in sorted order of role
         for k in sorted(self.roles.keys()):
@@ -385,8 +404,8 @@ class Dimension(Ingredient):
             if 'lookup_default' in kwargs:
                 self.lookup_default = kwargs.get('lookup_default')
                 self.formatters.insert(
-                    0,
-                    lambda value: self.lookup.get(value, self.lookup_default)
+                    0, lambda value: self.lookup.
+                    get(value, self.lookup_default)
                 )
             else:
                 self.formatters.insert(
@@ -403,6 +422,16 @@ class Dimension(Ingredient):
             yield extra
 
         yield self.id + '_id', lambda row: getattr(row, self.id_prop)
+
+    @property
+    def order_by_columns(self):
+        """ Yield columns to be used in an order by using this ingredient
+        """
+        for c in self._order_by_columns:
+            if self.ordering == 'desc':
+                yield c.desc()
+            else:
+                yield c
 
     def make_column_suffixes(self):
         """ Make sure we have the right column suffixes. These will be appended
@@ -493,10 +522,9 @@ class DivideMetric(Metric):
         else:
             # If the denominator is zero, return the ifzero value otherwise do
             # the division
-            expression = case(
-                ((cast(denominator, Float) == 0.0, ifzero),),
-                else_=cast(numerator, Float) / cast(denominator, Float)
-            )
+            expression = case(((cast(denominator, Float) == 0.0, ifzero),),
+                              else_=cast(numerator, Float) /
+                              cast(denominator, Float))
         super(DivideMetric, self).__init__(expression, **kwargs)
 
 
