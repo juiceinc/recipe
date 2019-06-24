@@ -8,7 +8,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
-from sqlalchemy.sql import sqltypes
 from sqlalchemy.util import lightweight_named_tuple
 from sureberus import errors as E
 from sureberus import normalize_schema
@@ -133,9 +132,9 @@ def convert_value(field, value):
         else:
             return value
     else:
-        if field.type is sqltypes.DATE:
+        if str(field.type) == 'DATE':
             return _convert_date_value(value)
-        elif field.type is sqltypes.DATETIME:
+        elif str(field.type) == 'DATETIME':
             return _convert_datetime_value(value)
         else:
             return value
