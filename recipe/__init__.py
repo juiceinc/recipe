@@ -7,7 +7,6 @@ import logging
 
 from flapjack_stack import FlapjackStack
 
-from recipe import default_settings
 from recipe.core import Recipe
 from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.extensions import (
@@ -22,8 +21,13 @@ from recipe.oven import get_oven
 from recipe.shelf import AutomaticShelf, Shelf
 from recipe.utils import FakerAnonymizer
 
+class DefaultSettings(object):
+    def __init__(self, *args, **kwargs):
+        self.POOL_SIZE = 5
+        self.POOL_RECYCLE = 60 * 60
+
 SETTINGS = FlapjackStack()
-SETTINGS.add_layer(default_settings)
+SETTINGS.add_layer(DefaultSettings())
 
 try:  # Python 2.7+
     from logging import NullHandler
