@@ -37,6 +37,8 @@ install = [
     'stevedore',
     'sureberus',
     'faker',
+    'dateparser',
+    'attrs',
 ]
 # yapf: enable
 
