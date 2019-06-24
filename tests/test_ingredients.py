@@ -182,11 +182,13 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter(['moo'])
         assert str(filt.filters[0]) == 'foo.first IN (:first_1)'
         filt = d.build_filter(['moo', None])
-        assert str(filt.filters[0]
-                  ) == 'foo.first IS NULL OR foo.first IN (:first_1)'
+        assert str(
+            filt.filters[0]
+        ) == 'foo.first IS NULL OR foo.first IN (:first_1)'
         filt = d.build_filter([None, 'moo', None, None])
-        assert str(filt.filters[0]
-                  ) == 'foo.first IS NULL OR foo.first IN (:first_1)'
+        assert str(
+            filt.filters[0]
+        ) == 'foo.first IS NULL OR foo.first IN (:first_1)'
         filt = d.build_filter([None, None])
         assert str(filt.filters[0]) == 'foo.first IS NULL'
 
@@ -197,11 +199,13 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter(['moo'], operator='notin')
         assert str(filt.filters[0]) == 'foo.first NOT IN (:first_1)'
         filt = d.build_filter(['moo', None], operator='notin')
-        assert str(filt.filters[0]
-                  ) == 'foo.first IS NOT NULL AND foo.first NOT IN (:first_1)'
+        assert str(
+            filt.filters[0]
+        ) == 'foo.first IS NOT NULL AND foo.first NOT IN (:first_1)'
         filt = d.build_filter([None, 'moo', None], operator='notin')
-        assert str(filt.filters[0]
-                  ) == 'foo.first IS NOT NULL AND foo.first NOT IN (:first_1)'
+        assert str(
+            filt.filters[0]
+        ) == 'foo.first IS NOT NULL AND foo.first NOT IN (:first_1)'
         filt = d.build_filter([None, None], operator='notin')
         assert str(filt.filters[0]) == 'foo.first IS NOT NULL'
         filt = d.build_filter(['moo', 'foo'], operator='between')
@@ -783,11 +787,10 @@ class TestParse(object):
     def test_weird_field_string_definitions(self):
         data = [('first+', MyTable.first), ('first-', MyTable.first),
                 ('fir st-', MyTable.first), ('fir st', MyTable.first),
-                ('first+last-',
-                 'foo.first || foo.last'), ('fir st*', MyTable.first),
+                ('first+last-', 'foo.first || foo.last'),
+                ('fir st*', MyTable.first),
                 (
-                    'first/last-',
-                    MyTable.first / (
+                    'first/last-', MyTable.first / (
                         func.coalesce(cast(MyTable.last, Float), 0.0) +
                         SAFE_DIVISON_EPSILON
                     )

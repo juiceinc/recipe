@@ -5,7 +5,7 @@ Test recipes built from yaml files in the ingredients directory.
 
 import os
 
-from datetime import date, datetime, timedelta
+from datetime import date
 import pytest
 from tests.test_base import Census, MyTable, oven
 
@@ -61,7 +61,7 @@ hi,15,hi
         assert recipe.to_sql() == '''SELECT sum(CASE
                WHEN (foo.birth_date BETWEEN '{}' AND '{}') THEN foo.age
            END) AS date_between
-FROM foo'''.format(date(today.year-20, today.month, today.day), today)
+FROM foo'''.format(date(today.year - 20, today.month, today.day), today)
         self.assert_recipe_csv(recipe, '''date_between
 15
 ''')
@@ -70,7 +70,8 @@ FROM foo'''.format(date(today.year-20, today.month, today.day), today)
         # exact datetimes, we don't try to check the exact sql but it will
         # look like
         #         SELECT sum(CASE
-        #                WHEN (foo.dt BETWEEN '1999-06-23 12:13:01.819190' AND '2019-06-23 12:13:01.820635') THEN foo.age
+        #                WHEN (foo.dt BETWEEN '1999-06-23 12:13:01.819190'
+        #                   AND '2019-06-23 12:13:01.820635') THEN foo.age
         #            END) AS dt_between
         # FROM foo
         recipe = Recipe(
@@ -79,8 +80,9 @@ FROM foo'''.format(date(today.year-20, today.month, today.day), today)
         assert recipe.to_sql() != '''SELECT sum(CASE
                WHEN (foo.birth_date BETWEEN '{}' AND '{}') THEN foo.age
            END) AS date_between
-FROM foo'''.format(date(today.year-20, today.month, today.day), today)
-        assert str(date(today.year-20, today.month, today.day)) in recipe.to_sql()
+FROM foo'''.format(date(today.year - 20, today.month, today.day), today)
+        assert str(date(today.year - 20, today.month,
+                        today.day)) in recipe.to_sql()
         assert str(today) in recipe.to_sql()
         self.assert_recipe_csv(recipe, '''dt_between
 15
@@ -176,7 +178,8 @@ babies,164043,babies
 children,948240,children
 oldsters,4567879,oldsters
 teens,614548,teens
-''')
+'''
+        )
 
     def test_census_condition_between(self):
         shelf = self.unvalidated_shelf('census.yaml', Census)
@@ -186,8 +189,7 @@ teens,614548,teens
                WHEN (census.age BETWEEN 13 AND 19) THEN census.pop2000
            END) AS teenagers
 FROM census"""
-        self.assert_recipe_csv(
-            recipe, '''teenagers
+        self.assert_recipe_csv(recipe, '''teenagers
 614548
 ''')
 
@@ -199,8 +201,7 @@ FROM census"""
                WHEN (census.age BETWEEN 13 AND 19) THEN census.pop2000
            END) AS teenagers
 FROM census"""
-        self.assert_recipe_csv(
-            recipe, '''teenagers
+        self.assert_recipe_csv(recipe, '''teenagers
 614548
 ''')
 
@@ -208,8 +209,8 @@ FROM census"""
         shelf = self.unvalidated_shelf('census.yaml', Census)
         recipe = Recipe(
             shelf=shelf, session=self.session
-        ).dimensions('mixed_buckets').metrics('pop2000').order_by(
-            '-mixed_buckets')
+        ).dimensions('mixed_buckets').metrics('pop2000'
+                                             ).order_by('-mixed_buckets')
         assert recipe.to_sql() == """SELECT CASE
            WHEN (census.state IN ('Vermont',
                                   'New Hampshire')) THEN 'northeast'
@@ -243,7 +244,8 @@ teens,550515,teens
 children,859206,children
 babies,150889,babies
 northeast,609480,northeast
-''')
+'''
+        )
 
     def test_census_buckets_ordering(self):
         shelf = self.unvalidated_shelf('census.yaml', Census)
@@ -276,10 +278,12 @@ babies,164043,babies
 children,948240,children
 teens,614548,teens
 oldsters,4567879,oldsters
-''')
+'''
+        )
         recipe = Recipe(
             shelf=shelf, session=self.session
-        ).dimensions('age_buckets').metrics('pop2000').order_by('-age_buckets')
+        ).dimensions('age_buckets').metrics('pop2000'
+                                           ).order_by('-age_buckets')
         assert recipe.to_sql() == """SELECT CASE
            WHEN (census.age < 2) THEN 'babies'
            WHEN (census.age < 13) THEN 'children'
@@ -306,7 +310,8 @@ oldsters,4567879,oldsters
 teens,614548,teens
 children,948240,children
 babies,164043,babies
-''')
+'''
+        )
 
     def test_complex_census_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and

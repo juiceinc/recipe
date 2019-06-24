@@ -19,7 +19,7 @@ TABLEDEF = '''
 
 oven.engine.execute(TABLEDEF)
 oven.engine.execute(
-    "insert into foo values ('hi', 'there', 5, '2000-01-01', '2000-01-01 12:15:00'), ('hi', 'fred', 10, '2015-05-15', '2013-10-15 05:20:10')"
+    "insert into foo values ('hi', 'there', 5, '2000-01-01', '2000-01-01 12:15:00'), ('hi', 'fred', 10, '2015-05-15', '2013-10-15 05:20:10')"  # noqa: E501
 )
 
 # Create a table for testing summarization

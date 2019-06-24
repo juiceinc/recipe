@@ -1,12 +1,10 @@
 import dateparser
-import inspect
 from copy import copy, deepcopy
 
 from datetime import date, datetime
 from six import iteritems
 from sqlalchemy import (
-    Float, Integer, String, Table, and_, between, case, cast, distinct, func, 
-    or_    
+    Float, Integer, String, Table, and_, case, cast, distinct, func, or_
 )
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
@@ -88,14 +86,14 @@ def find_column(selectable, name):
 
 def _convert_date_value(v):
     parse_kwargs = {
-        'languages': ['en'],        
+        'languages': ['en'],
     }
     if isinstance(v, date):
         return v
     elif isinstance(v, datetime):
         return v.date()
     elif isinstance(v, basestring):
-        parsed_dt = dateparser.parse(v, **parse_kwargs)        
+        parsed_dt = dateparser.parse(v, **parse_kwargs)
         if parsed_dt is None:
             raise ValueError('Could not parse date in {}'.format(v))
         return parsed_dt.date()
@@ -105,14 +103,14 @@ def _convert_date_value(v):
 
 def _convert_datetime_value(v):
     parse_kwargs = {
-        'languages': ['en'],        
+        'languages': ['en'],
     }
     if isinstance(v, datetime):
         return v
     elif isinstance(v, date):
         return datetime(v.year, v.month, v.day)
     elif isinstance(v, basestring):
-        parsed_dt = dateparser.parse(v, **parse_kwargs)        
+        parsed_dt = dateparser.parse(v, **parse_kwargs)
         if parsed_dt is None:
             raise ValueError('Could not parse datetime in {}'.format(v))
         return parsed_dt
@@ -121,8 +119,8 @@ def _convert_datetime_value(v):
 
 
 def convert_value(field, value):
-    """Convert values into something appropriate for this SQLAlchemy data type 
-    
+    """Convert values into something appropriate for this SQLAlchemy data type
+
     :param field: A SQLAlchemy expression
     :param values: A value or list of values
     """
@@ -141,7 +139,7 @@ def convert_value(field, value):
             return _convert_datetime_value(value)
         else:
             return value
-    
+
 
 def parse_validated_condition(cond, selectable):
     """ Convert a validated condition into a SQLAlchemy boolean expression """
@@ -164,7 +162,7 @@ def parse_validated_condition(cond, selectable):
         field = parse_validated_field(cond.get('field'), selectable)
         _op = cond.get('_op')
         _op_value = convert_value(field, cond.get('_op_value'))
-        
+
         if _op == 'between':
             return getattr(field, _op)(*_op_value)
         else:
