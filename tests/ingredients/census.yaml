@@ -38,6 +38,13 @@ mixed_buckets:
     - label: 'teens'
       lt: 20
     buckets_default_label: 'oldsters'
+teenagers:
+    kind: Metric
+    field: 
+      value: pop2000
+      condition:
+        field: age
+        between: [13,19]
 ttlpop:
     kind: Metric
     field: pop2000 + pop2008
