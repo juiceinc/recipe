@@ -21,10 +21,12 @@ from recipe.oven import get_oven
 from recipe.shelf import AutomaticShelf, Shelf
 from recipe.utils import FakerAnonymizer
 
+
 class DefaultSettings(object):
     def __init__(self, *args, **kwargs):
         self.POOL_SIZE = 5
         self.POOL_RECYCLE = 60 * 60
+
 
 SETTINGS = FlapjackStack()
 SETTINGS.add_layer(DefaultSettings())
