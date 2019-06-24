@@ -25,7 +25,7 @@ project = u'Recipe'
 year = '2017'
 author = u'Chris Gemignani'
 copyright = '{0}, {1}'.format(year, author)
-version = release = u'0.6.2'
+version = release = u'0.7.0'
 
 pygments_style = 'trac'
 templates_path = ['.']
