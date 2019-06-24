@@ -168,7 +168,6 @@ def parse_validated_condition(cond, selectable):
         if _op == 'between':
             return getattr(field, _op)(*_op_value)
         else:
-            # print("DOWN HERE")
             return getattr(field, _op)(_op_value)
 
 
