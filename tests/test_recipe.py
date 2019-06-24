@@ -129,12 +129,6 @@ OFFSET 1"""
                 val = getattr(c, x)
             except:
                 val = 'unknown'
-            print(x, val)
-        print(dir(age.columns[0]))
-        print()
-        print(age.columns[0].type)
-        print(type(age.columns[0].type))
-        assert age == 1
 
     def test_dataset(self):
         recipe = self.recipe().metrics('age').dimensions('first')

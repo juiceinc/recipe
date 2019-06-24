@@ -31,7 +31,6 @@ def _make_sqlalchemy_datatype_lookup():
 
 
 sqlalchemy_datatypes = _make_sqlalchemy_datatype_lookup()
-print(sqlalchemy_datatypes)
 
 format_lookup = {
     'comma': ',.0f',
