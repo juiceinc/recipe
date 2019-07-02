@@ -126,8 +126,8 @@ OFFSET 1"""
         assert recipe._use_cache is True
 
         recipe = self.recipe().metrics('age').use_cache(False)
-        assert recipe._use_cache == False
-        
+        assert recipe._use_cache is False
+
         with pytest.raises(AssertionError):
             self.recipe().metrics('age').use_cache('potatoe')
 

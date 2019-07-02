@@ -85,6 +85,7 @@ class Recipe(object):
         # Cache options
         self.cache_context = None
         self._cache_region = 'default'
+        self._cache_prefix = 'default'
         self._use_cache = True
 
         self.stats = Stats()
@@ -225,6 +226,12 @@ class Recipe(object):
         """Set a cache region for recipe-caching to use """
         assert isinstance(value, basestring)
         self._cache_region = value
+
+    @recipe_arg()
+    def cache_prefix(self, value):
+        """Set a cache prefix for recipe-caching to use """
+        assert isinstance(value, basestring)
+        self._cache_prefix = value
 
     @recipe_arg()
     def use_cache(self, value):
@@ -445,6 +452,8 @@ class Recipe(object):
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_postquery_parts(recipe_parts)
 
+        if 'recipe' not in recipe_parts:
+            recipe_parts['recipe'] = self
         recipe_parts = run_hooks(
             recipe_parts, 'modify_query', self.dynamic_extensions
         )
