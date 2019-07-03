@@ -22,7 +22,7 @@ if os.getenv('SPELLCHECK'):
 source_suffix = '.rst'
 master_doc = 'index'
 project = u'Recipe'
-year = '2017'
+year = '2019'
 author = u'Chris Gemignani'
 copyright = '{0}, {1}'.format(year, author)
 version = release = u'0.7.2'
@@ -38,6 +38,23 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 if not on_rtd:  # only set the theme if we're building docs locally
     html_theme = 'sphinx_rtd_theme'
+
+html_theme_options = {
+    # 'canonical_url': '',
+    # 'analytics_id': 'UA-XXXXXXX-1',  #  Provided by Google in your dashboard
+    'logo_only': False,
+    'display_version': True,
+    'prev_next_buttons_location': 'bottom',
+    'style_external_links': False,
+    # 'vcs_pageview_mode': '',
+    'style_nav_header_background': '#4eb2cd',
+    # Toc options
+    'collapse_navigation': True,
+    'sticky_navigation': True,
+    'navigation_depth': 4,
+    'includehidden': True,
+    'titles_only': False
+}
 
 html_use_smartypants = True
 html_last_updated_fmt = '%b %d, %Y'

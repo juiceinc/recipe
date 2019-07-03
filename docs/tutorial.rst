@@ -19,25 +19,24 @@ First, make sure that:
 
 Let's gets started with some simple use cases and examples.
 
-
 ------------------
 Creating a Shelf
 ------------------
 
-
 A :class:`Shelf <recipe.Shelf>` is a place to store SQL fragments. In recipe
-these are called :class:`Ingredients <recipe.Ingredient>`. Ingredients can
-contain columns that should be part of the ``SELECT`` portion of a query,
-filters that are part of the ``WHERE`` clause of a query, group_bys that
+these are called :class:`Ingredients <recipe.Ingredient>`. 
+
+Ingredients can contain columns that should be part of the ``SELECT`` portion of a query,
+filters that are part of a ``WHERE`` clause of a query, group_bys that
 contribute to a query's ``GROUP BY`` and havings which add ``HAVING`` limits
 ot a query.
 
 It's a safe bet that you won't have to construct an Ingredient
 with all these parts directly because Recipe contains convenience classes
 that help you build the most common SQL fragments. The two most common
-Ingredient subclasses are :class:`Dimensions <recipe.Dimension>` which supply
+Ingredient subclasses are :class:`Dimension <recipe.Dimension>` which supply
 both a column and a grouping on that column and
-:class:`Metrics <recipe.Metric>` which supply a column aggregation.
+:class:`Metric <recipe.Metric>` which supply a column aggregation.
 
 Shelf acts like a dictionary. The keys are strings and the
 values are Ingredients. The keys are a shortcut name for the
@@ -48,9 +47,9 @@ ingredient. Here's an example.
     from recipe import *
 
     shelf = Shelf({
+        'state', Dimension(Census.state),
         'age': WtdAvgMetric(Census.age, Census.pop2000),
-        'population': Metric(func.sum(Census.pop2000)),
-        'state', Dimension(Census.state)
+        'population': Metric(func.sum(Census.pop2000))
     })
 
 This is a shelf with two metrics (a weighted average of age, and the sum of
@@ -79,147 +78,6 @@ Viewing the data from your Recipe
 recipe.dataset.xxxx
 iterating over recipe.all
 dimensions have a separate _id property
-
-
-======================
-More about Ingredients
-======================
-
---------------------
-Types of Ingredients
---------------------
-
-List of ingredients
-
-Dimension
-~~~~~~~~~
-
-Dimensions are groupings that exist in your data.
-
-.. code-block:: python
-
-    # A simple dimension
-    self.shelf['state'] = Dimension(Census.state)
-
-Adding an id
-~~~~~~~~~~~~
-
-Dimensions can support separate properties for ids and values. Consider a
-table of employees with an ``employee_id`` and a ``full_name``. If you had
-two employees with the same name you need to be able to distinguish between
-them.
-
-.. code-block:: python
-
-    # Support an id and a label
-    self.shelf['employee']: Dimension(Employee.full_name,
-                                      id_expression=Employee.id)
-
-The id is accessible as ``employee_id`` in each row and their full name is
-available as ``employee``.
-
-Using lookups
-~~~~~~~~~~~~~
-
-Lookup maps values in your data to descriptive names. The ``_id``
-property of your dimension contains the original value.
-
-.. code-block:: python
-
-    # Convert M/F into Male/Female
-    self.shelf['gender']: Dimension(Census.sex, lookup={'M': 'Male',
-        'F': 'Female'}, lookup_default='Unknown')
-
-If you use the gender dimension, there will be a ``gender_id`` in each row
-that will be "M" or "F" and a ``gender`` in each row that will be "Male" or
-"Female".
-
-Metric
-~~~~~~
-
-DivideMetric
-~~~~~~~~~~~~
-
-WtdAvgMetric
-~~~~~~~~~~~~
-
-Filter
-~~~~~~
-
-Having
-~~~~~~
-
-
-----------
-Formatters
-----------
-
-----------------
-Building filters
-----------------
-
-Ingredient.build_filter
-
-
---------------------------------
-Storing extra attributes in meta
---------------------------------
-
-
-
-================
-Using Extensions
-================
-
-
-This part of the documentation services to give you an idea that are otherwise hard to extract from the :ref:`API Documentation <api>`
-
-Extensions build on the core behavior or recipe to let you perform
-What are extensions for?
-
--------------------
-Automatic Filtering
--------------------
-
-The AutomaticFilter extension
-
----------------------------
-Summarizing over Dimensions
----------------------------
-
-SummarizeOver
-
------------------------
-Merging multiple tables
------------------------
-
-BlendRecipe
-
-
-----------------------
-Adding comparison data
-----------------------
-
-CompareRecipe
-
-
-
-----------------
-Anonymizing data
-----------------
-
-Anonymize
-
-
-
-
-=================
-Advanced Features
-=================
-
---------------------
-Database connections
---------------------
 
 
 -------
