@@ -121,6 +121,36 @@ OFFSET 1"""
         recipe = self.recipe().metrics('age')
         assert recipe._is_postgres() is False
 
+    def test_use_cache(self):
+        recipe = self.recipe().metrics('age')
+        assert recipe._use_cache is True
+
+        recipe = self.recipe().metrics('age').use_cache(False)
+        assert recipe._use_cache is False
+
+        with pytest.raises(AssertionError):
+            self.recipe().metrics('age').use_cache('potatoe')
+
+    def test_cache_region(self):
+        recipe = self.recipe().metrics('age')
+        assert recipe._cache_region == 'default'
+
+        recipe = self.recipe().metrics('age').cache_region('foo')
+        assert recipe._cache_region == 'foo'
+
+        with pytest.raises(AssertionError):
+            self.recipe().metrics('age').cache_region(22)
+
+    def test_cache_prefix(self):
+        recipe = self.recipe().metrics('age')
+        assert recipe._cache_prefix == 'default'
+
+        recipe = self.recipe().metrics('age').cache_prefix('foo')
+        assert recipe._cache_prefix == 'foo'
+
+        with pytest.raises(AssertionError):
+            self.recipe().metrics('age').cache_prefix(22)
+
     def test_dataset(self):
         recipe = self.recipe().metrics('age').dimensions('first')
         assert recipe.dataset.json == '[{"first": "hi", "age": 15, ' \
