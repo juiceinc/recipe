@@ -453,7 +453,8 @@ class Recipe(object):
             recipe_parts = extension.modify_postquery_parts(recipe_parts)
 
         if 'recipe' not in recipe_parts:
-            recipe_parts['recipe'] = self
+            recipe_parts['cache_region'] = self._cache_region
+            recipe_parts['cache_prefix'] = self._cache_prefix
         recipe_parts = run_hooks(
             recipe_parts, 'modify_query', self.dynamic_extensions
         )
