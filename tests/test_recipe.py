@@ -139,7 +139,17 @@ OFFSET 1"""
         assert recipe._cache_region == 'foo'
 
         with pytest.raises(AssertionError):
-            self.recipe().metrics('age').use_cache(2)
+            self.recipe().metrics('age').cache_region(22)
+
+    def test_cache_prefix(self):
+        recipe = self.recipe().metrics('age')
+        assert recipe._cache_prefix == 'default'
+
+        recipe = self.recipe().metrics('age').cache_prefix('foo')
+        assert recipe._cache_prefix == 'foo'
+
+        with pytest.raises(AssertionError):
+            self.recipe().metrics('age').cache_prefix(22)
 
     def test_dataset(self):
         recipe = self.recipe().metrics('age').dimensions('first')

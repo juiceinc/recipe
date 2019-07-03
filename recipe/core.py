@@ -224,13 +224,13 @@ class Recipe(object):
     @recipe_arg()
     def cache_region(self, value):
         """Set a cache region for recipe-caching to use """
-        assert isinstance(value, basestring)
+        assert isinstance(value, str)
         self._cache_region = value
 
     @recipe_arg()
     def cache_prefix(self, value):
         """Set a cache prefix for recipe-caching to use """
-        assert isinstance(value, basestring)
+        assert isinstance(value, str)
         self._cache_prefix = value
 
     @recipe_arg()
