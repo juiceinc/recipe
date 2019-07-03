@@ -10,7 +10,7 @@ from sqlalchemy import alias, func
 from sqlalchemy.sql.elements import BinaryExpression
 from sureberus import normalize_dict, normalize_schema
 
-from recipe.compat import str
+from recipe.compat import basestring
 from recipe.dynamic_extensions import run_hooks
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Filter, Having, Metric
@@ -224,13 +224,13 @@ class Recipe(object):
     @recipe_arg()
     def cache_region(self, value):
         """Set a cache region for recipe-caching to use """
-        assert isinstance(value, str)
+        assert isinstance(value, basestring)
         self._cache_region = value
 
     @recipe_arg()
     def cache_prefix(self, value):
         """Set a cache prefix for recipe-caching to use """
-        assert isinstance(value, str)
+        assert isinstance(value, basestring)
         self._cache_prefix = value
 
     @recipe_arg()
