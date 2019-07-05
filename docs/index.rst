@@ -56,9 +56,10 @@ and response formatting.
    :caption: Key Concepts
    :maxdepth: 3
 
+   concepts/overview
    concepts/ingredients
    concepts/shelves
-   concepts/shelves_from_config
+   concepts/from_config
    concepts/extensions
 
 .. toctree::
