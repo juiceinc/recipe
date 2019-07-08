@@ -10,29 +10,63 @@ from recipe.utils import AttrDict
 
 @total_ordering
 class Ingredient(object):
-    """ Ingredients combine to make a SQLAlchemy query.
+    """ Ingredients combine to make a SQLAlchemy query. 
+    
+    Any unknown keyword arguments provided to an Ingredient
+    during initializatino are stored in a meta object.
+
+    .. code:: python
+
+        # icon is an unknown keyword argument
+        m = Metric(func.sum(MyTable.sales), icon='cog')
+        print(m.meta.icon)
+        >>> 'cog'
+
+    This meta storage can be used to add new capabilities to
+    ingredients.
+
+    Args:
+
+        id (:obj:`str`): 
+            An id to identify this Ingredient. If ingredients are 
+            added to a Shelf, the id is automatically set as the key in
+            the shelf.
+        columns (:obj:`list` of :obj:`ColumnElement`):
+            A list of SQLAlchemy columns to use in a query select.
+        filters (:obj:`list` of :obj:`BinaryExpression`):
+            A list of SQLAlchemy BinaryExpressions to use in the
+            .filter() clause of a query.
+        havings (:obj:`list` of :obj:`BinaryExpression`):
+            A list of SQLAlchemy BinaryExpressions to use in the
+            .having() clause of a query.
+        columns (:obj:`list` of :obj:`ColumnElement`):
+            A list of SQLAlchemy columns to use in the `group_by` clause
+            of a query.
+        formatters: (:obj:`list` of :obj:`callable`):
+            A list of callables to apply to the result values.
+            If formatters exist, property `{ingredient.id}_raw` will
+            exist on each result row containing the unformatted 
+            value.
+        cache_context (:obj:`str`):
+            Extra context when caching this ingredient. DEPRECATED
+        ordering (`string`, 'asc' or 'desc'):
+            One of 'asc' or 'desc'.  'asc' is the default value.
+            The default ordering of this ingredient if it is
+            used in a ``recipe.order_by``. 
+            This is added to the ingredient when the ingredient is
+            used in a ``recipe.order_by``.
+        quickfilters (:obj:`list` of named filters):
+            A list of named filters that can be accessed through
+            ``build_filter``. Named filters are dictionaries with
+            a ``name`` (:obj:str) property and a ``condition`` property
+            (:obj:`BinaryExpression`)
+        
+    Returns:
+        An Ingredient object.
+
     """
 
     def __init__(self, **kwargs):
-        """ Initializing an instance of the Ingredient Class
-
-        :param columns: A list of SQLAlchemy columns to use in a query.
-        :type ColumnElement: list
-        :param filters: A list of SQLAlchemy BinaryExpressions to use in the
-                        .filter() clause of a query.
-        :type BinaryExpressions: list
-        :param havings: A list of SQLAlchemy BinaryExpressions to use in the
-                        .filter() clause of a query.
-        :type BinaryExpressions: list
-        :param group_by: A list of SQLAlchemy columns to use in the group_by
-                        clause of a query
-        :param formatters: A list of callables to apply to the result values
-        :type callables: list
-        :param cache_context: Extra context when caching this ingredient
-        :type cache_context: string
-        :param ordering: The default ordering of this ingredient if it is
-        used in a ``recipe.order_by``
-        """
         self.id = kwargs.pop('id', uuid4().hex[:12])
         self.columns = kwargs.pop('columns', [])
         self.filters = kwargs.pop('filters', [])
@@ -75,13 +109,13 @@ class Ingredient(object):
         return ' '.join(str(col) for col in self.columns)
 
     def describe(self):
+        """A string representation of the ingredient."""
         return u'({}){} {}'.format(
             self.__class__.__name__, self.id, self._stringify()
         )
 
     def _format_value(self, value):
-        """ Formats value using any stored formatters
-        """
+        """Formats value using any stored formatters. """
         for f in self.formatters:
             value = f(value)
         return value
@@ -109,7 +143,7 @@ class Ingredient(object):
 
     @property
     def query_columns(self):
-        """ Yield labeled columns to be used as a select in a query
+        """Yield labeled columns to be used as a select in a query. 
         """
         for column, suffix in zip(self.columns, self.make_column_suffixes()):
             yield column.label(self.id + suffix)
@@ -127,7 +161,7 @@ class Ingredient(object):
     @property
     def cauldron_extras(self):
         """ Yield extra tuples containing a field name and a callable that takes
-        a row
+        a row.
         """
         if self.formatters:
             raw_property = self.id + '_raw'
@@ -135,7 +169,8 @@ class Ingredient(object):
                 self._format_value(getattr(row, raw_property))
 
     def _order(self):
-        """ Ingredients are sorted by subclass then by id """
+        """Ingredients are sorted by subclass then by id.
+        """
         if isinstance(self, Dimension):
             return (0, self.id)
         elif isinstance(self, Metric):
@@ -163,7 +198,19 @@ class Ingredient(object):
         return not (self._order() == other._order())
 
     def _build_scalar_filter(self, value, operator=None):
-        """ Scalar filters take a single value. """
+        """Build a Filter given a single value. 
+        
+        Args:
+        
+            value (a string, number, boolean or None):
+            operator (`str`)
+                A valid scalar operator. The default operator
+                is `eq`
+        
+        Returns:
+
+            A Filter object
+        """
         filter_column = self.columns[0]
 
         if operator is None or operator == 'eq':
@@ -203,7 +250,19 @@ class Ingredient(object):
             raise ValueError('Unknown operator {}'.format(operator))
 
     def _build_vector_filter(self, value, operator=None):
-        """ Vector filters take a list or tuple of values """
+        """Build a Filter given a list of values. 
+        
+        Args:
+        
+            value (a string, number, boolean or None):
+            operator (:obj:`str`)
+                A valid vector operator. The default operator is 
+                `in`.
+        
+        Returns:
+
+            A Filter object
+        """
         filter_column = self.columns[0]
 
         if operator is None or operator == 'in':
@@ -254,14 +313,29 @@ class Ingredient(object):
             raise ValueError('Unknown operator {}'.format(operator))
 
     def build_filter(self, value, operator=None):
-        """ Builds a filter based on a supplied value and optional operator. If
+        """ 
+        Builds a filter based on a supplied value and optional operator. If
         no operator is supplied an ``in`` filter will be used for a list and a
-        ``eq`` filter if we get a scalar value
+        ``eq`` filter if we get a scalar value.
 
-        :param value: The value to use in the filter
-        :type value: object
-        :param operator: An operator to override the default interaction
-        :type operator: str
+        ``build_filter`` is used by the AutomaticFilter extension. 
+
+        Args:
+        
+            value:
+                A value or list of values to operate against
+            operator (:obj:`str`)
+                An operator that determines the type of comparison
+                to do against value.
+
+                The default operator is 'in' if value is a list and
+                'eq' if value is a string, number, boolean or None.
+
+        
+        Returns:
+
+            A Filter object
+
         """
         value_is_scalar = not isinstance(value, (list, tuple))
 
@@ -333,6 +407,8 @@ class Dimension(Ingredient):
 
     For instance, the following
 
+    .. code:: python
+
         Dimension(Hospitals.name,
                   latitude_expression=Hospitals.lat
                   longitude_expression=Hospitals.lng,
@@ -344,9 +420,23 @@ class Dimension(Ingredient):
 
     The following additional keyword parameters are also supported:
 
+    Args:
+    
+        lookup (:obj:`dict`):
+            A dictionary that is used to map values to new values.
+
+            Note: Lookup adds a ``formatter`` callable as the first
+            item in the list of formatters.
+        lookup_default (:ojb:`object`)
+            A default to show if the value can't be found in the
+            lookup dictionary.
+    
+    Returns:
+
+        A Filter object
     :param lookup: dict A dictionary to translate values into
     :param lookup_default: A default to show if the value can't be found in the
-    lookup dictionary.
+      lookup dictionary.
     """
 
     def __init__(self, expression, **kwargs):
@@ -461,6 +551,29 @@ class Dimension(Ingredient):
 
 
 class IdValueDimension(Dimension):
+    """
+    DEPRECATED: A convenience class for creating a Dimension
+    with a separate ``id_expression``.  The following are identical.
+
+    .. code:: python
+
+        d = Dimension(Student.student_name, id_expression=Student.student_id)
+
+        d = IdValueDimension(Student.student_id, Student.student_name)
+
+    The former approach is recommended.
+
+    Args:
+
+        id_expression (:obj:`ColumnElement`)
+            A column expression that is used to identify the id 
+            for a Dimension
+        value_expression (:obj:`ColumnElement`)
+            A column expression that is used to identify the value 
+            for a Dimension
+        
+
+    """
 
     def __init__(self, id_expression, value_expression, **kwargs):
         kwargs['id_expression'] = id_expression
@@ -499,6 +612,11 @@ class Metric(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Metric, self).__init__(**kwargs)
         self.columns = [expression]
+
+    def build_filter(self, value, operator=None):
+        """Building filters with Metric returns Having objects. """
+        f = super().build_filter(value, operator=operator)
+        return Having(f.filters[0])
 
 
 class DivideMetric(Metric):

@@ -71,7 +71,7 @@ oven.engine.execute(
 
 oven.engine.execute(
     """CREATE TABLE IF NOT EXISTS census
-(state text, sex text, age integer, pop2000 integer, pop2008 integer);"""
+(state text, gender text, age integer, pop2000 integer, pop2008 integer);"""
 )
 oven.engine.execute(
     """INSERT INTO CENSUS values
@@ -8903,7 +8903,7 @@ class TagScores(Base):
 
 class Census(Base):
     state = Column('state', String(), primary_key=True)
-    sex = Column('sex', String())
+    gender = Column('gender', String())
     age = Column('age', Integer())
     pop2000 = Column('pop2000', Integer())
     pop2008 = Column('pop2008', Integer())
@@ -8982,8 +8982,8 @@ tagscores_shelf = Shelf({
 census_shelf = Shelf({
     'state':
         Dimension(Census.state),
-    'sex':
-        Dimension(Census.sex),
+    'gender':
+        Dimension(Census.gender),
     'age':
         Dimension(Census.age),
     'pop2000':
@@ -9069,3 +9069,108 @@ recipe = Recipe.from_config(s, recipe_yaml, session=oven.Session(),
     .compare(Recipe(shelf=s, session=oven.Session()).metrics('age'))
 print(recipe.to_sql())
 print(recipe.dataset.csv)
+
+
+
+shelf = Shelf({
+    'state': Dimension(Census.state),
+    'gender_desc': Dimension(Census.gender, lookup={'M': 'Male',
+        'F': 'Female'}, lookup_default='Unknown'),
+    'age': WtdAvgMetric(Census.age, Census.pop2000),
+    'population': Metric(func.sum(Census.pop2000))
+})
+
+recipe = Recipe(shelf=shelf, session=oven.Session())\
+    .dimensions('gender_desc').metrics('population')
+print(recipe.to_sql())
+print(recipe.dataset.csv)
+
+
+
+shelf = Shelf({
+    'state': Dimension(Census.state),
+    'age': WtdAvgMetric(Census.age, Census.pop2000),
+    'gender': Dimension(Census.gender),
+    'population': Metric(func.sum(Census.pop2000), formatters=[
+        lambda value: int(round(value, -6) / 1000000)
+    ])
+})
+
+recipe = Recipe(shelf=shelf, session=oven.Session())\
+    .dimensions('gender').metrics('population')
+
+for row in recipe.all():
+    print('{} has {} million people'.format(row.gender, row.population))
+    print('\tThe original value is: {}'.format(row.population_raw))
+
+shelf = Shelf({
+    'state': Dimension(Census.state),
+    'age': WtdAvgMetric(Census.age, Census.pop2000),
+    'gender': Dimension(Census.gender),
+    'population': Metric(func.sum(Census.pop2000))
+})
+
+
+shelf = Shelf({
+    'age': Dimension(Census.age),
+    'state': Dimension(Census.state),
+    'population': Metric(func.sum(Census.pop2000)),
+    'teens': Filter(Census.age.between(13,19)),
+})
+recipe = Recipe(shelf=shelf, session=oven.Session())\
+    .dimensions('state')\
+    .metrics('population')\
+    .filters('teens')
+
+print(recipe.to_sql())
+print(recipe.dataset.csv)
+
+shelf = Shelf({
+    'age': Dimension(Census.age),
+    'avgage': WtdAvgMetric(Census.age, Census.pop2000),
+    'state': Dimension(Census.state),
+    'population': Metric(func.sum(Census.pop2000)),
+})
+bigger = shelf['population'].build_filter(10000000, operator='gt')
+
+recipe = Recipe(shelf=shelf, session=oven.Session())\
+    .dimensions('state')\
+    .metrics('population')\
+    .order_by('-population')\
+    .filters(bigger)
+
+print(recipe.to_sql())
+print(recipe.dataset.csv)
+
+shelf = Shelf({
+    'state': Dimension(Census.state),
+    'avgage': WtdAvgMetric(Census.age, Census.pop2000),
+})
+recipe = Recipe(shelf=shelf, session=oven.Session())\
+    .dimensions('state').metrics('avgage')
+
+print(recipe.to_sql())
+print(recipe.dataset.csv)
+
+
+shelf = Shelf({
+    'state': Dimension(Census.state),
+    'popgrowth': DivideMetric(func.sum(Census.pop2008-Census.pop2000), func.sum(Census.pop2000)),
+})
+recipe = Recipe(shelf=shelf, session=oven.Session())\
+    .dimensions('state').metrics('popgrowth')
+
+print(recipe.to_sql())
+print(recipe.dataset.csv)
+
+
+shelf = Shelf({
+    'total_population': Metric(func.sum(Census.pop2000)),
+    'min_population': Metric(func.min(Census.pop2000)),
+    'max_population': Metric(func.max(Census.pop2000))
+})
+recipe = Recipe(shelf=shelf, session=oven.Session())\
+    .metrics('total_population', 'min_population', 'max_population')
+print(recipe.to_sql())
+print(recipe.dataset.csv)
+

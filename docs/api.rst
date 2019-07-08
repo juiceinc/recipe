@@ -30,7 +30,6 @@ Shelf
 .. autoclass:: AutomaticShelf
    :inherited-members:
 
-
 -----------
 Ingredients
 -----------

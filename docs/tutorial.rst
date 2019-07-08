@@ -3,7 +3,7 @@
 ===============
 Getting Started
 ===============
-
+ 
 .. module:: recipe
 
 This page gives a good introduction in how to get started with Recipe. This
