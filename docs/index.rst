@@ -60,6 +60,7 @@ and response formatting.
    concepts/ingredients
    concepts/shelves
    concepts/from_config
+   concepts/using_from_config
    concepts/extensions
 
 .. toctree::

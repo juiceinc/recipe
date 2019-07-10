@@ -10,8 +10,8 @@ from recipe.utils import AttrDict
 
 @total_ordering
 class Ingredient(object):
-    """ Ingredients combine to make a SQLAlchemy query. 
-    
+    """ Ingredients combine to make a SQLAlchemy query.
+
     Any unknown keyword arguments provided to an Ingredient
     during initializatino are stored in a meta object.
 
@@ -27,8 +27,8 @@ class Ingredient(object):
 
     Args:
 
-        id (:obj:`str`): 
-            An id to identify this Ingredient. If ingredients are 
+        id (:obj:`str`):
+            An id to identify this Ingredient. If ingredients are
             added to a Shelf, the id is automatically set as the key in
             the shelf.
         columns (:obj:`list` of :obj:`ColumnElement`):
@@ -45,14 +45,14 @@ class Ingredient(object):
         formatters: (:obj:`list` of :obj:`callable`):
             A list of callables to apply to the result values.
             If formatters exist, property `{ingredient.id}_raw` will
-            exist on each result row containing the unformatted 
+            exist on each result row containing the unformatted
             value.
         cache_context (:obj:`str`):
             Extra context when caching this ingredient. DEPRECATED
         ordering (`string`, 'asc' or 'desc'):
             One of 'asc' or 'desc'.  'asc' is the default value.
             The default ordering of this ingredient if it is
-            used in a ``recipe.order_by``. 
+            used in a ``recipe.order_by``.
             This is added to the ingredient when the ingredient is
             used in a ``recipe.order_by``.
         quickfilters (:obj:`list` of named filters):
@@ -60,7 +60,7 @@ class Ingredient(object):
             ``build_filter``. Named filters are dictionaries with
             a ``name`` (:obj:str) property and a ``condition`` property
             (:obj:`BinaryExpression`)
-        
+
     Returns:
         An Ingredient object.
 
@@ -143,7 +143,7 @@ class Ingredient(object):
 
     @property
     def query_columns(self):
-        """Yield labeled columns to be used as a select in a query. 
+        """Yield labeled columns to be used as a select in a query.
         """
         for column, suffix in zip(self.columns, self.make_column_suffixes()):
             yield column.label(self.id + suffix)
@@ -198,15 +198,15 @@ class Ingredient(object):
         return not (self._order() == other._order())
 
     def _build_scalar_filter(self, value, operator=None):
-        """Build a Filter given a single value. 
-        
+        """Build a Filter given a single value.
+
         Args:
-        
+
             value (a string, number, boolean or None):
             operator (`str`)
                 A valid scalar operator. The default operator
                 is `eq`
-        
+
         Returns:
 
             A Filter object
@@ -250,15 +250,15 @@ class Ingredient(object):
             raise ValueError('Unknown operator {}'.format(operator))
 
     def _build_vector_filter(self, value, operator=None):
-        """Build a Filter given a list of values. 
-        
+        """Build a Filter given a list of values.
+
         Args:
-        
+
             value (a string, number, boolean or None):
             operator (:obj:`str`)
-                A valid vector operator. The default operator is 
+                A valid vector operator. The default operator is
                 `in`.
-        
+
         Returns:
 
             A Filter object
@@ -313,15 +313,15 @@ class Ingredient(object):
             raise ValueError('Unknown operator {}'.format(operator))
 
     def build_filter(self, value, operator=None):
-        """ 
+        """
         Builds a filter based on a supplied value and optional operator. If
         no operator is supplied an ``in`` filter will be used for a list and a
         ``eq`` filter if we get a scalar value.
 
-        ``build_filter`` is used by the AutomaticFilter extension. 
+        ``build_filter`` is used by the AutomaticFilter extension.
 
         Args:
-        
+
             value:
                 A value or list of values to operate against
             operator (:obj:`str`)
@@ -331,7 +331,6 @@ class Ingredient(object):
                 The default operator is 'in' if value is a list and
                 'eq' if value is a string, number, boolean or None.
 
-        
         Returns:
 
             A Filter object
@@ -421,7 +420,7 @@ class Dimension(Ingredient):
     The following additional keyword parameters are also supported:
 
     Args:
-    
+
         lookup (:obj:`dict`):
             A dictionary that is used to map values to new values.
 
@@ -430,7 +429,7 @@ class Dimension(Ingredient):
         lookup_default (:ojb:`object`)
             A default to show if the value can't be found in the
             lookup dictionary.
-    
+
     Returns:
 
         A Filter object
@@ -566,12 +565,11 @@ class IdValueDimension(Dimension):
     Args:
 
         id_expression (:obj:`ColumnElement`)
-            A column expression that is used to identify the id 
+            A column expression that is used to identify the id
             for a Dimension
         value_expression (:obj:`ColumnElement`)
-            A column expression that is used to identify the value 
+            A column expression that is used to identify the value
             for a Dimension
-        
 
     """
 

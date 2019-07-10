@@ -9174,3 +9174,92 @@ recipe = Recipe(shelf=shelf, session=oven.Session())\
 print(recipe.to_sql())
 print(recipe.dataset.csv)
 
+
+s = '''
+teens:
+    kind: Metric
+    field: 
+        value: pop2000
+        condition:
+            field: age
+            between: [13,19]
+state:
+    kind: Dimension
+    field: state
+'''
+shelf_yaml = yaml.load(s)
+
+shelf = Shelf.from_config(shelf_yaml, Census)
+recipe = Recipe(shelf=shelf, session=oven.Session())\
+    .dimensions('state')\
+    .metrics('teens')
+print(recipe.to_sql())
+print(recipe.dataset.csv)
+
+
+s = '''
+teens:
+    kind: Metric
+    field: 
+        value: pop2000
+        condition:
+            field: age
+            between: [13,19]
+total_pop:
+    kind: Metric
+    field: pop2000
+pct_teens:
+    field: '@teens'
+    divide_by: '@total_pop'
+state:
+    kind: Dimension
+    field: state
+'''
+shelf_yaml = yaml.load(s)
+
+shelf = Shelf.from_config(shelf_yaml, Census)
+recipe = Recipe(shelf=shelf, session=oven.Session())\
+    .dimensions('state')\
+    .metrics('pct_teens')
+print(recipe.to_sql())
+print(recipe.dataset.csv)
+
+s = '''
+total_pop:
+    kind: Metric
+    field: pop2000
+age_buckets:
+    kind: Dimension
+    field: age
+    buckets:
+    - label: 'babies'
+      lt: 2
+    - label: 'children'
+      lt: 13
+    - label: 'teens'
+      lt: 20
+    buckets_default_label: 'oldsters'
+mixed_buckets:
+    kind: Dimension
+    field: age
+    buckets:
+    - label: 'northeasterners'
+      field: state
+      in: ['Vermont', 'New Hampshire']
+    - label: 'babies'
+      lt: 2
+    - label: 'children'
+      lt: 13
+    - label: 'teens'
+      lt: 20
+    buckets_default_label: 'oldsters'
+'''
+shelf_yaml = yaml.load(s)
+
+shelf = Shelf.from_config(shelf_yaml, Census)
+recipe = Recipe(shelf=shelf, session=oven.Session())\
+    .dimensions('mixed_buckets')\
+    .metrics('total_pop')\
+    .order_by('mixed_buckets')
+print(recipe.to_sql())
+print(recipe.dataset.csv)
