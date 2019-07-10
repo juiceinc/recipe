@@ -319,8 +319,9 @@ class Shelf(object):
     - ingredients as keyword arguments
 
     These keyword arguments have special meaning:
-    :param select_from: The SQLALchemy-compatible object which will be queried
-        (usually a Table or ORM object).
+
+    :param select_from: The SQLALchemy-compatible object which
+        will be queried (usually a Table or ORM object).
     :param table: Unused, but stored on the `Meta` attribute.
     :param metadata: Unused, but stored on the `Meta` attribute.
     """

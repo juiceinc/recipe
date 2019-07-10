@@ -1,12 +1,10 @@
 .. _quickstart:
 
-==========
-Quickstart
-==========
-
-
+===============
+Getting Started
+===============
+ 
 .. module:: recipe
-
 
 This page gives a good introduction in how to get started with Recipe. This
 assumes you already have Recipe installed. If you do not, head over to
@@ -19,222 +17,198 @@ First, make sure that:
 
 Let's gets started with some simple use cases and examples.
 
-
 ------------------
 Creating a Shelf
 ------------------
 
-
 A :class:`Shelf <recipe.Shelf>` is a place to store SQL fragments. In recipe
-these are called :class:`Ingredients <recipe.Ingredient>`. Ingredients can
-contain columns that should be part of the ``SELECT`` portion of a query,
-filters that are part of the ``WHERE`` clause of a query, group_bys that
+these are called :class:`Ingredients <recipe.Ingredient>`. 
+
+Ingredients can contain columns that should be part of the ``SELECT`` portion of a query,
+filters that are part of a ``WHERE`` clause of a query, group_bys that
 contribute to a query's ``GROUP BY`` and havings which add ``HAVING`` limits
 ot a query.
 
-It's a safe bet that you won't have to construct an Ingredient
+You won't have to construct an Ingredient
 with all these parts directly because Recipe contains convenience classes
 that help you build the most common SQL fragments. The two most common
-Ingredient subclasses are :class:`Dimensions <recipe.Dimension>` which supply
+Ingredient subclasses are :class:`Dimension <recipe.Dimension>` which provides
 both a column and a grouping on that column and
-:class:`Metrics <recipe.Metric>` which supply a column aggregation.
+:class:`Metric <recipe.Metric>` which provides a column aggregation.
 
 Shelf acts like a dictionary. The keys are strings and the
 values are Ingredients. The keys are a shortcut name for the
 ingredient. Here's an example.
 
-::
+.. code:: python
 
     from recipe import *
 
+    # Define a database connection
+    oven = get_oven('sqlite://')
+    Base = declarative_base(bind=oven.engine)
+
+    # Define a SQLAlchemy mapping
+    class Census(Base):
+        state = Column('state', String(), primary_key=True)
+        sex = Column('sex', String())
+        age = Column('age', Integer())
+        pop2000 = Column('pop2000', Integer())
+        pop2008 = Column('pop2008', Integer())
+
+        __tablename__ = 'census'
+        __table_args__ = {'extend_existing': True}
+
+    # Use that mapping to define a shelf.
     shelf = Shelf({
+        'state': Dimension(Census.state),
         'age': WtdAvgMetric(Census.age, Census.pop2000),
-        'population': Metric(func.sum(Census.pop2000)),
-        'state', Dimension(Census.state)
+        'population': Metric(func.sum(Census.pop2000))
     })
 
 This is a shelf with two metrics (a weighted average of age, and the sum of
 population) and a dimension which lets you group on US State names.
 
-
 ---------------------------------
 Using the Shelf to build a Recipe
 ---------------------------------
 
-Now that you have the shelf, you can build a recipe
+Now that you have the shelf, you can build a :class:`Recipe <recipe.Recipe>`.
 
-Quick example of a recipe
+.. code:: python
 
-Basic parts of a recipe
+    r = Recipe(shelf=shelf, session=oven.Session())\
+        .dimensions('state')\
+        .metrics('age')\
+        .order_by('-age')
 
-dimension, metrics, order_by, having
+    print(r.dataset.csv)
+
+This results in 
+
+.. code:: 
+
+    state,age,state_id
+    Florida,39.08283934000634,Florida
+    West Virginia,38.555058651148165,West Virginia
+    Maine,38.10118393261269,Maine
+    Pennsylvania,38.03856695544053,Pennsylvania
+    Rhode Island,37.20343773873182,Rhode Island
+    Connecticut,37.19867141455273,Connecticut
+    ...
 
 Note that a recipe contains data from a single table.`
 
 
----------------------------------
-Viewing the data from your Recipe
----------------------------------
+------------------------------------------------
+Defining Shelves and Recipes Using Configuration
+------------------------------------------------
 
-recipe.dataset.xxxx
-iterating over recipe.all
-dimensions have a separate _id property
+Recipes and shelves can be defined using plain ole' python objects.
+In the following example we'll use YAML. For instance, we can define
+the shelf using this yaml config. 
 
+.. code:: YAML
 
-======================
-More about Ingredients
-======================
+    state:
+        kind: Dimension
+        field: state
+    age:
+        kind: WtdAvgMetric
+        field: age
+        weight: pop2000
+    population:
+        kind: Metric
+        field: pop2000
 
---------------------
-Types of Ingredients
---------------------
+We can load this config by parsing it against any **selectable**, which
+can be a SQLAlchemy mapping, a SQLAlchemy select, or another Recipe.
 
-List of ingredients
+.. code:: python
 
-Dimension
-~~~~~~~~~
+    shelf_yaml = yaml.load('shelf.yaml')
+    s = Shelf.from_config(shelf_yaml, Census)
 
-Dimensions are groupings that exist in your data.
+We can also define a Recipe with Configuration
 
-.. code-block:: python
+.. code:: YAML
 
-    # A simple dimension
-    self.shelf['state'] = Dimension(Census.state)
+    metrics:
+    - age
+    - population
+    dimensions:
+    - state
+    order_by:
+    - '-age'
 
-Adding an id
-~~~~~~~~~~~~
+If we load that we get a Recipe
 
-Dimensions can support separate properties for ids and values. Consider a
-table of employees with an ``employee_id`` and a ``full_name``. If you had
-two employees with the same name you need to be able to distinguish between
-them.
+.. code:: python
 
-.. code-block:: python
+    recipe_yaml = yaml.load('shelf.yaml')
+    recipe = Recipe.from_config(s, recipe_yaml, session=oven.Session())
+    print(recipe.dataset.csv)
 
-    # Support an id and a label
-    self.shelf['employee']: Dimension(Employee.full_name,
-                                      id_expression=Employee.id)
+This results in a list of the oldest US states and their populations:
 
-The id is accessible as ``employee_id`` in each row and their full name is
-available as ``employee``.
+.. code::
 
-Using lookups
-~~~~~~~~~~~~~
-
-Lookup maps values in your data to descriptive names. The ``_id``
-property of your dimension contains the original value.
-
-.. code-block:: python
-
-    # Convert M/F into Male/Female
-    self.shelf['gender']: Dimension(Census.sex, lookup={'M': 'Male',
-        'F': 'Female'}, lookup_default='Unknown')
-
-If you use the gender dimension, there will be a ``gender_id`` in each row
-that will be "M" or "F" and a ``gender`` in each row that will be "Male" or
-"Female".
-
-Metric
-~~~~~~
-
-DivideMetric
-~~~~~~~~~~~~
-
-WtdAvgMetric
-~~~~~~~~~~~~
-
-Filter
-~~~~~~
-
-Having
-~~~~~~
+    state,age,population,state_id
+    Florida,39.08283934000634,15976093,Florida
+    West Virginia,38.555058651148165,1805847,West Virginia
+    Maine,38.10118393261269,1271694,Maine
+    Pennsylvania,38.03856695544053,12276157,Pennsylvania
+    Rhode Island,37.20343773873182,1047200,Rhode Island
+    Connecticut,37.19867141455273,3403620,Connecticut
+    ...
 
 
-----------
-Formatters
-----------
+-------------------------------
+Adding Features with Extensions
+-------------------------------
 
-----------------
-Building filters
-----------------
+Using extensions, you can add features to Recipe. Here are a few
+interesting thing you can do. This example mixes in two extensions. 
 
-Ingredient.build_filter
+**AutomaticFilters** defines filters (where clauses) using configuration. 
+In this case were are filtering to states that start with the letter C.
 
+**CompareRecipe** mixes in results from another recipe. In this case,
+we are using this comparison recipe to calculate an average age across 
+all states.
 
---------------------------------
-Storing extra attributes in meta
---------------------------------
+.. code:: python
 
+    recipe_yaml = yaml.load(r)
+    recipe = Recipe.from_config(s, recipe_yaml, session=oven.Session(), 
+        extension_classes=(AutomaticFilters, CompareRecipe))\
+        .automatic_filters({'state__like': 'C%'})\
+        .compare(Recipe(shelf=s, session=oven.Session()).metrics('age')) 
+    print(recipe.to_sql())   
+    print()
+    print(recipe.dataset.csv)
 
+The output looks like this
 
-================
-Using Extensions
-================
+.. code:: SQL
 
+    SELECT census.state AS state,
+        CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS age,
+        sum(census.pop2000) AS population,
+        avg(anon_1.age) AS age_compare
+    FROM census
+    LEFT OUTER JOIN
+    (SELECT CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS age
+    FROM census) AS anon_1 ON 1=1
+    WHERE census.state LIKE 'C%'
+    GROUP BY census.state
+    ORDER BY CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) DESC
 
-This part of the documentation services to give you an idea that are otherwise hard to extract from the :ref:`API Documentation <api>`
-
-Extensions build on the core behavior or recipe to let you perform
-What are extensions for?
-
--------------------
-Automatic Filtering
--------------------
-
-The AutomaticFilter extension
-
----------------------------
-Summarizing over Dimensions
----------------------------
-
-SummarizeOver
-
------------------------
-Merging multiple tables
------------------------
-
-BlendRecipe
-
-
-----------------------
-Adding comparison data
-----------------------
-
-CompareRecipe
+    state,age,population,age_compare,state_id
+    Connecticut,37.19867141455273,3403620,35.789568740450036,Connecticut
+    Colorado,34.5386073584527,4300877,35.789568740450036,Colorado
+    California,34.17872597484759,33829442,35.789568740450036,California
 
 
-
-----------------
-Anonymizing data
-----------------
-
-Anonymize
-
-
-
-
-=================
-Advanced Features
-=================
-
---------------------
-Database connections
---------------------
-
-
--------
-Caching
--------
-
--------------------------------------------
-Running recipes in parallel with RecipePool
--------------------------------------------
-
-
-
-
-
-----
-
-Now, go check out the :ref:`API Documentation <api>` or begin
-:ref:`Recipe Development <development>`.
+Now, go check out the :ref:`API Documentation <api>` or learn more about
+ 

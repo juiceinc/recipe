@@ -44,52 +44,43 @@ and response formatting.
     Pennsylvania,38.03856695544053,Pennsylvania
     ...
 
-
-User's Guide
-------------
-
-This guide covers installation, the core concepts to get you started,
-available extensions, connecting to databases and caching.
-
 .. toctree::
+   :caption: Getting started
    :maxdepth: 2
 
    intro
-
-.. toctree::
-   :maxdepth: 2
-
    install
+   tutorial
 
 .. toctree::
+   :caption: Key Concepts
    :maxdepth: 3
 
-   tutorial
+   concepts/overview
+   concepts/ingredients
+   concepts/shelves
+   concepts/from_config
+   concepts/using_from_config
+   concepts/extensions
+
+.. toctree::
+   :caption: Advanced Topics
+   :maxdepth: 3
+
    ovens
    hooks
 
-
-
-API Reference
--------------
-
-If you are looking for information on a specific function, class or
-method, this part of the documentation is for you.
-
 .. toctree::
+   :caption: API Reference
    :maxdepth: 2
 
    api
 
-
-Development
------------
-
-To add features, extensions or ingredients to Recipe see our development guide.
-
 .. toctree::
-   :maxdepth: 2
+   :caption: Contributing to Development
+   :maxdepth: 3
 
-   development
-   oven_drivers
-   dynamic_extensions
+   contributing/development
+   contributing/oven_drivers
+   contributing/dynamic_extensions
+   contributing/changelog
