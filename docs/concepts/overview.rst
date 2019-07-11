@@ -4,20 +4,20 @@ Overview
 **Ingredients** are reusable fragments of SQL defined in SQLAlchemy. Ingredients
 can contribute to a SQL query's select, group by, where clause or having clause.
 For convenience, we define **Metric**, **Dimension**, **Filter**, and **Having**
-classes which support common pattersn.
+classes which support common query patterns.
 
 A **Shelf** is a container for holding named ingredients. 
-Shelves can be defined with python code or via configuration (typically YAML).
-Shelf configuration can be bound to a SQLAlchemy selectable.
+Shelves can be defined with python code or via configuration.
+Shelves defined with configuration can be bound to a SQLAlchemy selectable.
 
 .. note::
 
     By convention, all the ingredients on a Shelf should reference the same SQLAlchemy selectable.
 
 A **Recipe** uses a **Shelf**. The Recipe picks dimensions, metrics, filters,
-havings from the shelf. Dimensions and metrics can also be used to order results.
+and havings from the shelf. Dimensions and metrics can also be used to order results.
 While the Recipe can refer to items in the shelf by name, you can also supply
-Ingredient objects. Recipe uses a builder pattern to allow a recipe object to be 
+raw Ingredient objects. Recipe uses a builder pattern to allow a recipe object to be 
 modified.
 
 A Recipe generates and runs a SQL query using SQLAlchemy. The query uses an **Oven**
@@ -30,7 +30,7 @@ Recipe results can optionally be cached with the recipe_caching support library.
 Extensions
 ----------
 
-Extensions can add to the Recipe object to change how SQL queries get built.
+Extensions add to Recipe to change how SQL queries get built.
 
 Recipe includes the following built-in extensions.
 

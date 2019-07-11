@@ -67,8 +67,9 @@ and response formatting.
    :caption: Advanced Topics
    :maxdepth: 3
 
-   ovens
-   hooks
+   advanced/settings
+   advanced/ovens
+   advanced/hooks
 
 .. toctree::
    :caption: API Reference
