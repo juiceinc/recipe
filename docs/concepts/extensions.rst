@@ -2,7 +2,6 @@
 Using Extensions
 ================
 
-
 This part of the documentation services to give you an idea that are otherwise hard to extract from the :ref:`API Documentation <api>`
 
 Extensions build on the core behavior or recipe to let you perform
@@ -40,15 +39,4 @@ Anonymizing data
 ----------------
 
 Anonymize
-
-
-
-
-=================
-Advanced Features
-=================
-
---------------------
-Database connections
---------------------
 

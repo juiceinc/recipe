@@ -55,6 +55,8 @@ class Recipe(object):
         session (:obj:`Session`) A SQLAlchemy database session.
         extension_classes (:obj:`list` of :obj:`RecipeExtension`)
           Extensions to apply to this recipe.
+        dynamic_extensions (:obj:`list` of :obj:`str`)
+          Dynamic extensions to apply to this recipe.
 
     Returns:
         A Recipe object.

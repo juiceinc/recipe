@@ -252,6 +252,8 @@ class AutomaticFilters(RecipeExtension):
             lte (less than or equal)
             gt (greater than)
             gte (greater than or equal)
+            like (SQL LIKE)
+            ilike (Case insensitive LIKE)
 
         **An example using operators**
 

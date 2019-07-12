@@ -4,7 +4,7 @@ Ingredients
 
 Ingredients are the building block of recipe. 
 
-Ingredients can contain columns that should be part of the ``SELECT`` portion of a query,
+Ingredients can contain columns that are part of the ``SELECT`` portion of a query,
 filters that are part of a ``WHERE`` clause of a query, group_bys that
 contribute to a query's ``GROUP BY`` and havings which add ``HAVING`` limits
 ot a query.
