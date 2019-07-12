@@ -76,7 +76,7 @@ Extensions
 .. autoclass:: CompareRecipe
     :members: compare
 
-.. autoclass::SummarizeOver
+.. autoclass:: SummarizeOver
     :members: summarize_over
 
 .. autoclass:: Anonymize

@@ -61,7 +61,7 @@ and response formatting.
    concepts/shelves
    concepts/from_config
    concepts/using_from_config
-   concepts/extensions
+   extensions/intro_to_extensions
 
 .. toctree::
    :caption: Advanced Topics
