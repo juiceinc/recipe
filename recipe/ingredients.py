@@ -345,8 +345,8 @@ class Ingredient(object):
 
     @property
     def expression(self):
-        """ An accessor for the sqlalchemy expression representing this
-        Ingredient """
+        """ An accessor for the SQLAlchemy expression representing this
+        Ingredient. """
         if self.columns:
             return self.columns[0]
         else:
@@ -366,8 +366,8 @@ class Filter(Ingredient):
 
     @property
     def expression(self):
-        """ An accessor for the sqlalchemy expression representing this
-        Ingredient """
+        """ An accessor for the SQLAlchemy expression representing this
+        Ingredient. """
         if self.filters:
             return self.filters[0]
         else:
@@ -387,8 +387,8 @@ class Having(Ingredient):
 
     @property
     def expression(self):
-        """ An accessor for the sqlalchemy expression representing this
-        Ingredient """
+        """ An accessor for the SQLAlchemy expression representing this
+        Ingredient. """
         if self.havings:
             return self.havings[0]
         else:
@@ -397,7 +397,7 @@ class Having(Ingredient):
 
 class Dimension(Ingredient):
     """A Dimension is an Ingredient that adds columns and groups by those
-    columns. Columns should be non-aggregate sqlalchemy expressions
+    columns. Columns should be non-aggregate SQLAlchemy expressions.
 
     The required expression supplies the dimension's value role. Additional
     expressions can be provided in keyword arguments with keys
@@ -426,7 +426,7 @@ class Dimension(Ingredient):
 
             Note: Lookup adds a ``formatter`` callable as the first
             item in the list of formatters.
-        lookup_default (:ojb:`object`)
+        lookup_default (:obj:`object`)
             A default to show if the value can't be found in the
             lookup dictionary.
 

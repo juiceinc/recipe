@@ -47,7 +47,7 @@ Ingredients
 .. autoclass:: Metric
    :members:
 
-.. autoclass:: WtdAveMetric
+.. autoclass:: WtdAvgMetric
    :members:
 
 .. autoclass:: DivideMetric

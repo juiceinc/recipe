@@ -277,7 +277,7 @@ class AutomaticFilters(RecipeExtension):
     def exclude_automatic_filter_keys(self, *keys):
         """A "blacklist" of automatic filter keys to exclude. The following will
         cause ``'state'`` to be ignored if it is present in the
-        ``automatic_filters`` dictionary.::
+        ``automatic_filters`` dictionary::
 
             recipe.exclude_automatic_filter_keys('state')
         """
@@ -288,7 +288,7 @@ class AutomaticFilters(RecipeExtension):
     def include_automatic_filter_keys(self, *keys):
         """A "whitelist" of automatic filter keys to use. The following will
         **only use** ``'state'`` for automatic filters regardless of what is
-        provided in the automatic_filters dictionary.::
+        provided in the automatic_filters dictionary::
 
             recipe.include_automatic_filter_keys('state')
         """
@@ -395,7 +395,7 @@ class SummarizeOver(RecipeExtension):
 
 
 class Anonymize(RecipeExtension):
-    """ Allows recipes to be anonymized by adding an anonymize property
+    """Allows recipes to be anonymized by adding an anonymize property.
     This flips the anonymize flag on all Ingredients used in the recipe.
 
     Injects an ingredient.meta._anonymize boolean property on each used

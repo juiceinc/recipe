@@ -29,19 +29,12 @@ quoted unless double quoting leads to less escaping. Add tests to achieve
 Source Control
 --------------
 
+The project is hosted on at https://github.com/juiceinc/recipe
 
-Recipe source is controlled with Git_, the lean, mean, distributed source
-control machine.
-
-The repository is publicly accessible.
+The repository is publicly accessible. To check it out, run:
 
     ``git clone git://github.com/juiceinc/recipe.git``
 
-The project is hosted on **GitHub**.
-
-
-    GitHub:
-        http://github.com/juiceinc/recipe
 
 
 Git Branch Structure
@@ -87,14 +80,14 @@ that require another recipe should have a classname that ends with **Recipe**.
 * CompareRecipe
 * BlendRecipe
 
-A checklist of adding an extension.
+When adding an extension, do the following.
 
-- [] Add extension to src/extensions.py
-- [] Add tests to tests/test_extensions.py, cover 100% of extension function
-     and test that the extension doesn't interfere with other extensions
-- [] Make sure your extension code passes flake8
-- [] Add extension description to docs/tutorial.py
-- [] Submit a PR!
+1) Add extension to src/extensions.py
+2) Add tests to tests/test_extensions.py, cover 100% of extension function
+   and test that the extension doesn't interfere with other extensions
+3) Make sure your extension code passes flake8
+4) Add extension description to docs/extensions/
+5) Submit a PR!
 
 ----------------------
 Adding New Ingredients
@@ -115,11 +108,11 @@ Extra functionality can be added by using Ingredient.meta in structured ways.
 
 A checklist of adding an extension.
 
-- [] Add extension to src/ingredients.py
-- [] Add tests to tests/test_ingredients.py, cover 100% of ingredient
-     parameters.
-- [] Make sure your ingredient passes flake8
-- [] Submit a PR!
+1) Add extension to src/ingredients.py
+2) Add tests to tests/test_ingredients.py, cover 100% of ingredient
+   parameters.
+3) Make sure your ingredient passes flake8
+4) Submit a PR!
 
 
 .. _testing:

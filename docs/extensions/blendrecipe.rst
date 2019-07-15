@@ -8,4 +8,4 @@ The BlendRecipe extension lets you combine data from multiple recipes.
 
 .. autoclass:: BlendRecipe
     :members: blend,full_blend
-
+    :noindex: 

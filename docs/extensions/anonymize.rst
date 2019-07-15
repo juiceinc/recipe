@@ -9,3 +9,4 @@ real data.
 
 .. autoclass:: Anonymize
     :members:
+    :noindex:
