@@ -317,6 +317,7 @@ class Ingredient(object):
                     if qs.get('name') == v:
                         qs_found = True
                         qs_conditions.append(qs.get('condition'))
+                        break
                 if not qs_found:
                     raise ValueError(
                         'quickselect {} was not found in '
