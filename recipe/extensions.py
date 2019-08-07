@@ -238,6 +238,8 @@ class AutomaticFilters(RecipeExtension):
 
             in (default)
             notin
+            quickselect (applies multiple conditions matching the 
+              named quickselect, quickselects are ORed together)
             between (requires a list of two items)
 
         **Scalar operators**
@@ -254,6 +256,7 @@ class AutomaticFilters(RecipeExtension):
             gte (greater than or equal)
             like (SQL LIKE)
             ilike (Case insensitive LIKE)
+            quickselect (applies the condition matching the named quickselect)
 
         **An example using operators**
 
