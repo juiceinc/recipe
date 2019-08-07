@@ -244,6 +244,39 @@ class TestIngredientBuildFilter(object):
         with pytest.raises(ValueError):
             filt = d.build_filter('c', operator='quickselect')
 
+        d = Dimension(
+            MyTable.first,
+            quickselects=[
+                {
+                    'name': 'a',
+                    'condition': MyTable.first == 'a'
+                },
+                {
+                    'name': 'b',
+                    'condition': MyTable.last == 'b'
+                },
+            ]
+        )
+
+        # Test building vector filters
+        filt = d.build_filter(['a'], operator='quickselect')
+        assert str(filt.filters[0]) == 'foo.first = :first_1'
+        filt = d.build_filter(['b'], operator='quickselect')
+        assert str(filt.filters[0]) == 'foo.last = :last_1'
+        filt = d.build_filter(['a', 'b'], operator='quickselect')
+        assert str(filt.filters[0]) == 'foo.first = :first_1 OR foo.last = :last_1'
+        filt = d.build_filter(['b', 'a'], operator='quickselect')
+        assert str(filt.filters[0]) == 'foo.last = :last_1 OR foo.first = :first_1'
+
+        with pytest.raises(ValueError):
+            filt = d.build_filter(['c'], operator='quickselect')
+        with pytest.raises(ValueError):
+            filt = d.build_filter([[]], operator='quickselect')
+        with pytest.raises(ValueError):
+            filt = d.build_filter([2], operator='quickselect')
+        with pytest.raises(ValueError):
+            filt = d.build_filter(['a', 'b', 'c'], operator='quickselect')
+
 
 class TestFilter(object):
 
