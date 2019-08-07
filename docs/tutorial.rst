@@ -27,7 +27,7 @@ these are called :class:`Ingredients <recipe.Ingredient>`.
 Ingredients can contain columns that should be part of the ``SELECT`` portion of a query,
 filters that are part of a ``WHERE`` clause of a query, group_bys that
 contribute to a query's ``GROUP BY`` and havings which add ``HAVING`` limits
-ot a query.
+to a query.
 
 You won't have to construct an Ingredient
 with all these parts directly because Recipe contains convenience classes
@@ -210,5 +210,5 @@ The output looks like this
     California,34.17872597484759,33829442,35.789568740450036,California
 
 
-Now, go check out the :ref:`API Documentation <api>` or learn more about
+Now, go check out the :ref:`API Documentation <api>` or look at an :ref:`concepts_overview`.
  
