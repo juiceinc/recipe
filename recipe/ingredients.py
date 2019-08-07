@@ -309,6 +309,21 @@ class Ingredient(object):
                 )
             lower_bound, upper_bound = value
             return Filter(between(filter_column, lower_bound, upper_bound))
+        elif operator == 'quickselect':
+            qs_conditions = []
+            for v in value:
+                qs_found = False
+                for qs in self.quickselects:
+                    if qs.get('name') == v:
+                        qs_found = True
+                        qs_conditions.append(qs.get('condition'))
+                        break
+                if not qs_found:
+                    raise ValueError(
+                        'quickselect {} was not found in '
+                        'ingredient {}'.format(value, self.id)
+                    )
+            return Filter(or_(*qs_conditions))
         else:
             raise ValueError('Unknown operator {}'.format(operator))
 

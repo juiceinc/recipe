@@ -2,6 +2,11 @@
 Changelog
 =========
 
+0.10.0 (2019-08-07)
+-----------------------------------------
+* Support multiple quickselects which are ORed together
+
+
 0.9.0 (2019-08-07)
 -----------------------------------------
 * Replace quickfilter with quickselect
