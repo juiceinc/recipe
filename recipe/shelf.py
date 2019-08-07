@@ -288,11 +288,11 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
             func.coalesce(cast(divide_by, Float), 0.0) + SAFE_DIVISON_EPSILON
         )
 
-    quickfilters = ingr_dict.pop('quickfilters', None)
-    parsed_quickfilters = []
-    if quickfilters:
-        for qf in quickfilters:
-            parsed_quickfilters.append({
+    quickselects = ingr_dict.pop('quickselects', None)
+    parsed_quickselects = []
+    if quickselects:
+        for qf in quickselects:
+            parsed_quickselects.append({
                 'name':
                     qf['name'],
                 'condition':
@@ -300,7 +300,7 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
                         qf.get('condition', None), selectable
                     ),
             })
-    ingr_dict['quickfilters'] = parsed_quickfilters
+    ingr_dict['quickselects'] = parsed_quickselects
 
     args = [field]
     # Each extra field contains a name and a field
