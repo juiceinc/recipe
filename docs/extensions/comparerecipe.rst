@@ -9,3 +9,4 @@ againt the same table to generate comparison values.
 
 .. autoclass:: CompareRecipe
     :members: compare
+    :noindex:    

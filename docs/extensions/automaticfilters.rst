@@ -9,6 +9,7 @@ using Ingredient.build_filter.
 
 .. autoclass:: AutomaticFilters
     :members: apply_automatic_filters,automatic_filters,include_automatic_filter_keys,exclude_automatic_filter_keys
-
+    :noindex:
+    
 The AutomaticFilters extension.
 

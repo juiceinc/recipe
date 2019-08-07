@@ -9,4 +9,5 @@ an aggregation of a Dimension.
 
 .. autoclass:: SummarizeOver
     :members: summarize_over
+    :noindex:    
 

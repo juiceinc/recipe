@@ -1,5 +1,7 @@
-Overview
-========
+.. _concepts_overview:
+
+Overview of Recipe Concepts
+===========================
 
 **Ingredients** are reusable fragments of SQL defined in SQLAlchemy. Ingredients
 can contribute to a SQL query's select, group by, where clause or having clause.
