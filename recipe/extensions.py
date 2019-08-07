@@ -238,7 +238,7 @@ class AutomaticFilters(RecipeExtension):
 
             in (default)
             notin
-            quickselect (applies multiple conditions matching the 
+            quickselect (applies multiple conditions matching the
               named quickselect, quickselects are ORed together)
             between (requires a list of two items)
 
