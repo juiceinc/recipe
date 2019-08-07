@@ -2,6 +2,18 @@
 Changelog
 =========
 
+0.9.0 (2019-08-07)
+-----------------------------------------
+* Replace quickfilter with quickselect
+* Improve and publish docs on at recipe.readthedocs.io
+* Happy birthday, Zoe!
+
+
+0.8.0 (2019-07-08)
+-----------------------------------------
+* Add cache control options.
+
+
 0.7.0 (2019-06-24)
 -----------------------------------------
 
