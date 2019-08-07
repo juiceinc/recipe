@@ -4,7 +4,7 @@ state:
     lookup:
         Vermont: "The Green Mountain State"
         Tennessee: "The Volunteer State"
-    quickfilters:
+    quickselects:
         - name: younger
           condition:
               field: age

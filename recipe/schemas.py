@@ -475,7 +475,7 @@ def _replace_refs_in_field(fld, shelf):
 
 def _process_ingredient(ingr, shelf):
     # TODO: Support condition references (to filters, dimension/metric
-    #  quickfilters, and to field conditions)
+    #  quickselects, and to field conditions)
     for k, fld in ingr.items():
         if (k.endswith('field') or k == 'divide_by') and isinstance(fld, dict):
             ingr[k] = _replace_refs_in_field(fld, shelf)
@@ -491,7 +491,7 @@ def _replace_references(shelf):
 
 condition_schema = _full_condition_schema(aggr=False)
 
-quickfilter_schema = S.List(
+quickselect_schema = S.List(
     required=False,
     schema=S.Dict(
         schema={
@@ -518,8 +518,8 @@ ingredient_schema = S.DictWhenKeyIs(
                             coerce=lambda v: format_lookup.get(v, v),
                             required=False
                         ),
-                    'quickfilters':
-                        quickfilter_schema
+                    'quickselects':
+                        quickselect_schema
                 }
             ),
         'Dimension':
@@ -551,8 +551,8 @@ ingredient_schema = S.DictWhenKeyIs(
                             coerce=lambda v: format_lookup.get(v, v),
                             required=False
                         ),  # noqa: E123
-                    'quickfilters':
-                        quickfilter_schema
+                    'quickselects':
+                        quickselect_schema
                 },
             ),
         'Filter':

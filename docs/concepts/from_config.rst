@@ -55,7 +55,7 @@ Metrics will always apply a default aggregation of 'sum' to their field.
     {role}_field: {field} (optional)
     buckets: A list of labeled conditions (optional)
     buckets_default_label: string (optional)
-    quickfilters: A list of labeled conditions (optional)
+    quickselects: A list of labeled conditions (optional)
 
 Adding `id` and other roles to Dimension
 ........................................
@@ -113,10 +113,10 @@ from the Dimension.
 If you use order_by a bucket dimension, the order will be the order in which the 
 buckets were defined.
 
-Adding quickfilters to a Dimension
+Adding quickselects to a Dimension
 ..................................
 
-Quickfilters are a way of associating conditions with a dimension. 
+quickselects are a way of associating conditions with a dimension. 
 
 .. code:: YAML 
 
@@ -129,7 +129,7 @@ Quickfilters are a way of associating conditions with a dimension.
   date:
       kind: Dimension
       field: sales_date
-      quickfilters:
+      quickselects:
       - label: 'Last 90 days'
         between:
         - 90 days ago
@@ -148,7 +148,7 @@ The ``AutomaticFilters`` extension is an easy way to use this.
               .dimensions('region') \
               .metrics('total_sales') \
               .automatic_filters({
-                'date__quickfilter': 'Last 90 days'
+                'date__quickselect': 'Last 90 days'
               })
 
 .. _fields:
@@ -498,7 +498,7 @@ Labeled conditions
 
 Conditions may optionally be labeled by adding a label property.
 
-Quickfilters are a feature of Dimension that are defined with a list
+quickselects are a feature of Dimension that are defined with a list
 of labeled conditions.
 
 .. _examples:

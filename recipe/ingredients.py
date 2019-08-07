@@ -55,7 +55,7 @@ class Ingredient(object):
             used in a ``recipe.order_by``.
             This is added to the ingredient when the ingredient is
             used in a ``recipe.order_by``.
-        quickfilters (:obj:`list` of named filters):
+        quickselects (:obj:`list` of named filters):
             A list of named filters that can be accessed through
             ``build_filter``. Named filters are dictionaries with
             a ``name`` (:obj:str) property and a ``condition`` property
@@ -73,7 +73,7 @@ class Ingredient(object):
         self.havings = kwargs.pop('havings', [])
         self.group_by = kwargs.pop('group_by', [])
         self.formatters = kwargs.pop('formatters', [])
-        self.quickfilters = kwargs.pop('quickfilters', [])
+        self.quickselects = kwargs.pop('quickselects', [])
         self.column_suffixes = kwargs.pop('column_suffixes', None)
         self.cache_context = kwargs.pop('cache_context', '')
         self.anonymize = False
@@ -238,12 +238,12 @@ class Ingredient(object):
             return Filter(filter_column.like(value))
         elif operator == 'ilike':
             return Filter(filter_column.ilike(value))
-        elif operator == 'quickfilter':
-            for qf in self.quickfilters:
-                if qf.get('name') == value:
-                    return Filter(qf.get('condition'))
+        elif operator == 'quickselect':
+            for qs in self.quickselects:
+                if qs.get('name') == value:
+                    return Filter(qs.get('condition'))
             raise ValueError(
-                'quickfilter {} was not found in '
+                'quickselect {} was not found in '
                 'ingredient {}'.format(value, self.id)
             )
         else:

@@ -220,10 +220,10 @@ class TestIngredientBuildFilter(object):
         with pytest.raises(ValueError):
             filt = d.build_filter(['moo'], operator='between')
 
-    def test_quickfilters(self):
+    def test_quickselects(self):
         d = Dimension(
             MyTable.first,
-            quickfilters=[
+            quickselects=[
                 {
                     'name': 'a',
                     'condition': MyTable.first == 'a'
@@ -236,13 +236,13 @@ class TestIngredientBuildFilter(object):
         )
 
         # Test building scalar filters
-        filt = d.build_filter('a', operator='quickfilter')
+        filt = d.build_filter('a', operator='quickselect')
         assert str(filt.filters[0]) == 'foo.first = :first_1'
-        filt = d.build_filter('b', operator='quickfilter')
+        filt = d.build_filter('b', operator='quickselect')
         assert str(filt.filters[0]) == 'foo.last = :last_1'
 
         with pytest.raises(ValueError):
-            filt = d.build_filter('c', operator='quickfilter')
+            filt = d.build_filter('c', operator='quickselect')
 
 
 class TestFilter(object):

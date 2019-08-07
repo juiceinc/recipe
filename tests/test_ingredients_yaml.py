@@ -346,9 +346,9 @@ Vermont,271469,The Green Mountain State,Vermont
 FROM census
 GROUP BY census.state'''  # noqa: E501
 
-    def test_complex_census_quickfilter_from_validated_yaml(self):
+    def test_complex_census_quickselect_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
-        metrics and quickfilters"""
+        metrics and quickselects"""
         shelf = self.validated_shelf('census_complex.yaml', Census)
         recipe = Recipe(
             shelf=shelf,
@@ -356,7 +356,7 @@ GROUP BY census.state'''  # noqa: E501
             extension_classes=(AutomaticFilters,)
         ).dimensions('state').metrics('pop2008'
                                      ).order_by('state').automatic_filters({
-                                         'state__quickfilter': 'younger'
+                                         'state__quickselect': 'younger'
                                      })
         assert recipe.to_sql() == '''SELECT census.state AS state_raw,
        sum(census.pop2008) AS pop2008
@@ -376,7 +376,7 @@ Vermont,300605,The Green Mountain State,Vermont
             extension_classes=(AutomaticFilters,)
         ).dimensions('state').metrics('pop2008'
                                      ).order_by('state').automatic_filters({
-                                         'state__quickfilter': 'vermontier'
+                                         'state__quickselect': 'vermontier'
                                      })
         assert recipe.to_sql() == '''SELECT census.state AS state_raw,
        sum(census.pop2008) AS pop2008
