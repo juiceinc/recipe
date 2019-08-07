@@ -264,9 +264,11 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter(['b'], operator='quickselect')
         assert str(filt.filters[0]) == 'foo.last = :last_1'
         filt = d.build_filter(['a', 'b'], operator='quickselect')
-        assert str(filt.filters[0]) == 'foo.first = :first_1 OR foo.last = :last_1'
+        assert str(filt.filters[0]) == \
+            'foo.first = :first_1 OR foo.last = :last_1'
         filt = d.build_filter(['b', 'a'], operator='quickselect')
-        assert str(filt.filters[0]) == 'foo.last = :last_1 OR foo.first = :first_1'
+        assert str(filt.filters[0]) == \
+            'foo.last = :last_1 OR foo.first = :first_1'
 
         with pytest.raises(ValueError):
             filt = d.build_filter(['c'], operator='quickselect')
