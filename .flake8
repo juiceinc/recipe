@@ -2,3 +2,4 @@
 exclude = .git,migrations,docs,manage.py,.venv*,salt,tf,.cache,.tox,.vscode,dist
 ignore = E124,E125,E122,E121,E126
 max-complexity = 18
+max-line-length = 88

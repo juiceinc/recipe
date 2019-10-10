@@ -20,7 +20,7 @@ from recipe.utils import prettyprintable_sql, recipe_arg
 
 ALLOW_QUERY_CACHING = True
 
-warnings.simplefilter('always', DeprecationWarning)
+warnings.simplefilter("always", DeprecationWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class Recipe(object):
         order_by=None,
         session=None,
         extension_classes=(),
-        dynamic_extensions=None
+        dynamic_extensions=None,
     ):
         self._id = str(uuid4())[:8]
         self._query = None
@@ -86,8 +86,8 @@ class Recipe(object):
 
         # Cache options
         self.cache_context = None
-        self._cache_region = 'default'
-        self._cache_prefix = 'default'
+        self._cache_region = "default"
+        self._cache_prefix = "default"
         self._use_cache = True
 
         self.stats = Stats()
@@ -125,8 +125,9 @@ class Recipe(object):
             query = query.limit(None)
         if self._order_bys:
             query = query.from_self().order_by(None)
-        count_query = self._session.query(func.count('*').label('count')
-                                         ).select_from(query.subquery())
+        count_query = self._session.query(func.count("*").label("count")).select_from(
+            query.subquery()
+        )
         cnt = count_query.scalar()
 
         # Clear the query so it is regenerated
@@ -158,19 +159,20 @@ class Recipe(object):
                     new[k] = d[k]
             return new
 
-        core_kwargs = subdict(obj, recipe_schema['schema'].keys())
+        core_kwargs = subdict(obj, recipe_schema["schema"].keys())
         core_kwargs = normalize_schema(recipe_schema, core_kwargs)
-        core_kwargs['filters'] = [
+        core_kwargs["filters"] = [
             parse_unvalidated_condition(filter, shelf.Meta.select_from)
-            if isinstance(filter, dict) else filter
-            for filter in obj.get('filters', [])
+            if isinstance(filter, dict)
+            else filter
+            for filter in obj.get("filters", [])
         ]
         core_kwargs.update(kwargs)
         recipe = cls(shelf=shelf, **core_kwargs)
 
         # Now let extensions handle their own stuff
         for ext in recipe.recipe_extensions:
-            additional_schema = getattr(ext, 'recipe_schema', None)
+            additional_schema = getattr(ext, "recipe_schema", None)
             if additional_schema is not None:
                 ext_data = subdict(obj, additional_schema.keys())
                 ext_data = normalize_dict(additional_schema, ext_data)
@@ -205,8 +207,8 @@ class Recipe(object):
             proxy_callable
         except NameError:
             raise AttributeError(
-                '{} isn\'t available on this recipe, '
-                'you may need to add an extension'.format(name)
+                "{} isn't available on this recipe, "
+                "you may need to add an extension".format(name)
             )
 
         return proxy_callable
@@ -251,10 +253,9 @@ class Recipe(object):
         elif isinstance(shelf, dict):
             self._shelf = Shelf(shelf)
         else:
-            raise BadRecipe('shelf must be a dict or recipe.shelf.Shelf')
+            raise BadRecipe("shelf must be a dict or recipe.shelf.Shelf")
 
-        if self._select_from is None and \
-            self._shelf.Meta.select_from is not None:
+        if self._select_from is None and self._shelf.Meta.select_from is not None:
             self._select_from = self._shelf.Meta.select_from
 
     @recipe_arg()
@@ -313,9 +314,7 @@ class Recipe(object):
 
         for f in filters:
             self._cauldron.use(
-                self._shelf.find(
-                    f, (Filter, Having), constructor=filter_constructor
-                )
+                self._shelf.find(f, (Filter, Having), constructor=filter_constructor)
             )
 
     @recipe_arg()
@@ -378,8 +377,7 @@ class Recipe(object):
             is_postgres_engine = False
             try:
                 dialect = self.session.bind.engine.name
-                if 'redshift' in dialect or 'postg' in dialect or 'pg' in \
-                        dialect:
+                if "redshift" in dialect or "postg" in dialect or "pg" in dialect:
                     is_postgres_engine = True
             except:
                 pass
@@ -407,7 +405,7 @@ class Recipe(object):
             return self._query
 
         if len(self._cauldron.ingredients()) == 0:
-            raise BadRecipe('No ingredients have been added to this recipe')
+            raise BadRecipe("No ingredients have been added to this recipe")
 
         # Step 1: Gather up global filters and user filters and
         # apply them as if they had been added to recipe().filters(...)
@@ -421,58 +419,58 @@ class Recipe(object):
         # Get the parts of the query from the cauldron
         # We don't need to regather order_bys
         recipe_parts = self._cauldron.brew_query_parts()
-        recipe_parts['order_bys'] = self._prepare_order_bys()
+        recipe_parts["order_bys"] = self._prepare_order_bys()
 
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_recipe_parts(recipe_parts)
 
         # Start building the query
-        query = self._session.query(*recipe_parts['columns'])
+        query = self._session.query(*recipe_parts["columns"])
         if self._select_from is not None:
             query = query.select_from(self._select_from)
-        recipe_parts['query'] = query \
-            .group_by(*recipe_parts['group_bys']) \
-            .order_by(*recipe_parts['order_bys']) \
-            .filter(*recipe_parts['filters'])
+        recipe_parts["query"] = (
+            query.group_by(*recipe_parts["group_bys"])
+            .order_by(*recipe_parts["order_bys"])
+            .filter(*recipe_parts["filters"])
+        )
 
-        if recipe_parts['havings']:
-            for having in recipe_parts['havings']:
-                recipe_parts['query'] = recipe_parts['query'].having(having)
+        if recipe_parts["havings"]:
+            for having in recipe_parts["havings"]:
+                recipe_parts["query"] = recipe_parts["query"].having(having)
 
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_prequery_parts(recipe_parts)
 
-        if self._select_from is None and len(
-            recipe_parts['query'].selectable.froms
-        ) != 1:
+        if (
+            self._select_from is None
+            and len(recipe_parts["query"].selectable.froms) != 1
+        ):
             raise BadRecipe(
-                'Recipes must use ingredients that all come from '
-                'the same table. \nDetails on this recipe:\n{'
-                '}'.format(str(self._cauldron))
+                "Recipes must use ingredients that all come from "
+                "the same table. \nDetails on this recipe:\n{"
+                "}".format(str(self._cauldron))
             )
 
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_postquery_parts(recipe_parts)
 
-        if 'recipe' not in recipe_parts:
-            recipe_parts['cache_region'] = self._cache_region
-            recipe_parts['cache_prefix'] = self._cache_prefix
-        recipe_parts = run_hooks(
-            recipe_parts, 'modify_query', self.dynamic_extensions
-        )
+        if "recipe" not in recipe_parts:
+            recipe_parts["cache_region"] = self._cache_region
+            recipe_parts["cache_prefix"] = self._cache_prefix
+        recipe_parts = run_hooks(recipe_parts, "modify_query", self.dynamic_extensions)
 
         # Apply limit on the outermost query
         # This happens after building the comparison recipe
         if self._limit and self._limit > 0:
-            recipe_parts['query'] = recipe_parts['query'].limit(self._limit)
+            recipe_parts["query"] = recipe_parts["query"].limit(self._limit)
 
         if self._offset and self._offset > 0:
-            recipe_parts['query'] = recipe_parts['query'].offset(self._offset)
+            recipe_parts["query"] = recipe_parts["query"].offset(self._offset)
 
         # Patch the query if there's a comparison query
         # cache results
 
-        self._query = recipe_parts['query']
+        self._query = recipe_parts["query"]
         return self._query
 
     def _table(self):
@@ -481,7 +479,7 @@ class Recipe(object):
         """
         descriptions = self.query().column_descriptions
         if descriptions:
-            return descriptions[0]['entity']
+            return descriptions[0]["entity"]
         else:
             return None
 
@@ -519,13 +517,13 @@ class Recipe(object):
             # This is not 100% accurate; it only reports if the caching query
             # attempts to save to cache not the internal state of the cache
             # and whether the cache save actually occurred.
-            if not getattr(self._query, 'saved_to_cache', True):
+            if not getattr(self._query, "saved_to_cache", True):
                 fetched_from_cache = True
             fetchtime = time.time()
             if not self._use_cache:
                 # Invalidate this query in the cache
                 # to ensure it gets fresh data from the database
-                if hasattr(self._query, 'invalidate'):
+                if hasattr(self._query, "invalidate"):
                     fetched_from_cache = False
                     self._query.invalidate()
 

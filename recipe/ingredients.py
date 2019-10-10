@@ -67,31 +67,28 @@ class Ingredient(object):
     """
 
     def __init__(self, **kwargs):
-        self.id = kwargs.pop('id', uuid4().hex[:12])
-        self.columns = kwargs.pop('columns', [])
-        self.filters = kwargs.pop('filters', [])
-        self.havings = kwargs.pop('havings', [])
-        self.group_by = kwargs.pop('group_by', [])
-        self.formatters = kwargs.pop('formatters', [])
-        self.quickselects = kwargs.pop('quickselects', [])
-        self.column_suffixes = kwargs.pop('column_suffixes', None)
-        self.cache_context = kwargs.pop('cache_context', '')
+        self.id = kwargs.pop("id", uuid4().hex[:12])
+        self.columns = kwargs.pop("columns", [])
+        self.filters = kwargs.pop("filters", [])
+        self.havings = kwargs.pop("havings", [])
+        self.group_by = kwargs.pop("group_by", [])
+        self.formatters = kwargs.pop("formatters", [])
+        self.quickselects = kwargs.pop("quickselects", [])
+        self.column_suffixes = kwargs.pop("column_suffixes", None)
+        self.cache_context = kwargs.pop("cache_context", "")
         self.anonymize = False
         # What order should this be in
-        self.ordering = kwargs.pop('ordering', 'asc')
+        self.ordering = kwargs.pop("ordering", "asc")
 
         if not isinstance(self.formatters, (list, tuple)):
             raise BadIngredient(
-                'formatters passed to an ingredient must be a '
-                'list or tuple'
+                "formatters passed to an ingredient must be a " "list or tuple"
             )
         # If explicit suffixes are passed in, there must be one for each column
-        if self.column_suffixes is not None and \
-            len(self.column_suffixes) != len(self.columns):
-            raise BadIngredient(
-                'column_suffixes must be the same length as '
-                'columns'
-            )
+        if self.column_suffixes is not None and len(self.column_suffixes) != len(
+            self.columns
+        ):
+            raise BadIngredient("column_suffixes must be the same length as " "columns")
 
         # Any remaining passed properties are available in self.meta
         self.meta = AttrDict(kwargs)
@@ -106,13 +103,11 @@ class Ingredient(object):
         """ Return a relevant string based on ingredient type for repr and
         ordering. Ingredients with the same classname, id and _stringify
         value are considered the same. """
-        return ' '.join(str(col) for col in self.columns)
+        return " ".join(str(col) for col in self.columns)
 
     def describe(self):
         """A string representation of the ingredient."""
-        return u'({}){} {}'.format(
-            self.__class__.__name__, self.id, self._stringify()
-        )
+        return u"({}){} {}".format(self.__class__.__name__, self.id, self._stringify())
 
     def _format_value(self, value):
         """Formats value using any stored formatters. """
@@ -132,13 +127,12 @@ class Ingredient(object):
 
         elif len(self.columns) == 1:
             if self.formatters:
-                return '_raw',
+                return ("_raw",)
             else:
-                return '',
+                return ("",)
         else:
             raise BadIngredient(
-                'column_suffixes must be supplied if there is '
-                'more than one column'
+                "column_suffixes must be supplied if there is " "more than one column"
             )
 
     @property
@@ -153,7 +147,7 @@ class Ingredient(object):
         """ Yield columns to be used in an order by using this ingredient
         """
         for c in self.columns:
-            if self.ordering == 'desc':
+            if self.ordering == "desc":
                 yield c.desc()
             else:
                 yield c
@@ -164,9 +158,8 @@ class Ingredient(object):
         a row.
         """
         if self.formatters:
-            raw_property = self.id + '_raw'
-            yield self.id, lambda row: \
-                self._format_value(getattr(row, raw_property))
+            raw_property = self.id + "_raw"
+            yield self.id, lambda row: self._format_value(getattr(row, raw_property))
 
     def _order(self):
         """Ingredients are sorted by subclass then by id.
@@ -213,41 +206,41 @@ class Ingredient(object):
         """
         filter_column = self.columns[0]
 
-        if operator is None or operator == 'eq':
+        if operator is None or operator == "eq":
             # Default operator is 'eq' so if no operator is provided, handle
             # like an 'eq'
             if value is None:
                 return Filter(filter_column.is_(value))
             else:
                 return Filter(filter_column == value)
-        if operator == 'ne':
+        if operator == "ne":
             return Filter(filter_column != value)
-        elif operator == 'lt':
+        elif operator == "lt":
             return Filter(filter_column < value)
-        elif operator == 'lte':
+        elif operator == "lte":
             return Filter(filter_column <= value)
-        elif operator == 'gt':
+        elif operator == "gt":
             return Filter(filter_column > value)
-        elif operator == 'gte':
+        elif operator == "gte":
             return Filter(filter_column >= value)
-        elif operator == 'is':
+        elif operator == "is":
             return Filter(filter_column.is_(value))
-        elif operator == 'isnot':
+        elif operator == "isnot":
             return Filter(filter_column.isnot(value))
-        elif operator == 'like':
+        elif operator == "like":
             return Filter(filter_column.like(value))
-        elif operator == 'ilike':
+        elif operator == "ilike":
             return Filter(filter_column.ilike(value))
-        elif operator == 'quickselect':
+        elif operator == "quickselect":
             for qs in self.quickselects:
-                if qs.get('name') == value:
-                    return Filter(qs.get('condition'))
+                if qs.get("name") == value:
+                    return Filter(qs.get("condition"))
             raise ValueError(
-                'quickselect {} was not found in '
-                'ingredient {}'.format(value, self.id)
+                "quickselect {} was not found in "
+                "ingredient {}".format(value, self.id)
             )
         else:
-            raise ValueError('Unknown operator {}'.format(operator))
+            raise ValueError("Unknown operator {}".format(operator))
 
     def _build_vector_filter(self, value, operator=None):
         """Build a Filter given a list of values.
@@ -265,7 +258,7 @@ class Ingredient(object):
         """
         filter_column = self.columns[0]
 
-        if operator is None or operator == 'in':
+        if operator is None or operator == "in":
             # Default operator is 'in' so if no operator is provided, handle
             # like an 'in'
             if None in value:
@@ -273,10 +266,7 @@ class Ingredient(object):
                 non_none_value = sorted([v for v in value if v is not None])
                 if non_none_value:
                     return Filter(
-                        or_(
-                            filter_column.is_(None),
-                            filter_column.in_(non_none_value)
-                        )
+                        or_(filter_column.is_(None), filter_column.in_(non_none_value))
                     )
                 else:
                     return Filter(filter_column.is_(None))
@@ -284,7 +274,7 @@ class Ingredient(object):
                 # Sort to generate deterministic query sql for caching
                 value = sorted(value)
                 return Filter(filter_column.in_(value))
-        elif operator == 'notin':
+        elif operator == "notin":
             if None in value:
                 # filter out the Nones
                 non_none_value = sorted([v for v in value if v is not None])
@@ -292,7 +282,7 @@ class Ingredient(object):
                     return Filter(
                         and_(
                             filter_column.isnot(None),
-                            filter_column.notin_(non_none_value)
+                            filter_column.notin_(non_none_value),
                         )
                     )
                 else:
@@ -301,31 +291,31 @@ class Ingredient(object):
                 # Sort to generate deterministic query sql for caching
                 value = sorted(value)
                 return Filter(filter_column.notin_(value))
-        elif operator == 'between':
+        elif operator == "between":
             if len(value) != 2:
                 ValueError(
-                    'When using between, you can only supply a '
-                    'lower and upper bounds.'
+                    "When using between, you can only supply a "
+                    "lower and upper bounds."
                 )
             lower_bound, upper_bound = value
             return Filter(between(filter_column, lower_bound, upper_bound))
-        elif operator == 'quickselect':
+        elif operator == "quickselect":
             qs_conditions = []
             for v in value:
                 qs_found = False
                 for qs in self.quickselects:
-                    if qs.get('name') == v:
+                    if qs.get("name") == v:
                         qs_found = True
-                        qs_conditions.append(qs.get('condition'))
+                        qs_conditions.append(qs.get("condition"))
                         break
                 if not qs_found:
                     raise ValueError(
-                        'quickselect {} was not found in '
-                        'ingredient {}'.format(value, self.id)
+                        "quickselect {} was not found in "
+                        "ingredient {}".format(value, self.id)
                     )
             return Filter(or_(*qs_conditions))
         else:
-            raise ValueError('Unknown operator {}'.format(operator))
+            raise ValueError("Unknown operator {}".format(operator))
 
     def build_filter(self, value, operator=None):
         """
@@ -377,7 +367,7 @@ class Filter(Ingredient):
         self.filters = [expression]
 
     def _stringify(self):
-        return ' '.join(str(expr) for expr in self.filters)
+        return " ".join(str(expr) for expr in self.filters)
 
     @property
     def expression(self):
@@ -398,7 +388,7 @@ class Having(Ingredient):
         self.havings = [expression]
 
     def _stringify(self):
-        return ' '.join(str(expr) for expr in self.havings)
+        return " ".join(str(expr) for expr in self.havings)
 
     @property
     def expression(self):
@@ -458,63 +448,60 @@ class Dimension(Ingredient):
 
         # An optional exprssion to use instead of the value expression
         # when ordering
-        order_by_expression = kwargs.pop('order_by_expression', None)
+        order_by_expression = kwargs.pop("order_by_expression", None)
 
         # We must always have a value role
-        self.roles = {'value': expression}
+        self.roles = {"value": expression}
         for k, v in kwargs.items():
             role = None
-            if k.endswith('_expression'):
+            if k.endswith("_expression"):
                 # Remove _expression to get the role
                 role = k[:-11]
             if role:
-                if role == 'raw':
-                    raise BadIngredient('raw is a reserved role in dimensions')
+                if role == "raw":
+                    raise BadIngredient("raw is a reserved role in dimensions")
                 self.roles[role] = v
 
         self.columns = []
         self.group_by = []
         self._order_by_columns = []
         self.role_keys = []
-        if 'id' in self.roles:
-            self.columns.append(self.roles['id'])
-            self.group_by.append(self.roles['id'])
-            self.role_keys.append('id')
-            self._order_by_columns.append(self.roles['id'])
-        if 'value' in self.roles:
-            self.columns.append(self.roles['value'])
-            self.group_by.append(self.roles['value'])
-            self.role_keys.append('value')
+        if "id" in self.roles:
+            self.columns.append(self.roles["id"])
+            self.group_by.append(self.roles["id"])
+            self.role_keys.append("id")
+            self._order_by_columns.append(self.roles["id"])
+        if "value" in self.roles:
+            self.columns.append(self.roles["value"])
+            self.group_by.append(self.roles["value"])
+            self.role_keys.append("value")
             # Order by columns are in order of value, id
             # Extra roles are ignored
             if order_by_expression is not None:
                 self._order_by_columns.insert(0, order_by_expression)
             else:
-                self._order_by_columns.insert(0, self.roles['value'])
+                self._order_by_columns.insert(0, self.roles["value"])
 
         # Add all the other columns in sorted order of role
         for k in sorted(self.roles.keys()):
-            if k in ('id', 'value'):
+            if k in ("id", "value"):
                 continue
             self.columns.append(self.roles[k])
             self.group_by.append(self.roles[k])
             self.role_keys.append(k)
 
-        if 'lookup' in kwargs:
-            self.lookup = kwargs.get('lookup')
+        if "lookup" in kwargs:
+            self.lookup = kwargs.get("lookup")
             if not isinstance(self.lookup, dict):
-                raise BadIngredient('lookup must be a dictionary')
+                raise BadIngredient("lookup must be a dictionary")
             # Inject a formatter that performs the lookup
-            if 'lookup_default' in kwargs:
-                self.lookup_default = kwargs.get('lookup_default')
+            if "lookup_default" in kwargs:
+                self.lookup_default = kwargs.get("lookup_default")
                 self.formatters.insert(
-                    0, lambda value: self.lookup.
-                    get(value, self.lookup_default)
+                    0, lambda value: self.lookup.get(value, self.lookup_default)
                 )
             else:
-                self.formatters.insert(
-                    0, lambda value: self.lookup.get(value, value)
-                )
+                self.formatters.insert(0, lambda value: self.lookup.get(value, value))
 
     @property
     def cauldron_extras(self):
@@ -525,14 +512,14 @@ class Dimension(Ingredient):
         for extra in super(Dimension, self).cauldron_extras:
             yield extra
 
-        yield self.id + '_id', lambda row: getattr(row, self.id_prop)
+        yield self.id + "_id", lambda row: getattr(row, self.id_prop)
 
     @property
     def order_by_columns(self):
         """ Yield columns to be used in an order by using this ingredient
         """
         for c in self._order_by_columns:
-            if self.ordering == 'desc':
+            if self.ordering == "desc":
                 yield c.desc()
             else:
                 yield c
@@ -542,24 +529,23 @@ class Dimension(Ingredient):
         to `id` when generating the query.
         """
         if self.formatters:
-            value_suffix = '_raw'
+            value_suffix = "_raw"
         else:
-            value_suffix = ''
+            value_suffix = ""
 
         return tuple(
-            value_suffix if role == 'value' else '_' + role
-            for role in self.role_keys
+            value_suffix if role == "value" else "_" + role for role in self.role_keys
         )
 
     @property
     def id_prop(self):
         """ The label of this dimensions id in the query columns """
-        if 'id' in self.role_keys:
-            return self.id + '_id'
+        if "id" in self.role_keys:
+            return self.id + "_id"
         else:
             # Use the value dimension
             if self.formatters:
-                return self.id + '_raw'
+                return self.id + "_raw"
             else:
                 return self.id
 
@@ -589,7 +575,7 @@ class IdValueDimension(Dimension):
     """
 
     def __init__(self, id_expression, value_expression, **kwargs):
-        kwargs['id_expression'] = id_expression
+        kwargs["id_expression"] = id_expression
         super(IdValueDimension, self).__init__(value_expression, **kwargs)
 
 
@@ -611,9 +597,9 @@ class LookupDimension(Dimension):
            lookup table.
         :type default: object
         """
-        if 'default' in kwargs:
-            kwargs['lookup_default'] = kwargs.pop('default')
-        kwargs['lookup'] = lookup
+        if "default" in kwargs:
+            kwargs["lookup_default"] = kwargs.pop("default")
+        kwargs["lookup"] = lookup
 
         super(LookupDimension, self).__init__(expression, **kwargs)
 
@@ -642,9 +628,9 @@ class DivideMetric(Metric):
     """
 
     def __init__(self, numerator, denominator, **kwargs):
-        ifzero = kwargs.pop('ifzero', 'epsilon')
-        epsilon = kwargs.pop('epsilon', 0.000000001)
-        if ifzero == 'epsilon':
+        ifzero = kwargs.pop("ifzero", "epsilon")
+        epsilon = kwargs.pop("epsilon", 0.000000001)
+        if ifzero == "epsilon":
             # Add an epsilon value to denominator to avoid divide by zero
             # errors
             expression = cast(numerator, Float) / (
@@ -653,9 +639,10 @@ class DivideMetric(Metric):
         else:
             # If the denominator is zero, return the ifzero value otherwise do
             # the division
-            expression = case(((cast(denominator, Float) == 0.0, ifzero),),
-                              else_=cast(numerator, Float) /
-                              cast(denominator, Float))
+            expression = case(
+                ((cast(denominator, Float) == 0.0, ifzero),),
+                else_=cast(numerator, Float) / cast(denominator, Float),
+            )
         super(DivideMetric, self).__init__(expression, **kwargs)
 
 
