@@ -2,9 +2,9 @@ from recipe.oven import get_oven
 
 
 def test_create_oven():
-    oven = get_oven('sqlite://')
-    assert oven.engine.driver == 'pysqlite'
-    assert oven.Session.kw['bind'] == oven.engine
+    oven = get_oven("sqlite://")
+    assert oven.engine.driver == "pysqlite"
+    assert oven.Session.kw["bind"] == oven.engine
 
 
 def test_create_oven_no_target():

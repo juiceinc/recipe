@@ -19,9 +19,7 @@ from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
 from recipe.compat import basestring, integer_types, str
 
 # only expose the printing sql function
-__all__ = [
-    'prettyprintable_sql', 'clean_unicode', 'FakerAnonymizer', 'FakerFormatter'
-]
+__all__ = ["prettyprintable_sql", "clean_unicode", "FakerAnonymizer", "FakerFormatter"]
 
 
 def recipe_arg(*args):
@@ -31,7 +29,6 @@ def recipe_arg(*args):
     """
 
     def decorator(func):
-
         @wraps(func)
         def wrapper(self, *_args, **_kwargs):
             from recipe import Recipe, RecipeExtension, BadRecipe
@@ -42,8 +39,8 @@ def recipe_arg(*args):
                 recipe = self.recipe
             else:
                 raise BadRecipe(
-                    'recipe_arg can only be applied to'
-                    'methods of Recipe or RecipeExtension'
+                    "recipe_arg can only be applied to"
+                    "methods of Recipe or RecipeExtension"
                 )
 
             if recipe._query is not None:
@@ -61,7 +58,7 @@ class TestProvider(BaseProvider):
     """A demo faker provider for testing string providers"""
 
     def foo(self):
-        return 'foo'
+        return "foo"
 
 
 class StringLiteral(String):
@@ -115,34 +112,30 @@ def prettyprintable_sql(statement, dialect=None, reindent=True):
         }
 
     compiled = statement.compile(
-        dialect=LiteralDialect(), compile_kwargs={
-            'literal_binds': True
-        }
+        dialect=LiteralDialect(), compile_kwargs={"literal_binds": True}
     )
     return sqlparse.format(str(compiled), reindent=reindent)
 
 
-WHITESPACE_RE = re.compile(r'\s+', flags=re.DOTALL | re.MULTILINE)
+WHITESPACE_RE = re.compile(r"\s+", flags=re.DOTALL | re.MULTILINE)
 
 
 def replace_whitespace_with_space(s):
     """ Replace multiple whitespaces with a single space. """
-    return WHITESPACE_RE.sub(' ', s)
+    return WHITESPACE_RE.sub(" ", s)
 
 
 def clean_unicode(value):
     try:
         cleaned_value = str(value)
     except UnicodeEncodeError:
-        cleaned_value = unicodedata.normalize('NFKD',
-                                              value).encode('ascii', 'ignore')
+        cleaned_value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore")
         if not cleaned_value:
-            raise ValueError('Could not find useful chars in the string')
+            raise ValueError("Could not find useful chars in the string")
     return cleaned_value
 
 
 class AttrDict(dict):
-
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
@@ -167,16 +160,16 @@ class FakerFormatter(string.Formatter):
         """
         generator = format_spec
         kwargs = {}
-        if '|' in format_spec:
+        if "|" in format_spec:
             try:
-                newgenerator, potential_kwargs = format_spec.split('|')
-                for part in potential_kwargs.split(','):
-                    k, v = part.split('=')
-                    if v == 'None':
+                newgenerator, potential_kwargs = format_spec.split("|")
+                for part in potential_kwargs.split(","):
+                    k, v = part.split("=")
+                    if v == "None":
                         v = None
-                    elif v == 'True':
+                    elif v == "True":
                         v = True
-                    elif v == 'False':
+                    elif v == "False":
                         v = False
                     elif v.isdigit():
                         v = int(v)
@@ -200,16 +193,17 @@ class FakerFormatter(string.Formatter):
 
         if value is not None and not isinstance(value, basestring):
             value = str(value)
-        return value or 'Unknown fake generator'
+        return value or "Unknown fake generator"
 
 
 @attr.s
 class FakerAnonymizer(object):
     """Returns a deterministically generated fake value that depends on the
     input value. """
+
     format_str = attr.ib()
     postprocessor = attr.ib()
-    locale = attr.ib(default='en_US')
+    locale = attr.ib(default="en_US")
     postprocessor = attr.ib(default=None)
     providers = attr.ib(default=None)
 
@@ -232,9 +226,9 @@ class FakerAnonymizer(object):
         for provider in providers:
             if isinstance(provider, basestring):
                 # dynamically import the provider
-                parts = provider.split('.')
+                parts = provider.split(".")
                 if len(parts) > 1:
-                    _module = '.'.join(parts[:-1])
+                    _module = ".".join(parts[:-1])
                     _provider_class = parts[-1]
                     try:
                         _mod = importlib.import_module(_module)
@@ -251,9 +245,7 @@ class FakerAnonymizer(object):
                     except ImportError:
                         # TODO: log an issue, can't import module
                         continue
-            elif inspect.isclass(provider) and issubclass(
-                provider, BaseProvider
-            ):
+            elif inspect.isclass(provider) and issubclass(provider, BaseProvider):
                 cleaned_providers.append(provider)
             else:
                 # TODO: log an issue, provider is not an importable string

@@ -35,9 +35,9 @@ class OvenBase(object):
             return
 
         connection_settings = {
-            'pool_size': SETTINGS.POOL_SIZE,
-            'pool_recycle': SETTINGS.POOL_RECYCLE,
-            'pool_pre_ping': True
+            "pool_size": SETTINGS.POOL_SIZE,
+            "pool_recycle": SETTINGS.POOL_RECYCLE,
+            "pool_pre_ping": True,
         }
         connection_settings.update(kwargs)
 

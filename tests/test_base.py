@@ -1,21 +1,19 @@
-from sqlalchemy import (
-    Column, Date, DateTime, Float, Integer, String, distinct, func
-)
+from sqlalchemy import Column, Date, DateTime, Float, Integer, String, distinct, func
 from sqlalchemy.ext.declarative import declarative_base
 
 from recipe import Dimension, Metric, Shelf, get_oven
 
-oven = get_oven('sqlite://')
+oven = get_oven("sqlite://")
 Base = declarative_base(bind=oven.engine)
 
-TABLEDEF = '''
+TABLEDEF = """
         CREATE TABLE IF NOT EXISTS foo
         (first text,
          last text,
          age int,
          birth_date date,
          dt datetime);
-'''
+"""
 
 oven.engine.execute(TABLEDEF)
 oven.engine.execute(
@@ -23,13 +21,13 @@ oven.engine.execute(
 )
 
 # Create a table for testing summarization
-TABLEDEF = '''
+TABLEDEF = """
         CREATE TABLE IF NOT EXISTS scores
         (username text,
          department text,
          testid text,
          score float);
-'''
+"""
 
 oven.engine.execute(TABLEDEF)
 oven.engine.execute(
@@ -44,14 +42,14 @@ oven.engine.execute(
 )
 
 # Create a table for denormalized tables with tags
-TABLEDEF = '''
+TABLEDEF = """
         CREATE TABLE IF NOT EXISTS tagscores
         (username text,
          tag text,
          department text,
          testid text,
          score float);
-'''
+"""
 
 oven.engine.execute(TABLEDEF)
 oven.engine.execute(
@@ -269,131 +267,129 @@ oven.engine.execute(
 
 
 class MyTable(Base):
-    first = Column('first', String(), primary_key=True)
-    last = Column('last', String())
-    age = Column('age', Integer())
-    birth_date = Column('birth_date', Date())
-    dt = Column('dt', DateTime())
+    first = Column("first", String(), primary_key=True)
+    last = Column("last", String())
+    age = Column("age", Integer())
+    birth_date = Column("birth_date", Date())
+    dt = Column("dt", DateTime())
 
-    __tablename__ = 'foo'
-    __table_args__ = {'extend_existing': True}
+    __tablename__ = "foo"
+    __table_args__ = {"extend_existing": True}
 
 
 class Scores(Base):
-    username = Column('username', String(), primary_key=True)
-    department = Column('department', String())
-    testid = Column('testid', String())
-    score = Column('score', Float())
+    username = Column("username", String(), primary_key=True)
+    department = Column("department", String())
+    testid = Column("testid", String())
+    score = Column("score", Float())
 
-    __tablename__ = 'scores'
-    __table_args__ = {'extend_existing': True}
+    __tablename__ = "scores"
+    __table_args__ = {"extend_existing": True}
 
 
 class TagScores(Base):
-    username = Column('username', String(), primary_key=True)
-    department = Column('department', String())
-    tag = Column('tag', String())
-    testid = Column('testid', String())
-    score = Column('score', Float())
+    username = Column("username", String(), primary_key=True)
+    department = Column("department", String())
+    tag = Column("tag", String())
+    testid = Column("testid", String())
+    score = Column("score", Float())
 
-    __tablename__ = 'tagscores'
-    __table_args__ = {'extend_existing': True}
+    __tablename__ = "tagscores"
+    __table_args__ = {"extend_existing": True}
 
 
 class Census(Base):
-    state = Column('state', String(), primary_key=True)
-    sex = Column('sex', String())
-    age = Column('age', Integer())
-    pop2000 = Column('pop2000', Integer())
-    pop2008 = Column('pop2008', Integer())
+    state = Column("state", String(), primary_key=True)
+    sex = Column("sex", String())
+    age = Column("age", Integer())
+    pop2000 = Column("pop2000", Integer())
+    pop2008 = Column("pop2008", Integer())
 
-    __tablename__ = 'census'
-    __table_args__ = {'extend_existing': True}
+    __tablename__ = "census"
+    __table_args__ = {"extend_existing": True}
 
 
 class StateFact(Base):
-    id = Column('id', String(), primary_key=True)
-    name = Column('name', String())
-    abbreviation = Column('abbreviation', String())
-    country = Column('country', String())
-    type = Column('type', String())
-    sort = Column('sort', String())
-    status = Column('status', String())
-    occupied = Column('occupied', String())
-    notes = Column('notes', String())
-    fips_state = Column('fips_state', String())
-    assoc_press = Column('assoc_press', String())
-    standard_federal_region = Column('standard_federal_region', String())
-    census_region = Column('census_region', String())
-    census_region_name = Column('census_region_name', String())
-    census_division = Column('census_division', String())
-    census_division_name = Column('census_division_name', String())
-    circuit_court = Column('circuit_court', String())
+    id = Column("id", String(), primary_key=True)
+    name = Column("name", String())
+    abbreviation = Column("abbreviation", String())
+    country = Column("country", String())
+    type = Column("type", String())
+    sort = Column("sort", String())
+    status = Column("status", String())
+    occupied = Column("occupied", String())
+    notes = Column("notes", String())
+    fips_state = Column("fips_state", String())
+    assoc_press = Column("assoc_press", String())
+    standard_federal_region = Column("standard_federal_region", String())
+    census_region = Column("census_region", String())
+    census_region_name = Column("census_region_name", String())
+    census_division = Column("census_division", String())
+    census_division_name = Column("census_division_name", String())
+    circuit_court = Column("circuit_court", String())
 
-    __tablename__ = 'state_fact'
-    __table_args__ = {'extend_existing': True}
+    __tablename__ = "state_fact"
+    __table_args__ = {"extend_existing": True}
 
 
-mytable_shelf = Shelf({
-    'first': Dimension(MyTable.first),
-    'last': Dimension(MyTable.last),
-    'firstlast': Dimension(MyTable.last, id_expression=MyTable.first),
-    'age': Metric(func.sum(MyTable.age)),
-})
+mytable_shelf = Shelf(
+    {
+        "first": Dimension(MyTable.first),
+        "last": Dimension(MyTable.last),
+        "firstlast": Dimension(MyTable.last, id_expression=MyTable.first),
+        "age": Metric(func.sum(MyTable.age)),
+    }
+)
 
-mytable_extrarole_shelf = Shelf({
-    'first':
-        Dimension(MyTable.first),
-    'last':
-        Dimension(MyTable.last),
-    'firstlastage':
-        Dimension(
-            MyTable.last,
-            id_expression=MyTable.first,
-            age_expression=MyTable.age
+mytable_extrarole_shelf = Shelf(
+    {
+        "first": Dimension(MyTable.first),
+        "last": Dimension(MyTable.last),
+        "firstlastage": Dimension(
+            MyTable.last, id_expression=MyTable.first, age_expression=MyTable.age
         ),
-    'age':
-        Metric(func.sum(MyTable.age)),
-})
+        "age": Metric(func.sum(MyTable.age)),
+    }
+)
 
-scores_shelf = Shelf({
-    'username':
-        Dimension(Scores.username),
-    'department':
-        Dimension(Scores.department, anonymizer=lambda value: value[::-1]),
-    'testid':
-        Dimension(Scores.testid),
-    'test_cnt':
-        Metric(func.count(distinct(TagScores.testid))),
-    'score':
-        Metric(func.avg(Scores.score))
-})
+scores_shelf = Shelf(
+    {
+        "username": Dimension(Scores.username),
+        "department": Dimension(
+            Scores.department, anonymizer=lambda value: value[::-1]
+        ),
+        "testid": Dimension(Scores.testid),
+        "test_cnt": Metric(func.count(distinct(TagScores.testid))),
+        "score": Metric(func.avg(Scores.score)),
+    }
+)
 
-tagscores_shelf = Shelf({
-    'username': Dimension(TagScores.username),
-    'department': Dimension(TagScores.department),
-    'testid': Dimension(TagScores.testid),
-    'tag': Dimension(TagScores.tag),
-    'test_cnt': Metric(func.count(distinct(TagScores.testid))),
-    'score': Metric(func.avg(TagScores.score), summary_aggregation=func.sum)
-})
+tagscores_shelf = Shelf(
+    {
+        "username": Dimension(TagScores.username),
+        "department": Dimension(TagScores.department),
+        "testid": Dimension(TagScores.testid),
+        "tag": Dimension(TagScores.tag),
+        "test_cnt": Metric(func.count(distinct(TagScores.testid))),
+        "score": Metric(func.avg(TagScores.score), summary_aggregation=func.sum),
+    }
+)
 
-census_shelf = Shelf({
-    'state':
-        Dimension(Census.state),
-    'sex':
-        Dimension(Census.sex),
-    'age':
-        Dimension(Census.age),
-    'pop2000':
-        Metric(func.sum(Census.pop2000)),
-    'pop2000_sum':
-        Metric(func.sum(Census.pop2000), summary_aggregation=func.sum),
-    'pop2008':
-        Metric(func.sum(Census.pop2008)),
-})
+census_shelf = Shelf(
+    {
+        "state": Dimension(Census.state),
+        "sex": Dimension(Census.sex),
+        "age": Dimension(Census.age),
+        "pop2000": Metric(func.sum(Census.pop2000)),
+        "pop2000_sum": Metric(func.sum(Census.pop2000), summary_aggregation=func.sum),
+        "pop2008": Metric(func.sum(Census.pop2008)),
+    }
+)
 
-statefact_shelf = Shelf({
-    'state': Dimension(StateFact.name),
-    'abbreviation': Dimension(StateFact.abbreviation),
-})
+statefact_shelf = Shelf(
+    {
+        "state": Dimension(StateFact.name),
+        "abbreviation": Dimension(StateFact.abbreviation),
+    }
+)
+
