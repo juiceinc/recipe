@@ -1,11 +1,22 @@
 from __future__ import print_function
 
 import importlib
-import inspect
 import re
 import string
 import unicodedata
 from functools import wraps
+
+from pyhash import metro_64
+from six import text_type, string_types
+
+try:
+    # getfullargspec is not available in python2
+    # getargspec is deprecated
+    # try to use getfullargspec if possible
+    from inspect import isclass, getfullargspec as getargspec
+except ImportError:
+    from inspect import getargspec, isclass
+
 
 import attr
 import sqlalchemy.orm
@@ -19,7 +30,24 @@ from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
 from recipe.compat import basestring, integer_types, str
 
 # only expose the printing sql function
-__all__ = ["prettyprintable_sql", "clean_unicode", "FakerAnonymizer", "FakerFormatter"]
+__all__ = [
+    "prettyprintable_sql",
+    "generate_faker_seed",
+    "clean_unicode",
+    "FakerAnonymizer",
+    "FakerFormatter",
+]
+
+
+hash_fn = metro_64()
+
+
+def generate_faker_seed(value):
+    """Generate a seed value for faker. """
+    if not isinstance(value, string_types):
+        value = text_type(value)
+
+    return hash_fn(value)
 
 
 def recipe_arg(*args):
@@ -183,7 +211,7 @@ class FakerFormatter(string.Formatter):
         value = None
         if callable(getattr(obj, generator)):
             c = getattr(obj, generator)
-            argspec = inspect.getargspec(c)
+            argspec = getargspec(c)
             if len(argspec.args) == 1:
                 value = getattr(obj, generator)()
             elif kwargs:
@@ -245,7 +273,7 @@ class FakerAnonymizer(object):
                     except ImportError:
                         # TODO: log an issue, can't import module
                         continue
-            elif inspect.isclass(provider) and issubclass(provider, BaseProvider):
+            elif isclass(provider) and issubclass(provider, BaseProvider):
                 cleaned_providers.append(provider)
             else:
                 # TODO: log an issue, provider is not an importable string
@@ -255,7 +283,7 @@ class FakerAnonymizer(object):
         return cleaned_providers
 
     def __call__(self, value):
-        self.fake.seed_instance(hash(value))
+        self.fake.seed_instance(generate_faker_seed(value))
         value = self.formatter.format(self.format_str, fake=self.fake)
         if self.postprocessor is None:
             return value

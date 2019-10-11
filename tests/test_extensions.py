@@ -3,6 +3,8 @@ from copy import copy
 import pytest
 from faker import Faker
 from sqlalchemy import func
+
+from recipe.utils import generate_faker_seed
 from tests.test_base import (
     Census,
     MyTable,
@@ -453,9 +455,30 @@ ORDER BY foo.first"""
         )
 
         fake = Faker(locale="en_US")
-        fake.seed_instance(hash("hi"))
+        fake.seed_instance(generate_faker_seed(ure"hi"))
         fake_value = fake.name()
 
+        assert recipe.all()[0].firstanon == fake_value
+        assert recipe.all()[0].firstanon_raw == "hi"
+        assert recipe.all()[0].firstanon_id == "hi"
+        assert recipe.all()[0].age == 15
+        assert recipe.stats.rows == 1
+
+        recipe = (
+            self.recipe()
+                .metrics("age")
+                .dimensions("firstanon")
+                .order_by("firstanon")
+                .anonymize(True)
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS firstanon_raw,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY foo.first
+ORDER BY foo.first"""
+    )
         assert recipe.all()[0].firstanon == fake_value
         assert recipe.all()[0].firstanon_raw == "hi"
         assert recipe.all()[0].firstanon_id == "hi"
