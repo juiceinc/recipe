@@ -455,7 +455,7 @@ ORDER BY foo.first"""
         )
 
         fake = Faker(locale="en_US")
-        fake.seed_instance(generate_faker_seed("hi"))
+        fake.seed_instance(generate_faker_seed(u"hi"))
         fake_value = fake.name()
 
         assert recipe.all()[0].firstanon == fake_value
