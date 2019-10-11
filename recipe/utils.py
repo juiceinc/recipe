@@ -17,7 +17,6 @@ try:
 except ImportError:
     from inspect import getargspec, isclass
 
-
 import attr
 import sqlalchemy.orm
 import sqlparse

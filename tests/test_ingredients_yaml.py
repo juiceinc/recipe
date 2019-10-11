@@ -673,4 +673,3 @@ Tennessee,36.24667550829078,Tennessee
 Vermont,37.0597968760254,Vermont
 """,
         )
-
