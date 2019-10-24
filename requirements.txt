@@ -1,8 +1,8 @@
-faker==1.0.8
+faker==2.0.2
 flapjack_stack==1.0.0
 orderedset==2.0.1
 py==1.4.32
-six==1.10.0
+six==1.10.0git
 SQLAlchemy==1.2.2
 sqlparse==0.3.0
 stevedore==1.27.1
