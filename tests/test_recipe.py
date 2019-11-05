@@ -71,18 +71,18 @@ GROUP BY foo.first,
        foo.age AS d_age,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.age,
-         foo.first,
-         foo.last"""
+GROUP BY foo.first,
+         foo.last,
+         foo.age"""
         )
-        assert recipe.all()[0].d == "there"
+        assert recipe.all()[0].d == "fred"
         assert recipe.all()[0].d_id == "hi"
-        assert recipe.all()[0].d_age == 5
-        assert recipe.all()[0].age == 5
-        assert recipe.all()[1].d == "fred"
+        assert recipe.all()[0].d_age == 10
+        assert recipe.all()[0].age == 10
+        assert recipe.all()[1].d == "there"
         assert recipe.all()[1].d_id == "hi"
-        assert recipe.all()[1].d_age == 10
-        assert recipe.all()[1].age == 10
+        assert recipe.all()[1].d_age == 5
+        assert recipe.all()[1].age == 5
         assert recipe.stats.rows == 2
 
     def test_multirole_dimension_with_lookup(self):
@@ -104,21 +104,21 @@ GROUP BY foo.age,
        foo.age AS d_age,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.age,
-         foo.first,
-         foo.last"""
+GROUP BY foo.first,
+         foo.last,
+         foo.age"""
         )
 
-        assert recipe.all()[0].d_raw == "there"
+        assert recipe.all()[0].d_raw == "fred"
         assert recipe.all()[0].d == "DEFAULT"
         assert recipe.all()[0].d_id == "hi"
-        assert recipe.all()[0].d_age == 5
-        assert recipe.all()[0].age == 5
-        assert recipe.all()[1].d_raw == "fred"
+        assert recipe.all()[0].d_age == 10
+        assert recipe.all()[0].age == 10
+        assert recipe.all()[1].d_raw == "there"
         assert recipe.all()[1].d == "DEFAULT"
         assert recipe.all()[1].d_id == "hi"
-        assert recipe.all()[1].d_age == 10
-        assert recipe.all()[1].age == 10
+        assert recipe.all()[1].d_age == 5
+        assert recipe.all()[1].age == 5
         assert recipe.stats.rows == 2
 
     def test_offset(self):
