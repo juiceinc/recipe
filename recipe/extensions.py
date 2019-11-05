@@ -458,55 +458,39 @@ class Paginate(RecipeExtension):
     Allows recipes to paginate results. Pagination also supports
     searching and sorting within paginated data.
 
-    **Using pagination**
+    **Using and controlling pagination**
 
-    Pagination is
+    Pagination returns pages of data using limit and offset.
 
-    Sets a dictionary of automatic filters to apply to this recipe.
-    If your recipe uses a shelf that has dimensions 'state' and 'gender'
-    you could filter the data to Men in California and New Hampshire with::
+    Pagination is enabled by setting a nonzero page size, like this.
 
         shelf = Shelf({
             'state': Dimension(Census.state),
             'gender': Dimension(Census.gender),
             'population': Metric(func.sum(Census.population)),
         })
-        recipe = Recipe(shelf=shelf)
-        recipe.dimensions('state').metrics('population').automatic_filters({
-            'state': ['California', 'New Hampshire'],
-            'gender': 'M'
-        })
+        recipe = Recipe(shelf=shelf, extension_classes=[Paginate])\
+            .dimensions('state')\
+            .metrics('population')\
+            .pagination_page_size(10)
 
-    Automatic filter keys can optionally include an ``operator``.
 
-    **List operators**
+    Pagination may be disabled by setting `.apply_pagination(False)`.
 
-    If the value provided in the automatic_filter dictionary is a list,
-    the following operators are available. The default operator is ``in``::
+    **Searching**
 
-        in (default)
-        notin
-        quickselect (applies multiple conditions matching the
-          named quickselect, quickselects are ORed together)
-        between (requires a list of two items)
+    `pagination_q` allows a recipe to be searched for a string.
+    The default search fields are all dimensions used in the recipe.
+    Search keys can be customized with `pagination_search_keys`.
+    Search may be disabled by setting `.apply_pagination_filters(False)`
 
-    **Scalar operators**
+    **Sorting**
 
-    If the value provided in the automatic_filter dictionary is a scalar
-    (a string, integer, or number), the following operators are available.
-    The default operator is ``eq``::
+    Pagination can override ordering applied to a recipe by setting
+    `.pagination_order_by(...)` to a list of ordering keys. If keys are
+    preceeded by a "-", ordering is descending, otherwise ordering is acending.
 
-        eq (equal) (the default)
-        ne (not equal)
-        lt (less than)
-        lte (less than or equal)
-        gt (greater than)
-        gte (greater than or equal)
-        like (SQL LIKE)
-        ilike (Case insensitive LIKE)
-        quickselect (applies the condition matching the named quickselect)
-
-    **An example using operators**
+    **An example using all features**
 
     Here's an example that filters to states that start with the letters
     A-C::
@@ -514,12 +498,32 @@ class Paginate(RecipeExtension):
         shelf = Shelf({
             'state': Dimension(Census.state),
             'gender': Dimension(Census.gender),
+            'age': Dimension(Census.age),
             'population': Metric(func.sum(Census.population)),
         })
-        recipe = Recipe(shelf=shelf)
-        recipe.dimensions('state').metrics('population').automatic_filters({
-            'state__lt': 'D'
-        })
+        recipe = self.recipe()\
+            .metrics("pop2000")\
+            .dimensions("state", "sex", "age")\
+            .pagination_page_size(10)\
+            .pagination_page(5)\
+            .pagination_q('t%')\
+            .pagination_search_keys("state", "sex")
+
+
+    This will generate SQL like::
+
+        SELECT census.age AS age,
+               census.sex AS sex,
+               census.state AS state,
+               sum(census.population) AS population
+        FROM census
+        WHERE lower(census.state) LIKE lower('t%')
+          OR lower(census.sex) LIKE lower('t%')
+        GROUP BY census.age,
+                 census.sex,
+                 census.state
+        LIMIT 10
+        OFFSET 40
     """
     recipe_schema = {
         "apply_pagination": {"type": "boolean"},
@@ -622,10 +626,13 @@ class Paginate(RecipeExtension):
     def pagination_page_size(self, value):
         """Paginate recipe responses into pages of this size.
 
-        :param value: A page size
+        A page size of zero disasbles pagination.
+
+        :param value: A page size (zero or a positive integer)
         :type value: integer
         """
         assert isinstance(value, int)
+        assert value >= 0
         self._pagination_page_size = value
 
     @recipe_arg()

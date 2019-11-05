@@ -55,9 +55,9 @@ prior to opening a pull request on GitHub_.
 
 .. _newextensions:
 
-------------------
+---------------------
 Adding New Extensions
-------------------
+---------------------
 
 Recipe welcomes new extensions.
 
@@ -125,7 +125,7 @@ Testing is crucial to confident development and stability. This stable
 project is used in production by many companies and developers, so it is
 important to be certain that every version released is fully operational.
 When developing a new feature for Recipe, be sure to write proper tests for it
- as well.
+as well.
 
 When developing a feature for Recipe, the easiest way to test your changes for
 potential issues is to simply run the test suite directly. ::
