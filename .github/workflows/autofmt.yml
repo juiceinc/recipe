@@ -1,0 +1,65 @@
+name: Format python code with Black
+
+on: [pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Checkout
+      # Instead of using the built-in "checkout" action, we have to do this manually so
+      # that we actually check out the *branch* and not just a detached HEAD. This is
+      # so we can push back to that branch later.
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -e
+        REPO_FULLNAME=$(jq -r ".repository.full_name" "$GITHUB_EVENT_PATH")
+        echo "## Initializing git repo..."
+        git init
+        echo "### Adding git remote..."
+        git remote add origin https://x-access-token:$GITHUB_TOKEN@github.com/$REPO_FULLNAME.git
+        echo "### git fetch..."
+        git fetch --all
+        echo "### Setting branch"
+        BRANCH=$(jq -r ".pull_request.head.ref" "$GITHUB_EVENT_PATH")
+        BASE=$(jq -r ".pull_request.base.ref" "$GITHUB_EVENT_PATH")
+        echo "### Branches: $BASE and $BRANCH"
+        git checkout $BASE
+        git checkout $BRANCH
+
+    - name: Auto-format with Black
+      run: |
+        set -e
+        pip install black
+        echo "### Figuring out which .py files were modified"
+        BRANCH=$(jq -r ".pull_request.head.ref" "$GITHUB_EVENT_PATH")
+        BASE=$(jq -r ".pull_request.base.ref" "$GITHUB_EVENT_PATH")
+        MODIFIED_FILES=$(git diff --name-only $BRANCH $(git merge-base $BRANCH $BASE) | grep '\.py$')
+        echo "modified files are $MODIFIED_FILES"
+        echo "### Running black"
+        black --target-version=py27 $MODIFIED_FILES
+
+    - name: Commit changes back to PR
+      run: |
+        set -e
+        git config user.email 'chrisgemignani@users.noreply.github.com'
+        git config user.name "chris's formatting bot"
+
+        if git diff --exit-code; then
+          echo "No changes to commit."
+          exit
+        fi
+
+        git add .
+        git commit -m 'auto-format Python code'
+        # Apparently github has some sort of loop-detection,
+        # so it won't recursively run this workflow when this
+        # is pushed, fortunately!
+        git push
