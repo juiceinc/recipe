@@ -801,17 +801,17 @@ GROUP BY census.age,
 LIMIT 10
 OFFSET 40"""
         )
-        assert recipe.dataset.csv.replace("\r\n", "\n") == """age,sex,state,pop2000,state_id,sex_id,age_id
-20,F,Tennessee,40966,Tennessee,F,20
-20,M,Tennessee,40512,Tennessee,M,20
-21,F,Tennessee,39776,Tennessee,F,21
-21,M,Tennessee,38980,Tennessee,M,21
-22,F,Tennessee,38057,Tennessee,F,22
-22,M,Tennessee,37950,Tennessee,M,22
-23,F,Tennessee,37569,Tennessee,F,23
-23,M,Tennessee,37456,Tennessee,M,23
-24,F,Tennessee,36220,Tennessee,F,24
-24,M,Tennessee,36332,Tennessee,M,24
+        assert recipe.dataset.csv.replace("\r\n", "\n") == """age,sex,state,pop2000,age_id,sex_id,state_id
+20,F,Tennessee,40966,20,F,Tennessee
+20,M,Tennessee,40512,20,M,Tennessee
+21,F,Tennessee,39776,21,F,Tennessee
+21,M,Tennessee,38980,21,M,Tennessee
+22,F,Tennessee,38057,22,F,Tennessee
+22,M,Tennessee,37950,22,M,Tennessee
+23,F,Tennessee,37569,23,F,Tennessee
+23,M,Tennessee,37456,23,M,Tennessee
+24,F,Tennessee,36220,24,F,Tennessee
+24,M,Tennessee,36332,24,M,Tennessee
 """
 
         recipe = self.recipe()\

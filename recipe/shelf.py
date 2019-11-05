@@ -641,7 +641,7 @@ class Shelf(object):
             # With extra callables
             extra_fields, extra_callables = [], []
 
-            for ingredient in self.values():
+            for ingredient in self.ingredients():
                 if not isinstance(ingredient, (Dimension, Metric)):
                     continue
                 if cache_context:
