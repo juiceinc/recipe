@@ -1,9 +1,9 @@
-faker==1.0.2
+faker==2.0.3
 flapjack_stack==1.0.0
 orderedset==2.0.1
 py==1.4.32
 six==1.10.0
-SQLAlchemy==1.2.2
+SQLAlchemy>=1.2.2
 sqlparse==0.3.0
 stevedore==1.27.1
 tablib==0.12.1
@@ -11,3 +11,4 @@ pyyaml>=4.2b1
 sureberus==0.14.0
 dateparser==0.7.1
 attrs==19.1.0
+pyhash==0.9.3

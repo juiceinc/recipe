@@ -74,7 +74,7 @@ def find_operators(value):
     if len(parts) == 1:
         return field, operators
 
-    remaining_value = value[len(field) :]
+    remaining_value = value[len(field):]
     if remaining_value:
         for part in re.findall("[+-\/\*][\@\w\.]+", remaining_value):
             # TODO: Full validation on other fields

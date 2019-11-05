@@ -878,4 +878,3 @@ class TestCacheContext(object):
 
         assert len(recipe.all()) == 2
         assert recipe._cauldron["last"].cache_context == "foo"
-
