@@ -160,10 +160,12 @@ class AutomaticFilters(RecipeExtension):
             {
                 "automatic_filters": self.automatic_filters,
                 "apply_automatic_filters": self.apply_automatic_filters,
-                "include_automatic_filter_keys":
-                    lambda v: self.include_automatic_filter_keys(*v),
-                "exclude_automatic_filter_keys":
-                    lambda v: self.exclude_automatic_filter_keys(*v),
+                "include_automatic_filter_keys": lambda v: self.include_automatic_filter_keys(
+                    *v
+                ),
+                "exclude_automatic_filter_keys": lambda v: self.exclude_automatic_filter_keys(
+                    *v
+                ),
             },
         )
 
@@ -653,11 +655,23 @@ class Paginate(RecipeExtension):
         # Inject the paginator ordering ahead of the existing ordering and filter
         # out sort items that aren't in the cauldron
         if self._apply_pagination and self._pagination_order_by:
+
+            def make_ordering_key(ingr):
+                if ingr.ordering == "desc":
+                    return "-" + ingr.id
+                else:
+                    return ingr.id
+
+            # Recover the existing orderings
+            existing_orderings = [
+                make_ordering_key(ingr) for ingr in self.recipe._order_bys
+            ]
+
             # Remove paginator sort keys from any existing order bys
             # Search for both ascending and descending versions of the keys
             existing_order_bys = [
                 key
-                for key in self.recipe._order_bys
+                for key in existing_orderings
                 if key not in self._pagination_order_by
                 and ("-" + key) not in self._pagination_order_by
             ]
