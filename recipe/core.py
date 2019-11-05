@@ -424,14 +424,37 @@ class Recipe(object):
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_recipe_parts(recipe_parts)
 
+
+        # # Order the filters, havings and group_bys
+        # # so we have a deterministic query for caching
+        columns = list(sorted(recipe_parts["columns"], key=lambda c: str(c)))
+        filters = list(sorted(recipe_parts["filters"], key=lambda f: str(f)))
+        havings = list(sorted(recipe_parts["havings"], key=lambda h: str(h)))
+        group_bys = list(sorted(recipe_parts["group_bys"], key=lambda gb: str(gb)))
+        #
+        # # Start building the query
+        # query = self._session.query(*columns)
+        # if self._select_from is not None:
+        #     query = query.select_from(self._select_from)
+        #
+        # recipe_parts["query"] = (
+        #     query.group_by(*group_bys)
+        #     .order_by(*recipe_parts["order_bys"])
+        #     .filter(*filters)
+        # )
+        #
+        # if havings:
+        #     recipe_parts["query"] = recipe_parts["query"].having(and_(havings))
+
+
         # Start building the query
         query = self._session.query(*recipe_parts["columns"])
         if self._select_from is not None:
             query = query.select_from(self._select_from)
         recipe_parts["query"] = (
-            query.group_by(*recipe_parts["group_bys"])
+            query.group_by(*group_bys)
             .order_by(*recipe_parts["order_bys"])
-            .filter(*recipe_parts["filters"])
+            .filter(*filters)
         )
 
         if recipe_parts["havings"]:
