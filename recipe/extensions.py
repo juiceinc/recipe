@@ -160,12 +160,10 @@ class AutomaticFilters(RecipeExtension):
             {
                 "automatic_filters": self.automatic_filters,
                 "apply_automatic_filters": self.apply_automatic_filters,
-                "include_automatic_filter_keys": lambda v: self.include_automatic_filter_keys(
-                    *v
-                ),
-                "exclude_automatic_filter_keys": lambda v: self.exclude_automatic_filter_keys(
-                    *v
-                ),
+                "include_automatic_filter_keys":
+                    lambda v: self.include_automatic_filter_keys(*v),
+                "exclude_automatic_filter_keys":
+                    lambda v: self.exclude_automatic_filter_keys(*v),
             },
         )
 

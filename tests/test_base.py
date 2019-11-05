@@ -392,4 +392,3 @@ statefact_shelf = Shelf(
         "abbreviation": Dimension(StateFact.abbreviation),
     }
 )
-
