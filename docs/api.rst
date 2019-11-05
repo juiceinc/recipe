@@ -82,6 +82,9 @@ Extensions
 .. autoclass:: Anonymize
     :members:
 
+.. autoclass:: Paginate
+    :members:
+
 ----------
 Exceptions
 ----------
