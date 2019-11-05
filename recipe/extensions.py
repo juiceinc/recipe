@@ -462,9 +462,11 @@ class Paginate(RecipeExtension):
     recipe_schema = {
         "apply_pagination": {"type": "boolean"},
         "apply_pagination_filters": {"type": "boolean"},
-        "pagination_order_by": {"type": "list", "element": "string"},
+        "pagination_order_by": {"type": "list", "elements": {"type": "string"}},
         "pagination_q": {"type": "string"},
-        "pagination_search_keys": {"type": "list", "element": "string"},
+        "pagination_search_keys": {"type": "list", "elements": {"type": "string"}},
+        "pagination_page_size": {"type": "integer"},
+        "pagination_page": {"type": "integer"},
     }
 
     def __init__(self, *args, **kwargs):
@@ -485,8 +487,8 @@ class Paginate(RecipeExtension):
             "pagination_order_by": lambda v: self.pagination_order_by(*v),
             "pagination_q": lambda v: self.pagination_q(v),
             "pagination_search_keys": lambda v: self.pagination_search_keys(*v),
-            "pagination_page_size": lambda v: self.pagination_page_size(*v),
-            "pagination_page": lambda v: self.pagination_page(*v),
+            "pagination_page_size": lambda v: self.pagination_page_size(v),
+            "pagination_page": lambda v: self.pagination_page(v),
         })
 
     @recipe_arg()
