@@ -488,12 +488,12 @@ class Paginate(RecipeExtension):
 
     Pagination can override ordering applied to a recipe by setting
     `.pagination_order_by(...)` to a list of ordering keys. If keys are
-    preceeded by a "-", ordering is descending, otherwise ordering is acending.
+    preceded by a "-", ordering is descending, otherwise ordering is ascending.
 
     **An example using all features**
 
-    Here's an example that filters to states that start with the letters
-    A-C::
+    Here's an example that searches for keys that start with "t", showing
+    the fifth page of results.
 
         shelf = Shelf({
             'state': Dimension(Census.state),
