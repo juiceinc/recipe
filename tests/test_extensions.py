@@ -22,6 +22,7 @@ from recipe.extensions import (
     CompareRecipe,
     RecipeExtension,
     SummarizeOver,
+    Paginate,
 )
 
 
@@ -502,6 +503,410 @@ ORDER BY foo.first"""
         assert recipe.all()[0].first_id == "hi"
         assert recipe.all()[0].age == 15
         assert recipe.stats.rows == 1
+
+
+class TestPaginateExtension(object):
+    def setup(self):
+        # create a Session
+        self.session = oven.Session()
+        self.shelf = copy(census_shelf)
+        self.extension_classes = [Paginate]
+
+    def recipe(self):
+        return Recipe(
+            shelf=copy(census_shelf),
+            session=self.session,
+            extension_classes=self.extension_classes,
+        )
+
+    def recipe_from_config(self, config):
+        return Recipe.from_config(
+            copy(census_shelf),
+            config,
+            session=self.session,
+            extension_classes=self.extension_classes,
+        )
+
+    def test_no_pagination(self):
+        recipe = self.recipe().metrics("pop2000").dimensions("state")
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state"""
+        )
+
+        recipe = self.recipe_from_config(
+            {"metrics": ["pop2000"], "dimensions": ["state"]}
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state"""
+        )
+
+    def test_pagination(self):
+        """ If pagination page size is configured, pagination is applied to results"""
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .pagination_page_size(10)
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state
+LIMIT 10
+OFFSET 0"""
+        )
+
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+            }
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state
+LIMIT 10
+OFFSET 0"""
+        )
+
+        recipe = recipe.pagination_page(2)
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state
+LIMIT 10
+OFFSET 10"""
+        )
+
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+                "pagination_page": 2,
+            }
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state
+LIMIT 10
+OFFSET 10"""
+        )
+
+    def test_apply_pagination(self):
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .pagination_page_size(10)
+            .apply_pagination(False)
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state"""
+        )
+
+        recipe = self.recipe_from_config(
+            {"metrics": ["pop2000"], "dimensions": ["state"], "apply_pagination": False}
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state"""
+        )
+
+    def test_pagination_order_by(self):
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .pagination_page_size(10)
+            .pagination_order_by("-state")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state
+ORDER BY census.state DESC
+LIMIT 10
+OFFSET 0"""
+        )
+
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+                "pagination_order_by": ["-state"],
+            }
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state
+ORDER BY census.state DESC
+LIMIT 10
+OFFSET 0"""
+        )
+
+        def test_pagination_q(self):
+            recipe = (
+                self.recipe()
+                .metrics("pop2000")
+                .dimensions("state")
+                .pagination_page_size(10)
+                .pagination_q("T%")
+            )
+            assert (
+                recipe.to_sql()
+                == """SELECT census.state AS state,
+           sum(census.pop2000) AS pop2000
+    FROM census
+    WHERE lower(census.state) LIKE lower('T%')
+    GROUP BY census.state
+    LIMIT 10
+    OFFSET 0"""
+            )
+            assert (
+                recipe.dataset.csv.replace("\r\n", "\n")
+                == """state,pop2000,state_id
+    Tennessee,5685230,Tennessee
+    """
+            )
+
+            recipe = self.recipe_from_config(
+                {
+                    "metrics": ["pop2000"],
+                    "dimensions": ["state"],
+                    "pagination_page_size": 10,
+                    "pagination_q": "T%",
+                }
+            )
+            assert (
+                recipe.to_sql()
+                == """SELECT census.state AS state,
+           sum(census.pop2000) AS pop2000
+    FROM census
+    WHERE lower(census.state) LIKE lower('T%')
+    GROUP BY census.state
+    LIMIT 10
+    OFFSET 0"""
+            )
+
+    def test_apply_pagination_filters(self):
+        """apply_pagination_filters False will disable adding search"""
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .pagination_page_size(10)
+            .pagination_q("T%")
+            .apply_pagination_filters(False)
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state
+LIMIT 10
+OFFSET 0"""
+        )
+
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+                "pagination_q": "T%",
+                "apply_pagination_filters": False,
+            }
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY census.state
+LIMIT 10
+OFFSET 0"""
+        )
+
+    def test_pagination_search_keys(self):
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .pagination_page_size(10)
+            .pagination_q("M")
+            .pagination_search_keys("sex")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+WHERE lower(census.sex) LIKE lower('M')
+GROUP BY census.state
+LIMIT 10
+OFFSET 0"""
+        )
+
+        # If multiple search keys are provided, they are ORed together
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .pagination_page_size(10)
+            .pagination_q("M")
+            .pagination_search_keys("sex", "state")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+WHERE lower(census.sex) LIKE lower('M')
+  OR lower(census.state) LIKE lower('M')
+GROUP BY census.state
+LIMIT 10
+OFFSET 0"""
+        )
+        assert (
+            recipe.dataset.csv.replace("\r\n", "\n")
+            == """state,pop2000,state_id
+Tennessee,2761277,Tennessee
+Vermont,298532,Vermont
+"""
+        )
+
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+                "pagination_q": "M",
+                "pagination_search_keys": ["sex", "state"],
+            }
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+WHERE lower(census.sex) LIKE lower('M')
+  OR lower(census.state) LIKE lower('M')
+GROUP BY census.state
+LIMIT 10
+OFFSET 0"""
+        )
+
+    def test_all(self):
+        """Test all pagination options together"""
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state", "sex", "age")
+            .pagination_page_size(10)
+            .pagination_page(5)
+            .pagination_q("T%")
+            .pagination_search_keys("state", "sex")
+        )
+
+        assert (
+            recipe.to_sql()
+            == """SELECT census.age AS age,
+       census.sex AS sex,
+       census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+WHERE lower(census.state) LIKE lower('T%')
+  OR lower(census.sex) LIKE lower('T%')
+GROUP BY census.age,
+         census.sex,
+         census.state
+LIMIT 10
+OFFSET 40"""
+        )
+        assert (
+            recipe.dataset.csv.replace("\r\n", "\n")
+            == """age,sex,state,pop2000,age_id,sex_id,state_id
+20,F,Tennessee,40966,20,F,Tennessee
+20,M,Tennessee,40512,20,M,Tennessee
+21,F,Tennessee,39776,21,F,Tennessee
+21,M,Tennessee,38980,21,M,Tennessee
+22,F,Tennessee,38057,22,F,Tennessee
+22,M,Tennessee,37950,22,M,Tennessee
+23,F,Tennessee,37569,23,F,Tennessee
+23,M,Tennessee,37456,23,M,Tennessee
+24,F,Tennessee,36220,24,F,Tennessee
+24,M,Tennessee,36332,24,M,Tennessee
+"""
+        )
+
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state", "sex", "age")
+            .pagination_page_size(10)
+            .pagination_page(5)
+            .pagination_q("T%")
+            .pagination_search_keys("state", "sex")
+        )
+
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state", "sex", "age"],
+                "pagination_page_size": 10,
+                "pagination_page": 5,
+                "pagination_q": "T%",
+                "pagination_search_keys": ["state", "sex"],
+            }
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.age AS age,
+       census.sex AS sex,
+       census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+WHERE lower(census.state) LIKE lower('T%')
+  OR lower(census.sex) LIKE lower('T%')
+GROUP BY census.age,
+         census.sex,
+         census.state
+LIMIT 10
+OFFSET 40"""
+        )
 
 
 class TestSummarizeOverExtension(object):

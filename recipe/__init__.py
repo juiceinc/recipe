@@ -16,6 +16,7 @@ from recipe.extensions import (
     CompareRecipe,
     RecipeExtension,
     SummarizeOver,
+    Paginate,
 )
 from recipe.ingredients import (
     Dimension,
@@ -77,6 +78,7 @@ __all__ = [
     "BlendRecipe",
     "CompareRecipe",
     "RecipeExtension",
+    "Paginate",
     "SummarizeOver",
     "FakerAnonymizer",
 ]

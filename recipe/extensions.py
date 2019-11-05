@@ -1,10 +1,10 @@
-from sqlalchemy import and_, func, text
+from sqlalchemy import and_, func, text, or_
 from sqlalchemy.ext.declarative import declarative_base
 
 from recipe.compat import basestring
 from recipe.core import Recipe
 from recipe.exceptions import BadRecipe
-from recipe.ingredients import Dimension, Metric
+from recipe.ingredients import Dimension, Metric, Filter
 from recipe.utils import FakerAnonymizer, recipe_arg
 
 Base = declarative_base()
@@ -451,6 +451,260 @@ class Anonymize(RecipeExtension):
                 else:
                     if ingredient.meta.anonymizer in ingredient.formatters:
                         ingredient.formatters.remove(anonymizer)
+
+
+class Paginate(RecipeExtension):
+    """
+    Allows recipes to paginate results. Pagination also supports
+    searching and sorting within paginated data.
+
+    **Using and controlling pagination**
+
+    Pagination returns pages of data using limit and offset.
+
+    Pagination is enabled by setting a nonzero page size, like this.
+
+        shelf = Shelf({
+            'state': Dimension(Census.state),
+            'gender': Dimension(Census.gender),
+            'population': Metric(func.sum(Census.population)),
+        })
+        recipe = Recipe(shelf=shelf, extension_classes=[Paginate])\
+            .dimensions('state')\
+            .metrics('population')\
+            .pagination_page_size(10)
+
+
+    Pagination may be disabled by setting `.apply_pagination(False)`.
+
+    **Searching**
+
+    `pagination_q` allows a recipe to be searched for a string.
+    The default search fields are all dimensions used in the recipe.
+    Search keys can be customized with `pagination_search_keys`.
+    Search may be disabled by setting `.apply_pagination_filters(False)`
+
+    **Sorting**
+
+    Pagination can override ordering applied to a recipe by setting
+    `.pagination_order_by(...)` to a list of ordering keys. If keys are
+    preceded by a "-", ordering is descending, otherwise ordering is ascending.
+
+    **An example using all features**
+
+    Here's an example that searches for keys that start with "t", showing
+    the fifth page of results.
+
+        shelf = Shelf({
+            'state': Dimension(Census.state),
+            'gender': Dimension(Census.gender),
+            'age': Dimension(Census.age),
+            'population': Metric(func.sum(Census.population)),
+        })
+        recipe = self.recipe()\
+            .metrics("pop2000")\
+            .dimensions("state", "sex", "age")\
+            .pagination_page_size(10)\
+            .pagination_page(5)\
+            .pagination_q('t%')\
+            .pagination_search_keys("state", "sex")
+
+
+    This will generate SQL like::
+
+        SELECT census.age AS age,
+               census.sex AS sex,
+               census.state AS state,
+               sum(census.population) AS population
+        FROM census
+        WHERE lower(census.state) LIKE lower('t%')
+          OR lower(census.sex) LIKE lower('t%')
+        GROUP BY census.age,
+                 census.sex,
+                 census.state
+        LIMIT 10
+        OFFSET 40
+    """
+
+    recipe_schema = {
+        "apply_pagination": {"type": "boolean"},
+        "apply_pagination_filters": {"type": "boolean"},
+        "pagination_order_by": {"type": "list", "elements": {"type": "string"}},
+        "pagination_q": {"type": "string"},
+        "pagination_search_keys": {"type": "list", "elements": {"type": "string"}},
+        "pagination_page_size": {"type": "integer"},
+        "pagination_page": {"type": "integer"},
+    }
+
+    def __init__(self, *args, **kwargs):
+        super(Paginate, self).__init__(*args, **kwargs)
+        self._apply_pagination = True
+        self._apply_pagination_filters = True
+        self._pagination_q = ""
+        self._paginate_search_keys = []
+        self._pagination_order_by = []
+        self._pagination_page_size = 0
+        self._pagination_page = 1
+
+    @recipe_arg()
+    def from_config(self, obj):
+        handle_directives(
+            obj,
+            {
+                "apply_pagination": lambda v: self.apply_pagination(v),
+                "apply_pagination_filters": lambda v: self.apply_pagination_filters(v),
+                "pagination_order_by": lambda v: self.pagination_order_by(*v),
+                "pagination_q": lambda v: self.pagination_q(v),
+                "pagination_search_keys": lambda v: self.pagination_search_keys(*v),
+                "pagination_page_size": lambda v: self.pagination_page_size(v),
+                "pagination_page": lambda v: self.pagination_page(v),
+            },
+        )
+
+    @recipe_arg()
+    def apply_pagination(self, value):
+        """Should this recipe be paginated.
+
+        :param value: Enable or disable pagination for this recipe, default True
+        :type value: bool
+        """
+        assert isinstance(value, bool)
+        self._apply_pagination = value
+
+    @recipe_arg()
+    def apply_pagination_filters(self, value):
+        """Should this recipe apply the paginations query filtering.
+
+        Should paginate_q be used to apply a search on paginate_search_keys or
+        all dimensions used in the recipe.
+
+        :param value: Enable or disable pagination filtering for this recipe, default True
+        :type value: bool
+        """
+        assert isinstance(value, bool)
+        self._apply_pagination_filters = value
+
+    @recipe_arg()
+    def pagination_order_by(self, *value):
+        """Sort this pagination by these keys. Pagination ordering is applied
+        before any other order_bys defined in the recipe.
+
+        :param value: A list of keys to order the paginated recipe by
+        :type value: list(str)
+        """
+        assert isinstance(value, (list, tuple))
+        self._pagination_order_by = value
+
+    @recipe_arg()
+    def pagination_q(self, value):
+        """Search this recipe for this string. The search is an case
+        insensitive like that ORs all dimensions in the recipe by default.
+
+        To search for a substring, use a percentage sign for wildcard,
+        like '%searchval%'.
+
+        `pagination_search_keys` can be used to customize what keys are used
+        for search.
+
+        :param value: A query string to search for this in this recipe.
+            The query string is evaluated as a `ilike` on all dimensions
+            in the recipe or pagination_search_keys if provided
+        :type value: str
+        """
+        assert isinstance(value, basestring)
+        self._pagination_q = value
+
+    @recipe_arg()
+    def pagination_search_keys(self, *value):
+        """When querying this recipe with a `pagination_q`, search these keys
+
+        pagination_search_keys do not have to be used in the recipe.
+
+        :param value: A list of keys to search in the paginated recipe
+        :type value: list(str)
+        """
+        assert isinstance(value, (list, tuple))
+        self._paginate_search_keys = value
+
+    @recipe_arg()
+    def pagination_page_size(self, value):
+        """Paginate recipe responses into pages of this size.
+
+        A page size of zero disasbles pagination.
+
+        :param value: A page size (zero or a positive integer)
+        :type value: integer
+        """
+        assert isinstance(value, int)
+        assert value >= 0
+        self._pagination_page_size = value
+
+    @recipe_arg()
+    def pagination_page(self, value):
+        """Fetch this page.
+
+        :param value: A page size
+        :type value: integer
+        """
+        assert isinstance(value, int)
+        self._pagination_page = value
+
+    def _apply_pagination_order_by(self):
+        """Inject pagination ordering ahead of any existing ordering """
+
+        # Inject the paginator ordering ahead of the existing ordering and filter
+        # out sort items that aren't in the cauldron
+        if self._apply_pagination and self._pagination_order_by:
+            # Remove paginator sort keys from any existing order bys
+            # Search for both ascending and descending versions of the keys
+            existing_order_bys = [
+                key
+                for key in self.recipe._order_bys
+                if key not in self._pagination_order_by
+                and ("-" + key) not in self._pagination_order_by
+            ]
+            new_order_by = list(self._pagination_order_by) + existing_order_bys
+            self.recipe.order_by(*new_order_by)
+
+    def _apply_pagination_q(self):
+        """ Apply pagination querying to all paginate search keys"""
+        q = self._pagination_q
+        if self._apply_pagination_filters and q:
+            search_keys = self._paginate_search_keys or self.recipe.dimension_ids
+
+            filters = []
+            for key in search_keys:
+                # build a filter for each search key and use in the recipe
+                ingredient = self.recipe._shelf.get(key, None)
+                if ingredient:
+                    filters.append(ingredient.build_filter(q, operator="ilike"))
+
+            # Build a big or filter for the search
+            if filters:
+                or_expression = or_(f.filters[0] for f in filters)
+                search_filter = Filter(or_expression)
+                self.recipe._cauldron.use(search_filter)
+
+    def add_ingredients(self):
+        """Apply pagination ordering and search to this query if necessary. """
+        self._apply_pagination_order_by()
+        self._apply_pagination_q()
+
+    def modify_postquery_parts(self, postquery_parts):
+        """Apply pagination limits and offset to a completed query. """
+
+        limit = self._pagination_page_size
+        page = self._pagination_page
+        # page=1 is the first page
+        offset = limit * (page - 1)
+
+        if limit and self._apply_pagination:
+            if limit:
+                postquery_parts["query"] = postquery_parts["query"].limit(limit)
+            if offset:
+                postquery_parts["query"] = postquery_parts["query"].offset(offset)
+
+        return postquery_parts
 
 
 class BlendRecipe(RecipeExtension):
