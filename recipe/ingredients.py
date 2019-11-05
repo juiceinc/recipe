@@ -67,7 +67,8 @@ class Ingredient(object):
     """
 
     def __init__(self, **kwargs):
-        self.id = kwargs.pop("id", uuid4().hex[:12])
+        self.id = kwargs.pop('id',
+                                uuid4().hex[:12])
         self.columns = kwargs.pop("columns", [])
         self.filters = kwargs.pop("filters", [])
         self.havings = kwargs.pop("havings", [])
