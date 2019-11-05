@@ -525,6 +525,7 @@ class Paginate(RecipeExtension):
         LIMIT 10
         OFFSET 40
     """
+
     recipe_schema = {
         "apply_pagination": {"type": "boolean"},
         "apply_pagination_filters": {"type": "boolean"},
@@ -539,7 +540,7 @@ class Paginate(RecipeExtension):
         super(Paginate, self).__init__(*args, **kwargs)
         self._apply_pagination = True
         self._apply_pagination_filters = True
-        self._pagination_q = ''
+        self._pagination_q = ""
         self._paginate_search_keys = []
         self._pagination_order_by = []
         self._pagination_page_size = 0
@@ -547,15 +548,18 @@ class Paginate(RecipeExtension):
 
     @recipe_arg()
     def from_config(self, obj):
-        handle_directives(obj, {
-            "apply_pagination": lambda v: self.apply_pagination(v),
-            "apply_pagination_filters": lambda v: self.apply_pagination_filters(v),
-            "pagination_order_by": lambda v: self.pagination_order_by(*v),
-            "pagination_q": lambda v: self.pagination_q(v),
-            "pagination_search_keys": lambda v: self.pagination_search_keys(*v),
-            "pagination_page_size": lambda v: self.pagination_page_size(v),
-            "pagination_page": lambda v: self.pagination_page(v),
-        })
+        handle_directives(
+            obj,
+            {
+                "apply_pagination": lambda v: self.apply_pagination(v),
+                "apply_pagination_filters": lambda v: self.apply_pagination_filters(v),
+                "pagination_order_by": lambda v: self.pagination_order_by(*v),
+                "pagination_q": lambda v: self.pagination_q(v),
+                "pagination_search_keys": lambda v: self.pagination_search_keys(*v),
+                "pagination_page_size": lambda v: self.pagination_page_size(v),
+                "pagination_page": lambda v: self.pagination_page(v),
+            },
+        )
 
     @recipe_arg()
     def apply_pagination(self, value):
@@ -654,9 +658,10 @@ class Paginate(RecipeExtension):
             # Remove paginator sort keys from any existing order bys
             # Search for both ascending and descending versions of the keys
             existing_order_bys = [
-                key for key in self.recipe._order_bys
-                if key not in self._pagination_order_by and
-                   ('-' + key) not in self._pagination_order_by
+                key
+                for key in self.recipe._order_bys
+                if key not in self._pagination_order_by
+                and ("-" + key) not in self._pagination_order_by
             ]
             new_order_by = list(self._pagination_order_by) + existing_order_bys
             self.recipe.order_by(*new_order_by)
@@ -664,7 +669,7 @@ class Paginate(RecipeExtension):
     def _apply_pagination_q(self):
         """ Apply pagination querying to all paginate search keys"""
         q = self._pagination_q
-        if  self._apply_pagination_filters and q:
+        if self._apply_pagination_filters and q:
             search_keys = self._paginate_search_keys or self.recipe.dimension_ids
 
             filters = []
@@ -672,9 +677,7 @@ class Paginate(RecipeExtension):
                 # build a filter for each search key and use in the recipe
                 ingredient = self.recipe._shelf.get(key, None)
                 if ingredient:
-                    filters.append(
-                        ingredient.build_filter(q, operator='ilike')
-                    )
+                    filters.append(ingredient.build_filter(q, operator="ilike"))
 
             # Build a big or filter for the search
             if filters:

@@ -22,7 +22,7 @@ from recipe.extensions import (
     CompareRecipe,
     RecipeExtension,
     SummarizeOver,
-    Paginate
+    Paginate,
 )
 
 
@@ -504,6 +504,7 @@ ORDER BY foo.first"""
         assert recipe.all()[0].age == 15
         assert recipe.stats.rows == 1
 
+
 class TestPaginateExtension(object):
     def setup(self):
         # create a Session
@@ -536,10 +537,9 @@ FROM census
 GROUP BY census.state"""
         )
 
-        recipe = self.recipe_from_config({
-            "metrics": ["pop2000"],
-            "dimensions": ["state"],
-        })
+        recipe = self.recipe_from_config(
+            {"metrics": ["pop2000"], "dimensions": ["state"]}
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -550,8 +550,12 @@ GROUP BY census.state"""
 
     def test_pagination(self):
         """ If pagination page size is configured, pagination is applied to results"""
-        recipe = self.recipe().metrics("pop2000").dimensions("state") \
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
             .pagination_page_size(10)
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -562,11 +566,13 @@ LIMIT 10
 OFFSET 0"""
         )
 
-        recipe = self.recipe_from_config({
-            "metrics": ["pop2000"],
-            "dimensions": ["state"],
-            "pagination_page_size": 10
-        })
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+            }
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -588,12 +594,14 @@ LIMIT 10
 OFFSET 10"""
         )
 
-        recipe = self.recipe_from_config({
-            "metrics": ["pop2000"],
-            "dimensions": ["state"],
-            "pagination_page_size": 10,
-            "pagination_page": 2
-        })
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+                "pagination_page": 2,
+            }
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -605,8 +613,13 @@ OFFSET 10"""
         )
 
     def test_apply_pagination(self):
-        recipe = self.recipe().metrics("pop2000").dimensions("state")\
-            .pagination_page_size(10).apply_pagination(False)
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .pagination_page_size(10)
+            .apply_pagination(False)
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -615,11 +628,9 @@ FROM census
 GROUP BY census.state"""
         )
 
-        recipe = self.recipe_from_config({
-            "metrics": ["pop2000"],
-            "dimensions": ["state"],
-            "apply_pagination": False,
-        })
+        recipe = self.recipe_from_config(
+            {"metrics": ["pop2000"], "dimensions": ["state"], "apply_pagination": False}
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -629,8 +640,13 @@ GROUP BY census.state"""
         )
 
     def test_pagination_order_by(self):
-        recipe = self.recipe().metrics("pop2000").dimensions("state")\
-            .pagination_page_size(10).pagination_order_by("-state")
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .pagination_page_size(10)
+            .pagination_order_by("-state")
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -642,12 +658,14 @@ LIMIT 10
 OFFSET 0"""
         )
 
-        recipe = self.recipe_from_config({
-            "metrics": ["pop2000"],
-            "dimensions": ["state"],
-            "pagination_page_size": 10,
-            "pagination_order_by": ["-state"]
-        })
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+                "pagination_order_by": ["-state"],
+            }
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -660,8 +678,13 @@ OFFSET 0"""
         )
 
         def test_pagination_q(self):
-            recipe = self.recipe().metrics("pop2000").dimensions("state") \
-                .pagination_page_size(10).pagination_q('T%')
+            recipe = (
+                self.recipe()
+                .metrics("pop2000")
+                .dimensions("state")
+                .pagination_page_size(10)
+                .pagination_q("T%")
+            )
             assert (
                 recipe.to_sql()
                 == """SELECT census.state AS state,
@@ -672,16 +695,21 @@ OFFSET 0"""
     LIMIT 10
     OFFSET 0"""
             )
-            assert recipe.dataset.csv.replace('\r\n', '\n') == """state,pop2000,state_id
+            assert (
+                recipe.dataset.csv.replace("\r\n", "\n")
+                == """state,pop2000,state_id
     Tennessee,5685230,Tennessee
     """
+            )
 
-            recipe = self.recipe_from_config({
-                "metrics": ["pop2000"],
-                "dimensions": ["state"],
-                "pagination_page_size": 10,
-                "pagination_q": "T%"
-            })
+            recipe = self.recipe_from_config(
+                {
+                    "metrics": ["pop2000"],
+                    "dimensions": ["state"],
+                    "pagination_page_size": 10,
+                    "pagination_q": "T%",
+                }
+            )
             assert (
                 recipe.to_sql()
                 == """SELECT census.state AS state,
@@ -695,8 +723,14 @@ OFFSET 0"""
 
     def test_apply_pagination_filters(self):
         """apply_pagination_filters False will disable adding search"""
-        recipe = self.recipe().metrics("pop2000").dimensions("state")\
-            .pagination_page_size(10).pagination_q('T%').apply_pagination_filters(False)
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .pagination_page_size(10)
+            .pagination_q("T%")
+            .apply_pagination_filters(False)
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -707,13 +741,15 @@ LIMIT 10
 OFFSET 0"""
         )
 
-        recipe = self.recipe_from_config({
-            "metrics": ["pop2000"],
-            "dimensions": ["state"],
-            "pagination_page_size": 10,
-            "pagination_q": "T%",
-            "apply_pagination_filters": False
-        })
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+                "pagination_q": "T%",
+                "apply_pagination_filters": False,
+            }
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -725,8 +761,14 @@ OFFSET 0"""
         )
 
     def test_pagination_search_keys(self):
-        recipe = self.recipe().metrics("pop2000").dimensions("state")\
-            .pagination_page_size(10).pagination_q('M').pagination_search_keys("sex")
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .pagination_page_size(10)
+            .pagination_q("M")
+            .pagination_search_keys("sex")
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -739,8 +781,14 @@ OFFSET 0"""
         )
 
         # If multiple search keys are provided, they are ORed together
-        recipe = self.recipe().metrics("pop2000").dimensions("state")\
-            .pagination_page_size(10).pagination_q('M').pagination_search_keys("sex", "state")
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .pagination_page_size(10)
+            .pagination_q("M")
+            .pagination_search_keys("sex", "state")
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -752,18 +800,23 @@ GROUP BY census.state
 LIMIT 10
 OFFSET 0"""
         )
-        assert recipe.dataset.csv.replace('\r\n','\n') == """state,pop2000,state_id
+        assert (
+            recipe.dataset.csv.replace("\r\n", "\n")
+            == """state,pop2000,state_id
 Tennessee,2761277,Tennessee
 Vermont,298532,Vermont
 """
+        )
 
-        recipe = self.recipe_from_config({
-            "metrics": ["pop2000"],
-            "dimensions": ["state"],
-            "pagination_page_size": 10,
-            "pagination_q": "M",
-            "pagination_search_keys": ["sex", "state"],
-        })
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+                "pagination_q": "M",
+                "pagination_search_keys": ["sex", "state"],
+            }
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -778,13 +831,15 @@ OFFSET 0"""
 
     def test_all(self):
         """Test all pagination options together"""
-        recipe = self.recipe()\
-            .metrics("pop2000")\
-            .dimensions("state", "sex", "age")\
-            .pagination_page_size(10)\
-            .pagination_page(5)\
-            .pagination_q('T%')\
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state", "sex", "age")
+            .pagination_page_size(10)
+            .pagination_page(5)
+            .pagination_q("T%")
             .pagination_search_keys("state", "sex")
+        )
 
         assert (
             recipe.to_sql()
@@ -801,7 +856,9 @@ GROUP BY census.age,
 LIMIT 10
 OFFSET 40"""
         )
-        assert recipe.dataset.csv.replace("\r\n", "\n") == """age,sex,state,pop2000,age_id,sex_id,state_id
+        assert (
+            recipe.dataset.csv.replace("\r\n", "\n")
+            == """age,sex,state,pop2000,age_id,sex_id,state_id
 20,F,Tennessee,40966,20,F,Tennessee
 20,M,Tennessee,40512,20,M,Tennessee
 21,F,Tennessee,39776,21,F,Tennessee
@@ -813,24 +870,28 @@ OFFSET 40"""
 24,F,Tennessee,36220,24,F,Tennessee
 24,M,Tennessee,36332,24,M,Tennessee
 """
+        )
 
-        recipe = self.recipe()\
-            .metrics("pop2000")\
-            .dimensions("state", "sex", "age")\
-            .pagination_page_size(10)\
-            .pagination_page(5)\
-            .pagination_q('T%')\
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state", "sex", "age")
+            .pagination_page_size(10)
+            .pagination_page(5)
+            .pagination_q("T%")
             .pagination_search_keys("state", "sex")
+        )
 
-
-        recipe = self.recipe_from_config({
-            "metrics": ["pop2000"],
-            "dimensions": ["state", "sex", "age"],
-            "pagination_page_size": 10,
-            "pagination_page": 5,
-            "pagination_q": "T%",
-            "pagination_search_keys": ["state", "sex"],
-        })
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state", "sex", "age"],
+                "pagination_page_size": 10,
+                "pagination_page": 5,
+                "pagination_q": "T%",
+                "pagination_search_keys": ["state", "sex"],
+            }
+        )
         assert (
             recipe.to_sql()
             == """SELECT census.age AS age,
