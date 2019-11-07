@@ -562,7 +562,7 @@ class Shelf(object):
 
         :param yaml_str: A string containing yaml ingredient definitions.
         :param selectable: A SQLAlchemy Table, a Recipe, or a SQLAlchemy
-        join to select from.
+            join to select from.
         :return: A shelf that contains the ingredients defined in yaml_str.
         """
         obj = safe_load(yaml_str)

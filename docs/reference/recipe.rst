@@ -7,3 +7,4 @@ recipe
 
 .. automodule:: recipe
     :members:
+    :noindex:
