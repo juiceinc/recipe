@@ -1,13 +1,13 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import importlib
 import re
 import string
 import unicodedata
+from .compat import str as compat_str
 from functools import wraps
 
 from pyhash import metro_64
-from six import text_type, string_types
 
 try:
     # getfullargspec is not available in python2
@@ -43,8 +43,8 @@ hash_fn = metro_64()
 
 def generate_faker_seed(value):
     """Generate a seed value for faker. """
-    if not isinstance(value, string_types):
-        value = text_type(value)
+    if not isinstance(value, compat_str):
+        value = compat_str(value)
 
     return hash_fn(value)
 

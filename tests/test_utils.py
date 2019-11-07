@@ -11,7 +11,9 @@ from recipe.utils import (
     FakerAnonymizer,
     FakerFormatter,
     replace_whitespace_with_space,
+    generate_faker_seed,
 )
+from recipe.compat import str as compat_str
 
 uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -20,6 +22,16 @@ class TestUtils(object):
     def test_replace_whitespace_with_space(self):
         assert replace_whitespace_with_space("fooo    moo") == "fooo moo"
         assert replace_whitespace_with_space("fooo\n\t moo") == "fooo moo"
+
+    def test_generate_faker_seed(self):
+        """ Test we get the same seed values in py2 and py3 """
+
+        assert compat_str('2') == compat_str(u'2')
+        assert generate_faker_seed(None) == 15208487303490345319
+        assert generate_faker_seed(0) == 17387988563394623128
+        assert generate_faker_seed(u'hi') == 14742342832905345683
+        assert generate_faker_seed('hi') == 14742342832905345683
+        assert generate_faker_seed([]) == 2766641713143040348
 
 
 class TestAttrDict(object):
@@ -30,6 +42,8 @@ class TestAttrDict(object):
         assert d["foo"] == 2
         d["bar"] = 3
         assert d.bar == 3
+
+
 
 
 class TestFakerFormatter(object):
