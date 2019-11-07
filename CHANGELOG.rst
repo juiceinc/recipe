@@ -2,6 +2,13 @@
 Changelog
 =========
 
+0.11.0 (2019-11-07)
+-----------------------------------------
+* Add Paginate extension
+* Fix deterministic Anonymization in python3
+* CI improvements
+
+
 0.10.0 (2019-08-07)
 -----------------------------------------
 * Support multiple quickselects which are ORed together

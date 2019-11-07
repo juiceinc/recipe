@@ -462,7 +462,7 @@ class Paginate(RecipeExtension):
 
     Pagination returns pages of data using limit and offset.
 
-    Pagination is enabled by setting a nonzero page size, like this.
+    Pagination is enabled by setting a nonzero page size, like this::
 
         shelf = Shelf({
             'state': Dimension(Census.state),
@@ -493,7 +493,7 @@ class Paginate(RecipeExtension):
     **An example using all features**
 
     Here's an example that searches for keys that start with "t", showing
-    the fifth page of results.
+    the fifth page of results::
 
         shelf = Shelf({
             'state': Dimension(Census.state),
@@ -524,6 +524,7 @@ class Paginate(RecipeExtension):
                  census.state
         LIMIT 10
         OFFSET 40
+
     """
 
     recipe_schema = {
@@ -643,14 +644,16 @@ class Paginate(RecipeExtension):
     def pagination_page(self, value):
         """Fetch this page.
 
-        :param value: A page size
+        :param value: A positive integer page number to fetch
         :type value: integer
         """
         assert isinstance(value, int)
-        self._pagination_page = value
+
+        # Pagination page must be a positive integer
+        self._pagination_page = max(1, value)
 
     def _apply_pagination_order_by(self):
-        """Inject pagination ordering ahead of any existing ordering """
+        """Inject pagination ordering ahead of any existing ordering. """
 
         # Inject the paginator ordering ahead of the existing ordering and filter
         # out sort items that aren't in the cauldron

@@ -13,3 +13,4 @@ Extensions build on the core behavior or recipe to let you perform
    comparerecipe
    blendrecipe
    anonymize
+   paginate
