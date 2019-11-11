@@ -388,7 +388,7 @@ scores_shelf = Shelf(
     {
         "username": Dimension(Scores.username),
         "department": Dimension(
-            Scores.department, anonymizer=lambda value: value[::-1] if value else 'None'
+            Scores.department, anonymizer=lambda value: value[::-1] if value else "None"
         ),
         "testid": Dimension(Scores.testid),
         "test_cnt": Metric(func.count(distinct(TagScores.testid))),
