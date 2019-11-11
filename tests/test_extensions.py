@@ -466,10 +466,10 @@ ORDER BY foo.first"""
 
         recipe = (
             self.recipe()
-                .metrics("age")
-                .dimensions("firstanon")
-                .order_by("firstanon")
-                .anonymize(True)
+            .metrics("age")
+            .dimensions("firstanon")
+            .order_by("firstanon")
+            .anonymize(True)
         )
         assert (
             recipe.to_sql()
@@ -478,7 +478,7 @@ ORDER BY foo.first"""
 FROM foo
 GROUP BY foo.first
 ORDER BY foo.first"""
-    )
+        )
         assert recipe.all()[0].firstanon == fake_value
         assert recipe.all()[0].firstanon_raw == "hi"
         assert recipe.all()[0].firstanon_id == "hi"
@@ -621,7 +621,7 @@ OFFSET 0"""
             "page": 1,
             "pageSize": 10,
             "requestedPage": 2,
-            "totalItems": 2
+            "totalItems": 2,
         }
 
         recipe = self.recipe_from_config(
@@ -645,7 +645,7 @@ OFFSET 1"""
             "page": 1,
             "pageSize": 10,
             "requestedPage": 2,
-            "totalItems": 2
+            "totalItems": 2,
         }
 
     def test_apply_pagination(self):

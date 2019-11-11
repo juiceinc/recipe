@@ -745,8 +745,9 @@ class Paginate(RecipeExtension):
         :raises BadRecipe:
         """
         if self._validated_pagination is None:
-            raise BadRecipe("validated_pagination can only be accessed after the "
-                            "recipe has run")
+            raise BadRecipe(
+                "validated_pagination can only be accessed after the " "recipe has run"
+            )
         else:
             return self._validated_pagination
 
