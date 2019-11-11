@@ -468,12 +468,10 @@ Here's an example:
   # use the same field. 
   condition:
     and:
-    - condition:
-        field: state 
-        like: 'C%'
-    - condition:
-        field: state 
-        like: '%a'
+    - field: state 
+      like: 'C%'
+    - field: state 
+      like: '%a'
 
 Date conditions
 ~~~~~~~~~~~~~~~
