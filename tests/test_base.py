@@ -41,6 +41,28 @@ oven.engine.execute(
 """
 )
 
+
+# Create a table for testing missing values
+TABLEDEF = """
+        CREATE TABLE IF NOT EXISTS scores_with_nulls
+        (username text,
+         department text,
+         testid text,
+         score float);
+"""
+oven.engine.execute(TABLEDEF)
+oven.engine.execute(
+    """insert into scores_with_nulls values
+('chris', 'sales', '1', NULL),
+('chip', 'ops', '2', 80),
+('chip', 'ops', '3', NULL),
+('chip', 'ops', '4', 100),
+('annika', NULL, '5', 80),
+('annika', NULL, '6', NULL)
+"""
+)
+
+
 # Create a table for denormalized tables with tags
 TABLEDEF = """
         CREATE TABLE IF NOT EXISTS tagscores
@@ -287,6 +309,16 @@ class Scores(Base):
     __table_args__ = {"extend_existing": True}
 
 
+class ScoresWithNulls(Base):
+    username = Column("username", String(), primary_key=True)
+    department = Column("department", String())
+    testid = Column("testid", String())
+    score = Column("score", Float())
+
+    __tablename__ = "scores_with_nulls"
+    __table_args__ = {"extend_existing": True}
+
+
 class TagScores(Base):
     username = Column("username", String(), primary_key=True)
     department = Column("department", String())
@@ -356,7 +388,7 @@ scores_shelf = Shelf(
     {
         "username": Dimension(Scores.username),
         "department": Dimension(
-            Scores.department, anonymizer=lambda value: value[::-1]
+            Scores.department, anonymizer=lambda value: value[::-1] if value else 'None'
         ),
         "testid": Dimension(Scores.testid),
         "test_cnt": Metric(func.count(distinct(TagScores.testid))),
