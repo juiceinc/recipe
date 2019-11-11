@@ -614,14 +614,21 @@ OFFSET 0"""
 FROM census
 GROUP BY census.state
 LIMIT 10
-OFFSET 10"""
+OFFSET 0"""
         )
+        print(recipe.validated_pagination())
+        assert recipe.validated_pagination() == {
+            "page": 1,
+            "pageSize": 10,
+            "requestedPage": 2,
+            "totalItems": 2
+        }
 
         recipe = self.recipe_from_config(
             {
                 "metrics": ["pop2000"],
                 "dimensions": ["state"],
-                "pagination_page_size": 10,
+                "pagination_page_size": 1,
                 "pagination_page": 2,
             }
         )
@@ -631,9 +638,15 @@ OFFSET 10"""
        sum(census.pop2000) AS pop2000
 FROM census
 GROUP BY census.state
-LIMIT 10
-OFFSET 10"""
+LIMIT 1
+OFFSET 1"""
         )
+        assert recipe.validated_pagination() == {
+            "page": 1,
+            "pageSize": 10,
+            "requestedPage": 2,
+            "totalItems": 2
+        }
 
     def test_apply_pagination(self):
         recipe = (
