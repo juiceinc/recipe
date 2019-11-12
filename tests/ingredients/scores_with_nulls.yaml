@@ -28,6 +28,15 @@ department_lookup_with_everything:
         ops: Operations
         null: 'can not find department'
     lookup_default: Unknown
+department_buckets:
+    kind: Dimension
+    field: department
+    buckets:
+    - label: 'Sales'
+      eq: 'sales'
+    - label: 'Operations'
+      eq: 'ops'
+    buckets_default_label: 'Other'
 department_default:
     kind: Dimension
     field:

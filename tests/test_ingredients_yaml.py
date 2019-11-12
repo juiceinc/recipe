@@ -674,163 +674,231 @@ Vermont,37.0597968760254,Vermont
 """,
         )
 
-        def test_dimension_null_handling(self):
-            """ Test different ways of handling nulls in dimensions """
-            shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
 
-            recipe = (
-                Recipe(shelf=shelf, session=self.session)
-                .dimensions("department")
-                .metrics("score")
-                .order_by("department")
-            )
-            assert (
-                recipe.to_sql()
-                == """SELECT scores_with_nulls.department AS department,
-           avg(scores_with_nulls.score) AS score
-    FROM scores_with_nulls
-    GROUP BY scores_with_nulls.department
-    ORDER BY scores_with_nulls.department"""
-            )  # noqa: E501
+class TestNullHandling(TestRecipeIngredientsYaml):
 
-            self.assert_recipe_csv(
-                recipe,
-                """department,score,department_id
-    ,80.0,
-    ops,90.0,ops
-    sales,,sales
-    """,
-            )
+    def test_dimension_null_handling(self):
+        """ Test different ways of handling nulls in dimensions """
+        shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
 
-            # This uses the lookup_default to replace items that aren't found in lookup
-            # department_lookup:
-            #     kind: Dimension
-            #     field: department
-            #     lookup:
-            #         sales: Sales
-            #         ops: Operations
-            #     lookup_default: Unknown
-            recipe = (
-                Recipe(shelf=shelf, session=self.session)
-                .dimensions("department_lookup")
-                .metrics("score")
-                .order_by("department_lookup")
-            )
-            assert (
-                recipe.to_sql()
-                == """SELECT scores_with_nulls.department AS department_lookup_raw,
-           avg(scores_with_nulls.score) AS score
-    FROM scores_with_nulls
-    GROUP BY scores_with_nulls.department
-    ORDER BY scores_with_nulls.department"""
-            )  # noqa: E501
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("department")
+            .metrics("score")
+            .order_by("department")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT scores_with_nulls.department AS department,
+       avg(scores_with_nulls.score) AS score
+FROM scores_with_nulls
+GROUP BY scores_with_nulls.department
+ORDER BY scores_with_nulls.department"""
+        )  # noqa: E501
 
-            self.assert_recipe_csv(
-                recipe,
-                """department_lookup_raw,score,department_lookup,department_lookup_id
-    ,80.0,Unknown,
-    ops,90.0,Operations,ops
-    sales,,Sales,sales
-    """,
-            )
+        self.assert_recipe_csv(
+            recipe,
+            """department,score,department_id
+,80.0,
+ops,90.0,ops
+sales,,sales
+""",
+        )
 
-            # This uses a null in the lookup
-            # department_lookup_with_null:
-            #     kind: Dimension
-            #     field: department
-            #     lookup:
-            #         sales: Sales
-            #         ops: Operations
-            #         null: 'can not find department'
-            recipe = (
-                Recipe(shelf=shelf, session=self.session)
-                .dimensions("department_lookup_with_null")
-                .metrics("score")
-                .order_by("department_lookup_with_null")
-            )
-            assert (
-                recipe.to_sql()
-                == """SELECT scores_with_nulls.department AS department_lookup_with_null_raw,
-           avg(scores_with_nulls.score) AS score
-    FROM scores_with_nulls
-    GROUP BY scores_with_nulls.department
-    ORDER BY scores_with_nulls.department"""
-            )  # noqa: E501
+    def test_dimension_null_handling_with_lookup_default(self):
+        """ Test different ways of handling nulls in dimensions """
 
-            self.assert_recipe_csv(
-                recipe,
-                """department_lookup_with_null_raw,score,department_lookup_with_null,department_lookup_with_null_id
-    ,80.0,can not find department,
-    ops,90.0,Operations,ops
-    sales,,Sales,sales
-    """,
-            )
+        # This uses the lookup_default to replace items that aren't found in lookup
+        # department_lookup:
+        #     kind: Dimension
+        #     field: department
+        #     lookup:
+        #         sales: Sales
+        #         ops: Operations
+        #     lookup_default: Unknown
 
-            # This uses default which will coalesce missing values to a defined value
-            # department_default:
-            #     kind: Dimension
-            #     field:
-            #         value: department
-            #         default: 'N/A'
-            recipe = (
-                Recipe(shelf=shelf, session=self.session)
-                .dimensions("department_default")
-                .metrics("score")
-                .order_by("department_default")
-            )
-            assert (
-                recipe.to_sql()
-                == """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_default,
-           avg(scores_with_nulls.score) AS score
-    FROM scores_with_nulls
-    GROUP BY coalesce(scores_with_nulls.department, 'N/A')
-    ORDER BY coalesce(scores_with_nulls.department, 'N/A')"""
-            )  # noqa: E501
+        shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("department_lookup")
+            .metrics("score")
+            .order_by("department_lookup")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT scores_with_nulls.department AS department_lookup_raw,
+       avg(scores_with_nulls.score) AS score
+FROM scores_with_nulls
+GROUP BY scores_with_nulls.department
+ORDER BY scores_with_nulls.department"""
+        )  # noqa: E501
 
-            self.assert_recipe_csv(
-                recipe,
-                """department_default,score,department_default_id
-    N/A,80.0,N/A
-    ops,90.0,ops
-    sales,,sales
-    """,
-            )
+        self.assert_recipe_csv(
+            recipe,
+            """department_lookup_raw,score,department_lookup,department_lookup_id
+,80.0,Unknown,
+ops,90.0,Operations,ops
+sales,,Sales,sales
+""",
+        )
 
-            # This uses all null handling together (coalesce with default wins and
-            # is then turned into "Unknown")
-            # department_lookup_with_everything:
-            #     kind: Dimension
-            #     field:
-            #         value: department
-            #         default: 'N/A'
-            #     lookup:
-            #         sales: Sales
-            #         ops: Operations
-            #         null: 'can not find department'
-            #     lookup_default: Unknown
-            recipe = (
-                Recipe(shelf=shelf, session=self.session)
-                .dimensions("department_lookup_with_everything")
-                .metrics("score")
-                .order_by("department_lookup_with_everything")
-            )
-            assert (
-                recipe.to_sql()
-                == """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_lookup_with_everything_raw,
-           avg(scores_with_nulls.score) AS score
-    FROM scores_with_nulls
-    GROUP BY coalesce(scores_with_nulls.department, 'N/A')
-    ORDER BY coalesce(scores_with_nulls.department, 'N/A')"""
-            )  # noqa: E501
+    def test_dimension_null_handling_with_null_in_lookup(self):
+        """ Test different ways of handling nulls in dimensions """
 
-            self.assert_recipe_csv(
-                recipe,
-                """department_lookup_with_everything_raw,score,department_lookup_with_everything,department_lookup_with_everything_id
-    N/A,80.0,Unknown,N/A
-    ops,90.0,Operations,ops
-    sales,,Sales,sales
-    """,
-            )
+        # This uses a null in the lookup
+        # department_lookup_with_null:
+        #     kind: Dimension
+        #     field: department
+        #     lookup:
+        #         sales: Sales
+        #         ops: Operations
+        #         null: 'can not find department'
+
+        shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("department_lookup_with_null")
+            .metrics("score")
+            .order_by("department_lookup_with_null")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT scores_with_nulls.department AS department_lookup_with_null_raw,
+       avg(scores_with_nulls.score) AS score
+FROM scores_with_nulls
+GROUP BY scores_with_nulls.department
+ORDER BY scores_with_nulls.department"""
+        )  # noqa: E501
+
+        self.assert_recipe_csv(
+            recipe,
+            """department_lookup_with_null_raw,score,department_lookup_with_null,department_lookup_with_null_id
+,80.0,can not find department,
+ops,90.0,Operations,ops
+sales,,Sales,sales
+""",
+        )
+
+    def test_dimension_null_handling_with_default(self):
+        """ Test different ways of handling nulls in dimensions """
+
+        # This uses default which will coalesce missing values to a defined value
+        # department_default:
+        #     kind: Dimension
+        #     field:
+        #         value: department
+        #         default: 'N/A'
+        shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("department_default")
+            .metrics("score")
+            .order_by("department_default")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_default,
+       avg(scores_with_nulls.score) AS score
+FROM scores_with_nulls
+GROUP BY coalesce(scores_with_nulls.department, 'N/A')
+ORDER BY coalesce(scores_with_nulls.department, 'N/A')"""
+        )  # noqa: E501
+
+        self.assert_recipe_csv(
+            recipe,
+            """department_default,score,department_default_id
+N/A,80.0,N/A
+ops,90.0,ops
+sales,,sales
+""",
+        )
+
+    def test_dimension_null_handling_with_buckets(self):
+        """ Test different ways of handling nulls in dimensions """
+
+        # This uses default which will coalesce missing values to a defined value
+        # department_default:
+        #     kind: Dimension
+        #     field:
+        #         value: department
+        #         default: 'N/A'
+        shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("department_buckets")
+            .metrics("score")
+            .order_by("department_buckets")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT CASE
+           WHEN (scores_with_nulls.department = 'sales') THEN 'Sales'
+           WHEN (scores_with_nulls.department = 'ops') THEN 'Operations'
+           ELSE 'Other'
+       END AS department_buckets,
+       avg(scores_with_nulls.score) AS score
+FROM scores_with_nulls
+GROUP BY CASE
+             WHEN (scores_with_nulls.department = 'sales') THEN 'Sales'
+             WHEN (scores_with_nulls.department = 'ops') THEN 'Operations'
+             ELSE 'Other'
+         END
+ORDER BY CASE
+             WHEN (scores_with_nulls.department = 'sales') THEN 0
+             WHEN (scores_with_nulls.department = 'ops') THEN 1
+             ELSE 9999
+         END"""
+        )  # noqa: E501
+
+        self.assert_recipe_csv(
+            recipe,
+            """department_buckets,score,department_buckets_id
+Sales,,Sales
+Operations,90.0,Operations
+Other,80.0,Other
+""",
+        )
+
+
+    def test_dimension_null_handling_multi_approaches(self):
+        """ Test different ways of handling nulls in dimensions """
+
+        # This uses all null handling together (coalesce with default wins and
+        # is then turned into "Unknown")
+        # department_lookup_with_everything:
+        #     kind: Dimension
+        #     field:
+        #         value: department
+        #         default: 'N/A'
+        #     lookup:
+        #         sales: Sales
+        #         ops: Operations
+        #         null: 'can not find department'
+        #     lookup_default: Unknown
+        shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("department_lookup_with_everything")
+            .metrics("score")
+            .order_by("department_lookup_with_everything")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_lookup_with_everything_raw,
+       avg(scores_with_nulls.score) AS score
+FROM scores_with_nulls
+GROUP BY coalesce(scores_with_nulls.department, 'N/A')
+ORDER BY coalesce(scores_with_nulls.department, 'N/A')"""
+        )  # noqa: E501
+
+        self.assert_recipe_csv(
+            recipe,
+            """department_lookup_with_everything_raw,score,department_lookup_with_everything,department_lookup_with_everything_id
+N/A,80.0,Unknown,N/A
+ops,90.0,Operations,ops
+sales,,Sales,sales
+""",
+        )
 
     def test_metric_null_handling(self):
         """ Test handling nulls in metrics """
