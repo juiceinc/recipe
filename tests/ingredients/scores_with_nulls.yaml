@@ -1,0 +1,53 @@
+username:
+    kind: Dimension
+    field: username
+department:
+    kind: Dimension
+    field: department
+department_lookup:
+    kind: Dimension
+    field: department
+    lookup:
+        sales: Sales
+        ops: Operations
+    lookup_default: Unknown
+department_lookup_with_null:
+    kind: Dimension
+    field: department
+    lookup:
+        sales: Sales
+        ops: Operations
+        null: 'can not find department'
+department_lookup_with_everything:
+    kind: Dimension
+    field:
+        value: department
+        default: 'N/A'
+    lookup:
+        sales: Sales
+        ops: Operations
+        null: 'can not find department'
+    lookup_default: Unknown
+department_buckets:
+    kind: Dimension
+    field: department
+    buckets:
+    - label: 'Sales'
+      eq: 'sales'
+    - label: 'Operations'
+      eq: 'ops'
+    buckets_default_label: 'Other'
+department_default:
+    kind: Dimension
+    field:
+        value: department
+        default: 'N/A'
+score:
+    kind: Metric
+    field: avg(score)
+score_with_default:
+    kind: Metric
+    field:
+        aggregation: avg
+        value: score
+        default: -1.0
