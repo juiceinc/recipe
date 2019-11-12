@@ -680,9 +680,9 @@ Vermont,37.0597968760254,Vermont
 
             recipe = (
                 Recipe(shelf=shelf, session=self.session)
-                    .dimensions("department")
-                    .metrics("score")
-                    .order_by("department")
+                .dimensions("department")
+                .metrics("score")
+                .order_by("department")
             )
             assert (
                 recipe.to_sql()
@@ -712,9 +712,9 @@ Vermont,37.0597968760254,Vermont
             #     lookup_default: Unknown
             recipe = (
                 Recipe(shelf=shelf, session=self.session)
-                    .dimensions("department_lookup")
-                    .metrics("score")
-                    .order_by("department_lookup")
+                .dimensions("department_lookup")
+                .metrics("score")
+                .order_by("department_lookup")
             )
             assert (
                 recipe.to_sql()
@@ -744,9 +744,9 @@ Vermont,37.0597968760254,Vermont
             #         null: 'can not find department'
             recipe = (
                 Recipe(shelf=shelf, session=self.session)
-                    .dimensions("department_lookup_with_null")
-                    .metrics("score")
-                    .order_by("department_lookup_with_null")
+                .dimensions("department_lookup_with_null")
+                .metrics("score")
+                .order_by("department_lookup_with_null")
             )
             assert (
                 recipe.to_sql()
@@ -774,9 +774,9 @@ Vermont,37.0597968760254,Vermont
             #         default: 'N/A'
             recipe = (
                 Recipe(shelf=shelf, session=self.session)
-                    .dimensions("department_default")
-                    .metrics("score")
-                    .order_by("department_default")
+                .dimensions("department_default")
+                .metrics("score")
+                .order_by("department_default")
             )
             assert (
                 recipe.to_sql()
@@ -810,9 +810,9 @@ Vermont,37.0597968760254,Vermont
             #     lookup_default: Unknown
             recipe = (
                 Recipe(shelf=shelf, session=self.session)
-                    .dimensions("department_lookup_with_everything")
-                    .metrics("score")
-                    .order_by("department_lookup_with_everything")
+                .dimensions("department_lookup_with_everything")
+                .metrics("score")
+                .order_by("department_lookup_with_everything")
             )
             assert (
                 recipe.to_sql()
@@ -865,4 +865,3 @@ ops,90.0,ops
 sales,-1.0,sales
 """,
         )
-
