@@ -676,7 +676,6 @@ Vermont,37.0597968760254,Vermont
 
 
 class TestNullHandling(TestRecipeIngredientsYaml):
-
     def test_dimension_null_handling(self):
         """ Test different ways of handling nulls in dimensions """
         shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
@@ -858,7 +857,6 @@ Operations,90.0,Operations
 Other,80.0,Other
 """,
         )
-
 
     def test_dimension_null_handling_multi_approaches(self):
         """ Test different ways of handling nulls in dimensions """
