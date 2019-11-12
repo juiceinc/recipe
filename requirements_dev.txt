@@ -1,5 +1,4 @@
 -r requirements.txt
--r docs/requirements.txt
 appdirs==1.4.0
 bumpversion==0.5.3
 flake8==3.4.1
