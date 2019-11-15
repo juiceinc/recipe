@@ -5,7 +5,7 @@ import pytest
 from faker import Faker
 from faker.providers import BaseProvider
 
-from recipe.compat import basestring
+from recipe.compat import basestring, integer_types
 from recipe.utils import (
     AttrDict,
     FakerAnonymizer,
@@ -112,7 +112,7 @@ class TestFakerAnonymizer(object):
 
         b = FakerAnonymizer("{fake:ean8}", postprocessor=lambda x: int(x))
 
-        assert isinstance(b("Value"), int)
+        assert isinstance(b("Value"), integer_types)
 
         assert int(a("Value")) == b("Value")
 
