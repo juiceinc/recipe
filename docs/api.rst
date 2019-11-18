@@ -27,8 +27,6 @@ Shelf
 .. autoclass:: Shelf
    :inherited-members:
 
-.. autoclass:: AutomaticShelf
-   :inherited-members:
 
 -----------
 Ingredients

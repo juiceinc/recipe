@@ -5,7 +5,7 @@ import pytest
 from faker import Faker
 from faker.providers import BaseProvider
 
-from recipe.compat import basestring
+from recipe.compat import basestring, integer_types
 from recipe.utils import (
     AttrDict,
     FakerAnonymizer,
@@ -26,11 +26,11 @@ class TestUtils(object):
     def test_generate_faker_seed(self):
         """ Test we get the same seed values in py2 and py3 """
 
-        assert compat_str('2') == compat_str(u'2')
+        assert compat_str("2") == compat_str(u"2")
         assert generate_faker_seed(None) == 15208487303490345319
         assert generate_faker_seed(0) == 17387988563394623128
-        assert generate_faker_seed(u'hi') == 14742342832905345683
-        assert generate_faker_seed('hi') == 14742342832905345683
+        assert generate_faker_seed(u"hi") == 14742342832905345683
+        assert generate_faker_seed("hi") == 14742342832905345683
         assert generate_faker_seed([]) == 2766641713143040348
 
 
@@ -42,8 +42,6 @@ class TestAttrDict(object):
         assert d["foo"] == 2
         d["bar"] = 3
         assert d.bar == 3
-
-
 
 
 class TestFakerFormatter(object):
@@ -114,7 +112,7 @@ class TestFakerAnonymizer(object):
 
         b = FakerAnonymizer("{fake:ean8}", postprocessor=lambda x: int(x))
 
-        assert isinstance(b("Value"), int)
+        assert isinstance(b("Value"), integer_types)
 
         assert int(a("Value")) == b("Value")
 

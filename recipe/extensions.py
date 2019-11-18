@@ -1,7 +1,7 @@
 from sqlalchemy import and_, func, text, or_
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe.compat import basestring
+from recipe.compat import basestring, integer_types
 from recipe.core import Recipe
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Metric, Filter
@@ -637,7 +637,7 @@ class Paginate(RecipeExtension):
         :param value: A page size (zero or a positive integer)
         :type value: integer
         """
-        assert isinstance(value, int)
+        assert isinstance(value, integer_types)
         assert value >= 0
         self._pagination_page_size = value
 
@@ -648,7 +648,7 @@ class Paginate(RecipeExtension):
         :param value: A positive integer page number to fetch
         :type value: integer
         """
-        assert isinstance(value, int)
+        assert isinstance(value, integer_types)
 
         # Pagination page must be a positive integer
         self._pagination_page = max(1, value)
