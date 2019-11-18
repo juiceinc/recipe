@@ -776,7 +776,7 @@ class BlendRecipe(RecipeExtension):
         if self.blend_recipes:
             for ingr in self.recipe._cauldron.ingredients():
                 if isinstance(ingr, Dimension):
-                    ingr.group_by_strategy = 'direct'
+                    ingr.group_by_strategy = "direct"
 
     def modify_postquery_parts(self, postquery_parts):
         """
@@ -897,7 +897,7 @@ class CompareRecipe(RecipeExtension):
         if self.compare_recipe:
             for ingr in self.recipe._cauldron.ingredients():
                 if isinstance(ingr, Dimension):
-                    ingr.group_by_strategy = 'direct'
+                    ingr.group_by_strategy = "direct"
 
     def modify_postquery_parts(self, postquery_parts):
         """Make the comparison recipe a subquery that is left joined to the

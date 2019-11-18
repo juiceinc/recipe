@@ -520,7 +520,7 @@ class Dimension(Ingredient):
         if not self._labels:
             list(self.query_columns)
 
-        if self.group_by_strategy == 'labels':
+        if self.group_by_strategy == "labels":
             return [lbl for gb, lbl in zip(self._group_by, self._labels)]
         else:
             return self._group_by

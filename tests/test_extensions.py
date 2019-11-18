@@ -466,10 +466,10 @@ ORDER BY foo.first"""
 
         recipe = (
             self.recipe()
-                .metrics("age")
-                .dimensions("firstanon")
-                .order_by("firstanon")
-                .anonymize(True)
+            .metrics("age")
+            .dimensions("firstanon")
+            .order_by("firstanon")
+            .anonymize(True)
         )
         assert (
             recipe.to_sql()
@@ -478,7 +478,7 @@ ORDER BY foo.first"""
 FROM foo
 GROUP BY firstanon_raw
 ORDER BY foo.first"""
-    )
+        )
         assert recipe.all()[0].firstanon == fake_value
         assert recipe.all()[0].firstanon_raw == "hi"
         assert recipe.all()[0].firstanon_id == "hi"
