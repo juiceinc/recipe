@@ -154,17 +154,14 @@ def replace_whitespace_with_space(s):
 
 
 def clean_unicode(value):
-    """Convert a unicode value into ASCII bytes."""
+    """Convert value into ASCII bytes by brute force."""
+    if not isinstance(value, string_types):
+        value = text_type(value)
     try:
-        if isinstance(value, string_types):
-            cleaned_value = value.encode("ascii")
-        else:
-            cleaned_value = text_type(value).encode("ascii")
+        return value.encode("ascii")
     except UnicodeEncodeError:
-        cleaned_value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore")
-        if not cleaned_value:
-            raise ValueError("Could not find useful chars in the string")
-    return cleaned_value
+        value = unicodedata.normalize("NFKD", value)
+        return value.encode("ascii", "ignore")
 
 
 class AttrDict(dict):
