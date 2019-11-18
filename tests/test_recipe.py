@@ -30,7 +30,7 @@ class TestRecipeIngredients(object):
             == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first"""
+GROUP BY first"""
         )
         assert recipe.all()[0].first == "hi"
         assert recipe.all()[0].age == 15
@@ -44,8 +44,8 @@ GROUP BY foo.first"""
        foo.last AS firstlast,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first,
-         foo.last"""
+GROUP BY firstlast_id,
+         firstlast"""
         )
         assert recipe.all()[0].firstlast == "fred"
         assert recipe.all()[0].firstlast_id == "hi"
@@ -71,9 +71,9 @@ GROUP BY foo.first,
        foo.age AS d_age,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first,
-         foo.last,
-         foo.age"""
+GROUP BY d_id,
+         d,
+         d_age"""
         )
         assert recipe.all()[0].d == "fred"
         assert recipe.all()[0].d_id == "hi"
@@ -104,9 +104,9 @@ GROUP BY foo.first,
        foo.age AS d_age,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first,
-         foo.last,
-         foo.age"""
+GROUP BY d_id,
+         d_raw,
+         d_age"""
         )
 
         assert recipe.all()[0].d_raw == "fred"
@@ -128,7 +128,7 @@ GROUP BY foo.first,
             == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first
+GROUP BY first
 LIMIT ?
 OFFSET 1"""
         )
@@ -199,7 +199,7 @@ hi\t15\thi\r
             == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first"""
+GROUP BY first"""
         )
         assert recipe.all()[0].first == "hi"
         assert recipe.all()[0].age == 15
@@ -228,7 +228,7 @@ GROUP BY foo.first"""
             == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.last
+GROUP BY last
 ORDER BY foo.last"""
         )
         assert recipe.all()[0].last == "fred"
@@ -243,7 +243,7 @@ ORDER BY foo.last"""
             == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.last
+GROUP BY last
 ORDER BY foo.last"""
         )
         assert recipe.all()[0].last == "fred"
@@ -256,7 +256,7 @@ ORDER BY foo.last"""
             == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.last
+GROUP BY last
 ORDER BY sum(foo.age)"""
         )
         assert recipe.all()[0].last == "there"
@@ -269,7 +269,7 @@ ORDER BY sum(foo.age)"""
             == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.last
+GROUP BY last
 ORDER BY sum(foo.age) DESC"""
         )
         assert recipe.all()[0].last == "fred"
@@ -286,8 +286,8 @@ ORDER BY sum(foo.age) DESC"""
        foo.last AS firstlast,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first,
-         foo.last
+GROUP BY firstlast_id,
+         firstlast
 ORDER BY foo.last,
          foo.first"""
         )
@@ -300,8 +300,8 @@ ORDER BY foo.last,
        foo.last AS firstlast,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first,
-         foo.last
+GROUP BY firstlast_id,
+         firstlast
 ORDER BY foo.last DESC,
          foo.first DESC"""
         )
@@ -320,8 +320,8 @@ ORDER BY foo.last DESC,
        foo.last AS d,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first,
-         foo.last
+GROUP BY d_id,
+         d
 ORDER BY upper(foo.last),
          foo.first"""
         )
@@ -334,7 +334,7 @@ ORDER BY upper(foo.last),
             == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.last
+GROUP BY last
 ORDER BY foo.last"""
         )
         assert recipe.all()[0].last == "fred"
@@ -352,7 +352,7 @@ ORDER BY foo.last"""
        sum(foo.age) AS age
 FROM foo
 WHERE foo.age > 4
-GROUP BY foo.first
+GROUP BY first
 ORDER BY foo.first"""
         )
         assert recipe.all()[0].first == "hi"
@@ -376,8 +376,8 @@ SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
 WHERE foo.age > 4
-GROUP BY foo.first,
-         foo.last"""
+GROUP BY first,
+         last"""
         )
 
     def test_from_config_filter_object(self):
@@ -400,7 +400,7 @@ SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
 WHERE foo.age > 13
-GROUP BY foo.last"""
+GROUP BY last"""
         )
 
     def test_from_config_extra_kwargs(self):
@@ -414,7 +414,7 @@ GROUP BY foo.last"""
 SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.last
+GROUP BY last
 ORDER BY foo.last"""
         )
 
@@ -455,7 +455,7 @@ ORDER BY foo.last"""
        sum(foo.age) AS age
 FROM foo
 WHERE foo.age > 2
-GROUP BY foo.last
+GROUP BY last
 ORDER BY foo.last"""
         )
         assert recipe.all()[0].last == "fred"
@@ -479,7 +479,7 @@ ORDER BY foo.last"""
        sum(foo.age) AS age
 FROM foo
 WHERE foo.age > 2
-GROUP BY foo.last
+GROUP BY last
 HAVING sum(foo.age) < 10
 ORDER BY foo.last"""
         )
@@ -680,8 +680,8 @@ FROM
   (SELECT foo.last AS last,
           sum(foo.age) AS age
    FROM foo
-   GROUP BY foo.last) AS anon
-GROUP BY anon.last"""
+   GROUP BY last) AS anon
+GROUP BY last"""
         )
         assert len(r.all()) == 2
 
@@ -719,7 +719,7 @@ class TestSelectFrom(object):
        sum(census.pop2000) AS pop
 FROM census
 JOIN state_fact ON census.state = state_fact.name
-GROUP BY state_fact.census_region_name"""
+GROUP BY region"""
         )
         assert (
             r.dataset.tsv
@@ -766,7 +766,7 @@ class TestShelfSelectFrom(object):
        sum(census.pop2000) AS pop
 FROM census
 JOIN state_fact ON census.state = state_fact.name
-GROUP BY state_fact.census_region_name"""
+GROUP BY region"""
         )
         assert (
             r.dataset.tsv
@@ -804,7 +804,7 @@ FROM
   (SELECT census.state AS state,
           sum(census.pop2000) AS pop2000
    FROM census
-   GROUP BY census.state) AS anon_1"""
+   GROUP BY state) AS anon_1"""
         )
         assert r.dataset.tsv == """pop\r\n3147355.0\r\n"""
 
@@ -835,7 +835,7 @@ FROM
   (SELECT census.state AS state,
           sum(census.pop2000) AS pop2000
    FROM census
-   GROUP BY census.state) AS anon_1"""
+   GROUP BY state) AS anon_1"""
         )
         assert r.dataset.tsv == """pop\r\n3147355.0\r\n"""
 
@@ -859,7 +859,7 @@ FROM
   (SELECT census.state AS state,
           sum(census.pop2000) AS pop2000
    FROM census
-   GROUP BY census.state) AS anon_1"""
+   GROUP BY state) AS anon_1"""
         )
         assert r2.dataset.tsv == """pop\r\n3147355.0\r\n"""
 

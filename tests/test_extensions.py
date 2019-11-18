@@ -97,7 +97,7 @@ class TestAddFilterExtension(object):
        sum(foo.age) AS age
 FROM foo
 WHERE foo.first > 2
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
 
@@ -169,7 +169,7 @@ class TestAutomaticFiltersExtension(object):
             == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
         recipe = self.recipe().metrics("age").dimensions("first")
@@ -182,7 +182,7 @@ GROUP BY foo.first"""
             == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
     def test_automatic_filters(self):
@@ -197,7 +197,7 @@ GROUP BY foo.first"""
        sum(foo.age) AS age
 FROM foo
 WHERE foo.first IN ('foo')
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
         with pytest.raises(AssertionError):
@@ -214,7 +214,7 @@ GROUP BY foo.first"""
        sum(foo.age) AS age
 FROM foo
 WHERE foo.first IS NULL
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
     def test_apply_automatic_filters(self):
@@ -227,7 +227,7 @@ GROUP BY foo.first"""
             == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
     def test_include_exclude_keys(self):
@@ -240,7 +240,7 @@ GROUP BY foo.first"""
             == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
         recipe = self.recipe().metrics("age").dimensions("first")
@@ -253,7 +253,7 @@ GROUP BY foo.first"""
        sum(foo.age) AS age
 FROM foo
 WHERE foo.first IN ('foo')
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
         recipe = self.recipe().metrics("age").dimensions("first")
@@ -266,7 +266,7 @@ GROUP BY foo.first"""
        sum(foo.age) AS age
 FROM foo
 WHERE foo.first IN ('foo')
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
         recipe = self.recipe().metrics("age").dimensions("first")
@@ -278,7 +278,7 @@ GROUP BY foo.first"""
             == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
         recipe = self.recipe().metrics("age").dimensions("first")
@@ -290,7 +290,7 @@ GROUP BY foo.first"""
             == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
     def test_operators(self):
@@ -303,7 +303,7 @@ GROUP BY foo.first"""
        sum(foo.age) AS age
 FROM foo
 WHERE foo.first NOT IN ('foo')
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
         # between operator
@@ -315,7 +315,7 @@ GROUP BY foo.first"""
        sum(foo.age) AS age
 FROM foo
 WHERE foo.first BETWEEN 'foo' AND 'moo'
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
         # scalar operator
@@ -327,7 +327,7 @@ GROUP BY foo.first"""
        sum(foo.age) AS age
 FROM foo
 WHERE foo.first < 'moo'
-GROUP BY foo.first"""
+GROUP BY first"""
         )
 
 
@@ -387,7 +387,7 @@ class TestAnonymizeRecipeExtension(object):
             == """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.last
+GROUP BY last
 ORDER BY foo.last"""
         )
         assert recipe.all()[0].last == "fred"
@@ -407,7 +407,7 @@ ORDER BY foo.last"""
             == """SELECT foo.last AS last_raw,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.last
+GROUP BY last_raw
 ORDER BY foo.last"""
         )
         assert recipe.all()[0].last == "derf"
@@ -430,7 +430,7 @@ ORDER BY foo.last"""
             == """SELECT foo.first AS firstanon,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first
+GROUP BY firstanon
 ORDER BY foo.first"""
         )
         assert recipe.all()[0].firstanon == "hi"
@@ -450,7 +450,7 @@ ORDER BY foo.first"""
             == """SELECT foo.first AS firstanon_raw,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first
+GROUP BY firstanon_raw
 ORDER BY foo.first"""
         )
 
@@ -476,7 +476,7 @@ ORDER BY foo.first"""
             == """SELECT foo.first AS firstanon_raw,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first
+GROUP BY firstanon_raw
 ORDER BY foo.first"""
     )
         assert recipe.all()[0].firstanon == fake_value
@@ -499,7 +499,7 @@ ORDER BY foo.first"""
             == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first
+GROUP BY first
 ORDER BY foo.first"""
         )
         assert recipe.all()[0].first == "hi"
@@ -519,7 +519,7 @@ ORDER BY foo.first"""
             == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY foo.first
+GROUP BY first
 ORDER BY foo.first"""
         )
         assert recipe.all()[0].first == "hi"
@@ -557,7 +557,7 @@ class TestPaginateExtension(object):
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state"""
+GROUP BY state"""
         )
 
         recipe = self.recipe_from_config(
@@ -568,7 +568,7 @@ GROUP BY census.state"""
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state"""
+GROUP BY state"""
         )
 
     def test_pagination(self):
@@ -584,7 +584,7 @@ GROUP BY census.state"""
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state
+GROUP BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -601,7 +601,7 @@ OFFSET 0"""
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state
+GROUP BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -612,7 +612,7 @@ OFFSET 0"""
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state
+GROUP BY state
 LIMIT 10
 OFFSET 10"""
         )
@@ -630,7 +630,7 @@ OFFSET 10"""
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state
+GROUP BY state
 LIMIT 10
 OFFSET 10"""
         )
@@ -648,7 +648,7 @@ OFFSET 10"""
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state"""
+GROUP BY state"""
         )
 
         recipe = self.recipe_from_config(
@@ -659,7 +659,7 @@ GROUP BY census.state"""
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state"""
+GROUP BY state"""
         )
 
     def test_pagination_order_by(self):
@@ -675,7 +675,7 @@ GROUP BY census.state"""
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state
+GROUP BY state
 ORDER BY census.state DESC
 LIMIT 10
 OFFSET 0"""
@@ -694,7 +694,7 @@ OFFSET 0"""
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state
+GROUP BY state
 ORDER BY census.state DESC
 LIMIT 10
 OFFSET 0"""
@@ -714,7 +714,7 @@ OFFSET 0"""
            sum(census.pop2000) AS pop2000
     FROM census
     WHERE lower(census.state) LIKE lower('T%')
-    GROUP BY census.state
+    GROUP BY state
     LIMIT 10
     OFFSET 0"""
             )
@@ -739,7 +739,7 @@ OFFSET 0"""
            sum(census.pop2000) AS pop2000
     FROM census
     WHERE lower(census.state) LIKE lower('T%')
-    GROUP BY census.state
+    GROUP BY state
     LIMIT 10
     OFFSET 0"""
             )
@@ -759,7 +759,7 @@ OFFSET 0"""
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state
+GROUP BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -778,7 +778,7 @@ OFFSET 0"""
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state
+GROUP BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -798,7 +798,7 @@ OFFSET 0"""
        sum(census.pop2000) AS pop2000
 FROM census
 WHERE lower(census.sex) LIKE lower('M')
-GROUP BY census.state
+GROUP BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -819,7 +819,7 @@ OFFSET 0"""
 FROM census
 WHERE lower(census.sex) LIKE lower('M')
   OR lower(census.state) LIKE lower('M')
-GROUP BY census.state
+GROUP BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -847,7 +847,7 @@ Vermont,298532,Vermont
 FROM census
 WHERE lower(census.sex) LIKE lower('M')
   OR lower(census.state) LIKE lower('M')
-GROUP BY census.state
+GROUP BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -873,9 +873,9 @@ OFFSET 0"""
 FROM census
 WHERE lower(census.state) LIKE lower('T%')
   OR lower(census.sex) LIKE lower('T%')
-GROUP BY census.age,
-         census.sex,
-         census.state
+GROUP BY age,
+         sex,
+         state
 LIMIT 10
 OFFSET 40"""
         )
@@ -924,9 +924,9 @@ OFFSET 40"""
 FROM census
 WHERE lower(census.state) LIKE lower('T%')
   OR lower(census.sex) LIKE lower('T%')
-GROUP BY census.age,
-         census.sex,
-         census.state
+GROUP BY age,
+         sex,
+         state
 LIMIT 10
 OFFSET 40"""
         )
@@ -973,8 +973,8 @@ FROM
           foo.last AS last,
           sum(foo.age) AS age
    FROM foo
-   GROUP BY foo.first,
-            foo.last) AS summarize
+   GROUP BY first,
+            last) AS summarize
 GROUP BY summarize.first"""
         )
 
@@ -996,8 +996,8 @@ FROM
           foo.last AS last,
           sum(foo.age) AS age
    FROM foo
-   GROUP BY foo.first,
-            foo.last) AS summarize
+   GROUP BY first,
+            last) AS summarize
 GROUP BY summarize.first"""
         )
         assert len(recipe.all()) == 1
@@ -1023,8 +1023,8 @@ FROM
           foo.last AS last_raw,
           sum(foo.age) AS age
    FROM foo
-   GROUP BY foo.first,
-            foo.last) AS summarize
+   GROUP BY first_raw,
+            last_raw) AS summarize
 GROUP BY summarize.first_raw"""
         )
         assert len(recipe.all()) == 1
@@ -1054,8 +1054,8 @@ FROM
           scores.username AS username,
           avg(scores.score) AS score
    FROM scores
-   GROUP BY scores.department,
-            scores.username) AS summarize
+   GROUP BY department,
+            username) AS summarize
 GROUP BY summarize.department"""
         )
         ops_row, sales_row = recipe.all()
@@ -1084,8 +1084,8 @@ FROM
           scores.username AS username,
           avg(scores.score) AS score
    FROM scores
-   GROUP BY scores.department,
-            scores.username) AS summarize
+   GROUP BY department,
+            username) AS summarize
 GROUP BY summarize.department LIMIT 2
 OFFSET 0""",
             """SELECT summarize.department,
@@ -1095,8 +1095,8 @@ FROM
           scores.username AS username,
           avg(scores.score) AS score
    FROM scores
-   GROUP BY scores.department,
-            scores.username) AS summarize
+   GROUP BY department,
+            username) AS summarize
 GROUP BY summarize.department
 LIMIT 2
 OFFSET 0""",
@@ -1162,8 +1162,8 @@ FROM
           scores.username AS username,
           avg(scores.score) AS score
    FROM scores
-   GROUP BY scores.department,
-            scores.username
+   GROUP BY department_raw,
+            username
    ORDER BY scores.department) AS summarize
 GROUP BY summarize.department_raw
 ORDER BY summarize.department_raw"""
@@ -1197,8 +1197,8 @@ FROM
           avg(scores.score) AS score
    FROM scores
    WHERE scores.department = 'ops'
-   GROUP BY scores.department,
-            scores.username) AS summarize
+   GROUP BY department,
+            username) AS summarize
 GROUP BY summarize.department"""
         )
         ops_row = recipe.one()
@@ -1230,8 +1230,8 @@ FROM
           tagscores.username AS username,
           avg(tagscores.score) AS score
    FROM tagscores
-   GROUP BY tagscores.department,
-            tagscores.username) AS summarize
+   GROUP BY department,
+            username) AS summarize
 GROUP BY summarize.department"""
         )
         ops_row, sales_row = recipe.all()
@@ -1261,8 +1261,8 @@ FROM
           avg(tagscores.score) AS score
    FROM tagscores
    WHERE tagscores.tag = 'musician'
-   GROUP BY tagscores.department,
-            tagscores.username) AS summarize
+   GROUP BY department,
+            username) AS summarize
 GROUP BY summarize.department"""
         )
         row = recipe.one()
@@ -1288,8 +1288,8 @@ FROM
           tagscores.username AS username,
           count(DISTINCT tagscores.testid) AS test_cnt
    FROM tagscores
-   GROUP BY tagscores.department,
-            tagscores.username) AS summarize
+   GROUP BY department,
+            username) AS summarize
 GROUP BY summarize.department"""
         )
         ops_row, sales_row = recipe.all()
@@ -1341,7 +1341,7 @@ LEFT OUTER JOIN
           sum(census.pop2000) AS pop2000
    FROM census
    WHERE census.state = 'Vermont'
-   GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
+   GROUP BY sex) AS anon_1 ON census.sex = anon_1.sex
 GROUP BY census.sex
 ORDER BY census.sex"""
         )
@@ -1380,7 +1380,7 @@ LEFT OUTER JOIN
           sum(census.pop2000) AS pop2000_sum
    FROM census
    WHERE census.state = 'Vermont'
-   GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
+   GROUP BY sex) AS anon_1 ON census.sex = anon_1.sex
 GROUP BY census.sex
 ORDER BY census.sex"""
         )
@@ -1418,7 +1418,7 @@ LEFT OUTER JOIN
           sum(census.pop2000) AS pop2000
    FROM census
    WHERE census.state = 'Vermont'
-   GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
+   GROUP BY sex) AS anon_1 ON census.sex = anon_1.sex
 GROUP BY census.sex
 ORDER BY census.sex"""
         )
@@ -1466,7 +1466,7 @@ LEFT OUTER JOIN
           sum(census.pop2000) AS pop2000
    FROM census
    WHERE census.state = 'Vermont'
-   GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
+   GROUP BY sex) AS anon_1 ON census.sex = anon_1.sex
 LEFT OUTER JOIN
   (SELECT sum(census.pop2000) AS pop2000
    FROM census) AS anon_2 ON 1=1
@@ -1548,7 +1548,7 @@ LEFT OUTER JOIN
           sum(census.pop2008) AS pop2008
    FROM census
    WHERE census.sex = 'F'
-   GROUP BY census.sex) AS anon_1 ON census.sex = anon_1.sex
+   GROUP BY sex) AS anon_1 ON census.sex = anon_1.sex
 GROUP BY census.sex
 ORDER BY census.sex"""
         )
@@ -1585,8 +1585,8 @@ JOIN
   (SELECT state_fact.abbreviation AS abbreviation,
           state_fact.name AS state
    FROM state_fact
-   GROUP BY state_fact.abbreviation,
-            state_fact.name) AS anon_1 ON census.state = anon_1.state
+   GROUP BY abbreviation,
+            state) AS anon_1 ON census.state = anon_1.state
 GROUP BY census.state,
          anon_1.abbreviation
 ORDER BY census.state"""
