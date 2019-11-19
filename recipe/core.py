@@ -520,7 +520,7 @@ class Recipe(object):
                 self._query.all(), cache_context=self.cache_context
             )
             enchanttime = time.time()
-            fetched_from_cache = getattr(query, 'fetched_from_cache', False)
+            fetched_from_cache = getattr(self._query, 'fetched_from_cache', False)
         else:
             fetched_from_cache = True
 
