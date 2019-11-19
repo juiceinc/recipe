@@ -22,6 +22,7 @@ import sqlalchemy.orm
 import sqlparse
 from faker import Faker
 from faker.providers import BaseProvider
+from six import text_type, string_types
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
@@ -153,8 +154,12 @@ def replace_whitespace_with_space(s):
 
 
 def clean_unicode(value):
+    """Convert a unicode value into ASCII bytes."""
     try:
-        cleaned_value = str(value)
+        if isinstance(value, string_types):
+            cleaned_value = value.encode("ascii")
+        else:
+            cleaned_value = text_type(value).encode("ascii")
     except UnicodeEncodeError:
         cleaned_value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore")
         if not cleaned_value:
