@@ -122,7 +122,7 @@ class Recipe(object):
         # query is generated again
         query = self.query()
         if self._limit:
-            query = query.limit(None)
+            query = query.limit(None).offset(None)
         if self._order_bys:
             query = query.from_self().order_by(None)
         count_query = self._session.query(func.count("*").label("count")).select_from(
