@@ -508,29 +508,21 @@ class Recipe(object):
         starttime = fetchtime = enchanttime = time.time()
         self.query()
 
-        fetched_from_cache = True
         if self._all is None:
-            fetched_from_cache = False
-
-            # If we're using a caching query and that query did not
-            # save new values to cache, we got the cached results
-            # This is not 100% accurate; it only reports if the caching query
-            # attempts to save to cache not the internal state of the cache
-            # and whether the cache save actually occurred.
-            if not getattr(self._query, "saved_to_cache", True):
-                fetched_from_cache = True
             fetchtime = time.time()
             if not self._use_cache:
                 # Invalidate this query in the cache
                 # to ensure it gets fresh data from the database
                 if hasattr(self._query, "invalidate"):
-                    fetched_from_cache = False
                     self._query.invalidate()
 
             self._all = self._cauldron.enchant(
                 self._query.all(), cache_context=self.cache_context
             )
             enchanttime = time.time()
+            fetched_from_cache = getattr(self._query, "fetched_from_cache", False)
+        else:
+            fetched_from_cache = True
 
         self.stats.rows = len(self._all)
         self.stats.dbtime = fetchtime - starttime
