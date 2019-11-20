@@ -515,7 +515,8 @@ class Dimension(Ingredient):
             else:
                 self.formatters.insert(0, lambda value: self.lookup.get(value, value))
 
-    def get_group_by(self):
+    @group_by.getter
+    def group_by(self):
         # Ensure the labels are generated
         if not self._labels:
             list(self.query_columns)
@@ -525,10 +526,9 @@ class Dimension(Ingredient):
         else:
             return self._group_by
 
-    def set_group_by(self, value):
+    @group_by.setter
+    def group_by(self, value):
         self._group_by = value
-
-    group_by = property(get_group_by, set_group_by)
 
     @property
     def cauldron_extras(self):
