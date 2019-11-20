@@ -22,6 +22,7 @@ import sqlalchemy.orm
 import sqlparse
 from faker import Faker
 from faker.providers import BaseProvider
+from six import text_type, string_types
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
@@ -153,13 +154,14 @@ def replace_whitespace_with_space(s):
 
 
 def clean_unicode(value):
+    """Convert value into ASCII bytes by brute force."""
+    if not isinstance(value, string_types):
+        value = text_type(value)
     try:
-        cleaned_value = str(value)
+        return value.encode("ascii")
     except UnicodeEncodeError:
-        cleaned_value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore")
-        if not cleaned_value:
-            raise ValueError("Could not find useful chars in the string")
-    return cleaned_value
+        value = unicodedata.normalize("NFKD", value)
+        return value.encode("ascii", "ignore")
 
 
 class AttrDict(dict):
