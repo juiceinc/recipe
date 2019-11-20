@@ -515,7 +515,7 @@ class Dimension(Ingredient):
             else:
                 self.formatters.insert(0, lambda value: self.lookup.get(value, value))
 
-    @group_by.getter
+    @property
     def group_by(self):
         # Ensure the labels are generated
         if not self._labels:
