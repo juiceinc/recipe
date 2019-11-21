@@ -33,7 +33,6 @@ install = [
     'sqlparse',
     'tablib',
     'pyyaml',
-    'flapjack_stack',
     'stevedore',
     'sureberus',
     'faker',
