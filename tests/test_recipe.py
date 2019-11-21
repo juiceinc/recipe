@@ -518,9 +518,12 @@ p75:
 """
         shelf = Shelf.from_validated_yaml(yaml, Census)
         recipe = Recipe(shelf=shelf, session=self.session).metrics("p75")
-        assert recipe.to_sql() == """SELECT percentile_cont(0.75) WITHIN GROUP (
+        assert (
+            recipe.to_sql()
+            == """SELECT percentile_cont(0.75) WITHIN GROUP (
                                            ORDER BY census.pop2000) AS p75
 FROM census"""
+        )
 
     def test_percentile_with_dimension(self):
         """ While this query doesn't run in sqlite, it has been tested in
@@ -536,13 +539,18 @@ p75:
         aggregation: percentile75
 """
         shelf = Shelf.from_validated_yaml(yaml, Census)
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("p75").dimensions("state")
+        recipe = (
+            Recipe(shelf=shelf, session=self.session).metrics("p75").dimensions("state")
+        )
         print(recipe.to_sql())
-        assert recipe.to_sql() == """SELECT census.state AS state,
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
        percentile_cont(0.75) WITHIN GROUP (
                                            ORDER BY census.pop2000) AS p75
 FROM census
 GROUP BY census.state"""
+        )
 
     def test_descending_percentile(self):
         yaml = """
@@ -554,9 +562,12 @@ descp75:
 """
         shelf = Shelf.from_validated_yaml(yaml, Census)
         recipe = Recipe(shelf=shelf, session=self.session).metrics("descp75")
-        assert recipe.to_sql() == """SELECT percentile_cont(0.75) WITHIN GROUP (
+        assert (
+            recipe.to_sql()
+            == """SELECT percentile_cont(0.75) WITHIN GROUP (
                                            ORDER BY census.pop2000 DESC) AS descp75
 FROM census"""
+        )
 
     def test_cast(self):
         yaml = """
