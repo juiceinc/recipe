@@ -574,10 +574,7 @@ GROUP BY state"""
     def test_pagination(self):
         """ If pagination page size is configured, pagination is applied to results"""
         recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("age")
-            .pagination_page_size(10)
+            self.recipe().metrics("pop2000").dimensions("age").pagination_page_size(10)
         )
         assert (
             recipe.to_sql()
