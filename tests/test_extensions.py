@@ -576,18 +576,24 @@ GROUP BY state"""
         recipe = (
             self.recipe()
             .metrics("pop2000")
-            .dimensions("state")
+            .dimensions("age")
             .pagination_page_size(10)
         )
         assert (
             recipe.to_sql()
-            == """SELECT census.state AS state,
+            == """SELECT census.age AS age,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY state
+GROUP BY age
 LIMIT 10
 OFFSET 0"""
         )
+        assert recipe.validated_pagination() == {
+            "page": 1,
+            "pageSize": 10,
+            "requestedPage": 1,
+            "totalItems": 86,
+        }
 
         recipe = self.recipe_from_config(
             {
@@ -605,6 +611,12 @@ GROUP BY state
 LIMIT 10
 OFFSET 0"""
         )
+        assert recipe.validated_pagination() == {
+            "page": 1,
+            "pageSize": 10,
+            "requestedPage": 1,
+            "totalItems": 2,
+        }
 
         recipe = recipe.pagination_page(2)
         assert (
@@ -616,7 +628,6 @@ GROUP BY state
 LIMIT 10
 OFFSET 0"""
         )
-        print(recipe.validated_pagination())
         assert recipe.validated_pagination() == {
             "page": 1,
             "pageSize": 10,
@@ -637,13 +648,13 @@ OFFSET 0"""
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state
+GROUP BY state
 LIMIT 1
 OFFSET 1"""
         )
         assert recipe.validated_pagination() == {
-            "page": 1,
-            "pageSize": 10,
+            "page": 2,
+            "pageSize": 1,
             "requestedPage": 2,
             "totalItems": 2,
         }
