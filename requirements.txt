@@ -10,4 +10,3 @@ pyyaml>=4.2b1
 sureberus==0.14.0
 dateparser==0.7.1
 attrs==19.1.0
-pyhash==0.9.3
