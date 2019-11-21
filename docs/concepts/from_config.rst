@@ -2,7 +2,7 @@
 Defining Shelves from configuration
 ===================================
 
-Shelves are defined as dictionaries containing keys and ingredient. 
+Shelves are defined as dictionaries containing keys and ingredient.
 All the examples below use YAML.
 
 Defining Shelves
@@ -27,7 +27,7 @@ See examples_ for more Shelf examples.
 Defining Ingredients
 --------------------
 
-Ingredients are defined using fields_ (which may contain conditions_). Those conditions_ 
+Ingredients are defined using fields_ (which may contain conditions_). Those conditions_
 may reference more fields_ in turn and so forth.
 
 Metric
@@ -36,7 +36,7 @@ Metric
 Metrics will always apply a default aggregation of 'sum' to any fields used.
 
 .. code::
-    
+
     kind: Metric
     field: {field}
     divide_by: {field} (optional)
@@ -49,7 +49,7 @@ Dimension
 Metrics will always apply a default aggregation of 'sum' to their field.
 
 .. code::
-    
+
     kind: Dimension
     field: {field}
     {role}_field: {field} (optional)
@@ -61,7 +61,7 @@ Adding `id` and other roles to Dimension
 ........................................
 
 Dimensions can be defined with extra fields. The prefix before ``_field``
-is the field's role. The role will be suffixed to each value in the 
+is the field's role. The role will be suffixed to each value in the
 recipe rows. Let's look at an example.
 
 .. code::
@@ -85,7 +85,7 @@ Defining buckets
 Buckets let you group continuous values (like salaries or ages). Here's
 an example:
 
-.. code:: YAML 
+.. code:: YAML
 
   groups:
       kind: Dimension
@@ -100,9 +100,9 @@ an example:
         lt: 13
       - label: 'teens'
         lt: 20
-      buckets_default_label: 'oldsters'  
+      buckets_default_label: 'oldsters'
 
-The conditions are evaluated **in order**. **buckets_default_label** is used for any 
+The conditions are evaluated **in order**. **buckets_default_label** is used for any
 values that didn't match any condition.
 
 For convenience, conditions defined in buckets will use the field from the Dimension
@@ -110,15 +110,15 @@ unless a different field is defined in the condition. In the example above, the 
 bucket uses ``field: state`` explicitly while all the other conditions use ``field: age``
 from the Dimension.
 
-If you use order_by a bucket dimension, the order will be the order in which the 
+If you use order_by a bucket dimension, the order will be the order in which the
 buckets were defined.
 
 Adding quickselects to a Dimension
 ..................................
 
-quickselects are a way of associating conditions with a dimension. 
+quickselects are a way of associating conditions with a dimension.
 
-.. code:: YAML 
+.. code:: YAML
 
   region:
       kind: Dimension
@@ -139,7 +139,7 @@ quickselects are a way of associating conditions with a dimension.
         - 180 days ago
         - tomorrow
 
-These conditions can then be accessed through ``Ingredient.build_filter``. 
+These conditions can then be accessed through ``Ingredient.build_filter``.
 The ``AutomaticFilters`` extension is an easy way to use this.
 
 .. code:: python
@@ -156,11 +156,11 @@ The ``AutomaticFilters`` extension is an easy way to use this.
 Defining Fields
 ---------------
 
-Fields can be defined with a short string syntax or a dictionary syntax. 
+Fields can be defined with a short string syntax or a dictionary syntax.
 The string syntax always is normalized into the dictionary syntax.
 
 .. code::
-    
+
     field:
         value: '{column reference}'
         aggregation: '{aggregation (optional)}'
@@ -168,7 +168,7 @@ The string syntax always is normalized into the dictionary syntax.
         as: {optional type to coerce into}
         default: {default value, optional}
 
-    or 
+    or
 
     field: '{string field definition}'
     This may include field references that look like
@@ -177,7 +177,7 @@ The string syntax always is normalized into the dictionary syntax.
 Defining Fields with Dicts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Dictionaries provide access to all options when defining a 
+Dictionaries provide access to all options when defining a
 field.
 
 .. list-table:: dictionary field options
@@ -195,7 +195,7 @@ field.
    * - aggregation
      - optional
      - string
-     
+
        (default is 'sum' for Metric and 'none' for Dimension)
 
        What aggregation to use, if any. Possible aggregations are:
@@ -212,6 +212,14 @@ field.
        - 'quarter' (round to the nearest quarter for dates)
        - 'age' (calculate age based on a date and the current date)
        - 'none' (perform no aggregation)
+       - 'median' (calculate the median value, note: this aggregation is not available
+         on all databases).
+       - 'percentile[1,5,10,25,50,75,90,95,99]' (calculate the nth percentile value
+         where higher values correspond to higher percentiles, note: this aggregation
+         is not available on all databases).
+       - '-percentile[1,5,10,25,50,75,90,95,99]' (calculate the nth percentile value
+         where lower values correspond to higher percentiles, note: this aggregation
+         is not available on all databases).
 
    * - condition
      - optional
@@ -241,14 +249,14 @@ field.
      - Required
      - Description
 
-   * - ref 
+   * - ref
      - optional
      - string
 
        Replace this field with the field defined in
        the specified key in the shelf.
 
-   * - _use_raw_value 
+   * - _use_raw_value
      - optional
      - boolean
 
@@ -260,7 +268,7 @@ Defining Fields with Strings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Fields can be defined using strings. When using
-strings, words are treated as column references. If the 
+strings, words are treated as column references. If the
 words are prefixed with an '@' (like @sales), the field of the ingredient
 named sales in the shelf will be injected.
 
@@ -305,7 +313,7 @@ to a column.
 
          field: count_distinct(student_id)
 
-         # is the same as 
+         # is the same as
 
          field:
             value: student_id
@@ -353,7 +361,7 @@ For instance, operators can be used like this:
 Defining Conditions
 -------------------
 
-Conditions can include a field and operator or a list of 
+Conditions can include a field and operator or a list of
 conditions and-ed or or-ed together.
 
 .. code::
@@ -401,7 +409,7 @@ Conditions consist of a field and **exactly one** operator.
        .. code::
 
          # Sales dollars are greater than 100.
-         condition:   
+         condition:
            field: sales_dollars
            gt: 100
 
@@ -434,7 +442,7 @@ Conditions consist of a field and **exactly one** operator.
        .. code::
 
          # States that start with the capital letter C
-         condition:   
+         condition:
            field: state
            like: 'C%'
 
@@ -465,18 +473,18 @@ Here's an example:
 
   # Find states that start with 'C' and end with 'a'
   # Note the conditions in the list don't have to
-  # use the same field. 
+  # use the same field.
   condition:
     and:
-    - field: state 
+    - field: state
       like: 'C%'
-    - field: state 
+    - field: state
       like: '%a'
 
 Date conditions
 ~~~~~~~~~~~~~~~
 
-If the ``field`` is a date or datetime, absolute and relative dates 
+If the ``field`` is a date or datetime, absolute and relative dates
 can be defined in values using string syntax. Recipe uses the
 `Dateparser <https://dateparser.readthedocs.io/en/latest/>`_ library.
 
@@ -513,7 +521,7 @@ This shelf is basic.
 
   teens:
       kind: Metric
-      field: 
+      field:
           value: pop2000
           condition:
               field: age
@@ -547,7 +555,7 @@ The results look like:
   Alabama,451765,Alabama
   Alaska,71655,Alaska
   Arizona,516270,Arizona
-  Arkansas,276069,Arkansas 
+  Arkansas,276069,Arkansas
   ...
 
 
@@ -561,7 +569,7 @@ The following shelf has a Metric ``pct_teens`` that divides one previously defin
 
   teens:
       kind: Metric
-      field: 
+      field:
           value: pop2000
           condition:
               field: age
@@ -608,7 +616,7 @@ Here's the results. Note that recipe performs safe division.
 Dimensions containing buckets
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Dimensions may be created by bucketing a field. 
+Dimensions may be created by bucketing a field.
 
 .. code:: YAML
 
@@ -639,7 +647,7 @@ Dimensions may be created by bucketing a field.
         lt: 13
       - label: 'teens'
         lt: 20
-      buckets_default_label: 'oldsters'  
+      buckets_default_label: 'oldsters'
 
 Using this shelf in a recipe.
 
