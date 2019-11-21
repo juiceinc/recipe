@@ -44,8 +44,8 @@ def generate_faker_seed(value):
     if not isinstance(value, compat_str):
         value = compat_str(value)
 
-    h = hashlib.new('md5')
-    h.update(value.encode('utf-8'))
+    h = hashlib.new("md5")
+    h.update(value.encode("utf-8"))
     return int(h.hexdigest()[:16], 16)
 
 
