@@ -158,7 +158,7 @@ FROM
           sum(census.pop2000) AS pop2000,
           sum(census.pop2000 + census.pop2008) AS ttlpop
    FROM census
-   GROUP BY census.state
+   GROUP BY state
    ORDER BY census.state) AS anon_1"""
         )
         self.assert_recipe_csv(
@@ -204,12 +204,7 @@ FROM
        END AS age_buckets,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY CASE
-             WHEN (census.age < 2) THEN 'babies'
-             WHEN (census.age < 13) THEN 'children'
-             WHEN (census.age < 20) THEN 'teens'
-             ELSE 'oldsters'
-         END"""
+GROUP BY age_buckets"""
         )
         self.assert_recipe_csv(
             recipe,
@@ -275,14 +270,7 @@ FROM census"""
        END AS mixed_buckets,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY CASE
-             WHEN (census.state IN ('Vermont',
-                                    'New Hampshire')) THEN 'northeast'
-             WHEN (census.age < 2) THEN 'babies'
-             WHEN (census.age < 13) THEN 'children'
-             WHEN (census.age < 20) THEN 'teens'
-             ELSE 'oldsters'
-         END
+GROUP BY mixed_buckets
 ORDER BY CASE
              WHEN (census.state IN ('Vermont',
                                     'New Hampshire')) THEN 0
@@ -321,12 +309,7 @@ northeast,609480,northeast
        END AS age_buckets,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY CASE
-             WHEN (census.age < 2) THEN 'babies'
-             WHEN (census.age < 13) THEN 'children'
-             WHEN (census.age < 20) THEN 'teens'
-             ELSE 'oldsters'
-         END
+GROUP BY age_buckets
 ORDER BY CASE
              WHEN (census.age < 2) THEN 0
              WHEN (census.age < 13) THEN 1
@@ -359,12 +342,7 @@ oldsters,4567879,oldsters
        END AS age_buckets,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY CASE
-             WHEN (census.age < 2) THEN 'babies'
-             WHEN (census.age < 13) THEN 'children'
-             WHEN (census.age < 20) THEN 'teens'
-             ELSE 'oldsters'
-         END
+GROUP BY age_buckets
 ORDER BY CASE
              WHEN (census.age < 2) THEN 0
              WHEN (census.age < 13) THEN 1
@@ -399,7 +377,7 @@ babies,164043,babies
                WHEN (census.age > 40) THEN census.pop2000
            END) AS pop2000
 FROM census
-GROUP BY census.state
+GROUP BY state_raw
 ORDER BY census.state"""
         )
         self.assert_recipe_csv(
@@ -424,7 +402,7 @@ Vermont,271469,The Green Mountain State,Vermont
             == """SELECT census.state AS state_raw,
        sum((((census.pop2000 + census.pop2008) - census.pop2000) * census.pop2008) / (coalesce(CAST(census.pop2000 AS FLOAT), 0.0) + 1e-09)) AS allthemath
 FROM census
-GROUP BY census.state"""
+GROUP BY state_raw"""
         )  # noqa: E501
 
     def test_complex_census_quickselect_from_validated_yaml(self):
@@ -446,7 +424,7 @@ GROUP BY census.state"""
        sum(census.pop2008) AS pop2008
 FROM census
 WHERE census.age < 40
-GROUP BY census.state
+GROUP BY state_raw
 ORDER BY census.state"""
         )
         self.assert_recipe_csv(
@@ -471,7 +449,7 @@ Vermont,300605,The Green Mountain State,Vermont
        sum(census.pop2008) AS pop2008
 FROM census
 WHERE census.state = 'Vermont'
-GROUP BY census.state
+GROUP BY state_raw
 ORDER BY census.state"""
         )
         self.assert_recipe_csv(
@@ -497,7 +475,7 @@ Vermont,620602,The Green Mountain State,Vermont
                     WHEN (census.age > 40) THEN census.pop2000
                 END) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS popdivide
 FROM census
-GROUP BY census.state
+GROUP BY state_raw
 ORDER BY census.state"""
         )  # noqa: E501
         self.assert_recipe_csv(
@@ -524,7 +502,7 @@ Vermont,0.4374284968466095,The Green Mountain State,Vermont
                WHEN (census.age > 40) THEN census.pop2008
            END) AS pop2008oldsters
 FROM census
-GROUP BY census.state
+GROUP BY state_raw
 ORDER BY census.state"""
         )  # noqa: E501
         self.assert_recipe_csv(
@@ -571,7 +549,7 @@ Vermont,311842,The Green Mountain State,Vermont
             == """SELECT census.state AS state,
        CAST(sum(census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS popchg
 FROM census
-GROUP BY census.state
+GROUP BY state
 ORDER BY census.state"""
         )  # noqa: E501
         self.assert_recipe_csv(
@@ -598,7 +576,7 @@ Vermont,0.9820786913351858,Vermont
             == """SELECT census.state AS state_characteristic_raw,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state
+GROUP BY state_characteristic_raw
 ORDER BY census.state"""
         )  # noqa: E501
         self.assert_recipe_csv(
@@ -627,8 +605,8 @@ Vermont,609480,Taciturny,Vermont
        census.state AS state_idval,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.pop2000,
-         census.state
+GROUP BY state_idval_id,
+         state_idval
 ORDER BY census.state,
          census.pop2000
 LIMIT 5
@@ -661,7 +639,7 @@ OFFSET 0"""
             == """SELECT census.state AS state,
        CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS avgage
 FROM census
-GROUP BY census.state
+GROUP BY state
 ORDER BY census.state,
          census.pop2000"""
         )  # noqa: E501
@@ -691,7 +669,7 @@ class TestNullHandling(TestRecipeIngredientsYaml):
             == """SELECT scores_with_nulls.department AS department,
        avg(scores_with_nulls.score) AS score
 FROM scores_with_nulls
-GROUP BY scores_with_nulls.department
+GROUP BY department
 ORDER BY scores_with_nulls.department"""
         )  # noqa: E501
 
@@ -728,7 +706,7 @@ sales,,sales
             == """SELECT scores_with_nulls.department AS department_lookup_raw,
        avg(scores_with_nulls.score) AS score
 FROM scores_with_nulls
-GROUP BY scores_with_nulls.department
+GROUP BY department_lookup_raw
 ORDER BY scores_with_nulls.department"""
         )  # noqa: E501
 
@@ -765,7 +743,7 @@ sales,,Sales,sales
             == """SELECT scores_with_nulls.department AS department_lookup_with_null_raw,
        avg(scores_with_nulls.score) AS score
 FROM scores_with_nulls
-GROUP BY scores_with_nulls.department
+GROUP BY department_lookup_with_null_raw
 ORDER BY scores_with_nulls.department"""
         )  # noqa: E501
 
@@ -799,7 +777,7 @@ sales,,Sales,sales
             == """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_default,
        avg(scores_with_nulls.score) AS score
 FROM scores_with_nulls
-GROUP BY coalesce(scores_with_nulls.department, 'N/A')
+GROUP BY department_default
 ORDER BY coalesce(scores_with_nulls.department, 'N/A')"""
         )  # noqa: E501
 
@@ -837,11 +815,7 @@ sales,,sales
        END AS department_buckets,
        avg(scores_with_nulls.score) AS score
 FROM scores_with_nulls
-GROUP BY CASE
-             WHEN (scores_with_nulls.department = 'sales') THEN 'Sales'
-             WHEN (scores_with_nulls.department = 'ops') THEN 'Operations'
-             ELSE 'Other'
-         END
+GROUP BY department_buckets
 ORDER BY CASE
              WHEN (scores_with_nulls.department = 'sales') THEN 0
              WHEN (scores_with_nulls.department = 'ops') THEN 1
@@ -885,7 +859,7 @@ Other,80.0,Other
             == """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_lookup_with_everything_raw,
        avg(scores_with_nulls.score) AS score
 FROM scores_with_nulls
-GROUP BY coalesce(scores_with_nulls.department, 'N/A')
+GROUP BY department_lookup_with_everything_raw
 ORDER BY coalesce(scores_with_nulls.department, 'N/A')"""
         )  # noqa: E501
 
@@ -919,7 +893,7 @@ sales,,Sales,sales
             == """SELECT scores_with_nulls.department AS department,
        coalesce(avg(scores_with_nulls.score), -1.0) AS score_with_default
 FROM scores_with_nulls
-GROUP BY scores_with_nulls.department
+GROUP BY department
 ORDER BY scores_with_nulls.department"""
         )  # noqa: E501
 

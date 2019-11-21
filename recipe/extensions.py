@@ -767,6 +767,17 @@ class BlendRecipe(RecipeExtension):
         self.blend_types.append("outer")
         self.blend_criteria.append((join_base, join_blend))
 
+    def add_ingredients(self):
+        """If we have a blend_recipe, modify all ingredients in the base recipe
+        to group_by using the direct strategy. This is because when we join
+        the base recipe to the blend recipe we will likely have more than one column
+        that has the same label. This will generate invalid sql if a more explicit
+        reference isn't used. """
+        if self.blend_recipes:
+            for ingr in self.recipe._cauldron.ingredients():
+                if isinstance(ingr, Dimension):
+                    ingr.group_by_strategy = "direct"
+
     def modify_postquery_parts(self, postquery_parts):
         """
         Make the comparison recipe a subquery that is left joined to the
@@ -876,6 +887,17 @@ class CompareRecipe(RecipeExtension):
         assert isinstance(suffix, basestring)
         self.compare_recipe.append(compare_recipe)
         self.suffix.append(suffix)
+
+    def add_ingredients(self):
+        """If we have a compare_recipe, modify all ingredients in the base recipe
+        to group_by using the direct strategy. This is because when we join
+        the base recipe to the compare recipe we will likely have more than one column
+        that has the same label. This will generate invalid sql if a more explicit
+        reference isn't used. """
+        if self.compare_recipe:
+            for ingr in self.recipe._cauldron.ingredients():
+                if isinstance(ingr, Dimension):
+                    ingr.group_by_strategy = "direct"
 
     def modify_postquery_parts(self, postquery_parts):
         """Make the comparison recipe a subquery that is left joined to the
