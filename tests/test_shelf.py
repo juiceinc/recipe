@@ -58,7 +58,7 @@ class TestFindColumn(object):
             == """SELECT census.state AS state,
        sum(census.pop2000) AS sum_pop2000
 FROM census
-GROUP BY census.state"""
+GROUP BY state"""
         )
 
         col = find_column(recipe, "state")
@@ -615,7 +615,7 @@ ttlpop:
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY census.state"""
+GROUP BY state"""
         )
         assert (
             recipe.dataset.tsv

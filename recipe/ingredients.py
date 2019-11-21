@@ -77,6 +77,8 @@ class Ingredient(object):
         self.column_suffixes = kwargs.pop("column_suffixes", None)
         self.cache_context = kwargs.pop("cache_context", "")
         self.anonymize = False
+        self._labels = []
+
         # What order should this be in
         self.ordering = kwargs.pop("ordering", "asc")
 
@@ -139,7 +141,9 @@ class Ingredient(object):
     def query_columns(self):
         """Yield labeled columns to be used as a select in a query.
         """
+        self._labels = []
         for column, suffix in zip(self.columns, self.make_column_suffixes()):
+            self._labels.append(self.id + suffix)
             yield column.label(self.id + suffix)
 
     @property
@@ -434,6 +438,13 @@ class Dimension(Ingredient):
         lookup_default (:obj:`object`)
             A default to show if the value can't be found in the
             lookup dictionary.
+        group_by_strategy (:obj:`str`):
+            A strategy to use when preparing group_bys for the query
+            "labels" is the default strategy which will use the labels assigned to
+            each column.
+            "direct" will use the column expression directly. This alternative is
+            useful when there might be more than one column with the same label
+            being used in the query.
 
     Returns:
 
@@ -449,6 +460,7 @@ class Dimension(Ingredient):
         # An optional exprssion to use instead of the value expression
         # when ordering
         order_by_expression = kwargs.pop("order_by_expression", None)
+        self.group_by_strategy = kwargs.pop("group_by_strategy", "labels")
 
         # We must always have a value role
         self.roles = {"value": expression}
@@ -463,17 +475,17 @@ class Dimension(Ingredient):
                 self.roles[role] = v
 
         self.columns = []
-        self.group_by = []
+        self._group_by = []
         self._order_by_columns = []
         self.role_keys = []
         if "id" in self.roles:
             self.columns.append(self.roles["id"])
-            self.group_by.append(self.roles["id"])
+            self._group_by.append(self.roles["id"])
             self.role_keys.append("id")
             self._order_by_columns.append(self.roles["id"])
         if "value" in self.roles:
             self.columns.append(self.roles["value"])
-            self.group_by.append(self.roles["value"])
+            self._group_by.append(self.roles["value"])
             self.role_keys.append("value")
             # Order by columns are in order of value, id
             # Extra roles are ignored
@@ -487,7 +499,7 @@ class Dimension(Ingredient):
             if k in ("id", "value"):
                 continue
             self.columns.append(self.roles[k])
-            self.group_by.append(self.roles[k])
+            self._group_by.append(self.roles[k])
             self.role_keys.append(k)
 
         if "lookup" in kwargs:
@@ -502,6 +514,21 @@ class Dimension(Ingredient):
                 )
             else:
                 self.formatters.insert(0, lambda value: self.lookup.get(value, value))
+
+    @property
+    def group_by(self):
+        # Ensure the labels are generated
+        if not self._labels:
+            list(self.query_columns)
+
+        if self.group_by_strategy == "labels":
+            return [lbl for gb, lbl in zip(self._group_by, self._labels)]
+        else:
+            return self._group_by
+
+    @group_by.setter
+    def group_by(self, value):
+        self._group_by = value
 
     @property
     def cauldron_extras(self):
