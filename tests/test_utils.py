@@ -25,13 +25,12 @@ class TestUtils(object):
 
     def test_generate_faker_seed(self):
         """ Test we get the same seed values in py2 and py3 """
-
         assert compat_str("2") == compat_str(u"2")
-        assert generate_faker_seed(None) == 15208487303490345319
-        assert generate_faker_seed(0) == 17387988563394623128
-        assert generate_faker_seed(u"hi") == 14742342832905345683
-        assert generate_faker_seed("hi") == 14742342832905345683
-        assert generate_faker_seed([]) == 2766641713143040348
+        assert generate_faker_seed(None) == 7701040980221191251
+        assert generate_faker_seed(0) == 14973660089898329583
+        assert generate_faker_seed(u"hi") == 5329599339005471788
+        assert generate_faker_seed("hi") == 5329599339005471788
+        assert generate_faker_seed([]) == 15515306683186839187
 
 
 class TestAttrDict(object):

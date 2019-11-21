@@ -39,7 +39,6 @@ install = [
     'faker',
     'dateparser',
     'attrs',
-    'pyhash',
 ]
 # yapf: enable
 
