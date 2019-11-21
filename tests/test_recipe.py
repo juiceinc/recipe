@@ -549,7 +549,7 @@ p75:
        percentile_cont(0.75) WITHIN GROUP (
                                            ORDER BY census.pop2000) AS p75
 FROM census
-GROUP BY census.state"""
+GROUP BY state"""
         )
 
     def test_descending_percentile(self):
