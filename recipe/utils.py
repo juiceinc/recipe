@@ -7,8 +7,6 @@ import unicodedata
 from .compat import str as compat_str
 from functools import wraps
 
-from pyhash import metro_64
-
 try:
     # getfullargspec is not available in python2
     # getargspec is deprecated
@@ -20,6 +18,8 @@ except ImportError:
 import attr
 import sqlalchemy.orm
 import sqlparse
+import hashlib
+
 from faker import Faker
 from faker.providers import BaseProvider
 from six import text_type, string_types
@@ -39,15 +39,14 @@ __all__ = [
 ]
 
 
-hash_fn = metro_64()
-
-
 def generate_faker_seed(value):
     """Generate a seed value for faker. """
     if not isinstance(value, compat_str):
         value = compat_str(value)
 
-    return hash_fn(value)
+    h = hashlib.new("md5")
+    h.update(value.encode("utf-8"))
+    return int(h.hexdigest()[:16], 16)
 
 
 def recipe_arg(*args):

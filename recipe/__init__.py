@@ -5,8 +5,6 @@ Recipe
 """
 import logging
 
-from flapjack_stack import FlapjackStack
-
 from recipe.core import Recipe
 from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.extensions import (
@@ -40,8 +38,8 @@ class DefaultSettings(object):
         self.POOL_RECYCLE = 60 * 60
 
 
-SETTINGS = FlapjackStack()
-SETTINGS.add_layer(DefaultSettings())
+SETTINGS = DefaultSettings()
+
 
 try:  # Python 2.7+
     from logging import NullHandler

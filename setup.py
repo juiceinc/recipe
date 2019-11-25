@@ -33,13 +33,11 @@ install = [
     'sqlparse',
     'tablib',
     'pyyaml',
-    'flapjack_stack',
     'stevedore',
     'sureberus',
     'faker',
     'dateparser',
     'attrs',
-    'pyhash',
 ]
 # yapf: enable
 
