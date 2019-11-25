@@ -116,6 +116,14 @@ class Recipe(object):
     def total_count(self, query=None):
         """Return the number of rows that would be returned by this Recipe,
         ignoring any `limit` that has been applied.
+
+        Args:
+
+            query: An optional SQLAlchemy query to calculate total_count for.
+              If None, the recipe query will be used.
+
+        Returns:
+            A count of the number of rows that are returned by this query.
         """
         # If there is an ordering we take it off to make this
         # count run faster, then set the recipe to dirty so the

@@ -707,7 +707,7 @@ class Paginate(RecipeExtension):
         self._apply_pagination_q()
 
     def modify_postquery_parts(self, postquery_parts):
-        """Apply pagination limits and offset to a completed query. """
+        """Apply validated pagination limits and offset to a completed query. """
 
         limit = self._pagination_page_size
         if limit == 0 or not self._apply_pagination:
@@ -746,7 +746,7 @@ class Paginate(RecipeExtension):
         """
         if self._validated_pagination is None:
             raise BadRecipe(
-                "validated_pagination can only be accessed after the " "recipe has run"
+                "validated_pagination can only be accessed after the recipe has run"
             )
         else:
             return self._validated_pagination
