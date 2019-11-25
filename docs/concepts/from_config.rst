@@ -217,9 +217,6 @@ field.
        - 'percentile[1,5,10,25,50,75,90,95,99]' (calculate the nth percentile value
          where higher values correspond to higher percentiles, note: this aggregation
          is not available on all databases).
-       - '-percentile[1,5,10,25,50,75,90,95,99]' (calculate the nth percentile value
-         where lower values correspond to higher percentiles, note: this aggregation
-         is not available on all databases).
 
    * - condition
      - optional

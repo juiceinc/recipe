@@ -71,15 +71,6 @@ aggregations = {
     "percentile90": lambda fld: func.percentile_cont(0.90).within_group(fld),
     "percentile95": lambda fld: func.percentile_cont(0.95).within_group(fld),
     "percentile99": lambda fld: func.percentile_cont(0.99).within_group(fld),
-    "-percentile1": lambda fld: func.percentile_cont(0.01).within_group(fld.desc()),
-    "-percentile5": lambda fld: func.percentile_cont(0.05).within_group(fld.desc()),
-    "-percentile10": lambda fld: func.percentile_cont(0.10).within_group(fld.desc()),
-    "-percentile25": lambda fld: func.percentile_cont(0.25).within_group(fld.desc()),
-    "-percentile50": lambda fld: func.percentile_cont(0.50).within_group(fld.desc()),
-    "-percentile75": lambda fld: func.percentile_cont(0.75).within_group(fld.desc()),
-    "-percentile90": lambda fld: func.percentile_cont(0.90).within_group(fld.desc()),
-    "-percentile95": lambda fld: func.percentile_cont(0.95).within_group(fld.desc()),
-    "-percentile99": lambda fld: func.percentile_cont(0.99).within_group(fld.desc()),
 }
 
 aggr_keys = "|".join(k for k in aggregations.keys() if isinstance(k, basestring))

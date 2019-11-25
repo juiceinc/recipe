@@ -552,23 +552,6 @@ FROM census
 GROUP BY state"""
         )
 
-    def test_descending_percentile(self):
-        yaml = """
-descp75:
-    kind: Metric
-    field:
-        value: pop2000
-        aggregation: -percentile75
-"""
-        shelf = Shelf.from_validated_yaml(yaml, Census)
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("descp75")
-        assert (
-            recipe.to_sql()
-            == """SELECT percentile_cont(0.75) WITHIN GROUP (
-                                           ORDER BY census.pop2000 DESC) AS descp75
-FROM census"""
-        )
-
     def test_cast(self):
         yaml = """
 intage:
