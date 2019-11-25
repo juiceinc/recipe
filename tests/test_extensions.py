@@ -574,20 +574,23 @@ GROUP BY state"""
     def test_pagination(self):
         """ If pagination page size is configured, pagination is applied to results"""
         recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
+            self.recipe().metrics("pop2000").dimensions("age").pagination_page_size(10)
         )
         assert (
             recipe.to_sql()
-            == """SELECT census.state AS state,
+            == """SELECT census.age AS age,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY state
+GROUP BY age
 LIMIT 10
 OFFSET 0"""
         )
+        assert recipe.validated_pagination() == {
+            "page": 1,
+            "pageSize": 10,
+            "requestedPage": 1,
+            "totalItems": 86,
+        }
 
         recipe = self.recipe_from_config(
             {
@@ -605,6 +608,12 @@ GROUP BY state
 LIMIT 10
 OFFSET 0"""
         )
+        assert recipe.validated_pagination() == {
+            "page": 1,
+            "pageSize": 10,
+            "requestedPage": 1,
+            "totalItems": 2,
+        }
 
         recipe = recipe.pagination_page(2)
         assert (
@@ -614,14 +623,20 @@ OFFSET 0"""
 FROM census
 GROUP BY state
 LIMIT 10
-OFFSET 10"""
+OFFSET 0"""
         )
+        assert recipe.validated_pagination() == {
+            "page": 1,
+            "pageSize": 10,
+            "requestedPage": 2,
+            "totalItems": 2,
+        }
 
         recipe = self.recipe_from_config(
             {
                 "metrics": ["pop2000"],
                 "dimensions": ["state"],
-                "pagination_page_size": 10,
+                "pagination_page_size": 1,
                 "pagination_page": 2,
             }
         )
@@ -631,9 +646,15 @@ OFFSET 10"""
        sum(census.pop2000) AS pop2000
 FROM census
 GROUP BY state
-LIMIT 10
-OFFSET 10"""
+LIMIT 1
+OFFSET 1"""
         )
+        assert recipe.validated_pagination() == {
+            "page": 2,
+            "pageSize": 1,
+            "requestedPage": 2,
+            "totalItems": 2,
+        }
 
     def test_apply_pagination(self):
         recipe = (
