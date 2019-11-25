@@ -508,6 +508,49 @@ oldage:
             "THEN foo.age END) AS oldage FROM foo"
         )
 
+    def test_percentile(self):
+        yaml = """
+p75:
+    kind: Metric
+    field:
+        value: pop2000
+        aggregation: percentile75
+"""
+        shelf = Shelf.from_validated_yaml(yaml, Census)
+        recipe = Recipe(shelf=shelf, session=self.session).metrics("p75")
+        assert (
+            recipe.to_sql()
+            == """SELECT percentile_cont(0.75) WITHIN GROUP (
+                                           ORDER BY census.pop2000) AS p75
+FROM census"""
+        )
+
+    def test_percentile_with_dimension(self):
+        """ While this query doesn't run in sqlite, it has been tested in
+        redshift and bigquery """
+        yaml = """
+state:
+    kind: Dimension
+    field: state
+p75:
+    kind: Metric
+    field:
+        value: pop2000
+        aggregation: percentile75
+"""
+        shelf = Shelf.from_validated_yaml(yaml, Census)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session).metrics("p75").dimensions("state")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       percentile_cont(0.75) WITHIN GROUP (
+                                           ORDER BY census.pop2000) AS p75
+FROM census
+GROUP BY state"""
+        )
+
     def test_cast(self):
         yaml = """
 intage:

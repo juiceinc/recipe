@@ -60,6 +60,17 @@ aggregations = {
     "age": lambda fld: func.date_part("year", func.age(fld)),
     "none": lambda fld: fld,
     None: lambda fld: fld,
+    # Percentile aggregations do not work in all engines
+    "median": func.median,
+    "percentile1": lambda fld: func.percentile_cont(0.01).within_group(fld),
+    "percentile5": lambda fld: func.percentile_cont(0.05).within_group(fld),
+    "percentile10": lambda fld: func.percentile_cont(0.10).within_group(fld),
+    "percentile25": lambda fld: func.percentile_cont(0.25).within_group(fld),
+    "percentile50": lambda fld: func.percentile_cont(0.50).within_group(fld),
+    "percentile75": lambda fld: func.percentile_cont(0.75).within_group(fld),
+    "percentile90": lambda fld: func.percentile_cont(0.90).within_group(fld),
+    "percentile95": lambda fld: func.percentile_cont(0.95).within_group(fld),
+    "percentile99": lambda fld: func.percentile_cont(0.99).within_group(fld),
 }
 
 aggr_keys = "|".join(k for k in aggregations.keys() if isinstance(k, basestring))
@@ -74,7 +85,7 @@ def find_operators(value):
     if len(parts) == 1:
         return field, operators
 
-    remaining_value = value[len(field):]
+    remaining_value = value[len(field) :]
     if remaining_value:
         for part in re.findall("[+-\/\*][\@\w\.]+", remaining_value):
             # TODO: Full validation on other fields
