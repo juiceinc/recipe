@@ -546,6 +546,7 @@ class Paginate(RecipeExtension):
         self._pagination_order_by = []
         self._pagination_page_size = 0
         self._pagination_page = 1
+        self._validated_pagination = None
 
     @recipe_arg()
     def from_config(self, obj):
@@ -706,20 +707,49 @@ class Paginate(RecipeExtension):
         self._apply_pagination_q()
 
     def modify_postquery_parts(self, postquery_parts):
-        """Apply pagination limits and offset to a completed query. """
+        """Apply validated pagination limits and offset to a completed query. """
 
         limit = self._pagination_page_size
-        page = self._pagination_page
-        # page=1 is the first page
-        offset = limit * (page - 1)
+        if limit == 0 or not self._apply_pagination:
+            return postquery_parts
 
-        if limit and self._apply_pagination:
-            if limit:
-                postquery_parts["query"] = postquery_parts["query"].limit(limit)
-            if offset:
-                postquery_parts["query"] = postquery_parts["query"].offset(offset)
+        # Validate what page we are on by looking at the total
+        # number of items.
+        total_count = self.recipe.total_count(postquery_parts["query"])
+
+        d, m = divmod(total_count, limit)
+        total_pages = d + (1 if m > 0 else 0)
+        page = self._pagination_page
+        validated_page = min(max(1, page), total_pages)
+
+        self._validated_pagination = {
+            "requestedPage": page,
+            "page": validated_page,
+            "pageSize": limit,
+            "totalItems": total_count,
+        }
+
+        # page=1 is the first page
+        offset = limit * (validated_page - 1)
+
+        postquery_parts["query"] = postquery_parts["query"].limit(limit)
+        if offset:
+            postquery_parts["query"] = postquery_parts["query"].offset(offset)
 
         return postquery_parts
+
+    def validated_pagination(self):
+        """ Return pagination validated against the actual number of items in the
+        response.
+
+        :raises BadRecipe:
+        """
+        if self._validated_pagination is None:
+            raise BadRecipe(
+                "validated_pagination can only be accessed after the recipe has run"
+            )
+        else:
+            return self._validated_pagination
 
 
 class BlendRecipe(RecipeExtension):
