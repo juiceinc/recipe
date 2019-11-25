@@ -542,7 +542,6 @@ p75:
         recipe = (
             Recipe(shelf=shelf, session=self.session).metrics("p75").dimensions("state")
         )
-        print(recipe.to_sql())
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
