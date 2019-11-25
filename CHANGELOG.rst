@@ -2,6 +2,15 @@
 Changelog
 =========
 
+0.12.0 (2019-11-25)
+-----------------------------------------
+
+* remove flapjack_stack and pyhash dependencies
+* Add percentile aggregations to metrics from config.
+* Use more accurate fetched_from_cache caching query attribute
+* Add grouping strategies so recipes can group by column labels
+
+
 0.11.0 (2019-11-07)
 -----------------------------------------
 * Add Paginate extension
