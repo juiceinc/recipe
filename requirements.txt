@@ -4,7 +4,7 @@ six==1.13.0
 SQLAlchemy>=1.2.2
 sqlparse==0.3.0
 stevedore==1.31.0
-tablib==0.14.0
+tablib==0.12.0
 pyyaml==5.1.2
 sureberus==0.14.0
 dateparser==0.7.2
