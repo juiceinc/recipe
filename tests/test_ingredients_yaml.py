@@ -7,6 +7,7 @@ import os
 
 from datetime import date
 import pytest
+from six import text_type
 from tests.test_base import Census, MyTable, oven, ScoresWithNulls
 
 from recipe import AutomaticFilters, BadIngredient, Recipe, Shelf
@@ -17,7 +18,7 @@ class TestRecipeIngredientsYaml(object):
         self.session = oven.Session()
 
     def assert_recipe_csv(self, recipe, csv_text):
-        assert recipe.dataset.export("csv", lineterminator="\n") == csv_text
+        assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
 
     def validated_shelf(self, shelf_name, table):
         """Load a file from the sample ingredients.yaml files."""

@@ -294,37 +294,41 @@ def _full_condition_schema(**kwargs):
 
     label_required = kwargs.get("label_required", False)
 
-    # Handle conditions where there's an operator
-    operator_condition = S.DictWhenKeyExists(
-        {
-            "gt": _condition_schema("gt", "__gt__", **kwargs),
-            "gte": _condition_schema("gte", "__ge__", **kwargs),
-            "ge": _condition_schema("ge", "__ge__", **kwargs),
-            "lt": _condition_schema("lt", "__lt__", **kwargs),
-            "lte": _condition_schema("lte", "__le__", **kwargs),
-            "le": _condition_schema("le", "__le__", **kwargs),
-            "eq": _condition_schema("eq", "__eq__", **kwargs),
-            "ne": _condition_schema("ne", "__ne__", **kwargs),
-            "like": _condition_schema("like", "like", **kwargs),
-            "ilike": _condition_schema("ilike", "ilike", **kwargs),
-            "in": _condition_schema("in", "in_", scalar=False, **kwargs),
-            "notin": _condition_schema("notin", "notin", scalar=False, **kwargs),
-            "between": _condition_schema("between", "between", scalar=False, **kwargs),
-            "or": S.Dict(
-                schema={
-                    "or": S.List(schema="condition"),
-                    "label": S.String(required=label_required),
-                }
-            ),
-            "and": S.Dict(
-                schema={
-                    "and": S.List(schema="condition"),
-                    "label": S.String(required=label_required),
-                }
-            ),
-            # A reference to another condition
-            "ref": S.Dict(schema={"ref": S.String()}),
-        },
+    # Handle conditions where there's an
+    operator_condition = S.Dict(
+        choose_schema=S.when_key_exists(
+            {
+                "gt": _condition_schema("gt", "__gt__", **kwargs),
+                "gte": _condition_schema("gte", "__ge__", **kwargs),
+                "ge": _condition_schema("ge", "__ge__", **kwargs),
+                "lt": _condition_schema("lt", "__lt__", **kwargs),
+                "lte": _condition_schema("lte", "__le__", **kwargs),
+                "le": _condition_schema("le", "__le__", **kwargs),
+                "eq": _condition_schema("eq", "__eq__", **kwargs),
+                "ne": _condition_schema("ne", "__ne__", **kwargs),
+                "like": _condition_schema("like", "like", **kwargs),
+                "ilike": _condition_schema("ilike", "ilike", **kwargs),
+                "in": _condition_schema("in", "in_", scalar=False, **kwargs),
+                "notin": _condition_schema("notin", "notin", scalar=False, **kwargs),
+                "between": _condition_schema(
+                    "between", "between", scalar=False, **kwargs
+                ),
+                "or": S.Dict(
+                    schema={
+                        "or": S.List(schema="condition"),
+                        "label": S.String(required=label_required),
+                    }
+                ),
+                "and": S.Dict(
+                    schema={
+                        "and": S.List(schema="condition"),
+                        "label": S.String(required=label_required),
+                    }
+                ),
+                # A reference to another condition
+                "ref": S.Dict(schema={"ref": S.String()}),
+            }
+        ),
         required=False,
         coerce=_coerce_string_into_condition_ref,
     )
@@ -473,49 +477,50 @@ quickselect_schema = S.List(
     schema=S.Dict(schema={"condition": "condition", "name": S.String(required=True)}),
 )
 
+ingredient_schema_choices = {
+    "Metric": S.Dict(
+        allow_unknown=True,
+        schema={
+            "field": "aggregated_field",
+            "divide_by": "optional_aggregated_field",
+            "format": S.String(
+                coerce=lambda v: format_lookup.get(v, v), required=False
+            ),
+            "quickselects": quickselect_schema,
+        },
+    ),
+    "Dimension": S.Dict(
+        allow_unknown=True,
+        coerce=_move_extra_fields,
+        coerce_post=_move_buckets_to_field,
+        schema={
+            "field": "non_aggregated_field",
+            "extra_fields": S.List(
+                required=False,
+                schema=S.Dict(
+                    schema={
+                        "field": "non_aggregated_field",
+                        "name": S.String(required=True),
+                    }
+                ),
+            ),
+            "buckets": S.List(required=False, schema="labeled_condition"),
+            "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
+            "format": S.String(
+                coerce=lambda v: format_lookup.get(v, v), required=False
+            ),  # noqa: E123
+            "quickselects": quickselect_schema,
+        },
+    ),
+    "Filter": S.Dict(allow_unknown=True, schema={"condition": "condition"}),
+    "Having": S.Dict(allow_unknown=True, schema={"condition": "having_condition"}),
+}
+
 # Create a full schema that uses a registry
-ingredient_schema = S.DictWhenKeyIs(
-    "kind",
-    {
-        "Metric": S.Dict(
-            allow_unknown=True,
-            schema={
-                "field": "aggregated_field",
-                "divide_by": "optional_aggregated_field",
-                "format": S.String(
-                    coerce=lambda v: format_lookup.get(v, v), required=False
-                ),
-                "quickselects": quickselect_schema,
-            },
-        ),
-        "Dimension": S.Dict(
-            allow_unknown=True,
-            coerce=_move_extra_fields,
-            coerce_post=_move_buckets_to_field,
-            schema={
-                "field": "non_aggregated_field",
-                "extra_fields": S.List(
-                    required=False,
-                    schema=S.Dict(
-                        schema={
-                            "field": "non_aggregated_field",
-                            "name": S.String(required=True),
-                        }
-                    ),
-                ),
-                "buckets": S.List(required=False, schema="labeled_condition"),
-                "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
-                "format": S.String(
-                    coerce=lambda v: format_lookup.get(v, v), required=False
-                ),  # noqa: E123
-                "quickselects": quickselect_schema,
-            },
-        ),
-        "Filter": S.Dict(allow_unknown=True, schema={"condition": "condition"}),
-        "Having": S.Dict(allow_unknown=True, schema={"condition": "having_condition"}),
-    },
-    # If the kind can't be found, default to metric
-    default_choice="Metric",
+ingredient_schema = S.Dict(
+    choose_schema=S.when_key_is(
+        "kind", ingredient_schema_choices, default_choice="Metric"
+    ),
     coerce=_adjust_kinds,
     registry={
         "aggregated_field": _field_schema(aggr=True, required=True),
