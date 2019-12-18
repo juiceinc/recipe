@@ -49,6 +49,50 @@ def test_field_as():
         normalize_schema(shelf_schema, v, allow_unknown=False)
 
 
+"""
+
+state:
+  singular: State
+  plural: States
+  kind: Dimension
+  field:
+    value: state
+    aggregation: none
+  role: 'dimension:place'
+  latitude_field: state_lat
+  longitude_field: state_long
+"""
+
+
+def test_dimension_extra_fields():
+    """ Extra fields get added to extra_fields list"""
+    value = {
+        "state": {
+            "field": "state",
+            "kind": "Dimension",
+            "latitude_field": "state_lat",
+            "longitude_field": "state_lng",
+        }
+    }
+    x = normalize_schema(shelf_schema, value)
+    assert x == {
+        "state": {
+            "kind": "Dimension",
+            "field": {"value": "state", "aggregation": "none"},
+            "extra_fields": [
+                {
+                    "field": {"value": "state_lat", "aggregation": "none"},
+                    "name": "latitude_expression",
+                },
+                {
+                    "field": {"value": "state_lng", "aggregation": "none"},
+                    "name": "longitude_expression",
+                },
+            ],
+        }
+    }
+
+
 def test_field_default():
     defaults = [24, True, 11.21243, "heythere"]
 
