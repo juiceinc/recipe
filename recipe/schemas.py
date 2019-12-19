@@ -80,14 +80,14 @@ field_pattern = re.compile(r"^({})\((.*)\)$".format(aggr_keys))
 
 def find_operators(value):
     """ Find operators in a field that may look like "a+b-c" """
-    parts = re.split("[+-\/\*]", value)
+    parts = re.split("[+-/*]", value)
     field, operators = parts[0], []
     if len(parts) == 1:
         return field, operators
 
     remaining_value = value[len(field) :]
     if remaining_value:
-        for part in re.findall("[+-\/\*][\@\w\.]+", remaining_value):
+        for part in re.findall("[+-/*][@\w\.]+", remaining_value):
             # TODO: Full validation on other fields
             other_field = _coerce_string_into_field(
                 part[1:], search_for_operators=False
