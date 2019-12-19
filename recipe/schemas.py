@@ -470,6 +470,10 @@ def _replace_references(shelf):
     return shelf
 
 
+def coerce_format(v):
+    return format_lookup.get(v, v)
+
+
 condition_schema = _full_condition_schema(aggr=False)
 
 quickselect_schema = S.List(
@@ -483,9 +487,7 @@ ingredient_schema_choices = {
         schema={
             "field": "aggregated_field",
             "divide_by": "optional_aggregated_field",
-            "format": S.String(
-                coerce=lambda v: format_lookup.get(v, v), required=False
-            ),
+            "format": S.String(coerce=coerce_format, required=False),
             "quickselects": quickselect_schema,
         },
     ),
@@ -506,9 +508,7 @@ ingredient_schema_choices = {
             ),
             "buckets": S.List(required=False, schema="labeled_condition"),
             "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
-            "format": S.String(
-                coerce=lambda v: format_lookup.get(v, v), required=False
-            ),  # noqa: E123
+            "format": S.String(coerce=coerce_format, required=False),  # noqa: E123
             "quickselects": quickselect_schema,
         },
     ),
@@ -532,11 +532,105 @@ ingredient_schema = S.Dict(
     },
 )
 
-shelf_schema = S.Dict(
+
+def pop_version(d):
+    d.pop("_version", None)
+    return d
+
+
+shelf_schema_v1 = S.Dict(
     valueschema=ingredient_schema,
     keyschema=S.String(),
     allow_unknown=True,
+    coerce=pop_version,
     coerce_post=_replace_references,
+)
+
+
+############################
+## PARSED
+############################
+
+
+def parsed_move_fields(value):
+    """ Move any fields that look like "{role}_field" into the extra_fields
+    list. These will be processed as fields. Rename them as {role}_expression.
+    """
+    if isinstance(value, dict):
+        keys_to_move = [k for k in value.keys() if k.endswith("_field")]
+        if keys_to_move:
+            value["extra_fields"] = []
+            for k in keys_to_move:
+                value["extra_fields"].append(
+                    {"name": k[:-6] + "_expression", "field": value.pop(k)}
+                )
+
+    return value
+
+
+parsed_condition_schema = S.String(required=True)
+
+labeled_parsed_condition_schema = S.Dict(
+    schema={"condition": parsed_condition_schema, "label": S.String(required=True)}
+)
+
+parsed_quickselect_schema = S.List(
+    required=False, schema=S.Dict(schema=labeled_parsed_condition_schema)
+)
+
+parsed_field_schema = S.String(required=True)
+
+parsed_format_schema = S.String(coerce=coerce_format, required=False)
+
+parsed_ingredient_schema_choices = {
+    "Metric": S.Dict(
+        schema={
+            "field": parsed_field_schema,
+            "format": parsed_format_schema,
+            "quickselects": parsed_quickselect_schema,
+        },
+        allow_unknown=True,
+    ),
+    "Dimension": S.Dict(
+        allow_unknown=True,
+        coerce=parsed_move_fields,
+        schema={
+            "field": parsed_field_schema,
+            "extra_fields": S.List(
+                required=False,
+                schema=S.Dict(
+                    schema={
+                        "field": parsed_field_schema,
+                        "name": S.String(required=True),
+                    }
+                ),
+            ),
+            "buckets": S.List(required=False, schema=labeled_parsed_condition_schema),
+            "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
+            "format": parsed_format_schema,
+            "quickselects": parsed_quickselect_schema,
+        },
+    ),
+    "Filter": S.Dict(allow_unknown=True, schema={"condition": parsed_condition_schema}),
+    "Having": S.Dict(allow_unknown=True, schema={"condition": parsed_condition_schema}),
+}
+
+parsed_ingredient_schema = S.Dict(
+    choose_schema=S.when_key_is(
+        "kind", parsed_ingredient_schema_choices, default_choice="Metric"
+    ),
+    registry={},
+)
+
+parsed_shelf_schema = S.Dict(
+    valueschema=parsed_ingredient_schema, keyschema=S.String(), coerce=pop_version
+)
+
+
+shelf_schema = S.Dict(
+    choose_schema=S.when_key_is(
+        "_version", {"1": shelf_schema_v1, "2": parsed_shelf_schema}, default_choice="1"
+    )
 )
 
 # This schema is used with sureberus

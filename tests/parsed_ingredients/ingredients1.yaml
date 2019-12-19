@@ -1,0 +1,21 @@
+first:
+    kind: Dimension
+    field: first
+last:
+    kind: Dimension
+    field: last
+age:
+    kind: Metric
+    field: age
+date_between:
+    kind: Metric
+    parsed_field: "if(birth_date between ['20 years ago', 'now'], age)"
+dt_between:
+    kind: Metric
+    field:
+        value: age
+        condition:
+            field: dt
+            between:
+            - 20 years ago
+            - now

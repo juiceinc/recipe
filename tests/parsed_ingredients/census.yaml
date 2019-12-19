@@ -1,0 +1,45 @@
+state:
+    kind: Dimension
+    parsed_field: state
+sex:
+    kind: Dimension
+    parsed_field: sex
+age:
+    kind: Dimension
+    parsed_field: age
+pop2000:
+    kind: Metric
+    parsed_field: pop2000
+pop2008:
+    kind: Metric
+    parsed_field: pop2008
+age_buckets:
+    kind: Dimension
+    parsed_field: age
+    buckets:
+    - label: 'babies'
+      parsed_condition: '<2'
+    - label: 'children'
+      parsed_condition: '<13'
+    - label: 'teens'
+      parsed_condition: '<20'
+    buckets_default_label: 'oldsters'
+mixed_buckets:
+    kind: Dimension
+    parsed_field: age
+    buckets:
+    - label: 'northeast'
+      parsed_condition: "state in ['Vermont', 'New Hampshire']"
+    - label: 'babies'
+      parsed_condition: '<2'
+    - label: 'children'
+      parsed_condition: '<13'
+    - label: 'teens'
+      parsed_condition: '<20'
+    buckets_default_label: 'oldsters'
+teenagers:
+    kind: Metric
+    parsed_field: "if(age between [13,19], pop2000)"
+ttlpop:
+    kind: Metric
+    parsed_field: pop2000 + pop2008

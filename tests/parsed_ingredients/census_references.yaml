@@ -1,0 +1,18 @@
+state:
+    kind: Dimension
+    parsed_field: state
+    lookup:
+        Vermont: "The Green Mountain State"
+        Tennessee: "The Volunteer State"
+pop2000:
+    kind: Metric
+    parsed_field: "if(age>40,pop2000)"
+pop2008:
+    kind: Metric
+    parsed_field: pop2008
+pop2008oldsters:
+    kind: Metric
+    parsed_field: "if(age>40,pop2008)"
+popdivide:
+    kind: Metric
+    parsed_field: "@pop2000 / @pop2008"
