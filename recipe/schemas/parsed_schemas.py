@@ -1,0 +1,288 @@
+import attr
+import logging
+from sureberus import schema as S
+from sureberus import errors as E
+
+from .utils import coerce_format, pop_version
+
+from lark import Lark, Transformer, v_args
+
+logging.captureWarnings(True)
+
+SCALAR_TYPES = [S.Integer(), S.String(), S.Float(), S.Boolean()]
+
+
+############################
+# PARSED
+# Shelf config _version="2" supports parsed fields.
+############################
+
+field_grammar = """
+    ?start:  expr | bool_expr | partial_relation_expr
+    ?expr: agex | sum                          -> expr
+    ?agex: aggr "(" sum ")"
+        | /count/i "(" STAR ")"                -> agex
+    ?aggr:  /(sum|min|max|avg|count)/i         -> aggregate
+    ?sum: product
+        | sum "+" product                      -> add
+        | sum "-" product                      -> sub
+    ?product: atom
+           | product "*" atom                  -> mul
+           | product "/" atom                  -> div
+    ?atom: agex
+           | const
+           | column
+           | case
+           | "(" sum ")"
+    ?column:  NAME                             -> column
+    ?const: NUMBER                             -> number
+            | ESCAPED_STRING                   -> literal
+            | /true/i                          -> true
+            | /false/i                         -> false
+            | /null/i                          -> null
+
+    // Pairs of boolean expressions and expressions
+    // forming case when {BOOL_EXPR} then {EXPR}
+    // an optional final expression is the else.T
+    ?case: "if" "(" (bool_expr "," expr)+ ("," expr)? ")"
+
+    // boolean expressions
+    ?bool_expr: bool_term ["OR" bool_term]
+    ?bool_term: bool_factor ["AND" bool_factor]
+    ?bool_factor: column
+                  | "NOT" bool_factor          -> not_bool_factor
+                  | "(" bool_expr ")"
+                  | relation_expr
+                  | vector_relation_expr
+    ?partial_relation_expr: comparator atom
+                | vector_comparator array
+                | BETWEEN pair_array
+    ?relation_expr:        atom comparator atom
+    ?vector_relation_expr: atom vector_comparator array
+                         | atom BETWEEN pair_array
+    ?pair_array:           "(" const "," const ")"      -> array
+    ?array:                "(" [const ("," const)*] ")"
+    ?comparator: EQ | NE | LT | LTE | GT | GTE
+    ?vector_comparator: IN | NOTIN
+    EQ: "="
+    NE: "!="
+    LT: "<"
+    LTE: "<="
+    GT: ">"
+    GTE: ">="
+    IN: /IN/i
+    NOTIN: /NOT/i /IN/i
+    BETWEEN: /BETWEEN/i
+    STAR: "*"
+    COMMENT: /#.*/
+
+    %import common.CNAME                       -> NAME
+    %import common.SIGNED_NUMBER               -> NUMBER
+    %import common.ESCAPED_STRING
+    %import common.WS_INLINE
+    %ignore COMMENT
+    %ignore WS_INLINE
+"""
+
+field_parser = Lark(field_grammar, parser="earley")
+
+
+def parsed_move_fields(value):
+    """ Move any fields that look like "{role}_field" into the extra_fields
+    list. These will be processed as fields. Rename them as {role}_expression.
+    """
+    if isinstance(value, dict):
+        keys_to_move = [k for k in value.keys() if k.endswith("_field")]
+        if keys_to_move:
+            value["extra_fields"] = []
+            for k in keys_to_move:
+                value["extra_fields"].append(
+                    {"name": k[:-6] + "_expression", "field": value.pop(k)}
+                )
+
+    return value
+
+
+def add_version(v):
+    # Add version to a parsed ingredient
+    v["_version"] = "2"
+    return v
+
+
+@attr.s
+class ParseValidator:
+    """A sureberus validator that checks that a field parses and matches
+    certain tokens"""
+
+    #: Message to display on failure
+    msg = attr.ib()
+    #: Must begin with one of these tokens
+    required_head_tokens = attr.ib(default=[])
+    #: Must not contain any of these tokens anywhere
+    forbidden_tokens = attr.ib(default=[])
+    #: Must contain at least one of these tokens
+    required_tokens = attr.ib(default=[])
+    other = attr.ib(default=None)
+
+    def __and__(self, other):
+        self.other = other
+        return self
+
+    def __call__(self, f, v, e):
+        """Check parsing"""
+        try:
+            tree = field_parser.parse(v)
+            failure_message = str(v) + " " + self.msg
+
+            if self.required_head_tokens:
+                if tree.data not in self.required_head_tokens:
+                    raise e(f, failure_message)
+            if self.forbidden_tokens:
+                for tok in self.forbidden_tokens:
+                    if list(tree.find_data(tok)):
+                        raise e(f, failure_message)
+            if self.required_tokens:
+                for tok in self.required_tokens:
+                    if not list(tree.find_data(tok)):
+                        raise e(f, failure_message)
+        except Exception as exc:
+            # A Lark error message raised when the value doesn't parse
+            raise exc
+
+        # Validate against the other
+        if self.other:
+            self.other(f, v, e)
+
+
+# Validators for the parsed
+validate_parses_with_agex = ParseValidator(
+    msg="must contain an aggregate expression", required_tokens=["agex"]
+)
+validate_parses_without_agex = ParseValidator(
+    msg="must not contain an aggregate expression", forbidden_tokens=["agex"]
+)
+validate_partial_or_full_condition = (
+    ParseValidator(
+        msg="must be a condition or partial condition",
+        required_head_tokens=[
+            "partial_relation_expr",
+            "bool_expr",
+            "bool_term",
+            "bool_factor",
+            "relation_expr",
+        ],
+    )
+    & validate_parses_without_agex
+)
+validate_condition = (
+    ParseValidator(
+        msg="must be a condition",
+        required_head_tokens=["bool_expr", "bool_term", "bool_factor", "relation_expr"],
+    )
+    & validate_parses_without_agex
+)
+validate_agex_condition = (
+    ParseValidator(
+        msg="must be a condition",
+        required_head_tokens=["bool_expr", "bool_term", "bool_factor", "relation_expr"],
+    )
+    & validate_parses_with_agex
+)
+
+
+parsed_condition_schema = S.String(required=True, validator=validate_condition)
+
+parsed_full_or_partial_condition_schema = S.String(
+    required=True, validator=validate_partial_or_full_condition
+)
+
+labeled_parsed_condition_schema = S.Dict(
+    schema={"condition": parsed_condition_schema, "label": S.String(required=True)}
+)
+
+parsed_quickselect_schema = S.List(
+    required=False, schema=S.Dict(schema=labeled_parsed_condition_schema)
+)
+
+parsed_agex_field_schema = S.String(required=True, validator=validate_parses_with_agex)
+
+parsed_noag_field_schema = S.String(
+    required=True, validator=validate_parses_without_agex
+)
+
+parsed_format_schema = S.String(coerce=coerce_format, required=False)
+
+parsed_metric_schema = S.Dict(
+    schema={
+        "field": parsed_agex_field_schema,
+        "format": parsed_format_schema,
+        "quickselects": parsed_quickselect_schema,
+    },
+    coerce_post=add_version,
+    allow_unknown=True,
+)
+
+parsed_dimension_schema = S.Dict(
+    allow_unknown=True,
+    coerce=parsed_move_fields,
+    coerce_post=add_version,
+    schema={
+        "field": parsed_noag_field_schema,
+        "extra_fields": S.List(
+            required=False,
+            schema=S.Dict(
+                schema={
+                    "field": parsed_noag_field_schema,
+                    "name": S.String(required=True),
+                }
+            ),
+        ),
+        "buckets": S.List(
+            required=False, schema=parsed_full_or_partial_condition_schema
+        ),
+        "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
+        "format": parsed_format_schema,
+        "quickselects": parsed_quickselect_schema,
+    },
+)
+
+parsed_filter_schema = S.Dict(
+    allow_unknown=True,
+    coerce_post=add_version,
+    schema={"condition": parsed_condition_schema},
+)
+
+parsed_having_schema = S.Dict(
+    allow_unknown=True,
+    coerce_post=add_version,
+    schema={"condition": parsed_condition_schema},
+)
+
+parsed_ingredient_schema_choices = {
+    "Metric": parsed_metric_schema,
+    "Dimension": parsed_dimension_schema,
+    "Filter": parsed_filter_schema,
+    "Having": parsed_having_schema,
+}
+
+
+parsed_ingredient_schema = S.Dict(
+    choose_schema=S.when_key_is(
+        "kind",
+        {
+            "Metric": parsed_metric_schema,
+            "Dimension": parsed_dimension_schema,
+            "Filter": parsed_filter_schema,
+            "Having": parsed_having_schema,
+        },
+        default_choice="Metric",
+    ),
+    registry={},
+)
+
+parsed_shelf_schema = S.Dict(
+    valueschema=parsed_ingredient_schema,
+    keyschema=S.String(),
+    coerce=pop_version,
+    allow_unknown=True,
+)

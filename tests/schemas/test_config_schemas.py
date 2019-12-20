@@ -6,12 +6,12 @@ import pytest
 from sureberus import errors as E
 from sureberus import normalize_schema
 
-from recipe.schemas import (
+from recipe.schemas.config_schemas import (
     aggregations,
     find_operators,
-    recipe_schema,
     shelf_schema,
 )
+from recipe.schemas import recipe_schema
 
 
 def test_field_parsing():
