@@ -6,8 +6,12 @@ import pytest
 from sureberus import errors as E
 from sureberus import normalize_schema
 
-from recipe.schemas import aggregations, find_operators, recipe_schema, shelf_schema, \
-    parsed_shelf_schema
+from recipe.schemas import (
+    aggregations,
+    find_operators,
+    recipe_schema,
+    shelf_schema,
+)
 
 
 def test_field_parsing():
@@ -35,12 +39,6 @@ def test_field_parsing():
     assert x == {
         "foo": {"field": {"aggregation": "max", "value": "a"}, "kind": "Metric"}
     }
-
-
-def test_field_parsed_field():
-    v = {"foo": {"kind": "Metric", "field": "foo"}, "_version": "2"}
-    x = normalize_schema(parsed_shelf_schema, v, allow_unknown=False)
-    assert x == {"foo": {"kind": "Metric", "field": "foo"}}
 
 
 def test_field_as():
@@ -913,3 +911,6 @@ class TestValidateRecipe(object):
                 "dimensions": ["bar"],
                 "filters": [{"field": "xyzzy", "gt": 3}],
             }
+
+
+

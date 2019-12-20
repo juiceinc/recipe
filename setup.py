@@ -38,6 +38,7 @@ install = [
     'faker',
     'dateparser',
     'attrs',
+    'lark-parser',
 ]
 # yapf: enable
 
