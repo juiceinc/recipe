@@ -47,6 +47,28 @@ def move_extra_fields(value):
     return value
 
 
+def replace_refs(shelf):
+    """Replace a reference in a field like @foo with the contents of foo's field"""
+    replacements = []
+    for k, v in shelf.items():
+        if "field" in v:
+            replacements.append(("@" + k, v["field"]))
+
+    # Sort in descending order of length then by k
+    replacements.sort(key=lambda k: (100 - len(k), k))
+
+    # Search for fields and replace with their replacements
+    for ingr in shelf.values():
+        for k in ingr.keys():
+            if k == "field" or k.endswith("_field"):
+                v = ingr[k]
+                if isinstance(v, string_types) and "@" in v:
+                    for search_for, replace_with in replacements:
+                        ingr[k] = ingr[k].replace(search_for, replace_with)
+
+    return shelf
+
+
 def _stringify(value):
     """Convert a value into a string that will parse"""
     if value is None:
@@ -241,6 +263,6 @@ ingredient_schema = S.Dict(
 shelf_schema = S.Dict(
     valueschema=ingredient_schema,
     keyschema=S.String(),
-    coerce=pop_version,
+    coerce=_chain(pop_version, replace_refs),
     allow_unknown=True,
 )

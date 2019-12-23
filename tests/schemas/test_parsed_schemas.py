@@ -107,7 +107,7 @@ test:
     assert result["test"]["field"] == 'if(moo>2,"foo",state in (1,2),"cow",NULL)'
     assert (
         result["test"]["extra_fields"][0]["field"]
-        == 'if(moo>2,0,state in (1,2),1,9999)'
+        == "if(moo>2,0,state in (1,2),1,9999)"
     )
 
     content = """
@@ -128,3 +128,22 @@ test:
         result["test"]["extra_fields"][0]["field"]
         == 'if(moo>"2",0,state in ("1", "2"),1,9999)'
     )
+
+
+def test_replace_refs():
+    """ Test that field references get replaced with the field value"""
+    content = """
+_version: "2"
+ttl:
+    kind: Metric
+    field: sum(moo)
+cnt:
+    kind: Metric
+    field: count(moo)
+avg:
+    kind: Metric
+    field: '@ttl / @cnt'
+"""
+    v = yaml.safe_load(content)
+    result = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert result["avg"]["field"] == "sum(moo) / count(moo)"
