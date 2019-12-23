@@ -56,7 +56,7 @@ def _stringify(value):
     elif value is False:
         return "FALSE"
     elif isinstance(value, string_types):
-        return "'" + value.replace("'", "'") + "'"
+        return '"' + value.replace('"', '\\"') + '"'
     else:
         return str(value)
 
@@ -68,12 +68,10 @@ def _convert_bucket_to_field(bucket, bucket_default_label, use_indices=False):
     partial conditions like '<5' to full conditions like 'age<5'
     with _convert_partial_conditions
     """
-
     parts, idx = [], 0
     for itm in bucket:
         cond = itm.get("condition")
         label = itm.get("label")
-
         parts.append(cond)
         if use_indices:
             parts.append(str(idx))
@@ -84,9 +82,9 @@ def _convert_bucket_to_field(bucket, bucket_default_label, use_indices=False):
 
     # Add the default value
     if use_indices:
-        parts.append(9999)
+        parts.append(str(9999))
     else:
-        parts.append(bucket_default_label)
+        parts.append(_stringify(bucket_default_label))
 
     return "if(" + ",".join(parts) + ")"
 
@@ -96,11 +94,13 @@ def _convert_partial_conditions(value):
     field = value.get("field")
     # Convert all bucket conditions to full conditions
     for itm in value.get("bucket", []):
-        if is_partial_condition(itm["condition"]):
+        tree = field_parser.parse(itm["condition"])
+        if is_partial_condition(tree):
             itm["condition"] = field + itm["condition"]
     # Convert all quickselects conditions to full conditions
     for itm in value.get("quickselects", []):
-        if is_partial_condition(itm["condition"]):
+        tree = field_parser.parse(itm["condition"])
+        if is_partial_condition(tree):
             itm["condition"] = field + itm["condition"]
     return value
 
@@ -113,8 +113,6 @@ def create_buckets(value):
         # Create a bucket
         if "extra_fields" not in value:
             value["extra_fields"] = []
-
-        field = value.get("field")
         bucket_field = _convert_bucket_to_field(bucket, bucket_default_label)
         bucket_order_by_field = _convert_bucket_to_field(
             bucket, bucket_default_label, use_indices=True

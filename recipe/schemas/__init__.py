@@ -1,12 +1,25 @@
 from sureberus import schema as S
-from .config_schemas import shelf_schema, _field_schema, _full_condition_schema, condition_schema, ingredient_schema
+from .config_schemas import (
+    shelf_schema,
+    _field_schema,
+    _full_condition_schema,
+    condition_schema,
+    ingredient_schema,
+)
 from .parsed_schemas import shelf_schema as parsed_shelf_schema
 from .utils import aggregations, sqlalchemy_datatypes
 
 
 shelf_schema = S.Dict(
     choose_schema=S.when_key_is(
-        "_version", {"1": shelf_schema, "2": parsed_shelf_schema}, default_choice="1"
+        "_version",
+        {
+            "1": shelf_schema,
+            1: shelf_schema,
+            "2": parsed_shelf_schema,
+            2: parsed_shelf_schema,
+        },
+        default_choice="1",
     )
 )
 

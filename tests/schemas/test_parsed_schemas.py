@@ -87,3 +87,44 @@ def test_move_extra_fields():
             "kind": "Dimension",
         }
     }
+
+
+def test_bucket():
+    """ Test that buckets get converted into fields"""
+    content = """
+_version: "2"
+test:
+    kind: Dimension
+    field: moo
+    bucket:
+    - label: foo
+      condition: ">2"
+    - label: cow
+      condition: "state in (1,2)"
+"""
+    v = yaml.safe_load(content)
+    result = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert result["test"]["field"] == 'if(moo>2,"foo",state in (1,2),"cow",NULL)'
+    assert (
+        result["test"]["extra_fields"][0]["field"]
+        == 'if(moo>2,0,state in (1,2),1,9999)'
+    )
+
+    content = """
+_version: "2"
+test:
+    kind: Dimension
+    field: moo
+    bucket:
+    - label: foo
+      condition:  '>"2"'
+    - label: cow
+      condition: 'state in ("1", "2")'
+"""
+    v = yaml.safe_load(content)
+    result = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert result["test"]["field"] == 'if(moo>"2","foo",state in ("1", "2"),"cow",NULL)'
+    assert (
+        result["test"]["extra_fields"][0]["field"]
+        == 'if(moo>"2",0,state in ("1", "2"),1,9999)'
+    )
