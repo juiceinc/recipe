@@ -39,7 +39,7 @@ def move_extra_fields(value):
         keys_to_move = [k for k in value.keys() if k.endswith("_field")]
         if keys_to_move:
             value["extra_fields"] = []
-            for k in keys_to_move:
+            for k in sorted(keys_to_move):
                 value["extra_fields"].append(
                     {"name": k[:-6] + "_expression", "field": value.pop(k)}
                 )
