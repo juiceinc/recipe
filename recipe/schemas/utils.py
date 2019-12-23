@@ -1,8 +1,20 @@
+import attr
 import inspect
 from sqlalchemy import distinct, func
 from sureberus import schema as S
 
 SCALAR_TYPES = [S.Integer(), S.String(), S.Float(), S.Boolean()]
+
+
+def _chain(*args):
+    """Chain several coercers together"""
+
+    def fn(value):
+        for arg in args:
+            value = arg(value)
+        return value
+
+    return fn
 
 
 def _make_sqlalchemy_datatype_lookup():
@@ -32,8 +44,10 @@ format_lookup = {
     "percent2": ".2%",
 }
 
+
 def coerce_format(v):
     return format_lookup.get(v, v)
+
 
 aggregations = {
     "sum": func.sum,
@@ -66,3 +80,49 @@ aggregations = {
 def pop_version(d):
     d.pop("_version", None)
     return d
+
+
+@attr.s
+class TreeTester:
+    """Test that a parse tree contains certain tokens returning boolean."""
+
+    #: Must begin with one of these tokens
+    required_head_token = attr.ib(default=[])
+    #: Must not contain any of these tokens anywhere
+    forbidden_tokens = attr.ib(default=[])
+    #: Must contain at least one of these tokens
+    required_tokens = attr.ib(default=[])
+    and_other = attr.ib(default=None)
+    or_other = attr.ib(default=None)
+
+    def __and__(self, other):
+        self.and_other = other
+        return self
+
+    def __or__(self, other):
+        self.or_other = other
+        return self
+
+    def __call__(self, tree):
+        result = True
+        if self.required_head_token:
+            if tree.data not in self.required_head_token:
+                result = False
+        if result and self.forbidden_tokens:
+            for tok in self.forbidden_tokens:
+                if list(tree.find_data(tok)):
+                    result = False
+                    break
+        if result and self.required_tokens:
+            for tok in self.required_tokens:
+                if not list(tree.find_data(tok)):
+                    result = False
+                    break
+
+        if result and self.and_other:
+            result = result and self.and_other(tree)
+
+        if not result and self.or_other:
+            result = result or self.or_other(tree)
+
+        return result

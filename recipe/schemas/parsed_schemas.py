@@ -1,92 +1,34 @@
+"""Shelf config _version="2" supports parsed fields using a lark parser."""
 import attr
 from six import string_types
 import logging
 from sureberus import schema as S
-from sureberus import errors as E
 
-from .utils import coerce_format, pop_version
-
-from lark import Lark, Transformer, v_args
+from .utils import coerce_format, pop_version, _chain, TreeTester, SCALAR_TYPES
+from .field_grammar import field_parser
 
 logging.captureWarnings(True)
 
-SCALAR_TYPES = [S.Integer(), S.String(), S.Float(), S.Boolean()]
 
+@attr.s
+class ParseValidator:
+    """A sureberus validator that checks that a field parses and matches
+    certain tokens"""
 
-############################
-# PARSED
-# Shelf config _version="2" supports parsed fields.
-############################
+    #: Message to display on failure
+    msg = attr.ib()
+    tester = attr.ib()
 
-field_grammar = """
-    ?start:  expr | bool_expr | partial_relation_expr
-    ?expr: agex | sum                          -> expr
-    ?agex: aggr "(" sum ")"
-        | /count/i "(" STAR ")"                -> agex
-    ?aggr:  /(sum|min|max|avg|count)/i         -> aggregate
-    ?sum: product
-        | sum "+" product                      -> add
-        | sum "-" product                      -> sub
-    ?product: atom
-           | product "*" atom                  -> mul
-           | product "/" atom                  -> div
-    ?atom: agex
-           | const
-           | column
-           | case
-           | "(" sum ")"
-    ?column:  NAME                             -> column
-    ?const: NUMBER                             -> number
-            | ESCAPED_STRING                   -> literal
-            | /true/i                          -> true
-            | /false/i                         -> false
-            | /null/i                          -> null
-
-    // Pairs of boolean expressions and expressions
-    // forming case when {BOOL_EXPR} then {EXPR}
-    // an optional final expression is the else.T
-    ?case: "if" "(" (bool_expr "," expr)+ ("," expr)? ")"
-
-    // boolean expressions
-    ?bool_expr: bool_term ["OR" bool_term]
-    ?bool_term: bool_factor ["AND" bool_factor]
-    ?bool_factor: column
-                  | "NOT" bool_factor          -> not_bool_factor
-                  | "(" bool_expr ")"
-                  | relation_expr
-                  | vector_relation_expr
-    ?partial_relation_expr: comparator atom
-                | vector_comparator array
-                | BETWEEN pair_array
-    ?relation_expr:        atom comparator atom
-    ?vector_relation_expr: atom vector_comparator array
-                         | atom BETWEEN pair_array
-    ?pair_array:           "(" const "," const ")"      -> array
-    ?array:                "(" [const ("," const)*] ")"
-    ?comparator: EQ | NE | LT | LTE | GT | GTE
-    ?vector_comparator: IN | NOTIN
-    EQ: "="
-    NE: "!="
-    LT: "<"
-    LTE: "<="
-    GT: ">"
-    GTE: ">="
-    IN: /IN/i
-    NOTIN: /NOT/i /IN/i
-    BETWEEN: /BETWEEN/i
-    STAR: "*"
-    COMMENT: /#.*/
-
-    %import common.CNAME                       -> NAME
-    %import common.SIGNED_NUMBER               -> NUMBER
-    %import common.ESCAPED_STRING
-    %import common.WS_INLINE
-    %ignore COMMENT
-    %ignore WS_INLINE
-"""
-
-
-field_parser = Lark(field_grammar, parser="earley")
+    def __call__(self, f, v, e):
+        """Check parsing"""
+        try:
+            tree = field_parser.parse(v)
+            if not self.tester(tree):
+                failure_message = str(v) + " " + self.msg
+                raise e(f, failure_message)
+        except Exception as exc:
+            # A Lark error message raised when the value doesn't parse
+            raise exc
 
 
 def move_extra_fields(value):
@@ -103,17 +45,6 @@ def move_extra_fields(value):
                 )
 
     return value
-
-
-def _chain(*args):
-    """Chain several coercers together"""
-
-    def fn(value):
-        for arg in args:
-            value = arg(value)
-        return value
-
-    return fn
 
 
 def _stringify(value):
@@ -202,75 +133,7 @@ def add_version(v):
     return v
 
 
-@attr.s
-class TreeTester:
-    """Test that a parse tree contains certain tokens returning boolean."""
-
-    #: Must begin with one of these tokens
-    required_head_token = attr.ib(default=[])
-    #: Must not contain any of these tokens anywhere
-    forbidden_tokens = attr.ib(default=[])
-    #: Must contain at least one of these tokens
-    required_tokens = attr.ib(default=[])
-    and_other = attr.ib(default=None)
-    or_other = attr.ib(default=None)
-
-    def __and__(self, other):
-        self.and_other = other
-        return self
-
-    def __or__(self, other):
-        self.or_other = other
-        return self
-
-    def __call__(self, tree):
-        result = True
-        if self.required_head_token:
-            if tree.data not in self.required_head_token:
-                result = False
-        if result and self.forbidden_tokens:
-            for tok in self.forbidden_tokens:
-                if list(tree.find_data(tok)):
-                    result = False
-                    break
-        if result and self.required_tokens:
-            for tok in self.required_tokens:
-                if not list(tree.find_data(tok)):
-                    result = False
-                    break
-
-        if result and self.and_other:
-            result = result and self.and_other(tree)
-
-        if not result and self.or_other:
-            result = result or self.or_other(tree)
-
-        return result
-
-
-@attr.s
-class ParseValidator:
-    """A sureberus validator that checks that a field parses and matches
-    certain tokens"""
-
-    #: Message to display on failure
-    msg = attr.ib()
-    tester = attr.ib()
-
-    def __call__(self, f, v, e):
-        """Check parsing"""
-        try:
-            tree = field_parser.parse(v)
-            if not self.tester(tree):
-                failure_message = str(v) + " " + self.msg
-                raise e(f, failure_message)
-        except Exception as exc:
-            # A Lark error message raised when the value doesn't parse
-            raise exc
-
-
-# Testers for parsed fields and conditions
-# These test the fields parse and match certain conditions
+# Test the fields parse and match certain conditions
 is_agex = TreeTester(required_tokens=["agex"])
 is_no_agex = TreeTester(forbidden_tokens=["agex"])
 is_any_condition = TreeTester(
@@ -307,8 +170,7 @@ validate_condition = ParseValidator(
     tester=is_full_condition_no_agex,
 )
 validate_agex_condition = ParseValidator(
-    msg="must be a condition and include an aggregation",
-    tester=is_full_condition_agex,
+    msg="must be a condition and include an aggregation", tester=is_full_condition_agex
 )
 
 
