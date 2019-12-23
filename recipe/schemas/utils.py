@@ -78,7 +78,7 @@ aggregations = {
 }
 
 
-def pop_version(shelf):
+def coerce_pop_version(shelf):
     shelf.pop("_version", None)
     return shelf
 

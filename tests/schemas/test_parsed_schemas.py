@@ -143,7 +143,35 @@ cnt:
 avg:
     kind: Metric
     field: '@ttl / @cnt'
+city:
+    kind: Dimension
+    field: city
+city_lat:
+    kind: Dimension
+    field: lat
+city_lng:
+    kind: Dimension
+    field: lng
+city_place:
+    kind: Dimension
+    field: '@city'
+    latitude_field: '@city_lat'
+    longitude_field: '@city_lng'
 """
     v = yaml.safe_load(content)
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
+
+    # THIS IS FAILING
+    from pprint import pprint
+    pprint(result["city_place"])
+
     assert result["avg"]["field"] == "sum(moo) / count(moo)"
+    assert result["city_place"] == {
+        "_version": "2",
+        "extra_fields": [
+            {"field": "lat", "name": "latitude_expression"},
+            {"field": "lng", "name": "longitude_expression"},
+        ],
+        "field": "city",
+        "kind": "Dimension",
+    }

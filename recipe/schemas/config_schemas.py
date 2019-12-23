@@ -13,7 +13,7 @@ from .utils import (
     coerce_format,
     aggregations,
     SCALAR_TYPES,
-    pop_version,
+    coerce_pop_version,
 )
 
 logging.captureWarnings(True)
@@ -482,6 +482,6 @@ shelf_schema = S.Dict(
     valueschema=ingredient_schema,
     keyschema=S.String(),
     allow_unknown=True,
-    coerce=pop_version,
+    coerce=coerce_pop_version,
     coerce_post=_replace_references,
 )

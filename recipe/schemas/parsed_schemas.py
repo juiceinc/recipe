@@ -4,7 +4,7 @@ from six import string_types
 import logging
 from sureberus import schema as S
 
-from .utils import coerce_format, pop_version, _chain, TreeTester, SCALAR_TYPES
+from .utils import coerce_format, coerce_pop_version, _chain, TreeTester, SCALAR_TYPES
 from .field_grammar import field_parser
 
 logging.captureWarnings(True)
@@ -47,7 +47,7 @@ def move_extra_fields(value):
     return value
 
 
-def replace_refs(shelf):
+def coerce_replace_refs(shelf):
     """Replace a reference in a field like @foo with the contents of foo's field"""
     replacements = []
     for k, v in shelf.items():
@@ -263,6 +263,6 @@ ingredient_schema = S.Dict(
 shelf_schema = S.Dict(
     valueschema=ingredient_schema,
     keyschema=S.String(),
-    coerce=_chain(pop_version, replace_refs),
+    coerce=_chain(coerce_pop_version, coerce_replace_refs),
     allow_unknown=True,
 )
