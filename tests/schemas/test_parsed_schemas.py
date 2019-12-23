@@ -7,22 +7,32 @@ from sureberus import normalize_schema
 from recipe.schemas import shelf_schema
 
 
-def test_field_parsing():
+def test_valid_field_parsing():
+    values = [
+        "sum(foo)",
+        "min(foo)",
+        "max(foo+moo)",
+        "sum(foo + moo) / sum(b)",
+        "sum(fo\t+\tnext)",
+    ]
+    for _ in values:
+        v = {"foo": {"kind": "Metric", "field": _}, "_version": "2"}
+        x = normalize_schema(shelf_schema, v, allow_unknown=False)
+        assert x == {"foo": {"kind": "Metric", "field": _, "_version": "2"}}
 
-    v = {"foo": {"kind": "Metric", "field": "sum(foo)"}, "_version": "2"}
-    x = normalize_schema(shelf_schema, v, allow_unknown=False)
-    assert x == {"foo": {"kind": "Metric", "field": "sum(foo)", "_version": "2"}}
 
+def test_invalid_field_parsing():
+    values = [
+        ("fo(", "No terminal defined for '('"),
+        ("fo)", "Expecting:"),
+        ("foo", "must contain an aggregate expression"),
+    ]
 
-def test_field_parsing_bad_parse():
-    v = {"foo": {"kind": "Metric", "field": "fo("}, "_version": "2"}
-    with pytest.raises(E.SureError) as excinfo:
-        normalize_schema(shelf_schema, v, allow_unknown=False)
-    assert "No terminal defined for '('" in str(excinfo.value)
+    for _, msg in values:
+        v = {"foo": {"kind": "Metric", "field": _}, "_version": "2"}
+        with pytest.raises(E.SureError) as excinfo:
+            normalize_schema(shelf_schema, v, allow_unknown=False)
 
-
-def test_field_parsing_no_aggregate():
-    v = {"foo": {"kind": "Metric", "field": "foo"}, "_version": "2"}
-    with pytest.raises(E.SureError) as excinfo:
-        normalize_schema(shelf_schema, v, allow_unknown=False)
-    assert "must contain an aggregate expression" in str(excinfo.value)
+        print("\n" + _)
+        print(str(excinfo.value))
+        assert msg in str(excinfo.value)

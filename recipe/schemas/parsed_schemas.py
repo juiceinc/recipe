@@ -1,4 +1,5 @@
 import attr
+from six import string_types
 import logging
 from sureberus import schema as S
 from sureberus import errors as E
@@ -88,7 +89,7 @@ field_grammar = """
 field_parser = Lark(field_grammar, parser="earley")
 
 
-def parsed_move_fields(value):
+def move_extra_fields(value):
     """ Move any fields that look like "{role}_field" into the extra_fields
     list. These will be processed as fields. Rename them as {role}_expression.
     """
@@ -104,6 +105,97 @@ def parsed_move_fields(value):
     return value
 
 
+def _chain(*args):
+    """Chain several coercers together"""
+
+    def fn(value):
+        for arg in args:
+            value = arg(value)
+        return value
+
+    return fn
+
+
+def _stringify(value):
+    """Convert a value into a string that will parse"""
+    if value is None:
+        return "NULL"
+    elif value is True:
+        return "TRUE"
+    elif value is False:
+        return "FALSE"
+    elif isinstance(value, string_types):
+        return "'" + value.replace("'", "'") + "'"
+    else:
+        return str(value)
+
+
+def _convert_bucket_to_field(bucket, bucket_default_label, use_indices=False):
+    """Convert a bucket structure to a field structure.
+
+    This assumes that all conditions have been converted from
+    partial conditions like '<5' to full conditions like 'age<5'
+    with _convert_partial_conditions
+    """
+
+    parts, idx = [], 0
+    for itm in bucket:
+        cond = itm.get("condition")
+        label = itm.get("label")
+
+        parts.append(cond)
+        if use_indices:
+            parts.append(str(idx))
+        else:
+            # Stringify the label
+            parts.append(_stringify(label))
+        idx += 1
+
+    # Add the default value
+    if use_indices:
+        parts.append(9999)
+    else:
+        parts.append(bucket_default_label)
+
+    return "if(" + ",".join(parts) + ")"
+
+
+def _convert_partial_conditions(value):
+    """Convert all partial conditions to full conditions."""
+    field = value.get("field")
+    # Convert all bucket conditions to full conditions
+    for itm in value.get("bucket", []):
+        if is_partial_condition(itm["condition"]):
+            itm["condition"] = field + itm["condition"]
+    # Convert all quickselects conditions to full conditions
+    for itm in value.get("quickselects", []):
+        if is_partial_condition(itm["condition"]):
+            itm["condition"] = field + itm["condition"]
+    return value
+
+
+def create_buckets(value):
+    """If a validated bucket exists, convert it into a field and extra order by field."""
+    bucket = value.pop("bucket", None)
+    bucket_default_label = value.pop("buckets_default_label", None)
+    if bucket:
+        # Create a bucket
+        if "extra_fields" not in value:
+            value["extra_fields"] = []
+
+        field = value.get("field")
+        bucket_field = _convert_bucket_to_field(bucket, bucket_default_label)
+        bucket_order_by_field = _convert_bucket_to_field(
+            bucket, bucket_default_label, use_indices=True
+        )
+        value["field"] = bucket_field
+        value["extra_fields"].append(
+            {"name": "order_by_expression", "field": bucket_order_by_field}
+        )
+        pass
+    return value
+
+
 def add_version(v):
     # Add version to a parsed ingredient
     v["_version"] = "2"
@@ -112,11 +204,10 @@ def add_version(v):
 
 @attr.s
 class TreeTester:
-    """Test that a parse tree contains certain tokens returning boolean
-    """
+    """Test that a parse tree contains certain tokens returning boolean."""
 
     #: Must begin with one of these tokens
-    required_head_tokens = attr.ib(default=[])
+    required_head_token = attr.ib(default=[])
     #: Must not contain any of these tokens anywhere
     forbidden_tokens = attr.ib(default=[])
     #: Must contain at least one of these tokens
@@ -134,8 +225,8 @@ class TreeTester:
 
     def __call__(self, tree):
         result = True
-        if self.required_head_tokens:
-            if tree.data not in self.required_head_tokens:
+        if self.required_head_token:
+            if tree.data not in self.required_head_token:
                 result = False
         if result and self.forbidden_tokens:
             for tok in self.forbidden_tokens:
@@ -180,10 +271,10 @@ class ParseValidator:
 
 # Testers for parsed fields and conditions
 # These test the fields parse and match certain conditions
-test_agex = TreeTester(required_tokens=["agex"])
-test_no_agex = TreeTester(forbidden_tokens=["agex"])
-test_any_condition = TreeTester(
-    required_head_tokens=[
+is_agex = TreeTester(required_tokens=["agex"])
+is_no_agex = TreeTester(forbidden_tokens=["agex"])
+is_any_condition = TreeTester(
+    required_head_token=[
         "partial_relation_expr",
         "bool_expr",
         "bool_term",
@@ -191,35 +282,37 @@ test_any_condition = TreeTester(
         "relation_expr",
     ]
 )
-test_full_condition = TreeTester(
-    required_head_tokens=["bool_expr", "bool_term", "bool_factor", "relation_expr"]
+is_partial_condition = TreeTester(required_head_token=["partial_relation_expr"])
+is_full_condition = TreeTester(
+    required_head_token=["bool_expr", "bool_term", "bool_factor", "relation_expr"]
 )
-test_any_condition_no_agex = test_any_condition & test_no_agex
-test_full_condition_no_agex = test_full_condition & test_no_agex
-test_full_condition_agex = test_full_condition & test_agex
+is_any_condition_no_agex = is_any_condition & is_no_agex
+is_full_condition_no_agex = is_full_condition & is_no_agex
+is_full_condition_agex = is_full_condition & is_agex
 
 
 # Sureberus validators that use the testers
 validate_parses_with_agex = ParseValidator(
-    msg="must contain an aggregate expression", tester=test_agex
+    msg="must contain an aggregate expression", tester=is_agex
 )
 validate_parses_without_agex = ParseValidator(
-    msg="must not contain an aggregate expression", tester=test_no_agex
+    msg="must not contain an aggregate expression", tester=is_no_agex
 )
 validate_any_condition = ParseValidator(
     msg="must be a condition or partial condition and not include an aggregation",
-    tester=test_any_condition_no_agex,
+    tester=is_any_condition_no_agex,
 )
 validate_condition = ParseValidator(
     msg="must be a condition and not include an aggregation",
-    tester=test_full_condition_no_agex,
+    tester=is_full_condition_no_agex,
 )
 validate_agex_condition = ParseValidator(
     msg="must be a condition and include an aggregation",
-    tester=test_full_condition_agex,
+    tester=is_full_condition_agex,
 )
 
 
+# Schemas
 agex_field_schema = S.String(required=True, validator=validate_parses_with_agex)
 
 noag_field_schema = S.String(required=True, validator=validate_parses_without_agex)
@@ -240,14 +333,14 @@ metric_schema = S.Dict(
         "format": format_schema,
         "quickselects": S.List(required=False, schema=labeled_condition_schema),
     },
-    coerce_post=add_version,
+    coerce_post=_chain(_convert_partial_conditions, add_version),
     allow_unknown=True,
 )
 
 dimension_schema = S.Dict(
     allow_unknown=True,
-    coerce=parsed_move_fields,
-    coerce_post=add_version,
+    coerce=move_extra_fields,
+    coerce_post=_chain(_convert_partial_conditions, create_buckets, add_version),
     schema={
         "field": noag_field_schema,
         "extra_fields": S.List(
