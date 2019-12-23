@@ -8,7 +8,13 @@ import re
 from copy import copy
 from sureberus import schema as S
 from recipe.compat import basestring
-from .utils import sqlalchemy_datatypes, coerce_format, aggregations, SCALAR_TYPES, pop_version
+from .utils import (
+    sqlalchemy_datatypes,
+    coerce_format,
+    aggregations,
+    SCALAR_TYPES,
+    pop_version,
+)
 
 logging.captureWarnings(True)
 

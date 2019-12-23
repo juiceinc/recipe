@@ -84,6 +84,7 @@ field_grammar = """
     %ignore WS_INLINE
 """
 
+
 field_parser = Lark(field_grammar, parser="earley")
 
 
@@ -110,178 +111,182 @@ def add_version(v):
 
 
 @attr.s
-class ParseValidator:
-    """A sureberus validator that checks that a field parses and matches
-    certain tokens"""
+class TreeTester:
+    """Test that a parse tree contains certain tokens returning boolean
+    """
 
-    #: Message to display on failure
-    msg = attr.ib()
     #: Must begin with one of these tokens
     required_head_tokens = attr.ib(default=[])
     #: Must not contain any of these tokens anywhere
     forbidden_tokens = attr.ib(default=[])
     #: Must contain at least one of these tokens
     required_tokens = attr.ib(default=[])
-    other = attr.ib(default=None)
+    and_other = attr.ib(default=None)
+    or_other = attr.ib(default=None)
 
     def __and__(self, other):
-        self.other = other
+        self.and_other = other
         return self
+
+    def __or__(self, other):
+        self.or_other = other
+        return self
+
+    def __call__(self, tree):
+        result = True
+        if self.required_head_tokens:
+            if tree.data not in self.required_head_tokens:
+                result = False
+        if result and self.forbidden_tokens:
+            for tok in self.forbidden_tokens:
+                if list(tree.find_data(tok)):
+                    result = False
+                    break
+        if result and self.required_tokens:
+            for tok in self.required_tokens:
+                if not list(tree.find_data(tok)):
+                    result = False
+                    break
+
+        if result and self.and_other:
+            result = result and self.and_other(tree)
+
+        if not result and self.or_other:
+            result = result or self.or_other(tree)
+
+        return result
+
+
+@attr.s
+class ParseValidator:
+    """A sureberus validator that checks that a field parses and matches
+    certain tokens"""
+
+    #: Message to display on failure
+    msg = attr.ib()
+    tester = attr.ib()
 
     def __call__(self, f, v, e):
         """Check parsing"""
         try:
             tree = field_parser.parse(v)
-            failure_message = str(v) + " " + self.msg
-
-            if self.required_head_tokens:
-                if tree.data not in self.required_head_tokens:
-                    raise e(f, failure_message)
-            if self.forbidden_tokens:
-                for tok in self.forbidden_tokens:
-                    if list(tree.find_data(tok)):
-                        raise e(f, failure_message)
-            if self.required_tokens:
-                for tok in self.required_tokens:
-                    if not list(tree.find_data(tok)):
-                        raise e(f, failure_message)
+            if not self.tester(tree):
+                failure_message = str(v) + " " + self.msg
+                raise e(f, failure_message)
         except Exception as exc:
             # A Lark error message raised when the value doesn't parse
             raise exc
 
-        # Validate against the other
-        if self.other:
-            self.other(f, v, e)
+
+# Testers for parsed fields and conditions
+# These test the fields parse and match certain conditions
+test_agex = TreeTester(required_tokens=["agex"])
+test_no_agex = TreeTester(forbidden_tokens=["agex"])
+test_any_condition = TreeTester(
+    required_head_tokens=[
+        "partial_relation_expr",
+        "bool_expr",
+        "bool_term",
+        "bool_factor",
+        "relation_expr",
+    ]
+)
+test_full_condition = TreeTester(
+    required_head_tokens=["bool_expr", "bool_term", "bool_factor", "relation_expr"]
+)
+test_any_condition_no_agex = test_any_condition & test_no_agex
+test_full_condition_no_agex = test_full_condition & test_no_agex
+test_full_condition_agex = test_full_condition & test_agex
 
 
-# Validators for the parsed
+# Sureberus validators that use the testers
 validate_parses_with_agex = ParseValidator(
-    msg="must contain an aggregate expression", required_tokens=["agex"]
+    msg="must contain an aggregate expression", tester=test_agex
 )
 validate_parses_without_agex = ParseValidator(
-    msg="must not contain an aggregate expression", forbidden_tokens=["agex"]
+    msg="must not contain an aggregate expression", tester=test_no_agex
 )
-validate_partial_or_full_condition = (
-    ParseValidator(
-        msg="must be a condition or partial condition",
-        required_head_tokens=[
-            "partial_relation_expr",
-            "bool_expr",
-            "bool_term",
-            "bool_factor",
-            "relation_expr",
-        ],
-    )
-    & validate_parses_without_agex
+validate_any_condition = ParseValidator(
+    msg="must be a condition or partial condition and not include an aggregation",
+    tester=test_any_condition_no_agex,
 )
-validate_condition = (
-    ParseValidator(
-        msg="must be a condition",
-        required_head_tokens=["bool_expr", "bool_term", "bool_factor", "relation_expr"],
-    )
-    & validate_parses_without_agex
+validate_condition = ParseValidator(
+    msg="must be a condition and not include an aggregation",
+    tester=test_full_condition_no_agex,
 )
-validate_agex_condition = (
-    ParseValidator(
-        msg="must be a condition",
-        required_head_tokens=["bool_expr", "bool_term", "bool_factor", "relation_expr"],
-    )
-    & validate_parses_with_agex
+validate_agex_condition = ParseValidator(
+    msg="must be a condition and include an aggregation",
+    tester=test_full_condition_agex,
 )
 
 
-parsed_condition_schema = S.String(required=True, validator=validate_condition)
+agex_field_schema = S.String(required=True, validator=validate_parses_with_agex)
 
-parsed_full_or_partial_condition_schema = S.String(
-    required=True, validator=validate_partial_or_full_condition
+noag_field_schema = S.String(required=True, validator=validate_parses_without_agex)
+
+condition_schema = S.String(required=True, validator=validate_condition)
+
+any_condition_schema = S.String(required=True, validator=validate_any_condition)
+
+labeled_condition_schema = S.Dict(
+    schema={"condition": condition_schema, "label": S.String(required=True)}
 )
 
-labeled_parsed_condition_schema = S.Dict(
-    schema={"condition": parsed_condition_schema, "label": S.String(required=True)}
-)
+format_schema = S.String(coerce=coerce_format, required=False)
 
-parsed_quickselect_schema = S.List(
-    required=False, schema=S.Dict(schema=labeled_parsed_condition_schema)
-)
-
-parsed_agex_field_schema = S.String(required=True, validator=validate_parses_with_agex)
-
-parsed_noag_field_schema = S.String(
-    required=True, validator=validate_parses_without_agex
-)
-
-parsed_format_schema = S.String(coerce=coerce_format, required=False)
-
-parsed_metric_schema = S.Dict(
+metric_schema = S.Dict(
     schema={
-        "field": parsed_agex_field_schema,
-        "format": parsed_format_schema,
-        "quickselects": parsed_quickselect_schema,
+        "field": agex_field_schema,
+        "format": format_schema,
+        "quickselects": S.List(required=False, schema=labeled_condition_schema),
     },
     coerce_post=add_version,
     allow_unknown=True,
 )
 
-parsed_dimension_schema = S.Dict(
+dimension_schema = S.Dict(
     allow_unknown=True,
     coerce=parsed_move_fields,
     coerce_post=add_version,
     schema={
-        "field": parsed_noag_field_schema,
+        "field": noag_field_schema,
         "extra_fields": S.List(
             required=False,
             schema=S.Dict(
-                schema={
-                    "field": parsed_noag_field_schema,
-                    "name": S.String(required=True),
-                }
+                schema={"field": noag_field_schema, "name": S.String(required=True)}
             ),
         ),
-        "buckets": S.List(
-            required=False, schema=parsed_full_or_partial_condition_schema
-        ),
+        "buckets": S.List(required=False, schema=labeled_condition_schema),
         "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
-        "format": parsed_format_schema,
-        "quickselects": parsed_quickselect_schema,
+        "format": format_schema,
+        "quickselects": S.List(required=False, schema=labeled_condition_schema),
     },
 )
 
-parsed_filter_schema = S.Dict(
-    allow_unknown=True,
-    coerce_post=add_version,
-    schema={"condition": parsed_condition_schema},
+filter_schema = S.Dict(
+    allow_unknown=True, coerce_post=add_version, schema={"condition": condition_schema}
 )
 
-parsed_having_schema = S.Dict(
-    allow_unknown=True,
-    coerce_post=add_version,
-    schema={"condition": parsed_condition_schema},
+having_schema = S.Dict(
+    allow_unknown=True, coerce_post=add_version, schema={"condition": condition_schema}
 )
 
-parsed_ingredient_schema_choices = {
-    "Metric": parsed_metric_schema,
-    "Dimension": parsed_dimension_schema,
-    "Filter": parsed_filter_schema,
-    "Having": parsed_having_schema,
-}
-
-
-parsed_ingredient_schema = S.Dict(
+ingredient_schema = S.Dict(
     choose_schema=S.when_key_is(
         "kind",
         {
-            "Metric": parsed_metric_schema,
-            "Dimension": parsed_dimension_schema,
-            "Filter": parsed_filter_schema,
-            "Having": parsed_having_schema,
+            "Metric": metric_schema,
+            "Dimension": dimension_schema,
+            "Filter": filter_schema,
+            "Having": having_schema,
         },
         default_choice="Metric",
     ),
     registry={},
 )
 
-parsed_shelf_schema = S.Dict(
-    valueschema=parsed_ingredient_schema,
+shelf_schema = S.Dict(
+    valueschema=ingredient_schema,
     keyschema=S.String(),
     coerce=pop_version,
     allow_unknown=True,

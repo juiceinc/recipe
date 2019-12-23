@@ -35,7 +35,6 @@ def test_field_parsing():
 
     v = {"foo": {"kind": "Metric", "field": "max(a)"}, "_version": "1"}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
-    print(x)
     assert x == {
         "foo": {"field": {"aggregation": "max", "value": "a"}, "kind": "Metric"}
     }

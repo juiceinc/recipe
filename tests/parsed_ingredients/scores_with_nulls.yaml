@@ -20,9 +20,7 @@ department_lookup_with_null:
         null: 'can not find department'
 department_lookup_with_everything:
     kind: Dimension
-    field:
-        value: department
-        default: 'N/A'
+    field: "coalesce(department, 'N/A')"
     lookup:
         sales: Sales
         ops: Operations
@@ -33,21 +31,16 @@ department_buckets:
     field: department
     buckets:
     - label: 'Sales'
-      eq: 'sales'
+      condition: "='sales'"
     - label: 'Operations'
-      eq: 'ops'
+      condition: "='ops'"
     buckets_default_label: 'Other'
 department_default:
     kind: Dimension
-    field:
-        value: department
-        default: 'N/A'
+    field: "coalesce(department, 'N/A')"
 score:
     kind: Metric
     field: avg(score)
 score_with_default:
     kind: Metric
-    field:
-        aggregation: avg
-        value: score
-        default: -1.0
+    field: "avg(coalesce(score,-1.0))"
