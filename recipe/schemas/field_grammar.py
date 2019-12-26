@@ -1,29 +1,8 @@
 from lark import Lark, Transformer, v_args
 
-field_grammar = """
-    ?start:  expr | bool_expr | partial_relation_expr
-    ?expr: agex | sum                          -> expr
-    ?agex: aggr "(" sum ")"
-        | /count/i "(" STAR ")"                -> agex
-    ?aggr:  /(sum|min|max|avg|count)/i         -> aggregate
-    ?sum: product
-        | sum "+" product                      -> add
-        | sum "-" product                      -> sub
-    ?product: atom
-           | product "*" atom                  -> mul
-           | product "/" atom                  -> div
-    ?atom: agex
-           | const
-           | column
-           | case
-           | "(" sum ")"
-    ?column:  NAME                             -> column
-    ?const: NUMBER                             -> number
-            | ESCAPED_STRING                   -> literal
-            | /true/i                          -> true
-            | /false/i                         -> false
-            | /null/i                          -> null
 
+# Grammar for boolean expressions
+boolean_expr_grammar = """
     // Pairs of boolean expressions and expressions
     // forming case when {BOOL_EXPR} then {EXPR}
     // an optional final expression is the else.T
@@ -33,7 +12,7 @@ field_grammar = """
     ?bool_expr: bool_term ["OR" bool_term]
     ?bool_term: bool_factor ["AND" bool_factor]
     ?bool_factor: column
-                  | "NOT" bool_factor          -> not_bool_factor
+                  | NOT bool_factor          -> not_bool_factor
                   | "(" bool_expr ")"
                   | relation_expr
                   | vector_relation_expr
@@ -46,7 +25,8 @@ field_grammar = """
     ?pair_array:           "(" const "," const ")"      -> array
     ?array:                "(" [const ("," const)*] ")"
     ?comparator: EQ | NE | LT | LTE | GT | GTE
-    ?vector_comparator: IN | NOTIN
+    ?vector_comparator.1: IN | NOTIN
+    NOT: /NOT/i
     EQ: "="
     NE: "!="
     LT: "<"
@@ -54,8 +34,29 @@ field_grammar = """
     GT: ">"
     GTE: ">="
     IN: /IN/i
-    NOTIN: /NOT/i /IN/i
+    NOTIN: /NOT/i /IN/i | /NOTIN/i | /NOT IN/ii
     BETWEEN: /BETWEEN/i
+"""
+
+noag_field_grammar = """
+    ?start:  expr | bool_expr | partial_relation_expr
+    ?expr: sum                                 -> expr
+    ?sum: product
+        | sum "+" product                      -> add
+        | sum "-" product                      -> sub
+    ?product: atom
+           | product "*" atom                  -> mul
+           | product "/" atom                  -> div
+    ?atom: const
+           | column
+           | case
+           | "(" sum ")"
+    ?column.0:  NAME                           -> column
+    ?const.1: NUMBER                           -> number
+            | ESCAPED_STRING                   -> literal
+            | /true/i                          -> true
+            | /false/i                         -> false
+            | /null/i                          -> null
     STAR: "*"
     COMMENT: /#.*/
 
@@ -65,7 +66,71 @@ field_grammar = """
     %import common.WS_INLINE
     %ignore COMMENT
     %ignore WS_INLINE
-"""
+""" + boolean_expr_grammar
 
 
-field_parser = Lark(field_grammar, parser="earley")
+agex_field_grammar = """
+    ?start:  expr | bool_expr | partial_relation_expr
+    ?expr: agex | sum                          -> expr
+    ?agex: aggr "(" sum ")"
+        | /count/i "(" STAR ")"                -> agex
+    ?sum: product
+        | sum "+" product                      -> add
+        | sum "-" product                      -> sub
+    ?product: atom
+           | product "*" atom                  -> mul
+           | product "/" atom                  -> div
+
+    ?aggr:  /(sum|min|max|avg|count)/i         -> aggregate
+    ?atom: agex
+           | const
+           | column
+           | case
+           | "(" sum ")"
+    ?column.0:  NAME                           -> column
+    ?const.1: NUMBER                           -> number
+            | ESCAPED_STRING                   -> literal
+            | /true/i                          -> true
+            | /false/i                         -> false
+            | /null/i                          -> null
+
+    STAR: "*"
+    COMMENT: /#.*/
+
+    %import common.CNAME                       -> NAME
+    %import common.SIGNED_NUMBER               -> NUMBER
+    %import common.ESCAPED_STRING
+    %import common.WS_INLINE
+    %ignore COMMENT
+    %ignore WS_INLINE
+""" + boolean_expr_grammar
+
+
+ambig = "resolve"
+
+field_parser = Lark(agex_field_grammar, parser="earley", ambiguity=ambig)
+any_condition_parser = Lark(
+    agex_field_grammar,
+    parser="earley",
+    ambiguity=ambig,
+    start=["bool_expr", "partial_relation_expr"],
+)
+full_condition_parser = Lark(
+    agex_field_grammar, parser="earley", ambiguity=ambig, start="bool_expr"
+)
+partial_condition_parser = Lark(
+    agex_field_grammar, parser="earley", ambiguity=ambig, start="partial_relation_expr"
+)
+noag_field_parser = Lark(noag_field_grammar, parser="earley", ambiguity=ambig)
+noag_any_condition_parser = Lark(
+    noag_field_grammar,
+    parser="earley",
+    ambiguity=ambig,
+    start=["bool_expr", "partial_relation_expr"],
+)
+noag_full_condition_parser = Lark(
+    noag_field_grammar, parser="earley", ambiguity=ambig, start="bool_expr"
+)
+noag_partial_condition_parser = Lark(
+    noag_field_grammar, parser="earley", ambiguity=ambig, start="partial_relation_expr"
+)

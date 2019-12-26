@@ -1,4 +1,4 @@
-""" Test sureberus schemas """
+""" Test sureberus shelf _version="2" schemas that use lark parser for fields """
 
 import yaml
 import pytest
@@ -9,6 +9,9 @@ from recipe.schemas import shelf_schema
 
 
 # Sample valid aggregated fields
+from recipe.schemas.field_grammar import field_parser
+from recipe.schemas.parsed_schemas import is_agex, is_no_agex, is_partial_condition
+
 VALID_AGG_FIELDS = [
     "sum(foo)",
     "min(foo)",
@@ -17,11 +20,36 @@ VALID_AGG_FIELDS = [
     "sum(fo\t+\tnext)",
 ]
 
+# Sample invalid aggregate fields
 INVALID_AGG_FIELDS = ["fo(", "foo", "fo)", "su(x + y)"]
 
+# Valid non-aggregated fields
 VALID_NOAGG_FIELDS = ["foo", "foo + moo", "FALSE"]
 
+# Invalid non-aggregated fields
 INVALID_NOAGG_FIELDS = ["fo(", "sum(foo)", "fo)", "su(x + y)"]
+
+VALID_PARTIAL_CONDS = [
+    ">10", 'in ("a", "b")', "notin (1,2,3)", "=  \t b", "=b"
+]
+
+
+def test_tree_testers():
+    for f in VALID_AGG_FIELDS:
+        tree = field_parser.parse(f)
+        assert is_agex(tree)
+        assert not is_no_agex(tree)
+
+    for f in VALID_NOAGG_FIELDS:
+        tree = field_parser.parse(f)
+        assert not is_agex(tree)
+        assert is_no_agex(tree)
+
+    for f in VALID_PARTIAL_CONDS:
+        tree = field_parser.parse(f)
+        print(f)
+        print(tree)
+        assert is_partial_condition(tree)
 
 
 def test_valid_metric_field_parsing():
@@ -131,7 +159,7 @@ test:
 
 
 def test_replace_refs():
-    """ Test that field references get replaced with the field value"""
+    """ Test that field references get replaced with the field"""
     content = """
 _version: "2"
 ttl:
@@ -160,10 +188,6 @@ city_place:
 """
     v = yaml.safe_load(content)
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
-
-    # THIS IS FAILING
-    from pprint import pprint
-    pprint(result["city_place"])
 
     assert result["avg"]["field"] == "sum(moo) / count(moo)"
     assert result["city_place"] == {

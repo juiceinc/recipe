@@ -5,7 +5,12 @@ import logging
 from sureberus import schema as S
 
 from .utils import coerce_format, coerce_pop_version, _chain, TreeTester, SCALAR_TYPES
-from .field_grammar import field_parser
+from .field_grammar import (
+    field_parser,
+    full_condition_parser,
+    partial_condition_parser,
+    any_condition_parser,
+)
 
 logging.captureWarnings(True)
 
@@ -18,11 +23,12 @@ class ParseValidator:
     #: Message to display on failure
     msg = attr.ib()
     tester = attr.ib()
+    parser = attr.ib(default=field_parser)
 
     def __call__(self, f, v, e):
         """Check parsing"""
         try:
-            tree = field_parser.parse(v)
+            tree = self.parser.parse(v)
             if not self.tester(tree):
                 failure_message = str(v) + " " + self.msg
                 raise e(f, failure_message)
@@ -55,7 +61,7 @@ def coerce_replace_refs(shelf):
             replacements.append(("@" + k, v["field"]))
 
     # Sort in descending order of length then by k
-    replacements.sort(key=lambda k: (100 - len(k), k))
+    replacements.sort(key=lambda k: (-1 * len(k[0]), k[0]))
 
     # Search for fields and replace with their replacements
     for ingr in shelf.values():
@@ -64,7 +70,8 @@ def coerce_replace_refs(shelf):
                 v = ingr[k]
                 if isinstance(v, string_types) and "@" in v:
                     for search_for, replace_with in replacements:
-                        ingr[k] = ingr[k].replace(search_for, replace_with)
+                        v = v.replace(search_for, replace_with)
+                    ingr[k] = v
 
     return shelf
 
@@ -159,6 +166,7 @@ is_no_agex = TreeTester(forbidden_tokens=["agex"])
 is_any_condition = TreeTester(
     required_head_token=[
         "partial_relation_expr",
+        "vector_relation_expr",
         "bool_expr",
         "bool_term",
         "bool_factor",
@@ -176,18 +184,22 @@ is_full_condition_agex = is_full_condition & is_agex
 
 # Sureberus validators that use the testers
 validate_parses_with_agex = ParseValidator(
-    msg="must contain an aggregate expression", tester=is_agex
+    msg="must contain an aggregate expression", tester=is_agex, parser=field_parser
 )
 validate_parses_without_agex = ParseValidator(
-    msg="must not contain an aggregate expression", tester=is_no_agex
+    msg="must not contain an aggregate expression",
+    tester=is_no_agex,
+    parser=field_parser,
 )
 validate_any_condition = ParseValidator(
     msg="must be a condition or partial condition and not include an aggregation",
     tester=is_any_condition_no_agex,
+    parser=any_condition_parser,
 )
 validate_condition = ParseValidator(
     msg="must be a condition and not include an aggregation",
     tester=is_full_condition_no_agex,
+    parser=full_condition_parser,
 )
 validate_agex_condition = ParseValidator(
     msg="must be a condition and include an aggregation", tester=is_full_condition_agex
@@ -215,14 +227,15 @@ metric_schema = S.Dict(
         "format": format_schema,
         "quickselects": S.List(required=False, schema=labeled_condition_schema),
     },
-    coerce_post=_chain(_convert_partial_conditions, add_version),
+    coerce=_convert_partial_conditions,
+    coerce_post=add_version,
     allow_unknown=True,
 )
 
 dimension_schema = S.Dict(
     allow_unknown=True,
-    coerce=move_extra_fields,
-    coerce_post=_chain(_convert_partial_conditions, create_buckets, add_version),
+    coerce=_chain(move_extra_fields, _convert_partial_conditions),
+    coerce_post=_chain(create_buckets, add_version),
     schema={
         "field": noag_field_schema,
         "extra_fields": S.List(
