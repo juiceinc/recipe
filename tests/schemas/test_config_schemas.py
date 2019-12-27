@@ -910,6 +910,3 @@ class TestValidateRecipe(object):
                 "dimensions": ["bar"],
                 "filters": [{"field": "xyzzy", "gt": 3}],
             }
-
-
-

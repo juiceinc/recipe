@@ -129,11 +129,7 @@ noag_field_parser = Lark(
 
 # A full condition ("x>5") or a partial condition (">5") that may not contain
 # aggregations
-noag_any_condition_parser = Lark(
-    noag_field_grammar,
-    parser="earley",
-    ambiguity=ambig,
-)
+noag_any_condition_parser = Lark(noag_field_grammar, parser="earley", ambiguity=ambig,)
 
 # A partial condition (">5", "in (1,2,3)") that may not contain aggregations
 noag_partial_condition_parser = Lark(

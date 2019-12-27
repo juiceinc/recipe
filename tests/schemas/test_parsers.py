@@ -54,7 +54,7 @@ def test_parsers():
     for row in values.split("\n"):
         row = row.strip()
         if row:
-            row, expected = row.split('#')
+            row, expected = row.split("#")
             expected_by_parser = expected.strip().split(",")
             # print("\n\n\n\n{row}")
             # print('-'*40)

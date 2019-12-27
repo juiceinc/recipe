@@ -120,13 +120,13 @@ def _convert_partial_conditions(value):
     # Convert all bucket conditions to full conditions
     for itm in value.get("bucket", []):
         tree = noag_any_condition_parser.parse(itm["condition"])
-        if tree.data == 'partial_relation_expr':
+        if tree.data == "partial_relation_expr":
             itm["condition"] = field + itm["condition"]
     # Convert all quickselects conditions to full conditions
     for itm in value.get("quickselects", []):
         tree = noag_any_condition_parser.parse(itm["condition"])
-        if tree.data == 'partial_relation_expr':
-            itm["condition"] = "(" + field + ")" +  itm["condition"]
+        if tree.data == "partial_relation_expr":
+            itm["condition"] = "(" + field + ")" + itm["condition"]
     return value
 
 
