@@ -1,5 +1,5 @@
 faker==2.0.4
-orderedset==2.0.1
+ordered-set==3.1.1
 six==1.13.0
 SQLAlchemy>=1.2.2
 sqlparse==0.3.0

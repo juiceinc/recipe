@@ -27,7 +27,7 @@ if sys.argv[-1] == "test":
 
 # yapf: disable
 install = [
-    'orderedset',
+    'ordered-set',
     'six',
     'sqlalchemy>=1.2.2',
     'sqlparse',
