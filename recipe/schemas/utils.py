@@ -1,6 +1,13 @@
+from datetime import date, datetime
+import dateparser
 import inspect
 from sqlalchemy import distinct, func
+from sqlalchemy.ext.declarative import DeclarativeMeta
+from sqlalchemy.sql.base import ImmutableColumnCollection
 from sureberus import schema as S
+
+from recipe.exceptions import BadIngredient
+from recipe.compat import basestring
 
 SCALAR_TYPES = [S.Integer(), S.String(), S.Float(), S.Boolean()]
 
@@ -79,3 +86,109 @@ aggregations = {
 def coerce_pop_version(shelf):
     shelf.pop("_version", None)
     return shelf
+
+
+def _convert_date_value(v):
+    parse_kwargs = {"languages": ["en"]}
+    if isinstance(v, date):
+        return v
+    elif isinstance(v, datetime):
+        return v.date()
+    elif isinstance(v, basestring):
+        parsed_dt = dateparser.parse(v, **parse_kwargs)
+        if parsed_dt is None:
+            raise ValueError("Could not parse date in {}".format(v))
+        return parsed_dt.date()
+    else:
+        raise ValueError("Can not convert {} to date".format(v))
+
+
+def _convert_datetime_value(v):
+    parse_kwargs = {"languages": ["en"]}
+    if isinstance(v, datetime):
+        return v
+    elif isinstance(v, date):
+        return datetime(v.year, v.month, v.day)
+    elif isinstance(v, basestring):
+        parsed_dt = dateparser.parse(v, **parse_kwargs)
+        if parsed_dt is None:
+            raise ValueError("Could not parse datetime in {}".format(v))
+        return parsed_dt
+    else:
+        raise ValueError("Can not convert {} to datetime".format(v))
+
+
+def convert_value(field, value):
+    """Convert values into something appropriate for this SQLAlchemy data type
+
+    :param field: A SQLAlchemy expression
+    :param values: A value or list of values
+    """
+
+    if isinstance(value, (list, tuple)):
+        if str(field.type) == "DATE":
+            return [_convert_date_value(v) for v in value]
+        elif str(field.type) == "DATETIME":
+            return [_convert_datetime_value(v) for v in value]
+        else:
+            return value
+    else:
+        if str(field.type) == "DATE":
+            return _convert_date_value(value)
+        elif str(field.type) == "DATETIME":
+            return _convert_datetime_value(value)
+        else:
+            return value
+
+
+def _find_in_columncollection(columns, name):
+    """ Find a column in a column collection by name or _label"""
+    for col in columns:
+        if col.name == name or getattr(col, "_label", None) == name:
+            return col
+    return None
+
+
+def find_column(selectable, name):
+    """
+    Find a column named `name` in selectable
+
+    :param selectable:
+    :param name:
+    :return: A column object
+    """
+    from recipe import Recipe
+
+    if isinstance(selectable, Recipe):
+        selectable = selectable.subquery()
+
+    # Selectable is a table
+    if isinstance(selectable, DeclarativeMeta):
+        col = getattr(selectable, name, None)
+        if col is not None:
+            return col
+
+        col = _find_in_columncollection(selectable.__table__.columns, name)
+        if col is not None:
+            return col
+
+    # Selectable is a sqlalchemy subquery
+    elif hasattr(selectable, "c") and isinstance(
+        selectable.c, ImmutableColumnCollection
+    ):
+        col = getattr(selectable.c, name, None)
+        if col is not None:
+            return col
+
+        col = _find_in_columncollection(selectable.c, name)
+        if col is not None:
+            return col
+
+    raise BadIngredient("Can not find {} in {}".format(name, selectable))
+
+
+def ingredient_class_for_name(class_name):
+    """Get the class in the recipe.ingredients module with the given name."""
+    from recipe import ingredients
+
+    return getattr(ingredients, class_name, None)
