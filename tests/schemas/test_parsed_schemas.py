@@ -8,11 +8,7 @@ from sureberus import normalize_schema
 from recipe.schemas import shelf_schema
 
 
-# Sample valid aggregated fields
-from recipe.schemas.field_grammar import field_parser
-from recipe.schemas.parsed_schemas import is_agex, is_no_agex, is_partial_condition
-
-VALID_AGG_FIELDS = [
+VALID_METRIC_FIELDS = [
     "sum(foo)",
     "min(foo)",
     "max(foo+moo)",
@@ -21,53 +17,33 @@ VALID_AGG_FIELDS = [
 ]
 
 # Sample invalid aggregate fields
-INVALID_AGG_FIELDS = ["fo(", "foo", "fo)", "su(x + y)"]
+INVALID_METRIC_FIELDS = ["fo(", "fo)", "su(x + y)"]
 
 # Valid non-aggregated fields
-VALID_NOAGG_FIELDS = ["foo", "foo + moo", "FALSE"]
+VALID_DIMENSION_FIELDS = ["foo", "foo + moo", "FALSE"]
 
 # Invalid non-aggregated fields
-INVALID_NOAGG_FIELDS = ["fo(", "sum(foo)", "fo)", "su(x + y)"]
+INVALID_DIMENSION_FIELDS = ["fo(", "sum(foo)", "fo)", "su(x + y)"]
 
-VALID_PARTIAL_CONDS = [
-    ">10", 'in ("a", "b")', "notin (1,2,3)", "=  \t b", "=b"
-]
-
-
-def test_tree_testers():
-    for f in VALID_AGG_FIELDS:
-        tree = field_parser.parse(f)
-        assert is_agex(tree)
-        assert not is_no_agex(tree)
-
-    for f in VALID_NOAGG_FIELDS:
-        tree = field_parser.parse(f)
-        assert not is_agex(tree)
-        assert is_no_agex(tree)
-
-    for f in VALID_PARTIAL_CONDS:
-        tree = field_parser.parse(f)
-        print(f)
-        print(tree)
-        assert is_partial_condition(tree)
+VALID_PARTIAL_CONDITIONS = [">10", 'in ("a", "b")', "notin (1,2,3)", "=  \t b", "=b"]
 
 
 def test_valid_metric_field_parsing():
-    for _ in VALID_AGG_FIELDS:
+    for _ in VALID_METRIC_FIELDS:
         v = {"foo": {"kind": "Metric", "field": _}, "_version": "2"}
         x = normalize_schema(shelf_schema, v, allow_unknown=False)
         assert x == {"foo": {"kind": "Metric", "field": _, "_version": "2"}}
 
 
 def test_invalid_metric_field_parsing():
-    for _ in INVALID_AGG_FIELDS:
+    for _ in INVALID_METRIC_FIELDS:
         v = {"foo": {"kind": "Metric", "field": _}, "_version": "2"}
-        with pytest.raises(E.SureError) as excinfo:
+        with pytest.raises(E.SureError):
             normalize_schema(shelf_schema, v, allow_unknown=False)
 
 
 def test_move_extra_fields():
-    for _ in VALID_NOAGG_FIELDS:
+    for _ in VALID_DIMENSION_FIELDS:
         v = {
             "foo": {"kind": "Dimension", "field": "moo", "other_field": _},
             "_version": "2",
@@ -83,12 +59,12 @@ def test_move_extra_fields():
         }
 
     # Other fields must be non aggregates
-    for _ in INVALID_NOAGG_FIELDS:
+    for _ in INVALID_DIMENSION_FIELDS:
         v = {
             "foo": {"kind": "Dimension", "field": "moo", "other_field": _},
             "_version": "2",
         }
-        with pytest.raises(E.SureError) as excinfo:
+        with pytest.raises(E.SureError):
             normalize_schema(shelf_schema, v, allow_unknown=False)
 
     # Multiple extra fields

@@ -4,12 +4,14 @@ from six import string_types
 import logging
 from sureberus import schema as S
 
-from .utils import coerce_format, coerce_pop_version, _chain, TreeTester, SCALAR_TYPES
+from .utils import coerce_format, coerce_pop_version, _chain, SCALAR_TYPES
 from .field_grammar import (
     field_parser,
     full_condition_parser,
-    partial_condition_parser,
-    any_condition_parser,
+    noag_field_parser,
+    noag_full_condition_parser,
+    noag_partial_condition_parser,
+    noag_any_condition_parser,
 )
 
 logging.captureWarnings(True)
@@ -21,17 +23,12 @@ class ParseValidator:
     certain tokens"""
 
     #: Message to display on failure
-    msg = attr.ib()
-    tester = attr.ib()
     parser = attr.ib(default=field_parser)
 
     def __call__(self, f, v, e):
         """Check parsing"""
         try:
             tree = self.parser.parse(v)
-            if not self.tester(tree):
-                failure_message = str(v) + " " + self.msg
-                raise e(f, failure_message)
         except Exception as exc:
             # A Lark error message raised when the value doesn't parse
             raise exc
@@ -123,13 +120,13 @@ def _convert_partial_conditions(value):
     field = value.get("field")
     # Convert all bucket conditions to full conditions
     for itm in value.get("bucket", []):
-        tree = field_parser.parse(itm["condition"])
-        if is_partial_condition(tree):
+        tree = noag_any_condition_parser.parse(itm["condition"])
+        if tree.data == 'partial_relation_expr':
             itm["condition"] = field + itm["condition"]
     # Convert all quickselects conditions to full conditions
     for itm in value.get("quickselects", []):
-        tree = field_parser.parse(itm["condition"])
-        if is_partial_condition(tree):
+        tree = noag_any_condition_parser.parse(itm["condition"])
+        if tree.data == 'partial_relation_expr':
             itm["condition"] = field + itm["condition"]
     return value
 
@@ -160,61 +157,28 @@ def add_version(v):
     return v
 
 
-# Test the fields parse and match certain conditions
-is_agex = TreeTester(required_tokens=["agex"])
-is_no_agex = TreeTester(forbidden_tokens=["agex"])
-is_any_condition = TreeTester(
-    required_head_token=[
-        "partial_relation_expr",
-        "vector_relation_expr",
-        "bool_expr",
-        "bool_term",
-        "bool_factor",
-        "relation_expr",
-    ]
-)
-is_partial_condition = TreeTester(required_head_token=["partial_relation_expr"])
-is_full_condition = TreeTester(
-    required_head_token=["bool_expr", "bool_term", "bool_factor", "relation_expr"]
-)
-is_any_condition_no_agex = is_any_condition & is_no_agex
-is_full_condition_no_agex = is_full_condition & is_no_agex
-is_full_condition_agex = is_full_condition & is_agex
+# Sureberus validators that check how a field parses
+validate_parses_with_agex = ParseValidator(parser=field_parser)
+validate_parses_without_agex = ParseValidator(parser=noag_field_parser)
+validate_any_condition = ParseValidator(parser=noag_any_condition_parser)
+validate_condition = ParseValidator(parser=noag_full_condition_parser)
+validate_agex_condition = ParseValidator(parser=full_condition_parser)
 
 
-# Sureberus validators that use the testers
-validate_parses_with_agex = ParseValidator(
-    msg="must contain an aggregate expression", tester=is_agex, parser=field_parser
-)
-validate_parses_without_agex = ParseValidator(
-    msg="must not contain an aggregate expression",
-    tester=is_no_agex,
-    parser=field_parser,
-)
-validate_any_condition = ParseValidator(
-    msg="must be a condition or partial condition and not include an aggregation",
-    tester=is_any_condition_no_agex,
-    parser=any_condition_parser,
-)
-validate_condition = ParseValidator(
-    msg="must be a condition and not include an aggregation",
-    tester=is_full_condition_no_agex,
-    parser=full_condition_parser,
-)
-validate_agex_condition = ParseValidator(
-    msg="must be a condition and include an aggregation", tester=is_full_condition_agex
-)
-
-
-# Schemas
+# A field that may OR MAY NOT contain an aggregation.
+# It will be the transformers responsibility to add an aggregation if one is missing
 agex_field_schema = S.String(required=True, validator=validate_parses_with_agex)
 
+# A field that is guaranteed to not contain an aggregation
 noag_field_schema = S.String(required=True, validator=validate_parses_without_agex)
 
+# A full condition guaranteed to not contain an aggregation
 condition_schema = S.String(required=True, validator=validate_condition)
 
+# A full or partial contain guaranteed to not contain an aggregation
 any_condition_schema = S.String(required=True, validator=validate_any_condition)
 
+# A full condition guaranteed to not contain an aggregation
 labeled_condition_schema = S.Dict(
     schema={"condition": condition_schema, "label": S.String(required=True)}
 )
@@ -233,9 +197,6 @@ metric_schema = S.Dict(
 )
 
 dimension_schema = S.Dict(
-    allow_unknown=True,
-    coerce=_chain(move_extra_fields, _convert_partial_conditions),
-    coerce_post=_chain(create_buckets, add_version),
     schema={
         "field": noag_field_schema,
         "extra_fields": S.List(
@@ -249,6 +210,9 @@ dimension_schema = S.Dict(
         "format": format_schema,
         "quickselects": S.List(required=False, schema=labeled_condition_schema),
     },
+    coerce=_chain(move_extra_fields, _convert_partial_conditions),
+    coerce_post=_chain(create_buckets, add_version),
+    allow_unknown=True,
 )
 
 filter_schema = S.Dict(
