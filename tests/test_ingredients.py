@@ -17,11 +17,11 @@ from recipe import (
     WtdAvgMetric,
 )
 from recipe.compat import str
-from recipe.schemas.config_transformers import (
+from recipe.schemas.config_constructors import (
     ingredient_from_unvalidated_dict as ingredient_from_dict,
 )
-from recipe.schemas.config_transformers import parse_unvalidated_field as parse_field
-from recipe.schemas.config_transformers import SAFE_DIVISON_EPSILON
+from recipe.schemas.config_constructors import parse_unvalidated_field as parse_field
+from recipe.schemas.config_constructors import SAFE_DIVISON_EPSILON
 
 
 class TestIngredients(object):

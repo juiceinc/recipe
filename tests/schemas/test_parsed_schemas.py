@@ -42,6 +42,13 @@ def test_invalid_metric_field_parsing():
             normalize_schema(shelf_schema, v, allow_unknown=False)
 
 
+def test_ensure_aggregation():
+    """ Metrics where the field doesn't aggregate get wrapped in a sum """
+    v = {"foo": {"kind": "Metric", "field": "foo"}, "_version": "2"}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {"foo": {"kind": "Metric", "field": "sum(foo)", "_version": "2"}}
+
+
 def test_valid_dimension_field_parsing():
     for _ in VALID_DIMENSION_FIELDS:
         v = {"foo": {"kind": "Dimension", "field": _}, "_version": "2"}

@@ -23,7 +23,7 @@ def ingredient_transformer(ingr):
     version = ingr.get("_version", "1")
 
 
-from recipe.schemas.config_transformers import (
+from recipe.schemas.config_constructors import (
     ingredient_from_validated_dict,
     parse_unvalidated_condition,
 )

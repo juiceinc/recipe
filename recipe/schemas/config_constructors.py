@@ -1,4 +1,4 @@
-"""Transformers convert config schemas to sqlalchemy objects """
+"""Constructors convert config schemas to sqlalchemy objects """
 from copy import deepcopy
 from sqlalchemy import and_, or_, func, cast, Float, case
 from sureberus import normalize_schema

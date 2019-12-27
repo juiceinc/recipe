@@ -150,6 +150,20 @@ def create_buckets(value):
     return value
 
 
+def ensure_aggregation(fld):
+    """ Ensure that a field has an aggregation by wrapping the entire field
+    in a sum if no aggregation is supplied. """
+    try:
+        tree = field_parser.parse(fld)
+        has_agex = list(tree.find_data("agex"))
+        if has_agex:
+            return fld
+        else:
+            return "sum(" + fld + ")"
+    except Exception:
+        return fld
+
+
 def add_version(v):
     # Add version to a parsed ingredient
     v["_version"] = "2"
@@ -166,7 +180,9 @@ validate_agex_condition = ParseValidator(parser=full_condition_parser)
 
 # A field that may OR MAY NOT contain an aggregation.
 # It will be the transformers responsibility to add an aggregation if one is missing
-agex_field_schema = S.String(required=True, validator=validate_parses_with_agex)
+agex_field_schema = S.String(
+    required=True, validator=validate_parses_with_agex, coerce=ensure_aggregation
+)
 
 # A field that is guaranteed to not contain an aggregation
 noag_field_schema = S.String(required=True, validator=validate_parses_without_agex)
