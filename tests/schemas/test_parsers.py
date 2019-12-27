@@ -56,15 +56,15 @@ def test_parsers():
         if row:
             row, expected = row.split('#')
             expected_by_parser = expected.strip().split(",")
-            print(f"\n\n\n\n{row}")
-            print('-'*40)
+            # print("\n\n\n\n{row}")
+            # print('-'*40)
             for parser_name, parser in parsers:
                 expected_result = expected_by_parser.pop(0)
                 try:
                     tree = parser.parse(row)
-                    print(f"{parser_name:30s} succeeded ({expected_result})")
+                    # print(f"{parser_name:30s} succeeded ({expected_result})")
                     assert expected_result == '1'
                     print(tree.pretty())
                 except:
-                    print(f"{parser_name:30s} failed ({expected_result})")
+                    # print(f"{parser_name:30s} failed ({expected_result})")
                     assert expected_result == '0'
