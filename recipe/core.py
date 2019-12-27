@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import attr
 import tablib
-from orderedset import OrderedSet
+from ordered_set import OrderedSet
 from sqlalchemy import alias, func
 from sqlalchemy.sql.elements import BinaryExpression
 from sureberus import normalize_dict, normalize_schema
