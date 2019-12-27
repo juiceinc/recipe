@@ -41,7 +41,7 @@ jobs:
         echo "### Figuring out which .py files were modified"
         BRANCH=$(jq -r ".pull_request.head.ref" "$GITHUB_EVENT_PATH")
         BASE=$(jq -r ".pull_request.base.ref" "$GITHUB_EVENT_PATH")
-        MODIFIED_FILES=$(git diff --name-only $BRANCH $(git merge-base $BRANCH $BASE) | grep '\.py$')
+        MODIFIED_FILES=$(git diff $(git merge-base $BRANCH $BASE) $BRANCH --diff-filter=d --name-only | grep '\.py$')
         echo "modified files are $MODIFIED_FILES"
         echo "### Running black"
         black --target-version=py27 $MODIFIED_FILES
