@@ -42,7 +42,38 @@ def test_invalid_metric_field_parsing():
             normalize_schema(shelf_schema, v, allow_unknown=False)
 
 
+def test_valid_dimension_field_parsing():
+    for _ in VALID_DIMENSION_FIELDS:
+        v = {"foo": {"kind": "Dimension", "field": _}, "_version": "2"}
+        x = normalize_schema(shelf_schema, v, allow_unknown=False)
+        assert x == {"foo": {"kind": "Dimension", "field": _, "_version": "2"}}
+
+
+def test_invalid_dimension_field_parsing():
+    for _ in INVALID_DIMENSION_FIELDS:
+        v = {"foo": {"kind": "Dimension", "field": _}, "_version": "2"}
+        with pytest.raises(E.SureError):
+            normalize_schema(shelf_schema, v, allow_unknown=False)
+
+
+def test_format():
+    values = [
+        ("comma", ",.0f"),
+        (".2s", ".2s"),
+        ("dollar1", "$,.1f"),
+        ("percent1", ".1%"),
+    ]
+    for fmt, expected in values:
+        v = {
+            "foo": {"kind": "Metric", "field": "sum(foo)", "format": fmt},
+            "_version": "2",
+        }
+        x = normalize_schema(shelf_schema, v, allow_unknown=False)
+        assert x["foo"]["format"] == expected
+
+
 def test_move_extra_fields():
+    """ Extra _fields get moved into the extra_fields list """
     for _ in VALID_DIMENSION_FIELDS:
         v = {
             "foo": {"kind": "Dimension", "field": "moo", "other_field": _},
@@ -132,6 +163,34 @@ test:
         result["test"]["extra_fields"][0]["field"]
         == 'if(moo>"2",0,state in ("1", "2"),1,9999)'
     )
+
+
+def test_quickselects():
+    """Partial quickselect conditions get converted to full conditions """
+    content = """
+_version: "2"
+test:
+    kind: Dimension
+    field: moo+foo
+    quickselects:
+    - label: foo
+      condition:  '>"2"'
+    - label: cow
+      condition: 'state in ("1", "2")'
+"""
+    v = yaml.safe_load(content)
+    result = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert result == {
+        "test": {
+            "kind": "Dimension",
+            "field": "moo+foo",
+            "quickselects": [
+                {"condition": '(moo+foo)>"2"', "label": "foo"},
+                {"condition": 'state in ("1", "2")', "label": "cow"},
+            ],
+            "_version": "2",
+        }
+    }
 
 
 def test_replace_refs():

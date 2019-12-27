@@ -10,7 +10,6 @@ from .field_grammar import (
     full_condition_parser,
     noag_field_parser,
     noag_full_condition_parser,
-    noag_partial_condition_parser,
     noag_any_condition_parser,
 )
 
@@ -116,7 +115,7 @@ def _convert_bucket_to_field(bucket, bucket_default_label, use_indices=False):
 
 
 def _convert_partial_conditions(value):
-    """Convert all partial conditions to full conditions."""
+    """Convert all partial conditions to full conditions in buckets and quickselects."""
     field = value.get("field")
     # Convert all bucket conditions to full conditions
     for itm in value.get("bucket", []):
@@ -127,7 +126,7 @@ def _convert_partial_conditions(value):
     for itm in value.get("quickselects", []):
         tree = noag_any_condition_parser.parse(itm["condition"])
         if tree.data == 'partial_relation_expr':
-            itm["condition"] = field + itm["condition"]
+            itm["condition"] = "(" + field + ")" +  itm["condition"]
     return value
 
 

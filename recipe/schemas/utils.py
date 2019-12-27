@@ -1,6 +1,4 @@
-import attr
 import inspect
-from six import string_types
 from sqlalchemy import distinct, func
 from sureberus import schema as S
 
