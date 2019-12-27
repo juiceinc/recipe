@@ -17,7 +17,7 @@ logging.captureWarnings(True)
 
 
 @attr.s
-class ParseValidato(object):
+class ParseValidator(object):
     """A sureberus validator that checks that a field parses and matches
     certain tokens"""
 
