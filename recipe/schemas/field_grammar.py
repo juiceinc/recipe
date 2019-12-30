@@ -1,5 +1,10 @@
 from lark import Lark, Transformer, v_args
+from .utils import aggregations
+from ..compat import basestring
 
+allowed_aggr_keys = "|".join(
+    k for k in aggregations.keys() if isinstance(k, basestring)
+)
 
 # Grammar for boolean expressions
 boolean_expr_grammar = """
@@ -73,6 +78,10 @@ noag_field_grammar = (
 )
 
 
+# Grammar for expressions that allow aggregations
+# for instance:
+# "sum(sales)" or "max(yards) - min(yards)"
+# Aggregations are keys defined in
 agex_field_grammar = (
     """
     ?expr: agex | sum                          -> expr
@@ -85,7 +94,7 @@ agex_field_grammar = (
            | product "*" atom                  -> mul
            | product "/" atom                  -> div
 
-    ?aggr:  /(sum|min|max|avg|count)/i         -> aggregate
+    ?aggr:  /({allowed_aggr_keys})/i           -> aggregate
     ?atom: agex
            | const
            | column
@@ -107,7 +116,7 @@ agex_field_grammar = (
     %import common.WS_INLINE
     %ignore COMMENT
     %ignore WS_INLINE
-"""
+""".format(allowed_aggr_keys=allowed_aggr_keys)
     + boolean_expr_grammar
 )
 
@@ -129,7 +138,7 @@ noag_field_parser = Lark(
 
 # A full condition ("x>5") or a partial condition (">5") that may not contain
 # aggregations
-noag_any_condition_parser = Lark(noag_field_grammar, parser="earley", ambiguity=ambig,)
+noag_any_condition_parser = Lark(noag_field_grammar, parser="earley", ambiguity=ambig)
 
 # A partial condition (">5", "in (1,2,3)") that may not contain aggregations
 noag_partial_condition_parser = Lark(

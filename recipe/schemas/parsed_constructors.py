@@ -1,10 +1,13 @@
 """Convert parsed trees into SQLAlchemy objects """
 from lark import Lark, Transformer, v_args
 from sqlalchemy import func, distinct, case, and_, or_, not_
+from .utils import aggregations
 
 
 @v_args(inline=True)  # Affects the signatures of the methods
 class CalculateField(Transformer):
+    """Converts a field to a SQLAlchemy expression """
+
     from operator import add, sub, mul, neg
 
     number = float
@@ -23,19 +26,16 @@ class CalculateField(Transformer):
         return None
 
     def IN(self, value):
-        return 'IN'
+        return "IN"
 
     def NOTIN(self, value):
-        return 'NOTIN'
+        return "NOTIN"
 
     def BETWEEN(self, value):
-        return 'BETWEEN'
+        return "BETWEEN"
 
     def aggregate(self, name):
-        from .utils import aggregations
-
-        f = getattr(func, name.lower())
-        return f
+        return aggregations.get(name.lower())
 
     def div(self, num, denom):
         """SQL safe division"""
@@ -69,12 +69,12 @@ class CalculateField(Transformer):
 
     def relation_expr(self, left, rel, right):
         comparators = {
-            '=': '__eq__',
-            '>': '__gt__',
-            '>=': '__gte__',
-            '!=': '__ne__',
-            '<': '__lt__',
-            '<=': '__lte__',
+            "=": "__eq__",
+            ">": "__gt__",
+            ">=": "__gte__",
+            "!=": "__ne__",
+            "<": "__lt__",
+            "<=": "__lte__",
         }
         if right is None:
             return
@@ -86,11 +86,8 @@ class CalculateField(Transformer):
         return args
 
     def vector_relation_expr(self, left, rel, right):
-        comparators = {
-            'IN': 'in_',
-            'NOTIN': 'notin_',
-        }
-        if rel == 'BETWEEN':
+        comparators = {"IN": "in_", "NOTIN": "notin_"}
+        if rel == "BETWEEN":
             return left.between(*right)
         else:
             return getattr(left, comparators[rel])(right)
@@ -109,4 +106,3 @@ class CalculateField(Transformer):
 
     def not_bool_factor(self, expr):
         return not_(expr)
-
