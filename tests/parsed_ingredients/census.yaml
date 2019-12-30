@@ -30,7 +30,7 @@ mixed_buckets:
     field: age
     buckets:
     - label: 'northeast'
-      condition: "state in ['Vermont', 'New Hampshire']"
+      condition: 'state in ("Vermont", "New Hampshire")'
     - label: 'babies'
       condition: '<2'
     - label: 'children'
@@ -40,7 +40,7 @@ mixed_buckets:
     buckets_default_label: 'oldsters'
 teenagers:
     kind: Metric
-    field: "if(age between [13,19], pop2000)"
+    field: "if(age between 13 and 19, pop2000)"
 ttlpop:
     kind: Metric
     field: pop2000 + pop2008

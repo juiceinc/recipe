@@ -1,3 +1,5 @@
+from lark.exceptions import LarkError
+
 from recipe.schemas.field_grammar import *
 
 
@@ -13,20 +15,22 @@ def test_parsers():
     #                                                 | | | | | noag_full_condition_parser
     #                                                 v v v v v v
     values = """
-    > 10                                            # 0,0,0,1,0,0
-    war_total IN (1,2,3)                            # 0,1,0,0,0,1
-    war_total BETWEEN (1, 5)                        # 0,1,0,0,0,1
-    if(war_total BETWEEN (1, 5), 5)                 # 1,0,1,0,0,0
-    if(war_total BETWEEN (1, 5), 4, 2)              # 1,0,1,0,0,0
-    war_total > 10                                  # 0,1,0,0,0,1
-    war_total > 10 OR NOT war_total < 20            # 0,1,0,0,0,1
-    in (1,2,3)                                      # 0,0,0,1,0,0
+    > 10                                            # 0,0,0,1,1,0
+    in (1,2,3)                                      # 0,0,0,1,1,0
+    war_total IN (1,2,3)                            # 0,1,0,0,1,1
+    war_total BETWEEN 1 AND 5                       # 0,1,0,0,1,1
+    war_total > 10                                  # 0,1,0,0,1,1
+    war_total > 10 OR NOT war_total < 20            # 0,1,0,0,1,1
     sum(x) < 20                                     # 0,1,0,0,0,0
-
     WAR_TOTAL                                       # 1,0,1,0,0,0
     war_total                                       # 1,0,1,0,0,0
     (war_total + war_total)                         # 1,0,1,0,0,0
     (war_total + war_total) / war_total             # 1,0,1,0,0,0
+    if(war_total BETWEEN 1 AND 5), 5)               # 1,0,1,0,0,0
+    """
+    others = """
+    if(war_total BETWEEN 1 AND 5), 4, 2)            # 1,0,1,0,0,0
+
 
     couNT(*)                                        # 1,0,0,0,0,0
     AVG(war_total) + 1.0                            # 1,0,0,0,0,0
@@ -56,8 +60,8 @@ def test_parsers():
         if row:
             row, expected = row.split("#")
             expected_by_parser = expected.strip().split(",")
-            # print("\n\n\n\n{row}")
-            # print('-'*40)
+            print(f"\n\n\n\n{row}")
+            print('-'*40)
             for parser_name, parser in parsers:
                 expected_result = expected_by_parser.pop(0)
                 try:

@@ -137,7 +137,7 @@ _version: "2"
 test:
     kind: Dimension
     field: moo
-    bucket:
+    buckets:
     - label: foo
       condition: ">2"
     - label: cow
@@ -156,20 +156,43 @@ _version: "2"
 test:
     kind: Dimension
     field: moo
-    bucket:
+    buckets:
+    - label: undertwo
+      condition: '<2'
     - label: foo
-      condition:  '>"2"'
+      condition: '>"2"'
     - label: cow
       condition: 'state in ("1", "2")'
 """
     v = yaml.safe_load(content)
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
-    assert result["test"]["field"] == 'if(moo>"2","foo",state in ("1", "2"),"cow",NULL)'
+    assert result["test"]["field"] == 'if(moo<2,"undertwo",moo>"2","foo",state in ("1", "2"),"cow",NULL)'
     assert (
         result["test"]["extra_fields"][0]["field"]
-        == 'if(moo>"2",0,state in ("1", "2"),1,9999)'
+        == 'if(moo<2,0,moo>"2",1,state in ("1", "2"),2,9999)'
     )
 
+    content = """
+_version: "2"
+age_buckets:
+    kind: Dimension
+    field: age
+    buckets:
+    - label: 'babies'
+      condition: '<2'
+    - label: 'children'
+      condition: '<13'
+    - label: 'teens'
+      condition: '<20'
+    buckets_default_label: 'oldsters'
+"""
+    v = yaml.safe_load(content)
+    result = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert result["age_buckets"]["field"] == 'if(age<2,"babies",age<13,"children",age<20,"teens","oldsters")'
+    assert (
+        result["age_buckets"]["extra_fields"][0]["field"]
+        == 'if(age<2,0,age<13,1,age<20,2,9999)'
+    )
 
 def test_quickselects():
     """Partial quickselect conditions get converted to full conditions """
@@ -179,9 +202,9 @@ test:
     kind: Dimension
     field: moo+foo
     quickselects:
-    - label: foo
+    - name: foo
       condition:  '>"2"'
-    - label: cow
+    - name: cow
       condition: 'state in ("1", "2")'
 """
     v = yaml.safe_load(content)
@@ -191,8 +214,8 @@ test:
             "kind": "Dimension",
             "field": "moo+foo",
             "quickselects": [
-                {"condition": '(moo+foo)>"2"', "label": "foo"},
-                {"condition": 'state in ("1", "2")', "label": "cow"},
+                {"condition": '(moo+foo)>"2"', "name": "foo"},
+                {"condition": 'state in ("1", "2")', "name": "cow"},
             ],
             "_version": "2",
         }
@@ -240,3 +263,4 @@ city_place:
         "field": "city",
         "kind": "Dimension",
     }
+

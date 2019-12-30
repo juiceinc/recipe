@@ -119,7 +119,7 @@ def _convert_partial_conditions(value):
     """Convert all partial conditions to full conditions in buckets and quickselects."""
     field = value.get("field")
     # Convert all bucket conditions to full conditions
-    for itm in value.get("bucket", []):
+    for itm in value.get("buckets", []):
         tree = noag_any_condition_parser.parse(itm["condition"])
         if tree.data == "partial_relation_expr":
             itm["condition"] = field + itm["condition"]
@@ -133,21 +133,22 @@ def _convert_partial_conditions(value):
 
 def create_buckets(value):
     """If a validated bucket exists, convert it into a field and extra order by field."""
-    bucket = value.pop("bucket", None)
-    bucket_default_label = value.pop("buckets_default_label", None)
-    if bucket:
+    buckets = value.pop("buckets", None)
+    buckets_default_label = value.pop("buckets_default_label", None)
+    if buckets:
         # Create a bucket
         if "extra_fields" not in value:
             value["extra_fields"] = []
-        bucket_field = _convert_bucket_to_field(bucket, bucket_default_label)
+        bucket_field = _convert_bucket_to_field(buckets, buckets_default_label)
         bucket_order_by_field = _convert_bucket_to_field(
-            bucket, bucket_default_label, use_indices=True
+            buckets, buckets_default_label, use_indices=True
         )
         value["field"] = bucket_field
         value["extra_fields"].append(
             {"name": "order_by_expression", "field": bucket_order_by_field}
         )
         pass
+    print("CREATED BUCLKETS", value)
     return value
 
 

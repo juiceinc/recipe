@@ -27,13 +27,6 @@ class TestRecipeIngredientsYaml(object):
         contents = open(fn).read()
         return Shelf.from_validated_yaml(contents, table)
 
-    def unvalidated_shelf(self, shelf_name, table):
-        """Load a file from the sample ingredients.yaml files."""
-        d = os.path.dirname(os.path.realpath(__file__))
-        fn = os.path.join(d, "ingredients", shelf_name)
-        contents = open(fn).read()
-        return Shelf.from_yaml(contents, table)
-
     def test_ingredients1_from_validated_yaml(self):
         shelf = self.validated_shelf("ingredients1.yaml", MyTable)
         recipe = (
@@ -122,7 +115,7 @@ Vermont,609480,1230082,Vermont
         )
 
     def test_census_from_yaml(self):
-        shelf = self.unvalidated_shelf("census.yaml", Census)
+        shelf = self.validated_shelf("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("state")
@@ -170,14 +163,14 @@ FROM
         )
 
     def test_nested_census_from_yaml(self):
-        shelf = self.unvalidated_shelf("census.yaml", Census)
+        shelf = self.validated_shelf("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("state")
             .metrics("pop2000", "ttlpop")
             .order_by("state")
         )
-        nested_shelf = self.unvalidated_shelf("census_nested.yaml", recipe)
+        nested_shelf = self.validated_shelf("census_nested.yaml", recipe)
         nested_recipe = Recipe(shelf=nested_shelf, session=self.session).metrics(
             "ttlpop", "num_states"
         )
@@ -189,8 +182,7 @@ FROM
         )
 
     def test_census_buckets(self):
-        """Ordering is applied automatically if a dimension has an order_by"""
-        shelf = self.unvalidated_shelf("census.yaml", Census)
+        shelf = self.validated_shelf("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("age_buckets")
@@ -228,7 +220,7 @@ oldsters,9999,4567879,oldsters
         )
 
     def test_census_condition_between(self):
-        shelf = self.unvalidated_shelf("census.yaml", Census)
+        shelf = self.validated_shelf("census.yaml", Census)
         recipe = Recipe(shelf=shelf, session=self.session).metrics("teenagers")
         assert (
             recipe.to_sql()
@@ -245,7 +237,7 @@ FROM census"""
         )
 
     def test_census_condition_between_dates(self):
-        shelf = self.unvalidated_shelf("census.yaml", Census)
+        shelf = self.validated_shelf("census.yaml", Census)
         recipe = Recipe(shelf=shelf, session=self.session).metrics("teenagers")
         assert (
             recipe.to_sql()
@@ -262,7 +254,7 @@ FROM census"""
         )
 
     def test_census_mixed_buckets(self):
-        shelf = self.unvalidated_shelf("census.yaml", Census)
+        shelf = self.validated_shelf("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("mixed_buckets")
@@ -307,7 +299,7 @@ northeast,0,609480,northeast
         )
 
     def test_census_buckets_ordering(self):
-        shelf = self.unvalidated_shelf("census.yaml", Census)
+        shelf = self.validated_shelf("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("age_buckets")
@@ -542,7 +534,7 @@ Vermont,311842,The Green Mountain State,Vermont
     def test_bad_census_from_yaml(self):
         """ Test a bad yaml file """
         with pytest.raises(BadIngredient):
-            self.unvalidated_shelf("census_bad.yaml", Census)
+            self.validated_shelf("census_bad.yaml", Census)
 
     def test_bad_census_in_from_validated_yaml(self):
         """ Test a bad yaml file """
@@ -552,7 +544,7 @@ Vermont,311842,The Green Mountain State,Vermont
     def test_bad_census_in_from_yaml(self):
         """ Test a bad yaml file """
         with pytest.raises(BadIngredient):
-            self.unvalidated_shelf("census_bad_in.yaml", Census)
+            self.validated_shelf("census_bad_in.yaml", Census)
 
     def test_deprecated_ingredients_dividemetric(self):
         """ Test deprecated ingredient kinds in a yaml file """
@@ -959,10 +951,46 @@ sales,-1.0,sales
         )
 
 
-class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
+class TestRecipeIngredientsYamlParsed(object):
+
+    def setup(self):
+        self.session = oven.Session()
+
+    def assert_recipe_csv(self, recipe, csv_text):
+        assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
+
     def validated_shelf(self, shelf_name, table):
         """Load a file from the sample ingredients.yaml files."""
         d = os.path.dirname(os.path.realpath(__file__))
         fn = os.path.join(d, "parsed_ingredients", shelf_name)
         contents = open(fn).read()
         return Shelf.from_validated_yaml(contents, table)
+
+    def test_census_buckets(self):
+        shelf = self.validated_shelf("census.yaml", Census)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("age_buckets")
+            .metrics("pop2000")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT CASE
+           WHEN (census.age < 2) THEN 'babies'
+           WHEN (census.age < 13) THEN 'children'
+           WHEN (census.age < 20) THEN 'teens'
+           ELSE 'oldsters'
+       END AS age_buckets,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY age_buckets"""
+        )
+        self.assert_recipe_csv(
+            recipe,
+            """age_buckets,pop2000,age_buckets_id
+babies,164043,babies
+children,948240,children
+oldsters,4567879,oldsters
+teens,614548,teens
+""",
+        )

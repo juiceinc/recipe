@@ -10,14 +10,7 @@ age:
     field: age
 date_between:
     kind: Metric
-    field: 'if(birth_date between ("20 years ago", "now"), age)'
-
-#dt_between:
-#    kind: Metric
-#    field:
-#        value: age
-#        condition:
-#            field: dt
-#            between:
-#            - 20 years ago
-#            - now
+    field: 'if(birth_date between "20 years ago" and "now", age)'
+dt_between:
+    kind: Metric
+    field: 'if(birth_date between "20 years ago" and "now", age)'

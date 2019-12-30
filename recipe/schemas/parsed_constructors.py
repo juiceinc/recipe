@@ -4,7 +4,7 @@ from sqlalchemy import func, distinct, case, and_, or_, not_
 
 from .field_grammar import field_parser, noag_field_parser, noag_full_condition_parser, \
     full_condition_parser
-from .utils import aggregations, find_column, ingredient_class_for_name
+from .utils import aggregations, find_column, ingredient_class_for_name, convert_value
 from recipe.exceptions import BadIngredient
 
 
@@ -86,6 +86,8 @@ class TransformToSQLAlchemyExpression(Transformer):
         }
         if right is None:
             return
+        # Convert the right into a type compatible with the left
+        right = convert_value(left, right)
         return getattr(left, comparators[rel])(right)
 
     def array(self, *args):
@@ -95,16 +97,21 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def vector_relation_expr(self, left, rel, right):
         comparators = {"IN": "in_", "NOTIN": "notin_"}
-        if rel == "BETWEEN":
-            return left.between(*right)
-        else:
-            return getattr(left, comparators[rel])(right)
+        return getattr(left, comparators[rel])(right)
+
+    def between_relation_expr(self, col, between, low, _, high):
+        # TODO: check data types and convert dates.
+        return col.between(convert_value(col, low), convert_value(col, high))
 
     def bool_expr(self, *exprs):
         if len(exprs) > 1:
             return or_(*exprs)
         else:
             return exprs[0]
+
+    def string_literal(self, value):
+        # Strip the quotes off of this string
+        return value.value[1:-1]
 
     def bool_term(self, *exprs):
         if len(exprs) > 1:

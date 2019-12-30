@@ -16,23 +16,25 @@ boolean_expr_grammar = """
     ?case: "if" "(" (bool_expr "," expr)+ ("," expr)? ")"
 
     // boolean expressions
-    ?bool_expr: bool_term ["OR" bool_term]
-    ?bool_term: bool_factor ["AND" bool_factor]
-    ?bool_factor: column
-                  | NOT bool_factor                           -> not_bool_factor
+    ?bool_expr: bool_term [OR bool_term]
+    ?bool_term: bool_factor [AND bool_factor]
+    ?bool_factor: NOT bool_factor                           -> not_bool_factor
                   | "(" bool_expr ")"
                   | relation_expr
                   | vector_relation_expr
-    ?partial_relation_expr: comparator atom
+                  | between_relation_expr
+    ?partial_relation_expr.0: comparator atom
                 | vector_comparator array
-                | BETWEEN pair_array
-    ?relation_expr:        atom comparator atom
-    ?vector_relation_expr: atom vector_comparator array
-                         | atom BETWEEN pair_array
+                | BETWEEN atom AND atom
+    ?relation_expr.1:        atom comparator atom
+    ?vector_relation_expr.1: atom vector_comparator array
+    ?between_relation_expr.1: atom BETWEEN atom AND atom
     ?pair_array:           "(" const "," const ")"            -> array
     ?array:                "(" [const ("," const)*] ")"
     ?comparator: EQ | NE | LT | LTE | GT | GTE
     ?vector_comparator.1: IN | NOTIN
+    OR: /OR/i
+    AND: /AND/i
     NOT: /NOT/i
     EQ: "="
     NE: "!="
@@ -41,7 +43,7 @@ boolean_expr_grammar = """
     GT: ">"
     GTE: ">="
     IN: /IN/i
-    NOTIN: /NOT/i /IN/i | /NOTIN/i | /NOT IN/ii
+    NOTIN: NOT IN
     BETWEEN: /BETWEEN/i
 """
 
@@ -60,7 +62,7 @@ noag_field_grammar = (
            | "(" sum ")"
     ?column.0:  NAME                           -> column
     ?const.1: NUMBER                           -> number
-            | ESCAPED_STRING                   -> literal
+            | ESCAPED_STRING                   -> string_literal
             | /true/i                          -> true
             | /false/i                         -> false
             | /null/i                          -> null
@@ -102,7 +104,7 @@ agex_field_grammar = (
            | "(" sum ")"
     ?column.0:  NAME                           -> column
     ?const.1: NUMBER                           -> number
-            | ESCAPED_STRING                   -> literal
+            | ESCAPED_STRING                   -> string_literal
             | /true/i                          -> true
             | /false/i                         -> false
             | /null/i                          -> null
