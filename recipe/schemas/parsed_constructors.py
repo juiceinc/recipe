@@ -5,7 +5,7 @@ from sqlalchemy import func, distinct, case, and_, or_, not_
 from .field_grammar import field_parser, noag_field_parser, noag_full_condition_parser, \
     full_condition_parser
 from .utils import aggregations, find_column, ingredient_class_for_name
-from .. import BadIngredient
+from recipe.exceptions import BadIngredient
 
 
 @v_args(inline=True)  # Affects the signatures of the methods
@@ -14,11 +14,15 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     from operator import add, sub, mul, neg
 
-    number = float
-
     def __init__(self, selectable, require_aggregation=False):
         self.selectable = selectable
         self.require_aggregation = require_aggregation
+
+    def number(self, value):
+        try:
+            return int(value)
+        except ValueError:
+            return float(value)
 
     def true(self, value):
         return True
@@ -135,7 +139,7 @@ def create_ingredient_from_parsed(ingr_dict, selectable):
                     "name": qf["name"],
                     "condition": TransformToSQLAlchemyExpression(
                         selectable=selectable
-                    ).transform(noag_full_condition_parser(qf.get("condition"))),
+                    ).transform(noag_full_condition_parser.parse(qf.get("condition"))),
                 }
             )
         ingr_dict["quickselects"] = parsed_quickselects

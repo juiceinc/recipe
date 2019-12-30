@@ -200,6 +200,11 @@ labeled_condition_schema = S.Dict(
     schema={"condition": condition_schema, "label": S.String(required=True)}
 )
 
+# A full condition guaranteed to not contain an aggregation
+named_condition_schema = S.Dict(
+    schema={"condition": condition_schema, "name": S.String(required=True)}
+)
+
 format_schema = S.String(coerce=coerce_format, required=False)
 
 metric_schema = S.Dict(
@@ -225,7 +230,7 @@ dimension_schema = S.Dict(
         "buckets": S.List(required=False, schema=labeled_condition_schema),
         "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
         "format": format_schema,
-        "quickselects": S.List(required=False, schema=labeled_condition_schema),
+        "quickselects": S.List(required=False, schema=named_condition_schema),
     },
     coerce=_chain(move_extra_fields, _convert_partial_conditions),
     coerce_post=_chain(create_buckets, add_version),

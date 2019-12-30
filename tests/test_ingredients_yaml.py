@@ -957,3 +957,12 @@ ops,90.0,ops
 sales,-1.0,sales
 """,
         )
+
+
+class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
+    def validated_shelf(self, shelf_name, table):
+        """Load a file from the sample ingredients.yaml files."""
+        d = os.path.dirname(os.path.realpath(__file__))
+        fn = os.path.join(d, "parsed_ingredients", shelf_name)
+        contents = open(fn).read()
+        return Shelf.from_validated_yaml(contents, table)

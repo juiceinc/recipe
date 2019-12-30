@@ -19,7 +19,7 @@ boolean_expr_grammar = """
     ?bool_expr: bool_term ["OR" bool_term]
     ?bool_term: bool_factor ["AND" bool_factor]
     ?bool_factor: column
-                  | NOT bool_factor          -> not_bool_factor
+                  | NOT bool_factor                           -> not_bool_factor
                   | "(" bool_expr ")"
                   | relation_expr
                   | vector_relation_expr
@@ -29,7 +29,7 @@ boolean_expr_grammar = """
     ?relation_expr:        atom comparator atom
     ?vector_relation_expr: atom vector_comparator array
                          | atom BETWEEN pair_array
-    ?pair_array:           "(" const "," const ")"      -> array
+    ?pair_array:           "(" const "," const ")"            -> array
     ?array:                "(" [const ("," const)*] ")"
     ?comparator: EQ | NE | LT | LTE | GT | GTE
     ?vector_comparator.1: IN | NOTIN

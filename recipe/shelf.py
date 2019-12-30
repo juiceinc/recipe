@@ -1,11 +1,6 @@
 from copy import copy
 from six import iteritems
-from sqlalchemy import (
-    Float,
-    Integer,
-    String,
-    Table,
-)
+from sqlalchemy import Float, Integer, String, Table
 from sqlalchemy.util import lightweight_named_tuple
 from sureberus import errors as E
 from sureberus import normalize_schema
@@ -16,10 +11,8 @@ from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric
 from recipe.schemas import shelf_schema
 from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
-from recipe.schemas.config_constructors import create_ingredient_from_config
-
 from recipe.schemas.config_constructors import (
-    ingredient_from_validated_dict,
+    create_ingredient_from_config,
     parse_unvalidated_condition,
 )
 
@@ -34,7 +27,6 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
         return create_ingredient_from_config(ingr_dict, selectable)
     else:
         return create_ingredient_from_parsed(ingr_dict, selectable)
-
 
 
 class Shelf(object):
