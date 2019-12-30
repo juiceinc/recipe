@@ -68,3 +68,124 @@ def test_parsers():
                     # print(f"{parser_name:30s} failed ({expected_result})")
                     assert expected_result == '0'
 
+def test_complex_condition_parser():
+    values = [
+        (
+            ">2",
+            """
+partial_relation_expr
+  >
+  number	2
+""",
+        ),
+        (
+            "A = 1 or b = 2",
+            """
+bool_expr
+  relation_expr
+    column	A
+    =
+    number	1
+  or
+  relation_expr
+    column	b
+    =
+    number	2
+""",
+        ),
+        (
+            'A = 1 or (b = 2 AND c < "3")',
+            """
+bool_expr
+  relation_expr
+    column	A
+    =
+    number	1
+  or
+  bool_term
+    relation_expr
+      column	b
+      =
+      number	2
+    AND
+    relation_expr
+      column	c
+      <
+      string_literal	"3"
+""",
+        ),
+    ]
+    for v, pretty_tree in values:
+        tree = noag_any_condition_parser.parse(v)
+        print(tree.pretty())
+        assert tree.pretty().strip() == pretty_tree.strip()
+
+
+def test_complex_field_parser():
+    values = [
+        (
+            "couNT(*)",
+            """
+agex
+  couNT
+  *
+""",
+        ),
+        (
+            "min(war_total)-max(war_total-war_total)",
+            """
+expr
+  sub
+    agex
+      aggregate	min
+      column	war_total
+    agex
+      aggregate	max
+      sub
+        column	war_total
+        column	war_total
+""",
+        ),
+        (
+            'if(age<2,"babies","oldsters")',
+            """
+expr
+  case
+    relation_expr
+      column	age
+      <
+      number	2
+    expr
+      string_literal	"babies"
+    expr
+      string_literal	"oldsters"
+""",
+        ),
+        (
+            'if(age<2,"babies",age between 4 and 8,"kids","oldsters")',
+            """
+expr
+  case
+    relation_expr
+      column	age
+      <
+      number	2
+    expr
+      string_literal	"babies"
+    between_relation_expr
+      column	age
+      between
+      number	4
+      and
+      number	8
+    expr
+      string_literal	"kids"
+    expr
+      string_literal	"oldsters"
+""",
+        ),
+    ]
+    for v, pretty_tree in values:
+        tree = field_parser.parse(v)
+        print(tree.pretty())
+        assert tree.pretty().strip() == pretty_tree.strip()

@@ -8,7 +8,7 @@ from .field_grammar import (
     noag_full_condition_parser,
     full_condition_parser,
 )
-from .utils import aggregations, find_column, ingredient_class_for_name
+from .utils import aggregations, find_column, ingredient_class_for_name, convert_value
 from recipe.exceptions import BadIngredient
 
 

@@ -952,7 +952,6 @@ sales,-1.0,sales
 
 
 class TestRecipeIngredientsYamlParsed(object):
-
     def setup(self):
         self.session = oven.Session()
 
