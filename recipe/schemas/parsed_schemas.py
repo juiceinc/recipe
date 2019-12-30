@@ -1,5 +1,6 @@
 """Shelf config _version="2" supports parsed fields using a lark parser."""
 import attr
+from lark.exceptions import LarkError
 from six import string_types
 import logging
 from sureberus import schema as S
@@ -28,7 +29,7 @@ class ParseValidator(object):
         """Check parsing"""
         try:
             tree = self.parser.parse(v)
-        except Exception as exc:
+        except LarkError as exc:
             # A Lark error message raised when the value doesn't parse
             raise exc
 
@@ -160,7 +161,8 @@ def ensure_aggregation(fld):
             return fld
         else:
             return "sum(" + fld + ")"
-    except Exception:
+    except LarkError:
+        # If we can't parse we will handle this in the validator
         return fld
 
 

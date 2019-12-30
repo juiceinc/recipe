@@ -1,7 +1,7 @@
 """Convert parsed trees into SQLAlchemy objects """
 from lark import Lark, Transformer, v_args
 from sqlalchemy import func, distinct, case, and_, or_, not_
-from .utils import aggregations
+from .utils import aggregations, find_column
 
 
 @v_args(inline=True)  # Affects the signatures of the methods
@@ -42,7 +42,7 @@ class CalculateField(Transformer):
         return case([(denom == 0, None)], else_=num / denom)
 
     def column(self, name):
-        return getattr(self.selectable.c, name)
+        return find_column(self.selectable, name)
 
     def agex(self, aggr, val):
         if val == "*":

@@ -27,7 +27,6 @@ INVALID_DIMENSION_FIELDS = ["fo(", "sum(foo)", "fo)", "su(x + y)"]
 
 VALID_PARTIAL_CONDITIONS = [">10", 'in ("a", "b")', "notin (1,2,3)", "=  \t b", "=b"]
 
-
 def test_valid_metric_field_parsing():
     for _ in VALID_METRIC_FIELDS:
         v = {"foo": {"kind": "Metric", "field": _}, "_version": "2"}
