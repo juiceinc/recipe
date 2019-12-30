@@ -2,9 +2,13 @@
 from lark import Lark, Transformer, v_args
 from sqlalchemy import func, distinct, case, and_, or_, not_
 
-from .field_grammar import field_parser, noag_field_parser, noag_full_condition_parser, \
-    full_condition_parser
-from .utils import aggregations, find_column, ingredient_class_for_name, convert_value
+from .field_grammar import (
+    field_parser,
+    noag_field_parser,
+    noag_full_condition_parser,
+    full_condition_parser,
+)
+from .utils import aggregations, find_column, ingredient_class_for_name
 from recipe.exceptions import BadIngredient
 
 
@@ -130,13 +134,15 @@ def create_ingredient_from_parsed(ingr_dict, selectable):
     if IngredientClass is None:
         raise BadIngredient("Unknown ingredient kind")
 
-    if kind in ('Metric', 'Dimension'):
+    if kind in ("Metric", "Dimension"):
         parser = field_parser if kind == "Metric" else noag_field_parser
 
         # Create a sqlalchemy expression from 'field' and pass it as the first arg
-        args = [TransformToSQLAlchemyExpression(selectable=selectable).transform(
-            parser.parse(ingr_dict.pop("field", None))
-        )]
+        args = [
+            TransformToSQLAlchemyExpression(selectable=selectable).transform(
+                parser.parse(ingr_dict.pop("field", None))
+            )
+        ]
 
         # Convert quickselects to a kwarg with sqlalchemy expressions
         parsed_quickselects = []
@@ -158,17 +164,21 @@ def create_ingredient_from_parsed(ingr_dict, selectable):
                 selectable=selectable
             ).transform(parser.parse(extra.get("field")))
 
-    elif kind == 'Filter':
+    elif kind == "Filter":
         # Create a sqlalchemy expression from 'condition' and pass it as the first arg
-        args = [TransformToSQLAlchemyExpression(selectable=selectable).transform(
-            noag_full_condition_parser.parse(ingr_dict.pop("condition", None))
-        )]
+        args = [
+            TransformToSQLAlchemyExpression(selectable=selectable).transform(
+                noag_full_condition_parser.parse(ingr_dict.pop("condition", None))
+            )
+        ]
 
-    elif kind == 'Having':
+    elif kind == "Having":
         # Create a sqlalchemy expression from 'condition' and pass it as the first arg
         # TODO: Force this to be an aggregate
-        args = [TransformToSQLAlchemyExpression(selectable=selectable).transform(
-            full_condition_parser.parse(ingr_dict.pop("condition", None))
-        )]
+        args = [
+            TransformToSQLAlchemyExpression(selectable=selectable).transform(
+                full_condition_parser.parse(ingr_dict.pop("condition", None))
+            )
+        ]
 
     return IngredientClass(*args, **ingr_dict)

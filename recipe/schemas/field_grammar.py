@@ -118,7 +118,9 @@ agex_field_grammar = (
     %import common.WS_INLINE
     %ignore COMMENT
     %ignore WS_INLINE
-""".format(allowed_aggr_keys=allowed_aggr_keys)
+""".format(
+        allowed_aggr_keys=allowed_aggr_keys
+    )
     + boolean_expr_grammar
 )
 
