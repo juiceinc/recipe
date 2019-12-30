@@ -140,9 +140,8 @@ def parse_validated_field(fld, selectable, use_bucket_labels=True):
     return field
 
 
-def ingredient_from_validated_dict(ingr_dict, selectable):
+def create_ingredient_from_config(ingr_dict, selectable):
     """ Create an ingredient from config object. """
-
     kind = ingr_dict.pop("kind", "Metric")
     IngredientClass = ingredient_class_for_name(kind)
 

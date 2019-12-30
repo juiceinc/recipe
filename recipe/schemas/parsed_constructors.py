@@ -1,11 +1,14 @@
 """Convert parsed trees into SQLAlchemy objects """
 from lark import Lark, Transformer, v_args
 from sqlalchemy import func, distinct, case, and_, or_, not_
-from .utils import aggregations, find_column
+
+from .field_grammar import field_parser, noag_field_parser, noag_full_condition_parser
+from .utils import aggregations, find_column, ingredient_class_for_name
+from .. import BadIngredient
 
 
 @v_args(inline=True)  # Affects the signatures of the methods
-class CalculateField(Transformer):
+class TransformToSQLAlchemyExpression(Transformer):
     """Converts a field to a SQLAlchemy expression """
 
     from operator import add, sub, mul, neg
@@ -106,3 +109,40 @@ class CalculateField(Transformer):
 
     def not_bool_factor(self, expr):
         return not_(expr)
+
+
+def create_ingredient_from_parsed(ingr_dict, selectable):
+    """ Create an ingredient from config version 2 object . """
+    kind = ingr_dict.pop("kind", "Metric")
+    IngredientClass = ingredient_class_for_name(kind)
+    parser = field_parser if kind == "Metric" else noag_field_parser
+
+    if IngredientClass is None:
+        raise BadIngredient("Unknown ingredient kind")
+
+    field_defn = ingr_dict.pop("field", None)
+
+    field = TransformToSQLAlchemyExpression(selectable=selectable).transform(
+        parser.parse(field_defn)
+    )
+
+    parsed_quickselects = []
+    for qf in ingr_dict.pop("quickselects", []):
+        parsed_quickselects.append(
+            {
+                "name": qf["name"],
+                "condition": TransformToSQLAlchemyExpression(
+                    selectable=selectable
+                ).transform(noag_full_condition_parser(qf.get("condition"))),
+            }
+        )
+    ingr_dict["quickselects"] = parsed_quickselects
+
+    args = [field]
+    # Each extra field contains a name and a field
+    for extra in ingr_dict.pop("extra_fields", []):
+        ingr_dict[extra.get("name")] = TransformToSQLAlchemyExpression(
+            selectable=selectable
+        ).transform(parser.parse(extra.get("field")))
+
+    return IngredientClass(*args, **ingr_dict)

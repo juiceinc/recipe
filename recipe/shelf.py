@@ -15,6 +15,8 @@ from recipe.compat import basestring
 from recipe.exceptions import BadIngredient, BadRecipe
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric
 from recipe.schemas import shelf_schema
+from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
+from recipe.schemas.config_constructors import create_ingredient_from_config
 
 from recipe.schemas.config_constructors import (
     ingredient_from_validated_dict,
@@ -25,8 +27,13 @@ from recipe.schemas.config_constructors import (
 _POP_DEFAULT = object()
 
 
-def ingredient_transformer(ingr):
-    version = ingr.get("_version", "1")
+def ingredient_from_validated_dict(ingr_dict, selectable):
+    """Create an ingredient object from a validated ingredient schema"""
+    version = ingr_dict.pop("_version", "1")
+    if version == "1":
+        return create_ingredient_from_config(ingr_dict, selectable)
+    else:
+        return create_ingredient_from_parsed(ingr_dict, selectable)
 
 
 
