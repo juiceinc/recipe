@@ -13,7 +13,7 @@ boolean_expr_grammar = """
     // Pairs of boolean expressions and expressions
     // forming case when {BOOL_EXPR} then {EXPR}
     // an optional final expression is the else.T
-    ?case: "if" "(" (bool_expr "," expr)+ ("," expr)? ")"
+    ?case: "if" "(" (bool_expr "," expr ","?)+ (expr)? ")"
 
     // boolean expressions
     ?bool_expr: bool_term [OR bool_term]

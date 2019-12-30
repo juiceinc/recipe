@@ -26,12 +26,8 @@ def test_parsers():
     war_total                                       # 1,0,1,0,0,0
     (war_total + war_total)                         # 1,0,1,0,0,0
     (war_total + war_total) / war_total             # 1,0,1,0,0,0
-    if(war_total BETWEEN 1 AND 5), 5)               # 1,0,1,0,0,0
-    """
-    others = """
-    if(war_total BETWEEN 1 AND 5), 4, 2)            # 1,0,1,0,0,0
-
-
+    if(war_total BETWEEN 1 AND 5, 5)                # 1,0,1,0,0,0
+    if(war_total BETWEEN 1 AND 5, 4, 2)             # 1,0,1,0,0,0
     couNT(*)                                        # 1,0,0,0,0,0
     AVG(war_total) + 1.0                            # 1,0,0,0,0,0
     sum(war_total)                                  # 1,0,0,0,0,0
@@ -45,7 +41,6 @@ def test_parsers():
     min(x)                                          # 1,0,0,0,0,0
     """
 
-    # connection = engine.connect()
     parsers = (
         ("field_parser", field_parser),
         ("full_condition_parser", full_condition_parser),
@@ -60,8 +55,8 @@ def test_parsers():
         if row:
             row, expected = row.split("#")
             expected_by_parser = expected.strip().split(",")
-            print(f"\n\n\n\n{row}")
-            print('-'*40)
+            # print(f"\n\n\n\n{row}")
+            # print("-" * 40)
             for parser_name, parser in parsers:
                 expected_result = expected_by_parser.pop(0)
                 try:
@@ -72,3 +67,4 @@ def test_parsers():
                 except:
                     # print(f"{parser_name:30s} failed ({expected_result})")
                     assert expected_result == '0'
+
