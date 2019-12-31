@@ -148,7 +148,6 @@ def create_buckets(value):
             {"name": "order_by_expression", "field": bucket_order_by_field}
         )
         pass
-    print("CREATED BUCLKETS", value)
     return value
 
 

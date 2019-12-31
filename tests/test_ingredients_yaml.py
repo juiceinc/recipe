@@ -416,7 +416,14 @@ Vermont,271469,The Green Mountain State,Vermont
        sum((((census.pop2000 + census.pop2008) - census.pop2000) * census.pop2008) / (coalesce(CAST(census.pop2000 AS FLOAT), 0.0) + 1e-09)) AS allthemath
 FROM census
 GROUP BY state_raw"""
-        )
+        )  # noqa: E501
+        self.assert_recipe_csv(
+            recipe,
+        """state_raw,allthemath,state,state_id
+Tennessee,6873286.452931551,The Volunteer State,Tennessee
+Vermont,660135.4074068918,The Green Mountain State,Vermont
+""",
+    )
 
     def test_complex_census_quickselect_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
@@ -600,7 +607,7 @@ Vermont,609480,Taciturny,Vermont
 """,
         )
 
-    def test_deprecated_ingredients_idvaluedimension(self):
+
         """ Test deprecated ingredient kinds in a yaml file """
         shelf = self.validated_shelf("census_deprecated.yaml", Census)
 
@@ -951,7 +958,7 @@ sales,-1.0,sales
         )
 
 
-class TestRecipeIngredientsYamlParsed(object):
+class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
     def setup(self):
         self.session = oven.Session()
 
@@ -992,4 +999,77 @@ children,948240,children
 oldsters,4567879,oldsters
 teens,614548,teens
 """,
+        )
+
+    def test_deprecated_ingredients_dividemetric(self):
+        """Skip this Deprecated ingredient kinds are not supperted in versino 2"""
+        pass
+
+    def test_deprecated_ingredients_lookupdimension(self):
+        """Skip this Deprecated ingredient kinds are not supperted in versino 2"""
+        pass
+
+    def test_deprecated_ingredients_idvaluedimension(self):
+        """Skip this Deprecated ingredient kinds are not supperted in versino 2"""
+        pass
+
+    def test_deprecated_ingredients_wtdavgmetric(self):
+        """Skip this Deprecated ingredient kinds are not supperted in versino 2"""
+        pass
+
+    def test_shelf_with_references(self):
+        """Parsed shelves do division slighly differently"""
+        shelf = self.validated_shelf("census_references.yaml", Census)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("state")
+            .metrics("popdivide")
+            .order_by("state")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state_raw,
+       CASE
+           WHEN (sum(census.pop2008) = 0) THEN NULL
+           ELSE CAST(sum(CASE
+                             WHEN (census.age > 40) THEN census.pop2000
+                         END) AS FLOAT) / CAST(sum(census.pop2008) AS FLOAT)
+       END AS popdivide
+FROM census
+GROUP BY state_raw
+ORDER BY census.state"""
+        )
+        self.assert_recipe_csv(
+            recipe,
+            """state_raw,popdivide,state,state_id
+Tennessee,0.38567639950103244,The Volunteer State,Tennessee
+Vermont,0.4374284968466102,The Green Mountain State,Vermont
+""",
+        )
+
+    def test_complex_census_from_validated_yaml_math(self):
+        """Build a recipe that uses complex definitions dimensions and
+        metrics """
+        shelf = self.validated_shelf("census_complex.yaml", Census)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("state")
+            .metrics("allthemath")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state_raw,
+       sum((census.pop2000 + census.pop2008) - CASE
+                                                   WHEN (census.pop2000 = 0) THEN NULL
+                                                   ELSE CAST(census.pop2000 * census.pop2008 AS FLOAT) / CAST(census.pop2000 AS FLOAT)
+                                               END) AS allthemath
+FROM census
+GROUP BY state_raw"""
+        )  # noqa: E501
+        self.assert_recipe_csv(
+            recipe,
+            """state_raw,allthemath,state,state_id
+Tennessee,5685230.0,The Volunteer State,Tennessee
+Vermont,609480.0,The Green Mountain State,Vermont
+"""
         )

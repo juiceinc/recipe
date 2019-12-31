@@ -74,7 +74,7 @@ def ingredient_from_unvalidated_dict(unvalidated_ingr, selectable):
         )
     except E.SureError as e:
         raise BadIngredient(str(e))
-    return ingredient_from_validated_dict(ingr_dict, selectable)
+    return create_ingredient_from_config(ingr_dict, selectable)
 
 
 def parse_validated_field(fld, selectable, use_bucket_labels=True):
@@ -141,7 +141,7 @@ def parse_validated_field(fld, selectable, use_bucket_labels=True):
 
 
 def create_ingredient_from_config(ingr_dict, selectable):
-    """ Create an ingredient from config object. """
+    """ Create an ingredient from a validated config object. """
     kind = ingr_dict.pop("kind", "Metric")
     IngredientClass = ingredient_class_for_name(kind)
 

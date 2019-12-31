@@ -1,6 +1,6 @@
 """Convert parsed trees into SQLAlchemy objects """
 from lark import Lark, Transformer, v_args
-from sqlalchemy import func, distinct, case, and_, or_, not_
+from sqlalchemy import func, distinct, case, and_, or_, not_, cast, Float
 
 from .field_grammar import (
     field_parser,
@@ -21,6 +21,9 @@ class TransformToSQLAlchemyExpression(Transformer):
     def __init__(self, selectable, require_aggregation=False):
         self.selectable = selectable
         self.require_aggregation = require_aggregation
+
+    def transform(self, tree):
+        return super(TransformToSQLAlchemyExpression, self).transform(tree)
 
     def number(self, value):
         try:
@@ -51,7 +54,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def div(self, num, denom):
         """SQL safe division"""
-        return case([(denom == 0, None)], else_=num / denom)
+        return case([(denom == 0, None)], else_=cast(num, Float) / cast(denom, Float))
 
     def column(self, name):
         return find_column(self.selectable, name)
@@ -101,7 +104,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def vector_relation_expr(self, left, rel, right):
         comparators = {"IN": "in_", "NOTIN": "notin_"}
-        return getattr(left, comparators[rel])(right)
+        return getattr(left, comparators[rel.upper()])(right)
 
     def between_relation_expr(self, col, between, low, _, high):
         # TODO: check data types and convert dates.
@@ -136,11 +139,12 @@ def create_ingredient_from_parsed(ingr_dict, selectable):
 
     if kind in ("Metric", "Dimension"):
         parser = field_parser if kind == "Metric" else noag_field_parser
-
+        fld_defn = ingr_dict.pop("field", None)
+        tree = parser.parse(fld_defn)
         # Create a sqlalchemy expression from 'field' and pass it as the first arg
         args = [
             TransformToSQLAlchemyExpression(selectable=selectable).transform(
-                parser.parse(ingr_dict.pop("field", None))
+                parser.parse(fld_defn)
             )
         ]
 

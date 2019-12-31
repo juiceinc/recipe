@@ -8,26 +8,26 @@ def test_parsers():
 
     # An expression to parse and the parsers it should pass
     #                                                 field_parser
-    #                                                 | full_condition_parser
-    #                                                 | | noag_field_parser
-    #                                                 | | | noag_partial_condition_parser
-    #                                                 | | | | noag_any_condition_parser
-    #                                                 | | | | | noag_full_condition_parser
+    #                                                 | noag_field_parser
+    #                                                 | | full_condition_parser
+    #                                                 | | | noag_full_condition_parser
+    #                                                 | | | | noag_partial_condition_parser
+    #                                                 | | | | | noag_any_condition_parser
     #                                                 v v v v v v
     values = """
-    > 10                                            # 0,0,0,1,1,0
-    in (1,2,3)                                      # 0,0,0,1,1,0
-    war_total IN (1,2,3)                            # 0,1,0,0,1,1
-    war_total BETWEEN 1 AND 5                       # 0,1,0,0,1,1
-    war_total > 10                                  # 0,1,0,0,1,1
-    war_total > 10 OR NOT war_total < 20            # 0,1,0,0,1,1
-    sum(x) < 20                                     # 0,1,0,0,0,0
-    WAR_TOTAL                                       # 1,0,1,0,0,0
-    war_total                                       # 1,0,1,0,0,0
-    (war_total + war_total)                         # 1,0,1,0,0,0
-    (war_total + war_total) / war_total             # 1,0,1,0,0,0
-    if(war_total BETWEEN 1 AND 5, 5)                # 1,0,1,0,0,0
-    if(war_total BETWEEN 1 AND 5, 4, 2)             # 1,0,1,0,0,0
+    > 10                                            # 0,0,0,0,1,1
+    in (1,2,3)                                      # 0,0,0,0,1,1
+    war_total IN (1,2,3)                            # 0,0,1,1,0,1
+    war_total BETWEEN 1 AND 5                       # 0,0,1,1,0,1
+    war_total > 10                                  # 0,0,1,1,0,1
+    war_total > 10 OR NOT war_total < 20            # 0,0,1,1,0,1
+    sum(x) < 20                                     # 0,0,1,0,0,0
+    WAR_TOTAL                                       # 1,1,0,0,0,0
+    war_total                                       # 1,1,0,0,0,0
+    (war_total + war_total)                         # 1,1,0,0,0,0
+    (war_total + war_total) / war_total             # 1,1,0,0,0,0
+    if(war_total BETWEEN 1 AND 5, 5)                # 1,1,0,0,0,0
+    if(war_total BETWEEN 1 AND 5, 4, 2)             # 1,1,0,0,0,0
     couNT(*)                                        # 1,0,0,0,0,0
     AVG(war_total) + 1.0                            # 1,0,0,0,0,0
     sum(war_total)                                  # 1,0,0,0,0,0
@@ -43,11 +43,11 @@ def test_parsers():
 
     parsers = (
         ("field_parser", field_parser),
-        ("full_condition_parser", full_condition_parser),
         ("noag_field_parser", noag_field_parser),
+        ("full_condition_parser", full_condition_parser),
+        ("noag_full_condition_parser", noag_full_condition_parser),
         ("noag_partial_condition_parser", noag_partial_condition_parser),
         ("noag_any_condition_parser", noag_any_condition_parser),
-        ("noag_full_condition_parser", noag_full_condition_parser),
     )
 
     for row in values.split("\n"):
