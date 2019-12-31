@@ -419,11 +419,11 @@ GROUP BY state_raw"""
         )  # noqa: E501
         self.assert_recipe_csv(
             recipe,
-        """state_raw,allthemath,state,state_id
+            """state_raw,allthemath,state,state_id
 Tennessee,6873286.452931551,The Volunteer State,Tennessee
 Vermont,660135.4074068918,The Green Mountain State,Vermont
 """,
-    )
+        )
 
     def test_complex_census_quickselect_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
@@ -606,7 +606,6 @@ Tennessee,5685230,Volunteery,Tennessee
 Vermont,609480,Taciturny,Vermont
 """,
         )
-
 
         """ Test deprecated ingredient kinds in a yaml file """
         shelf = self.validated_shelf("census_deprecated.yaml", Census)
@@ -1071,5 +1070,5 @@ GROUP BY state_raw"""
             """state_raw,allthemath,state,state_id
 Tennessee,5685230.0,The Volunteer State,Tennessee
 Vermont,609480.0,The Green Mountain State,Vermont
-"""
+""",
         )
