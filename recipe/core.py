@@ -12,7 +12,7 @@ from sureberus import normalize_dict, normalize_schema
 from recipe.compat import basestring
 from recipe.dynamic_extensions import run_hooks
 from recipe.exceptions import BadRecipe
-from recipe.ingredients import Dimension, Filter, Having, Metric
+from recipe.ingredients import Dimension, Filter, Having, Metric, Ingredient
 from recipe.schemas import recipe_schema
 from recipe.shelf import Shelf, parse_unvalidated_condition
 from recipe.utils import prettyprintable_sql, recipe_arg
@@ -334,6 +334,10 @@ class Recipe(object):
                          key is prefixed by "-" the ordering will be descending.
         :type order_bys: list(str)
         """
+        # Convert dimensions to use their id
+        order_bys = [
+            d.id if isinstance(d, Ingredient) else d for d in order_bys
+        ]
         self._order_bys = order_bys
 
     @recipe_arg()

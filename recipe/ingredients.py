@@ -161,13 +161,25 @@ class Ingredient(object):
 
     @property
     def order_by_columns(self):
-        """ Yield columns to be used in an order by using this ingredient
+        """Yield columns to be used in an order by using this ingredient. Column
+        ordering is in reverse order of columns
         """
-        for c in self.columns:
+        # Ensure the labels are generated
+        if not self._labels:
+            list(self.query_columns)
+
+        if self.group_by_strategy == "labels":
             if self.ordering == "desc":
-                yield c.desc()
+                suffix = " DESC"
             else:
-                yield c
+                suffix = ""
+
+            return [
+                text(lbl + suffix)
+                for col, lbl in reversed(list(zip(self.columns, self._labels)))
+            ]
+        else:
+            return reversed(self.columns)
 
     @property
     def cauldron_extras(self):
@@ -478,13 +490,11 @@ class Dimension(Ingredient):
 
         self.columns = []
         self._group_by = []
-        self._order_by_columns = []
         self.role_keys = []
         if "id" in self.roles:
             self.columns.append(self.roles["id"])
             self._group_by.append(self.roles["id"])
             self.role_keys.append("id")
-            self._order_by_columns.append(self.roles["id"])
         if "value" in self.roles:
             self.columns.append(self.roles["value"])
             self._group_by.append(self.roles["value"])
@@ -560,28 +570,6 @@ class Dimension(Ingredient):
         return tuple(
             value_suffix if role == "value" else "_" + role for role in self.role_keys
         )
-
-    @property
-    def order_by_columns(self):
-        """Yield columns to be used in an order by using this ingredient. Column
-        ordering is in reverse order of columns
-        """
-        # Ensure the labels are generated
-        if not self._labels:
-            list(self.query_columns)
-
-        if self.group_by_strategy == "labels":
-            if self.ordering == "desc":
-                suffix = " DESC"
-            else:
-                suffix = ""
-
-            return [
-                text(lbl + suffix)
-                for col, lbl in reversed(list(zip(self.columns, self._labels)))
-            ]
-        else:
-            return reversed(self.columns)
 
     @property
     def id_prop(self):
