@@ -605,7 +605,7 @@ class Shelf(object):
         else:
             raise BadRecipe("{} is not a {}".format(obj, filter_to_class))
 
-    def brew_query_parts(self):
+    def brew_query_parts(self, order_by_keys=[]):
         """ Make columns, group_bys, filters, havings
         """
         columns, group_bys, filters, havings = [], [], set(), set()
@@ -619,15 +619,6 @@ class Shelf(object):
             if ingredient.havings:
                 havings.update(ingredient.havings)
 
-        return {
-            "columns": columns,
-            "group_bys": group_bys,
-            "filters": filters,
-            "havings": havings,
-        }
-
-    def _prepare_order_bys(self, order_by_keys):
-        """ Build a list of order by columns """
         order_bys = OrderedSet()
         for key in order_by_keys:
             ingr = self.find(key, (Dimension, Metric))
@@ -636,20 +627,26 @@ class Shelf(object):
                 if str(c) not in [str(o) for o in order_bys]:
                     order_bys.add(c)
 
-        return list(order_bys)
+        return {
+            "columns": columns,
+            "group_bys": group_bys,
+            "filters": filters,
+            "havings": havings,
+            "order_bys": list(order_bys)
+        }
 
-    def enchant(self, list, cache_context=None):
+    def enchant(self, data, cache_context=None):
         """ Add any calculated values to each row of a resultset generating a
         new namedtuple
 
-        :param list: a list of row results
+        :param data: a list of row results
         :param cache_context: optional extra context for caching
         :return: a list with ingredient.cauldron_extras added for all
                  ingredients
         """
         enchantedlist = []
         if list:
-            sample_item = list[0]
+            sample_item = data[0]
 
             # Extra fields to add to each row
             # With extra callables
@@ -670,7 +667,7 @@ class Shelf(object):
             )
 
             # Iterate over the results and build a new namedtuple for each row
-            for row in list:
+            for row in data:
                 values = row + tuple(fn(row) for fn in extra_callables)
                 enchantedlist.append(keyed_tuple(values))
 

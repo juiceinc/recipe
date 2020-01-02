@@ -5,7 +5,6 @@ from uuid import uuid4
 
 import attr
 import tablib
-from ordered_set import OrderedSet
 from sqlalchemy import alias, func
 from sqlalchemy.sql.elements import BinaryExpression
 from sureberus import normalize_dict, normalize_schema
@@ -328,21 +327,13 @@ class Recipe(object):
 
     @recipe_arg()
     def order_by(self, *order_bys):
-        """ Add a list of ingredients to order by to the query. These can
-        either be Dimension or Metric objects or strings representing
-        order_bys on the shelf.
+        """Apply an ordering to the recipe results.
 
-        The Order_by expression will be added to the query's order_by statement
-
-        :param order_bys: Order_bys to add to the recipe. Order_bys can
-                         either be keys on the ``shelf`` or
-                         Dimension or Metric objects. If the
-                         key is prefixed by "-" the ordering will be
-                         descending.
-        :type order_bys: list
+        :param order_bys: Order_bys to add to the recipe. Order_bys must
+                         be keys of ingredients already added to the recipe. If the
+                         key is prefixed by "-" the ordering will be descending.
+        :type order_bys: list(str)
         """
-
-        # Order bys shouldn't be added to the _cauldron
         self._order_bys = order_bys
 
     @recipe_arg()
@@ -412,10 +403,14 @@ class Recipe(object):
         # and apply any blend recipes
 
         # Get the parts of the query from the cauldron
-        # We don't need to regather order_bys
-        recipe_parts = self._cauldron.brew_query_parts()
-
-        recipe_parts["order_bys"] = self._cauldron._prepare_order_bys(self._order_bys)
+        # {
+        #             "columns": columns,
+        #             "group_bys": group_bys,
+        #             "filters": filters,
+        #             "havings": havings,
+        #             "order_bys": list(order_bys)
+        #         }
+        recipe_parts = self._cauldron.brew_query_parts(self._order_bys)
 
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_recipe_parts(recipe_parts)

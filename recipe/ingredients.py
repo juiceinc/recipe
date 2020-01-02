@@ -55,6 +55,13 @@ class Ingredient(object):
             used in a ``recipe.order_by``.
             This is added to the ingredient when the ingredient is
             used in a ``recipe.order_by``.
+        group_by_strategy (:obj:`str`):
+            A strategy to use when preparing group_bys for the query
+            "labels" is the default strategy which will use the labels assigned to
+            each column.
+            "direct" will use the column expression directly. This alternative is
+            useful when there might be more than one column with the same label
+            being used in the query.
         quickselects (:obj:`list` of named filters):
             A list of named filters that can be accessed through
             ``build_filter``. Named filters are dictionaries with
@@ -81,6 +88,7 @@ class Ingredient(object):
 
         # What order should this be in
         self.ordering = kwargs.pop("ordering", "asc")
+        self.group_by_strategy = kwargs.pop("group_by_strategy", "labels")
 
         if not isinstance(self.formatters, (list, tuple)):
             raise BadIngredient(
@@ -442,13 +450,6 @@ class Dimension(Ingredient):
         lookup_default (:obj:`object`)
             A default to show if the value can't be found in the
             lookup dictionary.
-        group_by_strategy (:obj:`str`):
-            A strategy to use when preparing group_bys for the query
-            "labels" is the default strategy which will use the labels assigned to
-            each column.
-            "direct" will use the column expression directly. This alternative is
-            useful when there might be more than one column with the same label
-            being used in the query.
 
     Returns:
 
@@ -460,11 +461,6 @@ class Dimension(Ingredient):
 
     def __init__(self, expression, **kwargs):
         super(Dimension, self).__init__(**kwargs)
-
-        # An optional exprssion to use instead of the value expression
-        # when ordering
-        order_by_expression = kwargs.pop("order_by_expression", None)
-        self.group_by_strategy = kwargs.pop("group_by_strategy", "labels")
 
         # We must always have a value role
         self.roles = {"value": expression}
@@ -491,17 +487,22 @@ class Dimension(Ingredient):
             self.columns.append(self.roles["value"])
             self._group_by.append(self.roles["value"])
             self.role_keys.append("value")
-            # Order by columns are in order of value, id
-            # Extra roles are ignored
-            if order_by_expression is not None:
-                self._order_by_columns.insert(0, order_by_expression)
-            else:
-                self._order_by_columns.insert(0, self.roles["value"])
 
         # Add all the other columns in sorted order of role
-        for k in sorted(self.roles.keys()):
-            if k in ("id", "value"):
-                continue
+        # with order_by coming last
+        # For instance, if the following are passed
+        # expression, id_expression, order_by_expresion, zed_expression the order of
+        # columns would be "id", "value", "zed", "order_by"
+        # When using group_bys for ordering we put them in reverse order.
+        ordered_roles = [
+            k for k in sorted(self.roles.keys()) if k not in ("id", "value")
+        ]
+        # Move order_by to the end
+        if "order_by" in ordered_roles:
+            ordered_roles.remove("order_by")
+            ordered_roles.append("order_by")
+
+        for k in ordered_roles:
             self.columns.append(self.roles[k])
             self._group_by.append(self.roles[k])
             self.role_keys.append(k)
@@ -545,27 +546,6 @@ class Dimension(Ingredient):
 
         yield self.id + "_id", lambda row: getattr(row, self.id_prop)
 
-    @property
-    def order_by_columns(self):
-        """ Yield columns to be used in an order by using this ingredient
-        """
-        # Ensure the labels are generated
-        if not self._labels:
-            list(self.query_columns)
-
-        if self.group_by_strategy == "labels":
-            if self.ordering == "desc":
-                suffix = ' DESC'
-            else:
-                suffix = ''
-
-            return [text(lbl + suffix) for gb, lbl in zip(self._group_by, self._labels)]
-        else:
-            for c in self._order_by_columns:
-                pass
-            return self._group_by
-
-
     def make_column_suffixes(self):
         """ Make sure we have the right column suffixes. These will be appended
         to `id` when generating the query.
@@ -578,6 +558,28 @@ class Dimension(Ingredient):
         return tuple(
             value_suffix if role == "value" else "_" + role for role in self.role_keys
         )
+
+    @property
+    def order_by_columns(self):
+        """Yield columns to be used in an order by using this ingredient. Column
+        ordering is in reverse order of columns
+        """
+        # Ensure the labels are generated
+        if not self._labels:
+            list(self.query_columns)
+
+        if self.group_by_strategy == "labels":
+            if self.ordering == "desc":
+                suffix = " DESC"
+            else:
+                suffix = ""
+
+            return [
+                text(lbl + suffix)
+                for col, lbl in reversed(zip(self.columns, self._labels))
+            ]
+        else:
+            return reversed(self.columns)
 
     @property
     def id_prop(self):
