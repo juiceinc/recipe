@@ -335,9 +335,7 @@ class Recipe(object):
         :type order_bys: list(str)
         """
         # Convert dimensions to use their id
-        order_bys = [
-            d.id if isinstance(d, Ingredient) else d for d in order_bys
-        ]
+        order_bys = [d.id if isinstance(d, Ingredient) else d for d in order_bys]
         self._order_bys = order_bys
 
     @recipe_arg()

@@ -366,9 +366,7 @@ class SummarizeOver(RecipeExtension):
         # Find the ordering columns and apply them to the new query
         order_by_columns = []
         for col in postquery_parts["query"]._order_by:
-            subq_col = getattr(
-                subq.c, str(col).split(' ')[0]
-            )
+            subq_col = getattr(subq.c, str(col).split(" ")[0])
             if subq_col is not None:
                 order_by_columns.append(subq_col)
 
