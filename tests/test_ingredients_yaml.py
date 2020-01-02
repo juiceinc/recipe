@@ -424,7 +424,7 @@ Vermont,271469,The Green Mountain State,Vermont
        sum((((census.pop2000 + census.pop2008) - census.pop2000) * census.pop2008) / (coalesce(CAST(census.pop2000 AS FLOAT), 0.0) + 1e-09)) AS allthemath
 FROM census
 GROUP BY state_raw"""
-        )  # noqa: E501
+        )
 
     def test_complex_census_quickselect_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
@@ -498,7 +498,7 @@ Vermont,620602,The Green Mountain State,Vermont
 FROM census
 GROUP BY state_raw
 ORDER BY state_raw"""
-        )  # noqa: E501
+        )
         self.assert_recipe_csv(
             recipe,
             """state_raw,popdivide,state,state_id
@@ -525,7 +525,7 @@ Vermont,0.4374284968466095,The Green Mountain State,Vermont
 FROM census
 GROUP BY state_raw
 ORDER BY state_raw"""
-        )  # noqa: E501
+        )
         self.assert_recipe_csv(
             recipe,
             """state_raw,pop2008oldsters,state,state_id
@@ -572,7 +572,7 @@ Vermont,311842,The Green Mountain State,Vermont
 FROM census
 GROUP BY state
 ORDER BY state"""
-        )  # noqa: E501
+        )
         self.assert_recipe_csv(
             recipe,
             """state,popchg,state_id
@@ -599,7 +599,7 @@ Vermont,0.9820786913351858,Vermont
 FROM census
 GROUP BY state_characteristic_raw
 ORDER BY state_characteristic_raw"""
-        )  # noqa: E501
+        )
         self.assert_recipe_csv(
             recipe,
             """state_characteristic_raw,pop2000,state_characteristic,state_characteristic_id
@@ -632,7 +632,7 @@ ORDER BY state_idval,
          state_idval_id
 LIMIT 5
 OFFSET 0"""
-        )  # noqa: E501
+        )
         self.assert_recipe_csv(
             recipe,
             """state_idval_id,state_idval,pop2000,state_idval_id
@@ -720,7 +720,7 @@ class TestNullHandling(TestRecipeIngredientsYaml):
 FROM scores_with_nulls
 GROUP BY department
 ORDER BY department"""
-        )  # noqa: E501
+        )
 
         self.assert_recipe_csv(
             recipe,
@@ -794,7 +794,7 @@ sales,,Sales,sales
 FROM scores_with_nulls
 GROUP BY department_lookup_with_null_raw
 ORDER BY department_lookup_with_null_raw"""
-        )  # noqa: E501
+        )
 
         self.assert_recipe_csv(
             recipe,
@@ -828,7 +828,7 @@ sales,,Sales,sales
 FROM scores_with_nulls
 GROUP BY department_default
 ORDER BY department_default"""
-        )  # noqa: E501
+        )
 
         self.assert_recipe_csv(
             recipe,
@@ -873,7 +873,7 @@ GROUP BY department_buckets,
          department_buckets_order_by
 ORDER BY department_buckets_order_by,
          department_buckets"""
-        )  # noqa: E501
+        )
 
         self.assert_recipe_csv(
             recipe,
@@ -913,7 +913,7 @@ Other,9999,80.0,Other
 FROM scores_with_nulls
 GROUP BY department_lookup_with_everything_raw
 ORDER BY department_lookup_with_everything_raw DESC"""
-        )  # noqa: E501
+        )
 
         self.assert_recipe_csv(
             recipe,
@@ -947,7 +947,7 @@ N/A,80.0,Unknown,N/A
 FROM scores_with_nulls
 GROUP BY department
 ORDER BY department"""
-        )  # noqa: E501
+        )
 
         self.assert_recipe_csv(
             recipe,
