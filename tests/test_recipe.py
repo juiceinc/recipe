@@ -229,7 +229,7 @@ GROUP BY first"""
        sum(foo.age) AS age
 FROM foo
 GROUP BY last
-ORDER BY foo.last"""
+ORDER BY last"""
         )
         assert recipe.all()[0].last == "fred"
         assert recipe.all()[0].last_id == "fred"
@@ -244,13 +244,14 @@ ORDER BY foo.last"""
        sum(foo.age) AS age
 FROM foo
 GROUP BY last
-ORDER BY foo.last"""
+ORDER BY last"""
         )
         assert recipe.all()[0].last == "fred"
         assert recipe.all()[0].age == 10
         assert recipe.stats.rows == 2
 
         recipe = self.recipe().metrics("age").dimensions("last").order_by("age")
+        # FIXME: Why is this using the calculation
         assert (
             recipe.to_sql()
             == """SELECT foo.last AS last,
@@ -270,7 +271,7 @@ ORDER BY sum(foo.age)"""
        sum(foo.age) AS age
 FROM foo
 GROUP BY last
-ORDER BY sum(foo.age) DESC"""
+ORDER BY age DESC"""
         )
         assert recipe.all()[0].last == "fred"
         assert recipe.all()[0].age == 10
@@ -288,8 +289,8 @@ ORDER BY sum(foo.age) DESC"""
 FROM foo
 GROUP BY firstlast_id,
          firstlast
-ORDER BY foo.last,
-         foo.first"""
+ORDER BY firstlast,
+         firstlast_id"""
         )
         recipe = (
             self.recipe().metrics("age").dimensions("firstlast").order_by("-firstlast")
@@ -302,8 +303,8 @@ ORDER BY foo.last,
 FROM foo
 GROUP BY firstlast_id,
          firstlast
-ORDER BY foo.last DESC,
-         foo.first DESC"""
+ORDER BY firstlast DESC,
+         firstlast_id DESC"""
         )
 
         # Dimensions can define their own ordering

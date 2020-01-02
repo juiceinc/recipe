@@ -84,6 +84,7 @@ class Ingredient(object):
         self.column_suffixes = kwargs.pop("column_suffixes", None)
         self.cache_context = kwargs.pop("cache_context", "")
         self.anonymize = False
+        self.roles = {}
         self._labels = []
 
         # What order should this be in
@@ -464,6 +465,7 @@ class Dimension(Ingredient):
 
         # We must always have a value role
         self.roles = {"value": expression}
+
         for k, v in kwargs.items():
             role = None
             if k.endswith("_expression"):
@@ -576,7 +578,7 @@ class Dimension(Ingredient):
 
             return [
                 text(lbl + suffix)
-                for col, lbl in reversed(zip(self.columns, self._labels))
+                for col, lbl in reversed(list(zip(self.columns, self._labels)))
             ]
         else:
             return reversed(self.columns)
@@ -655,6 +657,9 @@ class Metric(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Metric, self).__init__(**kwargs)
         self.columns = [expression]
+
+        # We must always have a value role
+        self.roles = {"value": expression}
 
     def build_filter(self, value, operator=None):
         """Building filters with Metric returns Having objects. """

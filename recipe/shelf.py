@@ -609,6 +609,8 @@ class Shelf(object):
         """ Make columns, group_bys, filters, havings
         """
         columns, group_bys, filters, havings = [], [], set(), set()
+        order_by_keys = list(order_by_keys)
+
         for ingredient in self.ingredients():
             if ingredient.query_columns:
                 columns.extend(ingredient.query_columns)
@@ -619,9 +621,28 @@ class Shelf(object):
             if ingredient.havings:
                 havings.update(ingredient.havings)
 
+            # If there is an order_by key on one of the ingredients, make sure
+            # the recipe orders by this ingredient
+            if "order_by" in ingredient.roles:
+                if (
+                    ingredient.id not in order_by_keys
+                    and "-" + ingredient.id not in order_by_keys
+                ):
+                    if ingredient.ordering == "desc":
+                        order_by_keys.append("-" + ingredient.id)
+                    else:
+                        order_by_keys.append(ingredient.id)
+
         order_bys = OrderedSet()
         for key in order_by_keys:
-            ingr = self.find(key, (Dimension, Metric))
+            try:
+                ingr = self.find(key, (Dimension, Metric))
+            except BadRecipe as e:
+                if "doesn't exist on the shelf" in str(e):
+                    raise BadRecipe(
+                        "{} can't be used for order_by unless it has "
+                        "already been added as a dimension or metric".format(key)
+                    )
             for c in ingr.order_by_columns:
                 # Avoid duplicate order by columns
                 if str(c) not in [str(o) for o in order_bys]:
@@ -632,7 +653,7 @@ class Shelf(object):
             "group_bys": group_bys,
             "filters": filters,
             "havings": havings,
-            "order_bys": list(order_bys)
+            "order_bys": list(order_bys),
         }
 
     def enchant(self, data, cache_context=None):
@@ -645,7 +666,7 @@ class Shelf(object):
                  ingredients
         """
         enchantedlist = []
-        if list:
+        if data:
             sample_item = data[0]
 
             # Extra fields to add to each row
