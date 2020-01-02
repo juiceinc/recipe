@@ -343,10 +343,7 @@ class Recipe(object):
         """
 
         # Order bys shouldn't be added to the _cauldron
-        self._order_bys = []
-        for ingr in order_bys:
-            order_by = self._shelf.find(ingr, (Dimension, Metric))
-            self._order_bys.append(order_by)
+        self._order_bys = order_bys
 
     @recipe_arg()
     def select_from(self, selectable):
@@ -393,17 +390,6 @@ class Recipe(object):
             self._is_postgres_engine = is_postgres_engine
         return self._is_postgres_engine
 
-    def _prepare_order_bys(self):
-        """ Build a set of order by columns """
-        order_bys = OrderedSet()
-        if self._order_bys:
-            for ingredient in self._order_bys:
-                for c in ingredient.order_by_columns:
-                    if str(c) not in [str(o) for o in order_bys]:
-                        order_bys.add(c)
-
-        return list(order_bys)
-
     def query(self):
         """
         Generates a query using the ingredients supplied by the recipe.
@@ -428,7 +414,8 @@ class Recipe(object):
         # Get the parts of the query from the cauldron
         # We don't need to regather order_bys
         recipe_parts = self._cauldron.brew_query_parts()
-        recipe_parts["order_bys"] = self._prepare_order_bys()
+
+        recipe_parts["order_bys"] = self._cauldron._prepare_order_bys(self._order_bys)
 
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_recipe_parts(recipe_parts)

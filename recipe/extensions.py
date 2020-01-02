@@ -367,7 +367,7 @@ class SummarizeOver(RecipeExtension):
         order_by_columns = []
         for col in postquery_parts["query"]._order_by:
             subq_col = getattr(
-                subq.c, col.name, getattr(subq.c, col.name + "_raw", None)
+                subq.c, str(col).split(' ')[0]
             )
             if subq_col is not None:
                 order_by_columns.append(subq_col)
@@ -412,6 +412,7 @@ class Anonymize(RecipeExtension):
     def add_ingredients(self):
         """ Put the anonymizers in the last position of formatters """
         for ingredient in self.recipe._cauldron.values():
+            ingredient.anonymize = self._anonymize
             if hasattr(ingredient.meta, "anonymizer"):
                 anonymizer = ingredient.meta.anonymizer
 

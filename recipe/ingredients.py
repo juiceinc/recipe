@@ -1,7 +1,7 @@
 from functools import total_ordering
 from uuid import uuid4
 
-from sqlalchemy import Float, and_, between, case, cast, func, or_
+from sqlalchemy import Float, and_, between, case, cast, func, or_, text
 
 from recipe.compat import str
 from recipe.exceptions import BadIngredient
@@ -555,20 +555,16 @@ class Dimension(Ingredient):
 
         if self.group_by_strategy == "labels":
             if self.ordering == "desc":
-                suffix = ' desc'
+                suffix = ' DESC'
             else:
                 suffix = ''
-            return [lbl + suffix for gb, lbl in zip(self._group_by, self._labels)]
+
+            return [text(lbl + suffix) for gb, lbl in zip(self._group_by, self._labels)]
         else:
             for c in self._order_by_columns:
                 pass
             return self._group_by
 
-        for c in self._order_by_columns:
-            if self.ordering == "desc":
-                yield c.desc()
-            else:
-                yield c
 
     def make_column_suffixes(self):
         """ Make sure we have the right column suffixes. These will be appended

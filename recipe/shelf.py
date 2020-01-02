@@ -2,6 +2,8 @@ import dateparser
 from copy import copy, deepcopy
 
 from datetime import date, datetime
+
+from ordered_set import OrderedSet
 from six import iteritems
 from sqlalchemy import (
     Float,
@@ -623,6 +625,18 @@ class Shelf(object):
             "filters": filters,
             "havings": havings,
         }
+
+    def _prepare_order_bys(self, order_by_keys):
+        """ Build a list of order by columns """
+        order_bys = OrderedSet()
+        for key in order_by_keys:
+            ingr = self.find(key, (Dimension, Metric))
+            for c in ingr.order_by_columns:
+                # Avoid duplicate order by columns
+                if str(c) not in [str(o) for o in order_bys]:
+                    order_bys.add(c)
+
+        return list(order_bys)
 
     def enchant(self, list, cache_context=None):
         """ Add any calculated values to each row of a resultset generating a

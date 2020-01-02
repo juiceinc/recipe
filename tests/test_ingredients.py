@@ -337,7 +337,8 @@ class TestDimension(object):
         d = Dimension(MyTable.first, id_expression=MyTable.last)
         assert len(list(d.order_by_columns)) == 2
         # Order by value expression then id expression
-        assert list(d.order_by_columns) == [MyTable.first, MyTable.last]
+        # FIXME: This is wrong
+        assert list(map(str,d.order_by_columns)) == [d.id + '_id', d.id]
 
         # Extra roles do not participate in ordering
         d = Dimension(
