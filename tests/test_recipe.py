@@ -251,7 +251,6 @@ ORDER BY last"""
         assert recipe.stats.rows == 2
 
         recipe = self.recipe().metrics("age").dimensions("last").order_by("age")
-        # FIXME: Why is this using the calculation
         assert (
             recipe.to_sql()
             == """SELECT foo.last AS last,
