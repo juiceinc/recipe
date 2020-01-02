@@ -412,7 +412,6 @@ class Anonymize(RecipeExtension):
     def add_ingredients(self):
         """ Put the anonymizers in the last position of formatters """
         for ingredient in self.recipe._cauldron.values():
-            ingredient.anonymize = self._anonymize
             if hasattr(ingredient.meta, "anonymizer"):
                 anonymizer = ingredient.meta.anonymizer
 

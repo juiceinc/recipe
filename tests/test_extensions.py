@@ -382,7 +382,6 @@ class TestAnonymizeRecipeExtension(object):
             .order_by("last")
             .anonymize(False)
         )
-        print(recipe.to_sql())
         assert (
             recipe.to_sql()
             == """SELECT foo.last AS last,
@@ -403,7 +402,6 @@ ORDER BY last"""
             .anonymize(True)
             .order_by("last")
         )
-        print("anon is",recipe._anonymize)
         assert (
             recipe.to_sql()
             == """SELECT foo.last AS last_raw,

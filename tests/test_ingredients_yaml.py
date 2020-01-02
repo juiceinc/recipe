@@ -350,7 +350,6 @@ oldsters,9999,4567879,oldsters
             .metrics("pop2000")
             .order_by("-age_buckets")
         )
-        print(recipe.to_sql())
         assert (
             recipe.to_sql()
             == """SELECT CASE
