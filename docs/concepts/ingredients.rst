@@ -2,7 +2,7 @@
 Ingredients
 ===========
 
-Ingredients are the building block of recipe. 
+Ingredients are the building block of recipe.
 
 Ingredients can contain columns that are part of the ``SELECT`` portion of a query,
 filters that are part of a ``WHERE`` clause of a query, group_bys that
@@ -16,18 +16,18 @@ Creating ingredients in python
 Ingredients can be created either in python or via configuration. To created
 Ingredients in python, use one of the four convenience classes.
 
-* **Metric**: Create an aggregated calculation using a column. This 
+* **Metric**: Create an aggregated calculation using a column. This
   value appears only in the SELECT part of the SQL statement.
-* **Dimension**: Create a non-aggregated value using a column. This 
+* **Dimension**: Create a non-aggregated value using a column. This
   value appears in the SELECT and GROUP BY parts of the SQL statement.
-* **Filter**: Create a boolean expression. This value appears in the 
-  WHERE part of the SQL statement. Filters can be created automatically 
+* **Filter**: Create a boolean expression. This value appears in the
+  WHERE part of the SQL statement. Filters can be created automatically
   using the AutomaticFilters extension or by using a Dimension or Metric'sales
   ``build_filter`` method.
-* **Having**: Create a boolean expression with an aggregated ColumnElement. 
-  This value appears in the HAVING part of the SQL statement. 
-  
-Metrics and Dimensions are commonly reused in working Recipe code, while filters are 
+* **Having**: Create a boolean expression with an aggregated ColumnElement.
+  This value appears in the HAVING part of the SQL statement.
+
+Metrics and Dimensions are commonly reused in working Recipe code, while filters are
 often created temporarily based on data.
 
 Features of ingredients
@@ -59,7 +59,7 @@ formatters, the original, unmodified value is available as ``{ingredient}_raw``.
     for row in recipe.all():
         print('{} has {} people'.format(row.gender, row.population))
         print('\tThe original value is: {}'.format(row.population_raw))
-        
+
 The results look like
 
 .. code::
@@ -79,7 +79,7 @@ Storing extra attributes in meta
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Extra keyword arguments that get passed to ingredient initialization
-get stored in the ``meta`` object. This can be used to extend the 
+get stored in the ``meta`` object. This can be used to extend the
 capabilities of ingredients and add extra features.
 
 .. code:: python
@@ -125,7 +125,7 @@ available as ``employee``.
 Using lookups
 ~~~~~~~~~~~~~
 
-Lookup maps values in your data to descriptive names. The ``_id``
+You can use a lookup table to map values in your data to descriptive names. The ``_id``
 property of your dimension contains the original value.
 
 .. code-block:: python
@@ -197,7 +197,7 @@ The results of this recipe are:
         min(census.pop2000) AS min_population,
         sum(census.pop2000) AS total_population
     FROM census
-    
+
     max_population,min_population,total_population
     294583,217,280927321
 
@@ -206,8 +206,8 @@ DivideMetric
 ------------
 
 Division in SQL introduces the possibility of division by zero. DivideMetric
-guards against division by zero while giving you a quick way to divide 
-one calculation by another. 
+guards against division by zero while giving you a quick way to divide
+one calculation by another.
 
 .. code:: python
 
@@ -223,7 +223,7 @@ This creates results like:
 .. code::
 
     SELECT census.state AS state,
-        CAST(sum(census.pop2008 - census.pop2000) AS FLOAT) / 
+        CAST(sum(census.pop2008 - census.pop2000) AS FLOAT) /
           (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS popgrowth
     FROM census
     GROUP BY census.state
@@ -237,7 +237,7 @@ This creates results like:
     Colorado,0.14231283526592364,Colorado
     ...
 
-The denominator has a tiny value added to it to prevent division by zero.    
+The denominator has a tiny value added to it to prevent division by zero.
 
 WtdAvgMetric
 ------------
@@ -320,10 +320,10 @@ This results in output like:
 Different ways of generating Filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Recipe has several ways of filtering recipes. 
+Recipe has several ways of filtering recipes.
 
 * **Filter objects can be added to the shelf**. They can be added to the
-  recipe by name from a shelf. This is best when 
+  recipe by name from a shelf. This is best when
   you have a filter that you want to use in many place.
 
   .. code:: python
@@ -345,17 +345,17 @@ Recipe has several ways of filtering recipes.
         recipe = recipe.filters(Filter(Census.age.between(13,19))
 
 * **Ingredient.build_filter**  can be used to build filters that refer
-  to the ingredient's column. 
+  to the ingredient's column.
 
   .. code:: python
 
     age_filter = shelf['age'].build_filter([13,19], 'between')
     recipe = recipe.filters(age_filter)
 
-  This is best when you want to reuse a column definition defined in 
+  This is best when you want to reuse a column definition defined in
   an ingredient.
-* **AutomaticFilters**: The AutomaticFilters extension adds filtering 
-  syntax directly to recipe. 
+* **AutomaticFilters**: The AutomaticFilters extension adds filtering
+  syntax directly to recipe.
 
   .. code:: python
 
@@ -363,15 +363,15 @@ Recipe has several ways of filtering recipes.
       'age__between': [13,19]
     })
 
-  This is best when you want to add many filters consistently. 
+  This is best when you want to add many filters consistently.
   AutomaticFilters uses ``Ingredient.build_filter`` behind the scenes.
 
 Having
 ------
 
-Having objects are binary expressions with an aggregated column value. 
-One easy way to generate ``Having`` objects is to ``build_filter`` using 
-a ``Metric``. 
+Having objects are binary expressions with an aggregated column value.
+One easy way to generate ``Having`` objects is to ``build_filter`` using
+a ``Metric``.
 
 .. code:: python
 
@@ -394,7 +394,7 @@ a ``Metric``.
 
 This generates the following results.
 
-.. code:: 
+.. code::
 
     SELECT census.state AS state,
         sum(census.pop2000) AS population
