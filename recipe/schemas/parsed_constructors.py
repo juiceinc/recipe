@@ -22,9 +22,6 @@ class TransformToSQLAlchemyExpression(Transformer):
         self.selectable = selectable
         self.require_aggregation = require_aggregation
 
-    def transform(self, tree):
-        return super(TransformToSQLAlchemyExpression, self).transform(tree)
-
     def number(self, value):
         try:
             return int(value)
