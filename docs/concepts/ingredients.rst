@@ -122,6 +122,51 @@ them.
 The id is accessible as ``employee_id`` in each row and their full name is
 available as ``employee``.
 
+If you build a filter using this dimension, it will filter against the id.
+
+Adding an ordering
+~~~~~~~~~~~~~~~~~~
+
+If you want to order a dimension in a custom way, pass a keyword argument
+``order_by_expression``. This code adds an order_by_expression that causes the
+values to sort case insensitively.
+
+.. code-block:: python
+
+    from sqlalchemy import func
+
+    # Support an id and a label
+    self.shelf['employee']: Dimension(Employee.full_name,
+                                      order_by_expression=func.lower(
+                                        Employee.full_name
+                                      ))
+
+The order_by expression is accessible as ``employee_order_by`` in each row and
+the full name is available as ``employee``. If the `employee` dimension is used in a
+recipe, the recipe will **always** be ordered by ``func.lower(Employee.full_name)``.
+
+Adding additional groupings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Both ``id_expression`` and ``order_by_expression`` are special cases of Dimension's
+ability to be passed additional columns can be used for grouping. Any keyword argument
+suffixed with ``_expression`` adds additional roles to this Dimension. The first
+*required* expression supplies the dimension's value role. For instance,
+you could create a dimension with an ``id``, a ``latitude`` and a ``longitude``.
+
+For instance, the following
+
+.. code-block:: python
+
+    Dimension(Hospitals.name,
+              latitude_expression=Hospitals.lat
+              longitude_expression=Hospitals.lng,
+              id='hospital')
+
+would add columns named "hospital", "hospital_latitude", and
+"hospital_longitude" to the recipes results. All three of these expressions
+would be used as group bys.
+
 Using lookups
 ~~~~~~~~~~~~~
 
@@ -138,7 +183,7 @@ If you use the gender dimension, there will be a ``gender_id`` in each row
 that will be "M" or "F" and a ``gender`` in each row that will be "Male" or
 "Female".
 
-.. code:: python
+.. code-block:: python
 
     shelf = Shelf({
         'state': Dimension(Census.state),
@@ -160,7 +205,7 @@ property. All dimensions also generate an ``{ingredient}_id`` property.
 
 Here is the query and the results.
 
-.. code:: python
+.. code-block::
 
     SELECT census.gender AS gender_desc_raw,
         sum(census.pop2000) AS population
@@ -171,13 +216,14 @@ Here is the query and the results.
     F,143534804,Female,F
     M,137392517,Male,M
 
+
 Metric
 ------
 
 Metrics are aggregations performed on your data. Here's an example
 of a few Metrics.
 
-.. code:: python
+.. code-block:: python
 
     shelf = Shelf({
         'total_population': Metric(func.sum(Census.pop2000)),

@@ -433,7 +433,7 @@ class Dimension(Ingredient):
     """A Dimension is an Ingredient that adds columns and groups by those
     columns. Columns should be non-aggregate SQLAlchemy expressions.
 
-    The required expression supplies the dimension's value role. Additional
+    The required expression supplies the dimension's "value" role. Additional
     expressions can be provided in keyword arguments with keys
     that look like "{role}_expression". The role is suffixed to the
     end of the SQL column name.
@@ -450,6 +450,14 @@ class Dimension(Ingredient):
     would add columns named "hospital", "hospital_latitude", and
     "hospital_longitude" to the recipes results. All three of these expressions
     would be used as group bys.
+
+    Two special roles that can be added are "id" and "order_by". If a keyword argument
+    "id_expression" is passed, this expression will appear first in the list of
+    columns and group_bys. This "id" will be used if you call `build_filter` on the
+    dimension.
+
+    If the keyword argument "order_by_expression" is passed, this expression will
+    appear last in the list of columns and group_bys.
 
     The following additional keyword parameters are also supported:
 
