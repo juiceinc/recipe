@@ -1,4 +1,6 @@
 from copy import copy
+
+from ordered_set import OrderedSet
 from six import iteritems
 from sqlalchemy import Float, Integer, String, Table
 from sqlalchemy.util import lightweight_named_tuple

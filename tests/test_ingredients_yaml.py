@@ -986,17 +986,26 @@ class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
            WHEN (census.age < 20) THEN 'teens'
            ELSE 'oldsters'
        END AS age_buckets,
+       CASE
+           WHEN (census.age < 2) THEN 0
+           WHEN (census.age < 13) THEN 1
+           WHEN (census.age < 20) THEN 2
+           ELSE 9999
+       END AS age_buckets_order_by,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY age_buckets"""
+GROUP BY age_buckets,
+         age_buckets_order_by
+ORDER BY age_buckets_order_by,
+         age_buckets"""
         )
         self.assert_recipe_csv(
             recipe,
-            """age_buckets,pop2000,age_buckets_id
-babies,164043,babies
-children,948240,children
-oldsters,4567879,oldsters
-teens,614548,teens
+            """age_buckets,age_buckets_order_by,pop2000,age_buckets_id
+babies,0,164043,babies
+children,1,948240,children
+teens,2,614548,teens
+oldsters,9999,4567879,oldsters
 """,
         )
 
@@ -1036,7 +1045,7 @@ teens,614548,teens
        END AS popdivide
 FROM census
 GROUP BY state_raw
-ORDER BY census.state"""
+ORDER BY state_raw"""
         )
         self.assert_recipe_csv(
             recipe,
@@ -1070,5 +1079,54 @@ GROUP BY state_raw"""
             """state_raw,allthemath,state,state_id
 Tennessee,5685230.0,The Volunteer State,Tennessee
 Vermont,609480.0,The Green Mountain State,Vermont
+""",
+        )
+
+
+    def test_deprecated_ingredients_idvaluedim(self):
+        """ Test deprecated ingredient kinds in a yaml file """
+        shelf = self.validated_shelf("census_deprecated.yaml", Census)
+
+        # We can IdValueDimension
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("state_idval")
+            .metrics("avgage")
+            .order_by("state_idval")
+            .limit(10)
+        )
+        print(recipe.to_sql())
+        print(recipe.dataset.csv)
+        assert (
+            recipe.to_sql()
+            == """SELECT census.pop2000 AS state_idval_id,
+       census.state AS state_idval,
+       CASE
+           WHEN (sum(census.pop2000) = 0) THEN NULL
+           ELSE CAST(sum(census.age * census.pop2000) AS FLOAT) / CAST(sum(census.pop2000) AS FLOAT)
+       END AS avgage
+FROM census
+GROUP BY state_idval_id,
+         state_idval
+ORDER BY state_idval,
+         state_idval_id
+LIMIT 10
+OFFSET 0"""
+        )
+
+        # Parsed shelves provide better division
+        self.assert_recipe_csv(
+            recipe,
+            """state_idval_id,state_idval,avgage,state_idval_id
+5033,Tennessee,84.0,5033
+5562,Tennessee,83.0,5562
+6452,Tennessee,82.0,6452
+7322,Tennessee,81.0,7322
+8598,Tennessee,80.0,8598
+9583,Tennessee,79.0,9583
+10501,Tennessee,84.0,10501
+10672,Tennessee,78.0,10672
+11141,Tennessee,83.0,11141
+11168,Tennessee,77.0,11168
 """,
         )

@@ -2,25 +2,23 @@ _version: "2"
 # Test deprecated ingredient kinds
 # These all get turned into regular dimensions and metrics
 popchg:
-    kind: DivideMetric
-    numerator_field: pop2000
-    denominator_field: pop2008
+    kind: Metric
+    field: "sum(pop2008)/sum(pop2000)"
 avgage:
-    kind: WtdAvgMetric
-    field: age
-    weight: pop2000
+    kind: Metric
+    field: "sum(age*pop2000)/sum(pop2000)"
 state:
     kind: Dimension
     field: state
 state_idval:
-    kind: IdValueDimension
+    kind: Dimension
     field: state
     id_field: pop2000
 pop2000:
     kind: Metric
     field: pop2000
 state_characteristic:
-    kind: LookupDimension
+    kind: Dimension
     field: state
     lookup:
         Tennessee: Volunteery
