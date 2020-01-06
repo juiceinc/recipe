@@ -1082,7 +1082,6 @@ Vermont,609480.0,The Green Mountain State,Vermont
 """,
         )
 
-
     def test_deprecated_ingredients_idvaluedim(self):
         """ Test deprecated ingredient kinds in a yaml file """
         shelf = self.validated_shelf("census_deprecated.yaml", Census)

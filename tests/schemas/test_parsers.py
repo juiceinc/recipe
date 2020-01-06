@@ -62,11 +62,12 @@ def test_parsers():
                 try:
                     tree = parser.parse(row)
                     # print(f"{parser_name:30s} succeeded ({expected_result})")
-                    assert expected_result == '1'
+                    assert expected_result == "1"
                     print(tree.pretty())
                 except:
                     # print(f"{parser_name:30s} failed ({expected_result})")
-                    assert expected_result == '0'
+                    assert expected_result == "0"
+
 
 def test_complex_condition_parser():
     values = [
