@@ -94,6 +94,20 @@ class TransformToSQLAlchemyExpression(Transformer):
         right = convert_value(left, right)
         return getattr(left, comparators[rel])(right)
 
+    def IS(self, left, right):
+        """
+        This handles expressions like
+
+        'sales is Null' or
+        'sales_date is "lastquarter"
+
+        """
+        if right is None:
+            return left.is_(right)
+        else:
+            pass
+
+
     def array(self, *args):
         # TODO  check these are all the same type
         # And match the type of the column!

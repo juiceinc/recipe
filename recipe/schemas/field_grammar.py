@@ -26,13 +26,15 @@ boolean_expr_grammar = """
     ?partial_relation_expr.0: comparator atom
                 | vector_comparator array
                 | BETWEEN atom AND atom
-    ?relation_expr.1:        atom comparator atom
+    ?relation_expr.1:        atom comparator atom |
+                             atom IS (ESCAPED_STRING | NULL)  -> IS
     ?vector_relation_expr.1: atom vector_comparator array
     ?between_relation_expr.1: atom BETWEEN atom AND atom
     ?pair_array:           "(" const "," const ")"            -> array
     ?array:                "(" [const ("," const)*] ")"
     ?comparator: EQ | NE | LT | LTE | GT | GTE
     ?vector_comparator.1: IN | NOTIN
+    IS: /IS/i
     OR: /OR/i
     AND: /AND/i
     NOT: /NOT/i

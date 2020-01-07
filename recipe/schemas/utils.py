@@ -88,6 +88,70 @@ def coerce_pop_version(shelf):
     return shelf
 
 
+class IntelligentDates:
+    def __init__(self):
+        self.lookup = {
+            "mtd": (self._start_of_month(), "now"),
+            "qtd": (self._start_of_quarter(), "now"),
+            "mtd": (self._start_of_year(), "now"),
+        }
+
+    def _start_of_month(self):
+        """Start of the current month"""
+        n = datetime.utcnow()
+        if self.desired_type == 'date':
+            return date(n.year, n.month, 1)
+        else:
+            return datetime(n.year, n.month, 1)
+
+    def _start_of_quarter(self):
+        """Start of the current month"""
+        n = datetime.utcnow()
+        qtr_month = 3 * divmod(n.month, 3)[0] + 1
+        if self.desired_type == 'date':
+            return date(n.year, qtr_month, 1)
+        else:
+            return datetime(n.year, qtr_month, 1)
+
+    def _start_of_year(self):
+        """Start of the current month"""
+        n = datetime.utcnow()
+        if self.desired_type == 'date':
+            return date(n.year, 1, 1)
+        else:
+            return datetime(n.year, 1, 1)
+
+    def _convert(self, v):
+        if v is None:
+            return None
+        elif isinstance(v, basestring):
+            # Always returns a datetime
+            result = dateparser.parse(v)
+        else:
+            # Callable
+            result = v()
+
+        if self.desired_type == 'date' and isinstance(result, datetime):
+            return result.date()
+        else:
+            return result
+
+    def __call__(self, field, value):
+        """Convert a value into an intelligent date pair if possible"""
+        if str(field.type) == "DATE":
+            self.desired_type = 'date'
+        else:
+            self.desired_type = 'datetime'
+
+        if not isinstance(value, basestring):
+            return (None, None)
+        else:
+            value = value.lower()
+
+            low, high = self.lookup.get(value, (None, None))
+            return (self._convert(low), self._convert(high))
+
+
 def _convert_date_value(v):
     parse_kwargs = {"languages": ["en"]}
     if isinstance(v, date):
