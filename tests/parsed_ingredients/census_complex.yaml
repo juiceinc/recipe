@@ -12,7 +12,7 @@ state:
           condition: '="Vermont"'
 pop2000:
     kind: Metric
-    field: "if(age > 40, pop2000)"
+    field: "case(age > 40) {pop2000}"
 pop2008:
     kind: Metric
     field: pop2008

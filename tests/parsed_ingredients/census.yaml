@@ -40,7 +40,7 @@ mixed_buckets:
     buckets_default_label: 'oldsters'
 teenagers:
     kind: Metric
-    field: "if(age between 13 and 19, pop2000)"
+    field: "case(age between 13 and 19) {pop2000}"
 ttlpop:
     kind: Metric
     field: pop2000 + pop2008

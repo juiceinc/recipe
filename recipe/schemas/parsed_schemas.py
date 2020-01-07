@@ -98,22 +98,23 @@ def _convert_bucket_to_field(bucket, bucket_default_label, use_indices=False):
     for itm in bucket:
         cond = itm.get("condition")
         label = itm.get("label")
-        parts.append(cond)
         if use_indices:
-            parts.append(str(idx))
+            then_expr = str(idx)
         else:
             # Stringify the label
-            parts.append(_stringify(label))
+            then_expr = _stringify(label)
+        parts.append((cond, then_expr))
         idx += 1
 
     # Add the default value
     if use_indices:
-        parts.append(str(9999))
+        else_expr = "9999"
     else:
-        parts.append(_stringify(bucket_default_label))
+        else_expr = _stringify(bucket_default_label)
 
-    return "if(" + ",".join(parts) + ")"
-
+    case = "case " + " ".join("({}) {{{}}}".format(cond, then_expr) for (cond, then_expr) in parts)
+    case += " else {{{}}}".format(else_expr)
+    return case
 
 def _convert_partial_conditions(value):
     """Convert all partial conditions to full conditions in buckets and quickselects."""

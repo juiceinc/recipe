@@ -7,13 +7,13 @@ state:
         Tennessee: "The Volunteer State"
 pop2000:
     kind: Metric
-    field: "sum(if(age>40,pop2000))"
+    field: "sum(case(age>40) {pop2000})"
 pop2008:
     kind: Metric
     field: sum(pop2008)
 pop2008oldsters:
     kind: Metric
-    field: "sum(if(age>40,pop2008))"
+    field: "sum(case(age>40) {pop2008})"
 popdivide:
     kind: Metric
     field: "@pop2000 / @pop2008"

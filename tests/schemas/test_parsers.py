@@ -26,8 +26,8 @@ def test_parsers():
     war_total                                       # 1,1,0,0,0,0
     (war_total + war_total)                         # 1,1,0,0,0,0
     (war_total + war_total) / war_total             # 1,1,0,0,0,0
-    if(war_total BETWEEN 1 AND 5, 5)                # 1,1,0,0,0,0
-    if(war_total BETWEEN 1 AND 5, 4, 2)             # 1,1,0,0,0,0
+    case(war_total BETWEEN 1 AND 5) {5}             # 1,1,0,0,0,0
+    case(war_total BETWEEN 1 AND 5) {4} else {2}    # 1,1,0,0,0,0
     couNT(*)                                        # 1,0,0,0,0,0
     AVG(war_total) + 1.0                            # 1,0,0,0,0,0
     sum(war_total)                                  # 1,0,0,0,0,0
@@ -148,7 +148,7 @@ expr
 """,
         ),
         (
-            'if(age<2,"babies","oldsters")',
+            'case(age<2) {"babies"} else {"oldsters"}',
             """
 expr
   case
@@ -163,7 +163,7 @@ expr
 """,
         ),
         (
-            'if(age<2,"babies",age between 4 and 8,"kids","oldsters")',
+            'case(age<2){"babies"} (age between 4 and 8) {"kids"} else {"oldsters"}',
             """
 expr
   case
