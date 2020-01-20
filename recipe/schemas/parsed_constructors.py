@@ -1,4 +1,5 @@
 """Convert parsed trees into SQLAlchemy objects """
+from __future__ import absolute_import
 from lark import Lark, Transformer, v_args
 from sqlalchemy import func, distinct, case, and_, or_, not_, cast, Float
 
@@ -8,7 +9,8 @@ from .field_grammar import (
     noag_full_condition_parser,
     full_condition_parser,
 )
-from .utils import aggregations, find_column, ingredient_class_for_name, convert_value
+from .utils import aggregations, find_column, ingredient_class_for_name, convert_value, \
+    IntelligentDates
 from recipe.exceptions import BadIngredient
 
 
@@ -21,6 +23,7 @@ class TransformToSQLAlchemyExpression(Transformer):
     def __init__(self, selectable, require_aggregation=False):
         self.selectable = selectable
         self.require_aggregation = require_aggregation
+        self.intelligent_dates = IntelligentDates()
 
     def number(self, value):
         try:
@@ -34,7 +37,7 @@ class TransformToSQLAlchemyExpression(Transformer):
     def false(self, value):
         return False
 
-    def null(self, value):
+    def NULL(self, value):
         return None
 
     def IN(self, value):
@@ -94,7 +97,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         right = convert_value(left, right)
         return getattr(left, comparators[rel])(right)
 
-    def IS(self, left, right):
+    def is_expr(self, col, _, right):
         """
         This handles expressions like
 
@@ -103,13 +106,14 @@ class TransformToSQLAlchemyExpression(Transformer):
 
         """
         if right is None:
-            return left.is_(right)
+            return col.is_(right)
         else:
-            pass
-
+            right = self.string_literal(right)
+            start, end = self.intelligent_dates(col, right)
+            return col.between(start, end)
 
     def array(self, *args):
-        # TODO  check these are all the same type
+        # TODO check these are all the same type
         # And match the type of the column!
         return args
 

@@ -5,7 +5,7 @@ Test recipes built from yaml files in the ingredients directory.
 
 import os
 
-from datetime import date
+from datetime import date, datetime
 import pytest
 from six import text_type
 from tests.test_base import Census, MyTable, oven, ScoresWithNulls
@@ -1054,6 +1054,22 @@ Tennessee,0.38567639950103244,The Volunteer State,Tennessee
 Vermont,0.4374284968466102,The Green Mountain State,Vermont
 """,
         )
+
+    def test_intelligent_dates(self):
+        """Generate an intelligent year range"""
+        shelf = self.validated_shelf("ingredients1.yaml", MyTable)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session).metrics("dt_is_year").dimensions(
+                "first")
+        )
+        n = datetime.now()
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(CASE
+               WHEN (foo.birth_date BETWEEN '{}-01-01' AND '{}-12-31') THEN foo.age
+           END) AS dt_is_year
+FROM foo
+GROUP BY first""".format(n.year, n.year)
+
 
     def test_complex_census_from_validated_yaml_math(self):
         """Build a recipe that uses complex definitions dimensions and

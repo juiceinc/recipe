@@ -1,6 +1,7 @@
 from datetime import date, datetime
-import dateparser
+from dateutil.relativedelta import relativedelta
 import inspect
+import dateparser
 from sqlalchemy import distinct, func
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
@@ -88,68 +89,116 @@ def coerce_pop_version(shelf):
     return shelf
 
 
+"""
+
+mtd
+priormtd
+qtr
+priorqtr
+nextqtr
+
+thisytd
+
+
+prefix: prior|this|""|next
+
+ytd   (start of year, today)
+qtd   (start of quarter, today)
+mtd   (start of month, today)
+year  (start of year, start of year +
+month (start of month, end of month
+qtr   (start of quarter, +3 months, -1 day)
+quarter
+day
+
+
+"""
+
+
 class IntelligentDates:
+    """Converts strings into date or datetime tuples suitable for use in a
+    column.between(low, high) SQLALchemy expression.
+
+    ytd: year to date
+    qtd: quarter to date
+    mtd: month to date
+    year: full current year
+    qtr: full current quarter
+    quarter: a synonym for "qtr"
+
+    Values can also be prefixed by "prior", "previous", "this", or "next". Prior
+    offsets the value to the prior unit (that is, "prioryear" will be the year
+    before the current year). "Previous" is a synonym for "prior". "Next" goes forward
+    in time to the next unit. "This" is ignored.
+
+
+
+
+    """
+
     def __init__(self):
+        n = datetime.utcnow()
+        som = datetime(n.year, n.month, 1)
+        eom = som + relativedelta(months=1, microseconds=-1)
+        soy = datetime(n.year, 1, 1)
+        eoy = soy + relativedelta(years=1, microseconds=-1)
+        qtr_month = 3 * divmod(n.month, 3)[0] + 1
+        soq = datetime(n.year, qtr_month, 1)
+        eoq = soq + relativedelta(months=3, microseconds=-1)
+        sod = datetime(n.year, n.month, n.day)
+        eod = sod + relativedelta(days=1, microseconds=-1)
+
         self.lookup = {
-            "mtd": (self._start_of_month(), "now"),
-            "qtd": (self._start_of_quarter(), "now"),
-            "mtd": (self._start_of_year(), "now"),
+            "ytd": (soy, n),
+            "qtd": (soq, n),
+            "mtd": (som, n),
+            "year": (soy, eoy),
+            "month": (som, eom),
+            "qtr": (soq, eoq),
+            # Prior
+            "priorytd": (soy + relativedelta(years=-1), n + relativedelta(years=-1)),
+            "priorqtd": (soq + relativedelta(years=-1), n + relativedelta(years=-1)),
+            "priormtd": (som + relativedelta(months=-1), n + relativedelta(months=-1)),
+            "priordtd": (sod + relativedelta(days=-1), n + relativedelta(days=-1)),
+            "prioryear": (soy + relativedelta(years=-1), eoy + relativedelta(years=-1)),
+            "priormonth": (
+                som + relativedelta(months=-1),
+                eom + relativedelta(months=-1),
+            ),
+            "priorqtr": (
+                soq + relativedelta(months=-3),
+                eoq + relativedelta(months=-3),
+            ),
+            # next
+            "nextytd": (soy + relativedelta(years=1), n + relativedelta(years=1)),
+            "nextqtd": (soq + relativedelta(years=1), n + relativedelta(years=1)),
+            "nextmtd": (som + relativedelta(months=1), n + relativedelta(months=1)),
+            "nextdtd": (sod + relativedelta(days=1), n + relativedelta(days=1)),
+            "nextyear": (soy + relativedelta(years=1), eoy + relativedelta(years=1)),
+            "nextmonth": (som + relativedelta(months=1), eom + relativedelta(months=1)),
+            "nextqtr": (soq + relativedelta(months=3), eoq + relativedelta(months=3)),
         }
 
-    def _start_of_month(self):
-        """Start of the current month"""
-        n = datetime.utcnow()
-        if self.desired_type == 'date':
-            return date(n.year, n.month, 1)
-        else:
-            return datetime(n.year, n.month, 1)
-
-    def _start_of_quarter(self):
-        """Start of the current month"""
-        n = datetime.utcnow()
-        qtr_month = 3 * divmod(n.month, 3)[0] + 1
-        if self.desired_type == 'date':
-            return date(n.year, qtr_month, 1)
-        else:
-            return datetime(n.year, qtr_month, 1)
-
-    def _start_of_year(self):
-        """Start of the current month"""
-        n = datetime.utcnow()
-        if self.desired_type == 'date':
-            return date(n.year, 1, 1)
-        else:
-            return datetime(n.year, 1, 1)
-
-    def _convert(self, v):
-        if v is None:
-            return None
-        elif isinstance(v, basestring):
-            # Always returns a datetime
-            result = dateparser.parse(v)
-        else:
-            # Callable
-            result = v()
-
-        if self.desired_type == 'date' and isinstance(result, datetime):
-            return result.date()
-        else:
-            return result
-
     def __call__(self, field, value):
-        """Convert a value into an intelligent date pair if possible"""
-        if str(field.type) == "DATE":
-            self.desired_type = 'date'
-        else:
-            self.desired_type = 'datetime'
-
+        """Convert a value into an intelligent date pair if possible using a datatype
+        that is compatible with the field."""
         if not isinstance(value, basestring):
-            return (None, None)
-        else:
-            value = value.lower()
+            raise Exception("value must be a string")
 
-            low, high = self.lookup.get(value, (None, None))
-            return (self._convert(low), self._convert(high))
+        # Normalize the value for lookup
+        value = value.lower()
+        value = value.replace("quarter", "qtr").replace("previous", "prior")
+        if value.startswith("this"):
+            value = value[4:]
+
+        if value not in self.lookup:
+            raise Exception("Can not convert {} to intelligent dates".format(value))
+
+        low, high = self.lookup.get(value)
+        if str(field.type) == "DATE":
+            return low.date(), high.date()
+        else:
+            return low, high
 
 
 def _convert_date_value(v):
@@ -186,7 +235,7 @@ def convert_value(field, value):
     """Convert values into something appropriate for this SQLAlchemy data type
 
     :param field: A SQLAlchemy expression
-    :param values: A value or list of values
+    :param value: A value or list of values
     """
 
     if isinstance(value, (list, tuple)):

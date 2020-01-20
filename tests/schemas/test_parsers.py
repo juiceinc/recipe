@@ -17,7 +17,9 @@ def test_parsers():
     values = """
     > 10                                            # 0,0,0,0,1,1
     in (1,2,3)                                      # 0,0,0,0,1,1
+    is "Qtd"                                        # 0,0,0,0,1,1
     war_total IN (1,2,3)                            # 0,0,1,1,0,1
+    x IS nULL                                       # 0,0,1,1,0,1
     war_total BETWEEN 1 AND 5                       # 0,0,1,1,0,1
     war_total > 10                                  # 0,0,1,1,0,1
     war_total > 10 OR NOT war_total < 20            # 0,0,1,1,0,1

@@ -12,7 +12,7 @@ boolean_expr_grammar = """
 
     // Pairs of boolean expressions and expressions
     // forming case when {BOOL_EXPR} then {EXPR}
-    // an optional final expression is the else.T
+    // an optional final expression is the else.
     ?case: "if" "(" (bool_expr "," expr ","?)+ (expr)? ")"
 
     // boolean expressions
@@ -26,8 +26,9 @@ boolean_expr_grammar = """
     ?partial_relation_expr.0: comparator atom
                 | vector_comparator array
                 | BETWEEN atom AND atom
-    ?relation_expr.1:        atom comparator atom |
-                             atom IS (ESCAPED_STRING | NULL)  -> IS
+                | IS (ESCAPED_STRING | NULL)
+    ?relation_expr.1:        atom IS (ESCAPED_STRING | NULL)  -> is_expr
+                           | atom comparator atom
     ?vector_relation_expr.1: atom vector_comparator array
     ?between_relation_expr.1: atom BETWEEN atom AND atom
     ?pair_array:           "(" const "," const ")"            -> array
@@ -67,7 +68,8 @@ noag_field_grammar = (
             | ESCAPED_STRING                   -> string_literal
             | /true/i                          -> true
             | /false/i                         -> false
-            | /null/i                          -> null
+            | NULL
+    NULL: /null/i
     STAR: "*"
     COMMENT: /#.*/
 
@@ -109,8 +111,8 @@ agex_field_grammar = (
             | ESCAPED_STRING                   -> string_literal
             | /true/i                          -> true
             | /false/i                         -> false
-            | /null/i                          -> null
-
+            | NULL
+    NULL: /null/i
     STAR: "*"
     COMMENT: /#.*/
 
