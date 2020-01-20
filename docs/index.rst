@@ -1,6 +1,6 @@
 
-Recipe: A DRY framework for querying data
-=========================================
+Recipe: A don't repeat yourself framework for querying data
+===========================================================
 
 Release v\ |version|. (:ref:`Installation <install>`)
 
@@ -24,9 +24,14 @@ consistently. Extension classes allow you to support data anonymization,
 automatic generation of where clauses, user permissioning to data, subselects,
 and response formatting.
 
+Let's look at an example.
+
 .. code-block:: python
 
-    >>> shelf = Shelf({ 'age': WtdAvgMetric(Census.age, Census.pop2000), 'state': Dimension(Census.state)})
+    >>> shelf = Shelf({
+       'age': WtdAvgMetric(Census.age, Census.pop2000),
+       'state': Dimension(Census.state)
+    })
     >>> recipe = Recipe().shelf(shelf).metrics('age').dimensions('state').order_by('-age')
 
     >>> recipe.to_sql()

@@ -2,6 +2,14 @@
 Changelog
 =========
 
+
+0.13.0 (2020-01)
+-----------------------------------------
+* Update
+* Add new configuration syntax that parses fields and conditions
+  using a grammar. Fields and conditions to be defined entirely in text.
+* Change default for order bys to use labels rather than expressions.
+
 0.12.0 (2019-11-25)
 -----------------------------------------
 

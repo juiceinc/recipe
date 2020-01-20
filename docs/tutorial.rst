@@ -3,7 +3,7 @@
 ===============
 Getting Started
 ===============
- 
+
 .. module:: recipe
 
 This page gives a good introduction in how to get started with Recipe. This
@@ -22,7 +22,7 @@ Creating a Shelf
 ------------------
 
 A :class:`Shelf <recipe.Shelf>` is a place to store SQL fragments. In recipe
-these are called :class:`Ingredients <recipe.Ingredient>`. 
+these are called :class:`Ingredients <recipe.Ingredient>`.
 
 Ingredients can contain columns that should be part of the ``SELECT`` portion of a query,
 filters that are part of a ``WHERE`` clause of a query, group_bys that
@@ -84,9 +84,9 @@ Now that you have the shelf, you can build a :class:`Recipe <recipe.Recipe>`.
 
     print(r.dataset.csv)
 
-This results in 
+This results in
 
-.. code:: 
+.. code::
 
     state,age,state_id
     Florida,39.08283934000634,Florida
@@ -106,7 +106,7 @@ Defining Shelves and Recipes Using Configuration
 
 Recipes and shelves can be defined using plain ole' python objects.
 In the following example we'll use YAML. For instance, we can define
-the shelf using this yaml config. 
+the shelf using this yaml config.
 
 .. code:: YAML
 
@@ -115,8 +115,7 @@ the shelf using this yaml config.
         field: state
     age:
         kind: WtdAvgMetric
-        field: age
-        weight: pop2000
+        field: 'sum(age*pop2000)/sum(pop2000)'
     population:
         kind: Metric
         field: pop2000
@@ -168,23 +167,23 @@ Adding Features with Extensions
 -------------------------------
 
 Using extensions, you can add features to Recipe. Here are a few
-interesting thing you can do. This example mixes in two extensions. 
+interesting thing you can do. This example mixes in two extensions.
 
-**AutomaticFilters** defines filters (where clauses) using configuration. 
+**AutomaticFilters** defines filters (where clauses) using configuration.
 In this case were are filtering to states that start with the letter C.
 
 **CompareRecipe** mixes in results from another recipe. In this case,
-we are using this comparison recipe to calculate an average age across 
+we are using this comparison recipe to calculate an average age across
 all states.
 
 .. code:: python
 
     recipe_yaml = yaml.load(r)
-    recipe = Recipe.from_config(s, recipe_yaml, session=oven.Session(), 
+    recipe = Recipe.from_config(s, recipe_yaml, session=oven.Session(),
         extension_classes=(AutomaticFilters, CompareRecipe))\
         .automatic_filters({'state__like': 'C%'})\
-        .compare(Recipe(shelf=s, session=oven.Session()).metrics('age')) 
-    print(recipe.to_sql())   
+        .compare(Recipe(shelf=s, session=oven.Session()).metrics('age'))
+    print(recipe.to_sql())
     print()
     print(recipe.dataset.csv)
 
@@ -211,4 +210,3 @@ The output looks like this
 
 
 Now, go check out the :ref:`API Documentation <api>` or look at an :ref:`concepts_overview`.
- 

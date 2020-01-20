@@ -2,7 +2,7 @@
 Ingredients
 ===========
 
-Ingredients are the building block of recipe.
+Ingredients are the building block of recipes.
 
 Ingredients can contain columns that are part of the ``SELECT`` portion of a query,
 filters that are part of a ``WHERE`` clause of a query, group_bys that
@@ -13,7 +13,7 @@ ot a query.
 Creating ingredients in python
 ------------------------------
 
-Ingredients can be created either in python or via configuration. To created
+Ingredients can be created either in python or via configuration. To create
 Ingredients in python, use one of the four convenience classes.
 
 * **Metric**: Create an aggregated calculation using a column. This
@@ -30,13 +30,10 @@ Ingredients in python, use one of the four convenience classes.
 Metrics and Dimensions are commonly reused in working Recipe code, while filters are
 often created temporarily based on data.
 
-Features of ingredients
------------------------
+Let's explore you can do with Ingredients.
 
-Let's explore some capabilities.
-
-Formatters
-~~~~~~~~~~
+Adjusting results with Formatters
+---------------------------------
 
 Formatters are a list of python callables that take a single value. This
 let you manipulate the results of an ingredient with python code. If you use
@@ -67,16 +64,10 @@ The results look like
     F has 144 million people
         The original value is: 143534804
     M has 137 million people
-        The original value is: 137392517
+        The original value is: 13739251
 
-Building filters
-~~~~~~~~~~~~~~~~
-
-Ingredient.build_filter
-
-
-Storing extra attributes in meta
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Extra attributes are stored in meta
+-----------------------------------
 
 Extra keyword arguments that get passed to ingredient initialization
 get stored in the ``meta`` object. This can be used to extend the
@@ -88,17 +79,12 @@ capabilities of ingredients and add extra features.
     print(d.meta.icon)
     >>> 'cog'
 
---------------------
-Types of Ingredients
---------------------
-
-List of ingredients
-
 Dimension
 ---------
 
-Dimensions are groupings that exist in your data. Dimension objects add
-the column to the select statement and the group by of the SQL query.
+Dimension is for groupings that exist in your data. Dimension objects add
+the expression to the columns of the select statement and to the the group by of
+the SQL query.
 
 .. code-block:: python
 
@@ -127,8 +113,8 @@ If you build a filter using this dimension, it will filter against the id.
 Adding an ordering
 ~~~~~~~~~~~~~~~~~~
 
-If you want to order a dimension in a custom way, pass a keyword argument
-``order_by_expression``. This code adds an order_by_expression that causes the
+If you want to custom order a dimension, pass a keyword argument
+``order_by_expression``. The following code adds an ``order_by_expression`` that causes
 values to sort case insensitively.
 
 .. code-block:: python
@@ -144,6 +130,8 @@ values to sort case insensitively.
 The order_by expression is accessible as ``employee_order_by`` in each row and
 the full name is available as ``employee``. If the `employee` dimension is used in a
 recipe, the recipe will **always** be ordered by ``func.lower(Employee.full_name)``.
+
+.. _dimension_roles:
 
 Adding additional groupings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -331,7 +319,7 @@ Note: WtdAvgMetric uses safe division from ``DivideMetric``.
 Filter
 ------
 
-Filter objects add a condition to the where clause of your SQL query.
+Filters add a condition to the where clause of your SQL query.
 Filter objects can be added to a Shelf.
 
 .. code:: python
@@ -400,6 +388,7 @@ Recipe has several ways of filtering recipes.
 
   This is best when you want to reuse a column definition defined in
   an ingredient.
+
 * **AutomaticFilters**: The AutomaticFilters extension adds filtering
   syntax directly to recipe.
 

@@ -1,18 +1,25 @@
-===================================
-Defining Shelves from configuration
-===================================
+====================================
+Defining Shelves using configuration
+====================================
 
-Shelves are defined as dictionaries containing keys and ingredient.
-All the examples below use YAML.
+Configuration lets you define fields and conditions using natural, SQL-like
+language.
+
+.. note::
+
+    An older version of defining shelves from config can be found at :ref:`shelves_from_config_v1`.
+
 
 Defining Shelves
 ----------------
 
 Shelves are defined in configuration as dictionaries with keys and values that
-are Ingredient configuration definitions. A simple example looks like this.
+are Ingredient configuration definitions. A simple example (configured in yaml)
+looks like this.
 
-.. code:: YAML
+.. code-block::
 
+  _version: "2"
   total_population:
     kind: Metric
     field: pop2000
@@ -20,385 +27,173 @@ are Ingredient configuration definitions. A simple example looks like this.
     kind: Dimension
     field: state
 
+The `_version: "2"` key is necessary to trigger the new shelf behavior.
+
 See examples_ for more Shelf examples.
 
-.. _ingredients:
 
-Defining Ingredients
---------------------
+Fields
+------
 
-Ingredients are defined using fields_ (which may contain conditions_). Those conditions_
-may reference more fields_ in turn and so forth.
+The equivalent of the SQLAlchemy ``expression`` used in Ingredients defined in Python
+is ``field``. This is a string that will be parsed into a SQLAlchemy expression
+using a selectable (a table, recipe or subquery used to fetch data).
 
-Metric
-~~~~~~
+Fields are defined using strings.
 
-Metrics will always apply a default aggregation of 'sum' to any fields used.
+When used in a ``Metric``, the field may contain
+aggregations. If not aggregation is provided, the entire field string will be wrapped
+in a ``sum()``.
 
-.. code::
+When used in a ``Dimension``, fields must not contain aggregations. An BadIngredient
+exception will be raised if you define a field this way.
 
-    kind: Metric
-    field: {field}
-    divide_by: {field} (optional)
+Here are some examples of non-aggregated fields that you could use in a ``Dimension``.
 
-``divide_by`` is an optional denominator that ``field`` will be divided by safely.
-
-Dimension
-~~~~~~~~~
-
-Metrics will always apply a default aggregation of 'sum' to their field.
-
-.. code::
-
-    kind: Dimension
-    field: {field}
-    {role}_field: {field} (optional)
-    buckets: A list of labeled conditions (optional)
-    buckets_default_label: string (optional)
-    quickselects: A list of labeled conditions (optional)
-
-Adding `id` and other roles to Dimension
-........................................
-
-Dimensions can be defined with extra fields. The prefix before ``_field``
-is the field's role. The role will be suffixed to each value in the
-recipe rows. Let's look at an example.
-
-.. code::
-
-  hospital:
-    field: hospital_name
-    id_field: hospital_id
-    latitude_field: hospital_lat
-    longitude_field: hospital_lng
-
-Each result row will include
-
-* ``hospital``
-* ``hospital_id`` The field defined as ``id_field``
-* ``hospital_latitude`` The field defined as ``latitude_field``
-* ``hospital_longitude`` The field defined as ``longitude_field``
-
-Defining buckets
-................
-
-Buckets let you group continuous values (like salaries or ages). Here's
-an example:
-
-.. code:: YAML
-
-  groups:
-      kind: Dimension
-      field: age
-      buckets:
-      - label: 'northeasterners'
-        field: state
-        in: ['Vermont', 'New Hampshire']
-      - label: 'babies'
-        lt: 2
-      - label: 'children'
-        lt: 13
-      - label: 'teens'
-        lt: 20
-      buckets_default_label: 'oldsters'
-
-The conditions are evaluated **in order**. **buckets_default_label** is used for any
-values that didn't match any condition.
-
-For convenience, conditions defined in buckets will use the field from the Dimension
-unless a different field is defined in the condition. In the example above, the first
-bucket uses ``field: state`` explicitly while all the other conditions use ``field: age``
-from the Dimension.
-
-If you use order_by a bucket dimension, the order will be the order in which the
-buckets were defined.
-
-Adding quickselects to a Dimension
-..................................
-
-quickselects are a way of associating conditions with a dimension.
-
-.. code:: YAML
-
-  region:
-      kind: Dimension
-      field: sales_region
-  total_sales:
-      kind: Metric
-      field: sales_dollars
-  date:
-      kind: Dimension
-      field: sales_date
-      quickselects:
-      - label: 'Last 90 days'
-        between:
-        - 90 days ago
-        - tomorrow
-      - label: 'Last 180 days'
-        between:
-        - 180 days ago
-        - tomorrow
-
-These conditions can then be accessed through ``Ingredient.build_filter``.
-The ``AutomaticFilters`` extension is an easy way to use this.
-
-.. code:: python
-
-  recipe = Recipe(session=oven.Session(), extension_classes=[AutomaticFilters]). \
-              .dimensions('region') \
-              .metrics('total_sales') \
-              .automatic_filters({
-                'date__quickselect': 'Last 90 days'
-              })
-
-.. _fields:
-
-Defining Fields
----------------
-
-Fields can be defined with a short string syntax or a dictionary syntax.
-The string syntax always is normalized into the dictionary syntax.
-
-.. code::
-
-    field:
-        value: '{column reference}'
-        aggregation: '{aggregation (optional)}'
-        operators: {list of operators}
-        as: {optional type to coerce into}
-        default: {default value, optional}
-
-    or
-
-    field: '{string field definition}'
-    This may include field references that look like
-    @{ingredient name from the shelf}.
-
-Defining Fields with Dicts
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Dictionaries provide access to all options when defining a
-field.
-
-.. list-table:: dictionary field options
-   :widths: 10 5 30
+.. list-table:: Sample non-aggregated fields in Dimensions
+   :widths: 20 20
    :header-rows: 1
 
-   * - Key
-     - Required
-     - Description
-   * - value
-     - required
-     - string
+   * - Description
+     - Definition
+   * - Use the column student_name in your selectable.
+     - .. code-block::
 
-       What column to use.
-   * - aggregation
-     - optional
-     - string
+         student:
+             kind: Dimension
+             field: student_name
 
-       (default is 'sum' for Metric and 'none' for Dimension)
+   * - Use the column student_name in your selectable as the value for the field
+       and uses the student_id column as the id.
+     - .. code-block::
 
-       What aggregation to use, if any. Possible aggregations are:
+         student:
+             kind: Dimension
+             field: student_name
+             id_field: student_id
 
-       - 'sum'
-       - 'min'
-       - 'max'
-       - 'avg'
-       - 'count'
-       - 'count_distinct'
-       - 'month' (round to the nearest month for dates)
-       - 'week' (round to the nearest week for dates)
-       - 'year' (round to the nearest year for dates)
-       - 'quarter' (round to the nearest quarter for dates)
-       - 'age' (calculate age based on a date and the current date)
-       - 'none' (perform no aggregation)
-       - 'median' (calculate the median value, note: this aggregation is not available
-         on all databases).
-       - 'percentile[1,5,10,25,50,75,90,95,99]' (calculate the nth percentile value
-         where higher values correspond to higher percentiles, note: this aggregation
-         is not available on all databases).
+   * - Concatenate the student first and last names as the value for the field
+       and uses the student_id column as the id.
+     - .. code-block::
 
-   * - condition
-     - optional
-     - A ``condition``
+         student:
+             kind: Dimension
+             field: 'student_first_name + " " + student_last_name'
+             id_field: student_id
 
-       Condition will limit what rows of data are aggregated for a field.
+Here's an example of some aggregated fields that you could use in metrics
 
-   * - operators
-     - optional
-     - A list of ``operator``
 
-       Operators are fields combined with a math operator to the base field.
-
-   * - default
-     - optional
-     - An integer, string, float, or boolean value (optional)
-
-       A value to use if the column is NULL.
-
-.. warning:: The following two fields are for internal use.
-
-.. list-table:: internal dictionary field options
-   :widths: 10 5 30
+.. list-table:: Sample aggregated fields in Metrics
+   :widths: 20 20
    :header-rows: 1
 
-   * - Key
-     - Required
-     - Description
+   * - Description
+     - Definition
+   * - Count the number of rows in your data
+     - .. code-block::
 
-   * - ref
-     - optional
-     - string
+         count:
+             kind: Metric
+             field: count(*)
 
-       Replace this field with the field defined in
-       the specified key in the shelf.
+   * - Count the number of distinct student names.
+     - .. code-block::
 
-   * - _use_raw_value
-     - optional
-     - boolean
+         student_cnt:
+             kind: Metric
+             field: count_distinct(student_name)
 
-       Don't evaluate value as a column, treat
-       it as a constant in the SQL expression.
+   * - Sum the value in the sales column in your selectable.
+     - .. code-block::
+
+         total_sales:
+             kind: Metric
+             field: sum(sales)
+
+   * - Sum the value in the sales column and subtract the sum of expenses in your
+       selectable.
+     - .. code-block::
+
+         profit:
+             kind: Metric
+             field: sum(sales) - sum(expenses)
 
 
-Defining Fields with Strings
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Aggregations are written function-style like ``sum(sales)``. The following aggregations are available:
 
-Fields can be defined using strings. When using
-strings, words are treated as column references. If the
-words are prefixed with an '@' (like @sales), the field of the ingredient
-named sales in the shelf will be injected.
+   - sum(<field>)
+   - min(<field>)
+   - max(<field>)
+   - avg(<field>)
+   - count(<field>)
+   - count_distinct(<field>)
+   - month(<field>) (round to the nearest month for dates)
+   - week(<field>) (round to the nearest week for dates)
+   - year(<field>) (round to the nearest year for dates)
+   - quarter(<field>) (round to the nearest quarter for dates)
+   - age(<field>) (calculate age based on a date and the current date)
+   - none(<field>) (perform no aggregation)
+   - median(<field>) (calculate the median value, note: this aggregation is not available
+     on all databases).
+   - percentile[1,5,10,25,50,75,90,95,99](<field>) (calculate the nth percentile value
+     where higher values correspond to higher percentiles, note: this aggregation
+     is not available on all databases).
 
-Aggregations can be called like functions to apply that aggregation
-to a column.
 
-.. list-table:: string field examples
-   :widths: 10 20
-   :header-rows: 1
+Defining if-then logic in fields
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   * - Field string
-     - Description
-
-   * - revenue - expenses
-     - The sum of column revenue minus the sum of column expenses.
-
-       .. code::
-
-         field: revenue - expenses
-
-         # is the same as
-
-         field:
-           value: revenue
-           aggregation: sum  # this may be omitted because 'sum'
-                             # is the default aggregation for Metrics
-           operators:
-           - operator: '-'
-             field:
-               value: expenses
-               aggregation: sum
-
-   * - @sales / @student_count
-     - Find the field definition of the field named 'sales' in the shelf.
-
-       Divide it by the field definition of the field named 'student_count'.
-
-   * - count_distinct(student_id)
-     - Count the distinct values of column student_id.
-
-       .. code::
-
-         field: count_distinct(student_id)
-
-         # is the same as
-
-         field:
-            value: student_id
-            aggregation: count_distinct
-
-.. _operators:
-
-Defining Field Operators
-------------------------
-
-Operators lets you perform math with fields.
-
-.. list-table:: operator options
-   :widths: 10 5 30
-   :header-rows: 1
-
-   * - Key
-     - Required
-     - Description
-   * - operator
-     - required
-     - string
-
-       One of '+', '-', '*', '/'
-
-   * - field
-     - required
-     - A field definition (either a string or a dictionary)
-
-For instance, operators can be used like this:
-
-.. code:: YAML
-
-  # profit - taxes - interest
-  field:
-    value: profit
-    operators:
-    - operator: '-'
-      field: taxes
-    - operator: '-'
-      field: interest
-
-.. _conditions:
-
-Defining Conditions
--------------------
-
-Conditions can include a field and operator or a list of
-conditions and-ed or or-ed together.
+Fields can contain an ``if()`` function which contains one or more conditions. It
+looks like this.
 
 .. code::
 
-    field: {field definition}
-    label: string (an optional string label)
-    {operator}: {value} or {list of values}
+  if(<condition>, <field>, [<condition>, <field>,] [<else_field>])
 
-    or
+Here's some examples:
 
-    or:     # a list of conditions
-    - {condition1}
-    - {condition2}
-    ...
-    - {conditionN}
+.. list-table:: Sample ifs
+   :widths: 20 20
+   :header-rows: 1
 
-    or
+   * - Description
+     - Definition
+   * - Count alerts if a certain status_code is matched
+     - .. code-block::
 
-    and:    # a list of conditions
-    - {condition1}
-    - {condition2}
-    ...
-    - {conditionN}
+         alert_cnt:
+           kind: Metric
+           field: count_distinct(if(status_code=5, alert_id))
 
-    or
+   * - Discount sales based on codes, but sum without a discount when the right code
+       doesn't exist.
+     - .. code-block::
 
-    a condition reference @{ingredient name from the shelf}.
+         discount_total:
+             kind: Metric
+             field: sum(if(discount_code=1,sales*0.9,discount_code=2,sales*0.8,sales)
 
+   * - Discount sales based on codes, but sum without a discount when the right code
+       doesn't exist.
+     - .. code-block::
 
-Conditions consist of a field and **exactly one** operator.
+         discount_total:
+             kind: Dimension
+             field: if(last_name,first_name + " " + last_name,first_name)
 
-.. list-table:: condition options
-   :widths: 10 5 30
+Conditions
+----------
+
+Conditions are expressions that evaluate as true or false.
+
+.. list-table:: Conditions
+   :widths: 5 20
    :header-rows: 1
 
    * - Condition
-     - Value is...
      - Description
-   * - gt
-     - A string, int, or float.
+   * - >
      - Find values that are greater than the value
 
        For example:
@@ -406,77 +201,80 @@ Conditions consist of a field and **exactly one** operator.
        .. code::
 
          # Sales dollars are greater than 100.
-         condition:
-           field: sales_dollars
-           gt: 100
+         condition: sales_dollars>100
 
-   * - gte (or ge)
-     - A string, int, or float.
-     - Find values that are greater than or equal to the value
-
-   * - lt
-     - A string, int, or float.
-     - Find values that are less than the value
-
-   * - lte (or le)
-     - A string, int, or float.
-     - Find values that are less than or equal to the value
-
-   * - eq
-     - A string, int, or float.
-     - Find values that are equal to the value
-
-   * - ne
-     - A string, int, or float.
-     - Find values that are not equal to the value
-
-   * - like
-     - A string
-     - Find values that match the SQL LIKE expression
-
-       For example:
+       or
 
        .. code::
 
-         # States that start with the capital letter C
-         condition:
-           field: state
-           like: 'C%'
+         # Sales dollars are greater than 100.
+         condition: last_name>"C"
 
-   * - ilike
-     - A string
-     - Find values that match the SQL ILIKE (case insensitive like) expression.
+   * - >=
+     - Find values that are greater than or equal to the value
 
-   * - between
-     - A list of **two** values
+   * - <
+     - Find values that are less than the value
+
+   * - <=
+     - Find values that are less than or equal to the value
+
+   * - =
+     - Find values that are equal to the value
+
+   * - !=
+     - Find values that are not equal to the value
+
+   * - between <value> and <value>
      - Find values that are between the two values.
 
-   * - in
-     - A list of values
+       .. code::
+
+         # Sales dollars are between than 100 and 200.
+         condition: sales between 100 and 200
+
+       or
+
+       .. code::
+
+         # Sales dollars are between than 100 and 200.
+         condition: 'sales_date between "2 weeks ago" and "tomorrow"'
+
+   * - in (list of <values>)
      - Find values that are in the list of values
 
-   * - notin
-     - A list of values
+       .. code::
+
+         # New England states in the USA
+         condition: state_abbreviation in ("VT", "NH", "ME", "MA", "CT")
+
+   * - not in
      - Find values that are not in the list of values
 
-ands and ors in conditions
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+       .. code::
 
-Conditions can ``and`` and ``or`` a list of conditions together.
+         condition: sales_code not in (1,5,7,9)
+
+
+Using ands and ors in conditions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Conditions can ``and`` and ``or`` multiple conditions together.
 
 Here's an example:
 
 .. code:: YAML
 
-  # Find states that start with 'C' and end with 'a'
-  # Note the conditions in the list don't have to
-  # use the same field.
-  condition:
-    and:
-    - field: state
-      like: 'C%'
-    - field: state
-      like: '%a'
+  # Find sales between 100 and 1000
+  condition: sales_dollars > 100 and sales_dollars < 1000
+
+You can also use parentheses to clearly express groupings.
+
+.. code:: YAML
+
+  # Find sales meeting multiple conditions
+  condition: (sales_dollars > 100 or sales_date > "1 month ago") and region = "North"
+
 
 Date conditions
 ~~~~~~~~~~~~~~~
@@ -490,19 +288,153 @@ Here's an example.
 .. code:: YAML
 
   # Find sales that occured within the last 90 days.
-  condition:
-    field: sales_date
-    between:
-    - '90 days ago'
-    - 'tomorrow'
+  condition: 'sales_date between "90 days ago" and "tomorrow"'
 
-Labeled conditions
+.. _partial_conditions:
+
+Partial conditions
 ~~~~~~~~~~~~~~~~~~
 
-Conditions may optionally be labeled by adding a label property.
+While most conditions have to contain a field, condition and value (like
+``sales_dollars>1000``), in some contexts you can define a partial condition that
+contains just the condition and value (``>1000``). The field will be automatically
+prefixed to each partial condition.
 
-quickselects are a feature of Dimension that are defined with a list
-of labeled conditions.
+
+.. _ingredients:
+
+Extra features
+--------------
+
+Metric fields always apply an aggregation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Metrics will always apply a default aggregation of 'sum' to any fields used.
+
+.. code::
+
+    sales:
+      kind: Metric
+      field: sales_dollars
+
+is the same as
+
+.. code::
+
+    sales:
+      kind: Metric
+      field: sum(sales_dollars)
+
+
+Defining extra roles in dimensions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Dimensions can contain extra groupings (see :ref:`dimension_roles`). In configuration
+you can define extra roles by creating extra keys that end with ``_field``. For instance:
+
+.. code::
+
+    student:
+      kind: Dimension
+      field: 'student_first_name + " " + student_last_name'
+      id_field: student_id
+
+Defining bucket dimensions
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A common need is to group values and treat those groupings as a dimension.
+For instance, you could group sales as small, medium or large.
+
+Dimension allows you to define a list of labeled conditions that you can use to
+do exactly this. Let's look at an example then break it down.
+
+.. code::
+
+    kind: Dimension
+    field: sales_dollars
+    buckets:
+    - label: Small
+      condition: <1000
+    - label: Medium
+      condition: <20000
+    - label: Large
+      condition: >=20000
+    buckets_default_label: Unknown
+
+These conditions can be full or partial conditions (:ref:`partial_conditions`). In this
+example the ``sales_dollars`` would be prefixed to all conditions, making it
+identical to this.
+
+
+.. code::
+
+    kind: Dimension
+    field: sales_dollars
+    buckets:
+    - label: Small
+      condition: sales_dollars<1000
+    - label: Medium
+      condition: sales_dollars<20000
+    - label: Large
+      condition: sales_dollars>=20000
+    buckets_default_label: Unknown
+
+The ``buckets_default_label`` is applied when none of the bucket conditions match
+(for instance, if the sales_dollars was NULL in this example). A bucket Dimension will
+include an order_by that orders results in the order that the buckets were defined.
+
+.. note::
+
+    Buckets create a ``if()`` function to create their groupings
+
+    In our sample bucket code, we could accomplish the same thing with these
+    fields (broken into separate lines for clarity).
+
+    .. code::
+
+        kind: Dimension
+        field: 'if(sales_dollars<1000,"Small",
+                  sales_dollars<20000,"Medium",
+                  sales_dollars>=20000,"Large","Unknown")'
+        order_by_field: 'if(sales_dollars<1000,1,
+                          sales_dollars<20000,2,
+                          sales_dollars>=20000,3,9999)'
+
+
+Adding quickselects to a Dimension
+..................................
+
+quickselects are a way of associating named conditions with a Dimension. Like buckets
+quickselects use partial conditions.
+
+.. code-block::
+
+  region:
+      kind: Dimension
+      field: sales_region
+  total_sales:
+      kind: Metric
+      field: sales_dollars
+  date:
+      kind: Dimension
+      field: sales_date
+      quickselects:
+      - name: 'Last 90 days'
+        condition: 'between "90 days ago" and "tomorrow"'
+      - name: 'Last 180 days'
+        condition: 'between "180 days ago" and "tomorrow"'
+
+These conditions can then be accessed through ``Ingredient.build_filter``.
+The ``AutomaticFilters`` extension is an easy way to use this.
+
+.. code:: python
+
+  recipe = Recipe(session=oven.Session(), extension_classes=[AutomaticFilters]). \
+              .dimensions('region') \
+              .metrics('total_sales') \
+              .automatic_filters({
+                'date__quickselect': 'Last 90 days'
+              })
 
 .. _examples:
 
@@ -516,13 +448,10 @@ This shelf is basic.
 
 .. code:: YAML
 
+  _version: "2"
   teens:
       kind: Metric
-      field:
-          value: pop2000
-          condition:
-              field: age
-              between: [13,19]
+      field: if(age between 13 and 19,pop2000)
   state:
       kind: Dimension
       field: state
