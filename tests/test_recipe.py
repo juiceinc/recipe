@@ -229,7 +229,7 @@ GROUP BY first"""
        sum(foo.age) AS age
 FROM foo
 GROUP BY last
-ORDER BY foo.last"""
+ORDER BY last"""
         )
         assert recipe.all()[0].last == "fred"
         assert recipe.all()[0].last_id == "fred"
@@ -244,7 +244,7 @@ ORDER BY foo.last"""
        sum(foo.age) AS age
 FROM foo
 GROUP BY last
-ORDER BY foo.last"""
+ORDER BY last"""
         )
         assert recipe.all()[0].last == "fred"
         assert recipe.all()[0].age == 10
@@ -257,7 +257,7 @@ ORDER BY foo.last"""
        sum(foo.age) AS age
 FROM foo
 GROUP BY last
-ORDER BY sum(foo.age)"""
+ORDER BY age"""
         )
         assert recipe.all()[0].last == "there"
         assert recipe.all()[0].age == 5
@@ -270,7 +270,7 @@ ORDER BY sum(foo.age)"""
        sum(foo.age) AS age
 FROM foo
 GROUP BY last
-ORDER BY sum(foo.age) DESC"""
+ORDER BY age DESC"""
         )
         assert recipe.all()[0].last == "fred"
         assert recipe.all()[0].age == 10
@@ -288,8 +288,8 @@ ORDER BY sum(foo.age) DESC"""
 FROM foo
 GROUP BY firstlast_id,
          firstlast
-ORDER BY foo.last,
-         foo.first"""
+ORDER BY firstlast,
+         firstlast_id"""
         )
         recipe = (
             self.recipe().metrics("age").dimensions("firstlast").order_by("-firstlast")
@@ -302,8 +302,8 @@ ORDER BY foo.last,
 FROM foo
 GROUP BY firstlast_id,
          firstlast
-ORDER BY foo.last DESC,
-         foo.first DESC"""
+ORDER BY firstlast DESC,
+         firstlast_id DESC"""
         )
 
         # Dimensions can define their own ordering
@@ -318,12 +318,15 @@ ORDER BY foo.last DESC,
             recipe.to_sql()
             == """SELECT foo.first AS d_id,
        foo.last AS d,
+       upper(foo.last) AS d_order_by,
        sum(foo.age) AS age
 FROM foo
 GROUP BY d_id,
-         d
-ORDER BY upper(foo.last),
-         foo.first"""
+         d,
+         d_order_by
+ORDER BY d_order_by,
+         d,
+         d_id"""
         )
 
     def test_recipe_init(self):
@@ -335,7 +338,7 @@ ORDER BY upper(foo.last),
        sum(foo.age) AS age
 FROM foo
 GROUP BY last
-ORDER BY foo.last"""
+ORDER BY last"""
         )
         assert recipe.all()[0].last == "fred"
         assert recipe.all()[0].age == 10
@@ -353,7 +356,7 @@ ORDER BY foo.last"""
 FROM foo
 WHERE foo.age > 4
 GROUP BY first
-ORDER BY foo.first"""
+ORDER BY first"""
         )
         assert recipe.all()[0].first == "hi"
         assert recipe.all()[0].age == 15
@@ -415,7 +418,7 @@ SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
 GROUP BY last
-ORDER BY foo.last"""
+ORDER BY last"""
         )
 
     def test_recipe_empty(self):
@@ -456,7 +459,7 @@ ORDER BY foo.last"""
 FROM foo
 WHERE foo.age > 2
 GROUP BY last
-ORDER BY foo.last"""
+ORDER BY last"""
         )
         assert recipe.all()[0].last == "fred"
         assert recipe.all()[0].age == 10
@@ -481,7 +484,7 @@ FROM foo
 WHERE foo.age > 2
 GROUP BY last
 HAVING sum(foo.age) < 10
-ORDER BY foo.last"""
+ORDER BY last"""
         )
 
         assert (

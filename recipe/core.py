@@ -5,7 +5,6 @@ from uuid import uuid4
 
 import attr
 import tablib
-from ordered_set import OrderedSet
 from sqlalchemy import alias, func
 from sqlalchemy.sql.elements import BinaryExpression
 from sureberus import normalize_dict, normalize_schema
@@ -13,7 +12,7 @@ from sureberus import normalize_dict, normalize_schema
 from recipe.compat import basestring
 from recipe.dynamic_extensions import run_hooks
 from recipe.exceptions import BadRecipe
-from recipe.ingredients import Dimension, Filter, Having, Metric
+from recipe.ingredients import Dimension, Filter, Having, Metric, Ingredient
 from recipe.schemas import recipe_schema
 from recipe.shelf import Shelf, parse_unvalidated_condition
 from recipe.utils import prettyprintable_sql, recipe_arg
@@ -328,25 +327,16 @@ class Recipe(object):
 
     @recipe_arg()
     def order_by(self, *order_bys):
-        """ Add a list of ingredients to order by to the query. These can
-        either be Dimension or Metric objects or strings representing
-        order_bys on the shelf.
+        """Apply an ordering to the recipe results.
 
-        The Order_by expression will be added to the query's order_by statement
-
-        :param order_bys: Order_bys to add to the recipe. Order_bys can
-                         either be keys on the ``shelf`` or
-                         Dimension or Metric objects. If the
-                         key is prefixed by "-" the ordering will be
-                         descending.
-        :type order_bys: list
+        :param order_bys: Order_bys to add to the recipe. Order_bys must
+                         be keys of ingredients already added to the recipe. If the
+                         key is prefixed by "-" the ordering will be descending.
+        :type order_bys: list(str)
         """
-
-        # Order bys shouldn't be added to the _cauldron
-        self._order_bys = []
-        for ingr in order_bys:
-            order_by = self._shelf.find(ingr, (Dimension, Metric))
-            self._order_bys.append(order_by)
+        # Convert dimensions to use their id
+        order_bys = [d.id if isinstance(d, Ingredient) else d for d in order_bys]
+        self._order_bys = order_bys
 
     @recipe_arg()
     def select_from(self, selectable):
@@ -393,17 +383,6 @@ class Recipe(object):
             self._is_postgres_engine = is_postgres_engine
         return self._is_postgres_engine
 
-    def _prepare_order_bys(self):
-        """ Build a set of order by columns """
-        order_bys = OrderedSet()
-        if self._order_bys:
-            for ingredient in self._order_bys:
-                for c in ingredient.order_by_columns:
-                    if str(c) not in [str(o) for o in order_bys]:
-                        order_bys.add(c)
-
-        return list(order_bys)
-
     def query(self):
         """
         Generates a query using the ingredients supplied by the recipe.
@@ -426,9 +405,14 @@ class Recipe(object):
         # and apply any blend recipes
 
         # Get the parts of the query from the cauldron
-        # We don't need to regather order_bys
-        recipe_parts = self._cauldron.brew_query_parts()
-        recipe_parts["order_bys"] = self._prepare_order_bys()
+        # {
+        #             "columns": columns,
+        #             "group_bys": group_bys,
+        #             "filters": filters,
+        #             "havings": havings,
+        #             "order_bys": list(order_bys)
+        #         }
+        recipe_parts = self._cauldron.brew_query_parts(self._order_bys)
 
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_recipe_parts(recipe_parts)

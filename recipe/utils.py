@@ -36,6 +36,7 @@ __all__ = [
     "clean_unicode",
     "FakerAnonymizer",
     "FakerFormatter",
+    "recipe_arg",
 ]
 
 

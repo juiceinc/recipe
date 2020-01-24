@@ -1,7 +1,7 @@
 from functools import total_ordering
 from uuid import uuid4
 
-from sqlalchemy import Float, and_, between, case, cast, func, or_
+from sqlalchemy import Float, and_, between, case, cast, func, or_, text
 
 from recipe.compat import str
 from recipe.exceptions import BadIngredient
@@ -55,6 +55,13 @@ class Ingredient(object):
             used in a ``recipe.order_by``.
             This is added to the ingredient when the ingredient is
             used in a ``recipe.order_by``.
+        group_by_strategy (:obj:`str`):
+            A strategy to use when preparing group_bys for the query
+            "labels" is the default strategy which will use the labels assigned to
+            each column.
+            "direct" will use the column expression directly. This alternative is
+            useful when there might be more than one column with the same label
+            being used in the query.
         quickselects (:obj:`list` of named filters):
             A list of named filters that can be accessed through
             ``build_filter``. Named filters are dictionaries with
@@ -77,10 +84,12 @@ class Ingredient(object):
         self.column_suffixes = kwargs.pop("column_suffixes", None)
         self.cache_context = kwargs.pop("cache_context", "")
         self.anonymize = False
+        self.roles = {}
         self._labels = []
 
         # What order should this be in
         self.ordering = kwargs.pop("ordering", "asc")
+        self.group_by_strategy = kwargs.pop("group_by_strategy", "labels")
 
         if not isinstance(self.formatters, (list, tuple)):
             raise BadIngredient(
@@ -120,6 +129,10 @@ class Ingredient(object):
     def make_column_suffixes(self):
         """ Make sure we have the right column suffixes. These will be appended
         to `id` when generating the query.
+
+        Developers note: These are generated when the query runs because the
+        recipe may be run with anonymization on or off, which will inject
+        a formatter.
         """
         if self.column_suffixes:
             return self.column_suffixes
@@ -148,13 +161,25 @@ class Ingredient(object):
 
     @property
     def order_by_columns(self):
-        """ Yield columns to be used in an order by using this ingredient
+        """Yield columns to be used in an order by using this ingredient. Column
+        ordering is in reverse order of columns
         """
-        for c in self.columns:
+        # Ensure the labels are generated
+        if not self._labels:
+            list(self.query_columns)
+
+        if self.group_by_strategy == "labels":
             if self.ordering == "desc":
-                yield c.desc()
+                suffix = " DESC"
             else:
-                yield c
+                suffix = ""
+
+            return [
+                text(lbl + suffix)
+                for col, lbl in reversed(list(zip(self.columns, self._labels)))
+            ]
+        else:
+            return reversed(self.columns)
 
     @property
     def cauldron_extras(self):
@@ -408,7 +433,7 @@ class Dimension(Ingredient):
     """A Dimension is an Ingredient that adds columns and groups by those
     columns. Columns should be non-aggregate SQLAlchemy expressions.
 
-    The required expression supplies the dimension's value role. Additional
+    The required expression supplies the dimension's "value" role. Additional
     expressions can be provided in keyword arguments with keys
     that look like "{role}_expression". The role is suffixed to the
     end of the SQL column name.
@@ -426,6 +451,14 @@ class Dimension(Ingredient):
     "hospital_longitude" to the recipes results. All three of these expressions
     would be used as group bys.
 
+    Two special roles that can be added are "id" and "order_by". If a keyword argument
+    "id_expression" is passed, this expression will appear first in the list of
+    columns and group_bys. This "id" will be used if you call `build_filter` on the
+    dimension.
+
+    If the keyword argument "order_by_expression" is passed, this expression will
+    appear last in the list of columns and group_bys.
+
     The following additional keyword parameters are also supported:
 
     Args:
@@ -438,13 +471,6 @@ class Dimension(Ingredient):
         lookup_default (:obj:`object`)
             A default to show if the value can't be found in the
             lookup dictionary.
-        group_by_strategy (:obj:`str`):
-            A strategy to use when preparing group_bys for the query
-            "labels" is the default strategy which will use the labels assigned to
-            each column.
-            "direct" will use the column expression directly. This alternative is
-            useful when there might be more than one column with the same label
-            being used in the query.
 
     Returns:
 
@@ -457,13 +483,9 @@ class Dimension(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Dimension, self).__init__(**kwargs)
 
-        # An optional exprssion to use instead of the value expression
-        # when ordering
-        order_by_expression = kwargs.pop("order_by_expression", None)
-        self.group_by_strategy = kwargs.pop("group_by_strategy", "labels")
-
         # We must always have a value role
         self.roles = {"value": expression}
+
         for k, v in kwargs.items():
             role = None
             if k.endswith("_expression"):
@@ -476,28 +498,31 @@ class Dimension(Ingredient):
 
         self.columns = []
         self._group_by = []
-        self._order_by_columns = []
         self.role_keys = []
         if "id" in self.roles:
             self.columns.append(self.roles["id"])
             self._group_by.append(self.roles["id"])
             self.role_keys.append("id")
-            self._order_by_columns.append(self.roles["id"])
         if "value" in self.roles:
             self.columns.append(self.roles["value"])
             self._group_by.append(self.roles["value"])
             self.role_keys.append("value")
-            # Order by columns are in order of value, id
-            # Extra roles are ignored
-            if order_by_expression is not None:
-                self._order_by_columns.insert(0, order_by_expression)
-            else:
-                self._order_by_columns.insert(0, self.roles["value"])
 
         # Add all the other columns in sorted order of role
-        for k in sorted(self.roles.keys()):
-            if k in ("id", "value"):
-                continue
+        # with order_by coming last
+        # For instance, if the following are passed
+        # expression, id_expression, order_by_expresion, zed_expression the order of
+        # columns would be "id", "value", "zed", "order_by"
+        # When using group_bys for ordering we put them in reverse order.
+        ordered_roles = [
+            k for k in sorted(self.roles.keys()) if k not in ("id", "value")
+        ]
+        # Move order_by to the end
+        if "order_by" in ordered_roles:
+            ordered_roles.remove("order_by")
+            ordered_roles.append("order_by")
+
+        for k in ordered_roles:
             self.columns.append(self.roles[k])
             self._group_by.append(self.roles[k])
             self.role_keys.append(k)
@@ -540,16 +565,6 @@ class Dimension(Ingredient):
             yield extra
 
         yield self.id + "_id", lambda row: getattr(row, self.id_prop)
-
-    @property
-    def order_by_columns(self):
-        """ Yield columns to be used in an order by using this ingredient
-        """
-        for c in self._order_by_columns:
-            if self.ordering == "desc":
-                yield c.desc()
-            else:
-                yield c
 
     def make_column_suffixes(self):
         """ Make sure we have the right column suffixes. These will be appended
@@ -638,6 +653,9 @@ class Metric(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Metric, self).__init__(**kwargs)
         self.columns = [expression]
+
+        # We must always have a value role
+        self.roles = {"value": expression}
 
     def build_filter(self, value, operator=None):
         """Building filters with Metric returns Having objects. """

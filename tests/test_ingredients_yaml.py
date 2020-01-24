@@ -10,7 +10,7 @@ import pytest
 from six import text_type
 from tests.test_base import Census, MyTable, oven, ScoresWithNulls
 
-from recipe import AutomaticFilters, BadIngredient, Recipe, Shelf
+from recipe import AutomaticFilters, BadIngredient, Recipe, Shelf, BadRecipe
 
 
 class TestRecipeIngredientsYaml(object):
@@ -160,7 +160,7 @@ FROM
           sum(census.pop2000 + census.pop2008) AS ttlpop
    FROM census
    GROUP BY state
-   ORDER BY census.state) AS anon_1"""
+   ORDER BY state) AS anon_1"""
         )
         self.assert_recipe_csv(
             nested_recipe,
@@ -189,6 +189,7 @@ FROM
         )
 
     def test_census_buckets(self):
+        """Ordering is applied automatically if a dimension has an order_by"""
         shelf = self.unvalidated_shelf("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
@@ -203,17 +204,26 @@ FROM
            WHEN (census.age < 20) THEN 'teens'
            ELSE 'oldsters'
        END AS age_buckets,
+       CASE
+           WHEN (census.age < 2) THEN 0
+           WHEN (census.age < 13) THEN 1
+           WHEN (census.age < 20) THEN 2
+           ELSE 9999
+       END AS age_buckets_order_by,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY age_buckets"""
+GROUP BY age_buckets,
+         age_buckets_order_by
+ORDER BY age_buckets_order_by,
+         age_buckets"""
         )
         self.assert_recipe_csv(
             recipe,
-            """age_buckets,pop2000,age_buckets_id
-babies,164043,babies
-children,948240,children
-oldsters,4567879,oldsters
-teens,614548,teens
+            """age_buckets,age_buckets_order_by,pop2000,age_buckets_id
+babies,0,164043,babies
+children,1,948240,children
+teens,2,614548,teens
+oldsters,9999,4567879,oldsters
 """,
         )
 
@@ -269,26 +279,30 @@ FROM census"""
            WHEN (census.age < 20) THEN 'teens'
            ELSE 'oldsters'
        END AS mixed_buckets,
+       CASE
+           WHEN (census.state IN ('Vermont',
+                                  'New Hampshire')) THEN 0
+           WHEN (census.age < 2) THEN 1
+           WHEN (census.age < 13) THEN 2
+           WHEN (census.age < 20) THEN 3
+           ELSE 9999
+       END AS mixed_buckets_order_by,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY mixed_buckets
-ORDER BY CASE
-             WHEN (census.state IN ('Vermont',
-                                    'New Hampshire')) THEN 0
-             WHEN (census.age < 2) THEN 1
-             WHEN (census.age < 13) THEN 2
-             WHEN (census.age < 20) THEN 3
-             ELSE 9999
-         END DESC"""
+GROUP BY mixed_buckets,
+         mixed_buckets_order_by
+ORDER BY mixed_buckets_order_by DESC,
+         mixed_buckets DESC"""
         )
+
         self.assert_recipe_csv(
             recipe,
-            """mixed_buckets,pop2000,mixed_buckets_id
-oldsters,4124620,oldsters
-teens,550515,teens
-children,859206,children
-babies,150889,babies
-northeast,609480,northeast
+            """mixed_buckets,mixed_buckets_order_by,pop2000,mixed_buckets_id
+oldsters,9999,4124620,oldsters
+teens,3,550515,teens
+children,2,859206,children
+babies,1,150889,babies
+northeast,0,609480,northeast
 """,
         )
 
@@ -308,23 +322,26 @@ northeast,609480,northeast
            WHEN (census.age < 20) THEN 'teens'
            ELSE 'oldsters'
        END AS age_buckets,
+       CASE
+           WHEN (census.age < 2) THEN 0
+           WHEN (census.age < 13) THEN 1
+           WHEN (census.age < 20) THEN 2
+           ELSE 9999
+       END AS age_buckets_order_by,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY age_buckets
-ORDER BY CASE
-             WHEN (census.age < 2) THEN 0
-             WHEN (census.age < 13) THEN 1
-             WHEN (census.age < 20) THEN 2
-             ELSE 9999
-         END"""
+GROUP BY age_buckets,
+         age_buckets_order_by
+ORDER BY age_buckets_order_by,
+         age_buckets"""
         )
         self.assert_recipe_csv(
             recipe,
-            """age_buckets,pop2000,age_buckets_id
-babies,164043,babies
-children,948240,children
-teens,614548,teens
-oldsters,4567879,oldsters
+            """age_buckets,age_buckets_order_by,pop2000,age_buckets_id
+babies,0,164043,babies
+children,1,948240,children
+teens,2,614548,teens
+oldsters,9999,4567879,oldsters
 """,
         )
         recipe = (
@@ -341,23 +358,26 @@ oldsters,4567879,oldsters
            WHEN (census.age < 20) THEN 'teens'
            ELSE 'oldsters'
        END AS age_buckets,
+       CASE
+           WHEN (census.age < 2) THEN 0
+           WHEN (census.age < 13) THEN 1
+           WHEN (census.age < 20) THEN 2
+           ELSE 9999
+       END AS age_buckets_order_by,
        sum(census.pop2000) AS pop2000
 FROM census
-GROUP BY age_buckets
-ORDER BY CASE
-             WHEN (census.age < 2) THEN 0
-             WHEN (census.age < 13) THEN 1
-             WHEN (census.age < 20) THEN 2
-             ELSE 9999
-         END DESC"""
+GROUP BY age_buckets,
+         age_buckets_order_by
+ORDER BY age_buckets_order_by DESC,
+         age_buckets DESC"""
         )
         self.assert_recipe_csv(
             recipe,
-            """age_buckets,pop2000,age_buckets_id
-oldsters,4567879,oldsters
-teens,614548,teens
-children,948240,children
-babies,164043,babies
+            """age_buckets,age_buckets_order_by,pop2000,age_buckets_id
+oldsters,9999,4567879,oldsters
+teens,2,614548,teens
+children,1,948240,children
+babies,0,164043,babies
 """,
         )
 
@@ -379,7 +399,7 @@ babies,164043,babies
            END) AS pop2000
 FROM census
 GROUP BY state_raw
-ORDER BY census.state"""
+ORDER BY state_raw"""
         )
         self.assert_recipe_csv(
             recipe,
@@ -404,7 +424,7 @@ Vermont,271469,The Green Mountain State,Vermont
        sum((((census.pop2000 + census.pop2008) - census.pop2000) * census.pop2008) / (coalesce(CAST(census.pop2000 AS FLOAT), 0.0) + 1e-09)) AS allthemath
 FROM census
 GROUP BY state_raw"""
-        )  # noqa: E501
+        )
 
     def test_complex_census_quickselect_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
@@ -426,7 +446,7 @@ GROUP BY state_raw"""
 FROM census
 WHERE census.age < 40
 GROUP BY state_raw
-ORDER BY census.state"""
+ORDER BY state_raw"""
         )
         self.assert_recipe_csv(
             recipe,
@@ -451,7 +471,7 @@ Vermont,300605,The Green Mountain State,Vermont
 FROM census
 WHERE census.state = 'Vermont'
 GROUP BY state_raw
-ORDER BY census.state"""
+ORDER BY state_raw"""
         )
         self.assert_recipe_csv(
             recipe,
@@ -477,8 +497,8 @@ Vermont,620602,The Green Mountain State,Vermont
                 END) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS popdivide
 FROM census
 GROUP BY state_raw
-ORDER BY census.state"""
-        )  # noqa: E501
+ORDER BY state_raw"""
+        )
         self.assert_recipe_csv(
             recipe,
             """state_raw,popdivide,state,state_id
@@ -504,8 +524,8 @@ Vermont,0.4374284968466095,The Green Mountain State,Vermont
            END) AS pop2008oldsters
 FROM census
 GROUP BY state_raw
-ORDER BY census.state"""
-        )  # noqa: E501
+ORDER BY state_raw"""
+        )
         self.assert_recipe_csv(
             recipe,
             """state_raw,pop2008oldsters,state,state_id
@@ -551,8 +571,8 @@ Vermont,311842,The Green Mountain State,Vermont
        CAST(sum(census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS popchg
 FROM census
 GROUP BY state
-ORDER BY census.state"""
-        )  # noqa: E501
+ORDER BY state"""
+        )
         self.assert_recipe_csv(
             recipe,
             """state,popchg,state_id
@@ -578,8 +598,8 @@ Vermont,0.9820786913351858,Vermont
        sum(census.pop2000) AS pop2000
 FROM census
 GROUP BY state_characteristic_raw
-ORDER BY census.state"""
-        )  # noqa: E501
+ORDER BY state_characteristic_raw"""
+        )
         self.assert_recipe_csv(
             recipe,
             """state_characteristic_raw,pop2000,state_characteristic,state_characteristic_id
@@ -608,11 +628,11 @@ Vermont,609480,Taciturny,Vermont
 FROM census
 GROUP BY state_idval_id,
          state_idval
-ORDER BY census.state,
-         census.pop2000
+ORDER BY state_idval,
+         state_idval_id
 LIMIT 5
 OFFSET 0"""
-        )  # noqa: E501
+        )
         self.assert_recipe_csv(
             recipe,
             """state_idval_id,state_idval,pop2000,state_idval_id
@@ -624,7 +644,7 @@ OFFSET 0"""
 """,
         )
 
-    def test_deprecated_ingredients_wtdavgmetric(self):
+    def test_deprecated_ingredients_idvaluedim(self):
         """ Test deprecated ingredient kinds in a yaml file """
         shelf = self.validated_shelf("census_deprecated.yaml", Census)
 
@@ -635,21 +655,49 @@ OFFSET 0"""
             .metrics("avgage")
             .order_by("state_idval")
         )
+        # Can't order_by something that isn't used as a dimension or metric
+        with pytest.raises(BadRecipe):
+            recipe.to_sql()
+
+    def test_deprecated_ingredients_idvaluedim(self):
+        """ Test deprecated ingredient kinds in a yaml file """
+        shelf = self.validated_shelf("census_deprecated.yaml", Census)
+
+        # We can IdValueDimension
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("state_idval")
+            .metrics("avgage")
+            .order_by("state_idval")
+            .limit(10)
+        )
         assert (
             recipe.to_sql()
-            == """SELECT census.state AS state,
+            == """SELECT census.pop2000 AS state_idval_id,
+       census.state AS state_idval,
        CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS avgage
 FROM census
-GROUP BY state
-ORDER BY census.state,
-         census.pop2000"""
-        )  # noqa: E501
+GROUP BY state_idval_id,
+         state_idval
+ORDER BY state_idval,
+         state_idval_id
+LIMIT 10
+OFFSET 0"""
+        )
 
         self.assert_recipe_csv(
             recipe,
-            """state,avgage,state_id
-Tennessee,36.24667550829078,Tennessee
-Vermont,37.0597968760254,Vermont
+            """state_idval_id,state_idval,avgage,state_idval_id
+5033,Tennessee,83.9999999999833,5033
+5562,Tennessee,82.99999999998506,5562
+6452,Tennessee,81.99999999998728,6452
+7322,Tennessee,80.99999999998893,7322
+8598,Tennessee,79.99999999999069,8598
+9583,Tennessee,78.99999999999176,9583
+10501,Tennessee,83.999999999992,10501
+10672,Tennessee,77.99999999999268,10672
+11141,Tennessee,82.99999999999255,11141
+11168,Tennessee,76.99999999999311,11168
 """,
         )
 
@@ -671,8 +719,8 @@ class TestNullHandling(TestRecipeIngredientsYaml):
        avg(scores_with_nulls.score) AS score
 FROM scores_with_nulls
 GROUP BY department
-ORDER BY scores_with_nulls.department"""
-        )  # noqa: E501
+ORDER BY department"""
+        )
 
         self.assert_recipe_csv(
             recipe,
@@ -708,8 +756,8 @@ sales,,sales
        avg(scores_with_nulls.score) AS score
 FROM scores_with_nulls
 GROUP BY department_lookup_raw
-ORDER BY scores_with_nulls.department"""
-        )  # noqa: E501
+ORDER BY department_lookup_raw"""
+        )
 
         self.assert_recipe_csv(
             recipe,
@@ -745,8 +793,8 @@ sales,,Sales,sales
        avg(scores_with_nulls.score) AS score
 FROM scores_with_nulls
 GROUP BY department_lookup_with_null_raw
-ORDER BY scores_with_nulls.department"""
-        )  # noqa: E501
+ORDER BY department_lookup_with_null_raw"""
+        )
 
         self.assert_recipe_csv(
             recipe,
@@ -779,8 +827,8 @@ sales,,Sales,sales
        avg(scores_with_nulls.score) AS score
 FROM scores_with_nulls
 GROUP BY department_default
-ORDER BY coalesce(scores_with_nulls.department, 'N/A')"""
-        )  # noqa: E501
+ORDER BY department_default"""
+        )
 
         self.assert_recipe_csv(
             recipe,
@@ -814,22 +862,25 @@ sales,,sales
            WHEN (scores_with_nulls.department = 'ops') THEN 'Operations'
            ELSE 'Other'
        END AS department_buckets,
+       CASE
+           WHEN (scores_with_nulls.department = 'sales') THEN 0
+           WHEN (scores_with_nulls.department = 'ops') THEN 1
+           ELSE 9999
+       END AS department_buckets_order_by,
        avg(scores_with_nulls.score) AS score
 FROM scores_with_nulls
-GROUP BY department_buckets
-ORDER BY CASE
-             WHEN (scores_with_nulls.department = 'sales') THEN 0
-             WHEN (scores_with_nulls.department = 'ops') THEN 1
-             ELSE 9999
-         END"""
-        )  # noqa: E501
+GROUP BY department_buckets,
+         department_buckets_order_by
+ORDER BY department_buckets_order_by,
+         department_buckets"""
+        )
 
         self.assert_recipe_csv(
             recipe,
-            """department_buckets,score,department_buckets_id
-Sales,,Sales
-Operations,90.0,Operations
-Other,80.0,Other
+            """department_buckets,department_buckets_order_by,score,department_buckets_id
+Sales,0,,Sales
+Operations,1,90.0,Operations
+Other,9999,80.0,Other
 """,
         )
 
@@ -853,7 +904,7 @@ Other,80.0,Other
             Recipe(shelf=shelf, session=self.session)
             .dimensions("department_lookup_with_everything")
             .metrics("score")
-            .order_by("department_lookup_with_everything")
+            .order_by("-department_lookup_with_everything")
         )
         assert (
             recipe.to_sql()
@@ -861,15 +912,15 @@ Other,80.0,Other
        avg(scores_with_nulls.score) AS score
 FROM scores_with_nulls
 GROUP BY department_lookup_with_everything_raw
-ORDER BY coalesce(scores_with_nulls.department, 'N/A')"""
-        )  # noqa: E501
+ORDER BY department_lookup_with_everything_raw DESC"""
+        )
 
         self.assert_recipe_csv(
             recipe,
             """department_lookup_with_everything_raw,score,department_lookup_with_everything,department_lookup_with_everything_id
-N/A,80.0,Unknown,N/A
-ops,90.0,Operations,ops
 sales,,Sales,sales
+ops,90.0,Operations,ops
+N/A,80.0,Unknown,N/A
 """,
         )
 
@@ -895,8 +946,8 @@ sales,,Sales,sales
        coalesce(avg(scores_with_nulls.score), -1.0) AS score_with_default
 FROM scores_with_nulls
 GROUP BY department
-ORDER BY scores_with_nulls.department"""
-        )  # noqa: E501
+ORDER BY department"""
+        )
 
         self.assert_recipe_csv(
             recipe,

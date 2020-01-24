@@ -2,6 +2,8 @@ import dateparser
 from copy import copy, deepcopy
 
 from datetime import date, datetime
+
+from ordered_set import OrderedSet
 from six import iteritems
 from sqlalchemy import (
     Float,
@@ -603,10 +605,12 @@ class Shelf(object):
         else:
             raise BadRecipe("{} is not a {}".format(obj, filter_to_class))
 
-    def brew_query_parts(self):
+    def brew_query_parts(self, order_by_keys=[]):
         """ Make columns, group_bys, filters, havings
         """
         columns, group_bys, filters, havings = [], [], set(), set()
+        order_by_keys = list(order_by_keys)
+
         for ingredient in self.ingredients():
             if ingredient.query_columns:
                 columns.extend(ingredient.query_columns)
@@ -617,25 +621,53 @@ class Shelf(object):
             if ingredient.havings:
                 havings.update(ingredient.havings)
 
+            # If there is an order_by key on one of the ingredients, make sure
+            # the recipe orders by this ingredient
+            if "order_by" in ingredient.roles:
+                if (
+                    ingredient.id not in order_by_keys
+                    and "-" + ingredient.id not in order_by_keys
+                ):
+                    if ingredient.ordering == "desc":
+                        order_by_keys.append("-" + ingredient.id)
+                    else:
+                        order_by_keys.append(ingredient.id)
+
+        order_bys = OrderedSet()
+        for key in order_by_keys:
+            try:
+                ingr = self.find(key, (Dimension, Metric))
+            except BadRecipe as e:
+                if "doesn't exist on the shelf" in str(e):
+                    raise BadRecipe(
+                        "{} can't be used for order_by unless it has "
+                        "already been added as a dimension or metric".format(key)
+                    )
+            for c in ingr.order_by_columns:
+                # Avoid duplicate order by columns
+                if str(c) not in [str(o) for o in order_bys]:
+                    order_bys.add(c)
+
         return {
             "columns": columns,
             "group_bys": group_bys,
             "filters": filters,
             "havings": havings,
+            "order_bys": list(order_bys),
         }
 
-    def enchant(self, list, cache_context=None):
+    def enchant(self, data, cache_context=None):
         """ Add any calculated values to each row of a resultset generating a
         new namedtuple
 
-        :param list: a list of row results
+        :param data: a list of row results
         :param cache_context: optional extra context for caching
         :return: a list with ingredient.cauldron_extras added for all
                  ingredients
         """
         enchantedlist = []
-        if list:
-            sample_item = list[0]
+        if data:
+            sample_item = data[0]
 
             # Extra fields to add to each row
             # With extra callables
@@ -656,7 +688,7 @@ class Shelf(object):
             )
 
             # Iterate over the results and build a new namedtuple for each row
-            for row in list:
+            for row in data:
                 values = row + tuple(fn(row) for fn in extra_callables)
                 enchantedlist.append(keyed_tuple(values))
 

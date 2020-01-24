@@ -388,7 +388,7 @@ class TestAnonymizeRecipeExtension(object):
        sum(foo.age) AS age
 FROM foo
 GROUP BY last
-ORDER BY foo.last"""
+ORDER BY last"""
         )
         assert recipe.all()[0].last == "fred"
         assert recipe.all()[0].last_id == "fred"
@@ -399,8 +399,8 @@ ORDER BY foo.last"""
             self.recipe()
             .metrics("age")
             .dimensions("last")
-            .order_by("last")
             .anonymize(True)
+            .order_by("last")
         )
         assert (
             recipe.to_sql()
@@ -408,7 +408,7 @@ ORDER BY foo.last"""
        sum(foo.age) AS age
 FROM foo
 GROUP BY last_raw
-ORDER BY foo.last"""
+ORDER BY last_raw"""
         )
         assert recipe.all()[0].last == "derf"
         assert recipe.all()[0].last_raw == "fred"
@@ -431,7 +431,7 @@ ORDER BY foo.last"""
        sum(foo.age) AS age
 FROM foo
 GROUP BY firstanon
-ORDER BY foo.first"""
+ORDER BY firstanon"""
         )
         assert recipe.all()[0].firstanon == "hi"
         assert recipe.all()[0].firstanon_id == "hi"
@@ -451,7 +451,7 @@ ORDER BY foo.first"""
        sum(foo.age) AS age
 FROM foo
 GROUP BY firstanon_raw
-ORDER BY foo.first"""
+ORDER BY firstanon_raw"""
         )
 
         fake = Faker(locale="en_US")
@@ -477,7 +477,7 @@ ORDER BY foo.first"""
        sum(foo.age) AS age
 FROM foo
 GROUP BY firstanon_raw
-ORDER BY foo.first"""
+ORDER BY firstanon_raw"""
         )
         assert recipe.all()[0].firstanon == fake_value
         assert recipe.all()[0].firstanon_raw == "hi"
@@ -500,7 +500,7 @@ ORDER BY foo.first"""
        sum(foo.age) AS age
 FROM foo
 GROUP BY first
-ORDER BY foo.first"""
+ORDER BY first"""
         )
         assert recipe.all()[0].first == "hi"
         assert recipe.all()[0].first_id == "hi"
@@ -520,7 +520,7 @@ ORDER BY foo.first"""
        sum(foo.age) AS age
 FROM foo
 GROUP BY first
-ORDER BY foo.first"""
+ORDER BY first"""
         )
         assert recipe.all()[0].first == "hi"
         assert recipe.all()[0].first_id == "hi"
@@ -697,7 +697,7 @@ GROUP BY state"""
        sum(census.pop2000) AS pop2000
 FROM census
 GROUP BY state
-ORDER BY census.state DESC
+ORDER BY state DESC
 LIMIT 10
 OFFSET 0"""
         )
@@ -716,7 +716,7 @@ OFFSET 0"""
        sum(census.pop2000) AS pop2000
 FROM census
 GROUP BY state
-ORDER BY census.state DESC
+ORDER BY state DESC
 LIMIT 10
 OFFSET 0"""
         )
@@ -1185,7 +1185,7 @@ FROM
    FROM scores
    GROUP BY department_raw,
             username
-   ORDER BY scores.department) AS summarize
+   ORDER BY department_raw) AS summarize
 GROUP BY summarize.department_raw
 ORDER BY summarize.department_raw"""
         )

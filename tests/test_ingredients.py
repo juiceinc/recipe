@@ -337,17 +337,65 @@ class TestDimension(object):
         d = Dimension(MyTable.first, id_expression=MyTable.last)
         assert len(list(d.order_by_columns)) == 2
         # Order by value expression then id expression
-        assert list(d.order_by_columns) == [MyTable.first, MyTable.last]
+        assert list(map(str, d.order_by_columns)) == [d.id, d.id + "_id"]
 
-        # Extra roles do not participate in ordering
+        # Extra roles DO participate in ordering
         d = Dimension(
             MyTable.first,
             id_expression=MyTable.last,
             age_expression=MyTable.age,
             id="moo",
         )
-        assert len(list(d.order_by_columns)) == 2
-        assert list(d.order_by_columns) == [MyTable.first, MyTable.last]
+        assert len(list(d.order_by_columns)) == 3
+        assert list(map(str, d.order_by_columns)) == ["moo_age", "moo", "moo_id"]
+
+        # Extra roles DO participate in ordering, order_by_expression is always first
+        d = Dimension(
+            MyTable.first,
+            id_expression=MyTable.last,
+            age_expression=MyTable.age,
+            order_by_expression=MyTable.age,
+            id="moo",
+        )
+        assert len(list(d.order_by_columns)) == 4
+        assert list(map(str, d.order_by_columns)) == [
+            "moo_order_by",
+            "moo_age",
+            "moo",
+            "moo_id",
+        ]
+
+        d = Dimension(
+            MyTable.first,
+            id_expression=MyTable.last,
+            zed_expression=MyTable.age,
+            order_by_expression=MyTable.age,
+            id="moo",
+        )
+        assert len(list(d.order_by_columns)) == 4
+        assert list(map(str, d.order_by_columns)) == [
+            "moo_order_by",
+            "moo_zed",
+            "moo",
+            "moo_id",
+        ]
+
+        # Default ordering can be set to descending
+        d = Dimension(
+            MyTable.first,
+            id_expression=MyTable.last,
+            zed_expression=MyTable.age,
+            order_by_expression=MyTable.age,
+            ordering="desc",
+            id="moo",
+        )
+        assert len(list(d.order_by_columns)) == 4
+        assert list(map(str, d.order_by_columns)) == [
+            "moo_order_by DESC",
+            "moo_zed DESC",
+            "moo DESC",
+            "moo_id DESC",
+        ]
 
     def test_dimension_cauldron_extras(self):
         d = Dimension(MyTable.first, id="moo")
