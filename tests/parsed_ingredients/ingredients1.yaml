@@ -1,0 +1,16 @@
+_version: "2"
+first:
+    kind: Dimension
+    field: first
+last:
+    kind: Dimension
+    field: last
+age:
+    kind: Metric
+    field: age
+date_between:
+    kind: Metric
+    field: 'if(birth_date between "20 years ago" and "now", age)'
+dt_between:
+    kind: Metric
+    field: 'if(birth_date between "20 years ago" and "now", age)'

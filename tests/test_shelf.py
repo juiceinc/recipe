@@ -16,7 +16,8 @@ from recipe import (
     Shelf,
 )
 from recipe.ingredients import Ingredient
-from recipe.shelf import find_column, introspect_table
+from recipe.shelf import introspect_table
+from recipe.schemas.utils import find_column
 
 from .test_base import Base, Census, MyTable, StateFact, mytable_shelf, oven
 

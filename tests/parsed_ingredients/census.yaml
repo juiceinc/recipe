@@ -1,0 +1,46 @@
+_version: "2"
+state:
+    kind: Dimension
+    field: state
+sex:
+    kind: Dimension
+    field: sex
+age:
+    kind: Dimension
+    field: age
+pop2000:
+    kind: Metric
+    field: pop2000
+pop2008:
+    kind: Metric
+    field: pop2008
+age_buckets:
+    kind: Dimension
+    field: age
+    buckets:
+    - label: 'babies'
+      condition: '<2'
+    - label: 'children'
+      condition: '<13'
+    - label: 'teens'
+      condition: '<20'
+    buckets_default_label: 'oldsters'
+mixed_buckets:
+    kind: Dimension
+    field: age
+    buckets:
+    - label: 'northeast'
+      condition: 'state in ("Vermont", "New Hampshire")'
+    - label: 'babies'
+      condition: '<2'
+    - label: 'children'
+      condition: '<13'
+    - label: 'teens'
+      condition: '<20'
+    buckets_default_label: 'oldsters'
+teenagers:
+    kind: Metric
+    field: "if(age between 13 and 19, pop2000)"
+ttlpop:
+    kind: Metric
+    field: pop2000 + pop2008

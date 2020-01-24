@@ -1,0 +1,21 @@
+_version: "2"
+state:
+    kind: Dimension
+    field: state
+    lookup:
+        Vermont: "The Green Mountain State"
+        Tennessee: "The Volunteer State"
+    quickselects:
+        - name: younger
+          condition: "age<40"
+        - name: vermontier
+          condition: '="Vermont"'
+pop2000:
+    kind: Metric
+    field: "if(age > 40, pop2000)"
+pop2008:
+    kind: Metric
+    field: pop2008
+allthemath:
+    kind: Metric
+    field: 'sum(pop2000+pop2008   - pop2000 * pop2008 /pop2000)'

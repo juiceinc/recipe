@@ -1,0 +1,25 @@
+_version: "2"
+# Test deprecated ingredient kinds
+# These all get turned into regular dimensions and metrics
+popchg:
+    kind: Metric
+    field: "sum(pop2008)/sum(pop2000)"
+avgage:
+    kind: Metric
+    field: "sum(age*pop2000)/sum(pop2000)"
+state:
+    kind: Dimension
+    field: state
+state_idval:
+    kind: Dimension
+    field: state
+    id_field: pop2000
+pop2000:
+    kind: Metric
+    field: pop2000
+state_characteristic:
+    kind: Dimension
+    field: state
+    lookup:
+        Tennessee: Volunteery
+        Vermont: Taciturny

@@ -6,23 +6,34 @@ import pytest
 from sureberus import errors as E
 from sureberus import normalize_schema
 
-from recipe.schemas import aggregations, find_operators, recipe_schema, shelf_schema
+from recipe.schemas.config_schemas import (
+    aggregations,
+    find_operators,
+    shelf_schema,
+)
+from recipe.schemas import recipe_schema
 
 
 def test_field_parsing():
-    v = {"foo": {"kind": "Metric", "field": {"value": "foo"}}}
+    v = {"foo": {"kind": "Metric", "field": {"value": "foo"}}, "_version": "1"}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         "foo": {"field": {"aggregation": "sum", "value": "foo"}, "kind": "Metric"}
     }
 
-    v = {"foo": {"kind": "Metric", "field": "foo"}}
+    v = {"foo": {"kind": "Metric", "field": "foo"}, "_version": "1"}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         "foo": {"field": {"aggregation": "sum", "value": "foo"}, "kind": "Metric"}
     }
 
-    v = {"foo": {"kind": "Metric", "field": "max(a)"}}
+    v = {"foo": {"kind": "Metric", "field": "max(a)"}, "_version": "1"}
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        "foo": {"field": {"aggregation": "max", "value": "a"}, "kind": "Metric"}
+    }
+
+    v = {"foo": {"kind": "Metric", "field": "max(a)"}, "_version": "1"}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         "foo": {"field": {"aggregation": "max", "value": "a"}, "kind": "Metric"}

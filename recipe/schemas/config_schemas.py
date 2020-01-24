@@ -2,76 +2,25 @@
 Registers recipe schemas
 """
 
-import inspect
 import logging
 import re
 
 from copy import copy
-from sqlalchemy import distinct, func
 from sureberus import schema as S
-
 from recipe.compat import basestring
+from .utils import (
+    sqlalchemy_datatypes,
+    coerce_format,
+    aggregations,
+    SCALAR_TYPES,
+    coerce_pop_version,
+)
 
 logging.captureWarnings(True)
 
-SCALAR_TYPES = [S.Integer(), S.String(), S.Float(), S.Boolean()]
-
-
-def _make_sqlalchemy_datatype_lookup():
-    """ Build a dictionary of the allowed sqlalchemy casts """
-    from sqlalchemy.sql import sqltypes
-
-    d = {}
-    for name in dir(sqltypes):
-        sqltype = getattr(sqltypes, name)
-        if name.lower() not in d and name[0] != "_" and name != "NULLTYPE":
-            if inspect.isclass(sqltype) and issubclass(sqltype, sqltypes.TypeEngine):
-                d[name.lower()] = sqltype
-    return d
-
-
-sqlalchemy_datatypes = _make_sqlalchemy_datatype_lookup()
-
-format_lookup = {
-    "comma": ",.0f",
-    "dollar": "$,.0f",
-    "percent": ".0%",
-    "comma1": ",.1f",
-    "dollar1": "$,.1f",
-    "percent1": ".1%",
-    "comma2": ",.2f",
-    "dollar2": "$,.2f",
-    "percent2": ".2%",
-}
-
 default_aggregation = "sum"
 no_aggregation = "none"
-aggregations = {
-    "sum": func.sum,
-    "min": func.min,
-    "max": func.max,
-    "avg": func.avg,
-    "count": func.count,
-    "count_distinct": lambda fld: func.count(distinct(fld)),
-    "month": lambda fld: func.date_trunc("month", fld),
-    "week": lambda fld: func.date_trunc("week", fld),
-    "year": lambda fld: func.date_trunc("year", fld),
-    "quarter": lambda fld: func.date_trunc("quarter", fld),
-    "age": lambda fld: func.date_part("year", func.age(fld)),
-    "none": lambda fld: fld,
-    None: lambda fld: fld,
-    # Percentile aggregations do not work in all engines
-    "median": func.median,
-    "percentile1": lambda fld: func.percentile_cont(0.01).within_group(fld),
-    "percentile5": lambda fld: func.percentile_cont(0.05).within_group(fld),
-    "percentile10": lambda fld: func.percentile_cont(0.10).within_group(fld),
-    "percentile25": lambda fld: func.percentile_cont(0.25).within_group(fld),
-    "percentile50": lambda fld: func.percentile_cont(0.50).within_group(fld),
-    "percentile75": lambda fld: func.percentile_cont(0.75).within_group(fld),
-    "percentile90": lambda fld: func.percentile_cont(0.90).within_group(fld),
-    "percentile95": lambda fld: func.percentile_cont(0.95).within_group(fld),
-    "percentile99": lambda fld: func.percentile_cont(0.99).within_group(fld),
-}
+
 
 aggr_keys = "|".join(k for k in aggregations.keys() if isinstance(k, basestring))
 # Match patterns like sum(a)
@@ -80,14 +29,14 @@ field_pattern = re.compile(r"^({})\((.*)\)$".format(aggr_keys))
 
 def find_operators(value):
     """ Find operators in a field that may look like "a+b-c" """
-    parts = re.split("[+-\/\*]", value)
+    parts = re.split("[+-/*]", value)
     field, operators = parts[0], []
     if len(parts) == 1:
         return field, operators
 
     remaining_value = value[len(field) :]
     if remaining_value:
-        for part in re.findall("[+-\/\*][\@\w\.]+", remaining_value):
+        for part in re.findall("[+-/*][@\w\.]+", remaining_value):
             # TODO: Full validation on other fields
             other_field = _coerce_string_into_field(
                 part[1:], search_for_operators=False
@@ -483,9 +432,7 @@ ingredient_schema_choices = {
         schema={
             "field": "aggregated_field",
             "divide_by": "optional_aggregated_field",
-            "format": S.String(
-                coerce=lambda v: format_lookup.get(v, v), required=False
-            ),
+            "format": S.String(coerce=coerce_format, required=False),
             "quickselects": quickselect_schema,
         },
     ),
@@ -506,9 +453,7 @@ ingredient_schema_choices = {
             ),
             "buckets": S.List(required=False, schema="labeled_condition"),
             "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
-            "format": S.String(
-                coerce=lambda v: format_lookup.get(v, v), required=False
-            ),  # noqa: E123
+            "format": S.String(coerce=coerce_format, required=False),  # noqa: E123
             "quickselects": quickselect_schema,
         },
     ),
@@ -532,27 +477,11 @@ ingredient_schema = S.Dict(
     },
 )
 
+
 shelf_schema = S.Dict(
     valueschema=ingredient_schema,
     keyschema=S.String(),
     allow_unknown=True,
+    coerce=coerce_pop_version,
     coerce_post=_replace_references,
-)
-
-# This schema is used with sureberus
-recipe_schema = S.Dict(
-    schema={
-        "metrics": S.List(schema=S.String(), required=False),
-        "dimensions": S.List(schema=S.String(), required=False),
-        "filters": S.List(schema={"oneof": [S.String(), "condition"]}, required=False),
-        "order_by": S.List(schema=S.String(), required=False),
-    },
-    registry={
-        "aggregated_field": _field_schema(aggr=True, required=True),
-        "optional_aggregated_field": _field_schema(aggr=True, required=False),
-        "non_aggregated_field": _field_schema(aggr=False, required=True),
-        "condition": _full_condition_schema(aggr=False, label_required=False),
-        "labeled_condition": _full_condition_schema(aggr=False, label_required=True),
-        "having_condition": _full_condition_schema(aggr=True, label_required=False),
-    },
 )
