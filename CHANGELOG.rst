@@ -2,6 +2,14 @@
 Changelog
 =========
 
+
+0.13.0 (2020-01-28)
+-----------------------------------------
+
+* Extend grouping strategies so recipes can also order by column labels
+* Create a new shelf configuration that uses lark to parse text into SQLAlchemy.
+
+
 0.12.0 (2019-11-25)
 -----------------------------------------
 
