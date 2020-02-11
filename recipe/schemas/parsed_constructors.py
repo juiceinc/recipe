@@ -58,7 +58,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def agex(self, aggr, val):
         if val == "*":
-            return func.count("*")
+            return func.count()
         else:
             return aggr(val)
 
