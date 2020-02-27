@@ -6,7 +6,7 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sureberus import schema as S
 
-from recipe.exceptions import BadIngredient
+from recipe.exceptions import BadIngredient, InvalidColumnError
 from recipe.compat import basestring
 
 SCALAR_TYPES = [S.Integer(), S.String(), S.Float(), S.Boolean()]
@@ -184,8 +184,7 @@ def find_column(selectable, name):
         if col is not None:
             return col
 
-    raise BadIngredient("Can not find {} in {}".format(name, selectable))
-
+    return None
 
 def ingredient_class_for_name(class_name):
     """Get the class in the recipe.ingredients module with the given name."""

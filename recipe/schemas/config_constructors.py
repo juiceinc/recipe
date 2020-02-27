@@ -185,4 +185,7 @@ def create_ingredient_from_config(ingr_dict, selectable):
             extra.get("field"), selectable
         )
 
+    if field is None:
+        ingr_dict['invalid_columns'] = [field_defn.get('value', '?')]
+
     return IngredientClass(*args, **ingr_dict)

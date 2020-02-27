@@ -9,7 +9,7 @@ from sureberus import normalize_schema
 from yaml import safe_load
 
 from recipe.compat import basestring
-from recipe.exceptions import BadIngredient, BadRecipe
+from recipe.exceptions import BadIngredient, BadRecipe, InvalidColumnError
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric
 from recipe.schemas import shelf_schema
 from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
@@ -321,7 +321,17 @@ class Shelf(object):
 
         for ingredient in self.ingredients():
             if ingredient.query_columns:
-                columns.extend(ingredient.query_columns)
+                from recipe.exceptions import InvalidColumnError
+                try:
+                    columns.extend(ingredient.query_columns)
+                except InvalidColumnError as e:
+                    raise InvalidColumnError(
+                        'Database column(s) {0} supporting recipe ingredient {1} is invalid'.format
+                        (
+                            ingredient.invalid_columns,
+                            ingredient.id
+                        )
+                    )
             if ingredient.group_by:
                 group_bys.extend(ingredient.group_by)
             if ingredient.filters:
