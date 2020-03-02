@@ -86,7 +86,7 @@ class Ingredient(object):
         self.anonymize = False
         self.roles = {}
         self._labels = []
-        self.invalid_columns = kwargs.pop("invalid_columns", [])
+        self.errors = kwargs.pop('errors', [])
 
         # What order should this be in
         self.ordering = kwargs.pop("ordering", "asc")
@@ -157,9 +157,6 @@ class Ingredient(object):
         """
         self._labels = []
         for column, suffix in zip(self.columns, self.make_column_suffixes()):
-            if column is None:
-                from recipe.exceptions import InvalidColumnError
-                raise InvalidColumnError
             self._labels.append(self.id + suffix)
             yield column.label(self.id + suffix)
 

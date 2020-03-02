@@ -184,10 +184,23 @@ def find_column(selectable, name):
         if col is not None:
             return col
 
-    return None
+    return  _find_in_columncollection(DummyTable.__table__.c, 'dummy_column')  # DummyTable.dummy_column
 
 def ingredient_class_for_name(class_name):
     """Get the class in the recipe.ingredients module with the given name."""
     from recipe import ingredients
 
     return getattr(ingredients, class_name, None)
+
+from sqlalchemy import Column, Boolean, Table
+from sqlalchemy.ext.declarative import declarative_base
+Base = declarative_base()
+
+
+class DummyTable(Base):
+
+    __table__ = Table(
+        'dummy_table',
+        Base.metadata,
+        Column('dummy_column', Boolean(), primary_key=True)
+    )

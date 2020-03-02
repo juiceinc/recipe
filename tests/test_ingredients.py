@@ -22,6 +22,7 @@ from recipe.schemas.config_constructors import (
 )
 from recipe.schemas.config_constructors import parse_unvalidated_field as parse_field
 from recipe.schemas.config_constructors import SAFE_DIVISON_EPSILON
+from recipe.schemas.utils import DummyTable
 
 
 class TestIngredients(object):
@@ -817,7 +818,6 @@ class TestParse(object):
             [],
             ["abb"],
             ["age"],
-            {"value": "abb"},
             {"value": ["age"]},
             {"condition": ["age"]},
             {"condition": "foo"},
@@ -826,3 +826,11 @@ class TestParse(object):
         for input_field in bad_data:
             with pytest.raises(BadIngredient):
                 parse_field(input_field, MyTable)
+
+    def test_field_with_invalid_column(self):
+        bad_data = [
+            {"value": "abb"}
+        ]
+        for input_field in bad_data:
+            field = parse_field(input_field, MyTable)
+            assert field.clauses.clauses[0] == DummyTable.dummy_column

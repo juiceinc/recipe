@@ -320,18 +320,10 @@ class Shelf(object):
         order_by_keys = list(order_by_keys)
 
         for ingredient in self.ingredients():
+            if ingredient.errors:
+                raise BadIngredient(str(ingredient.errors))
             if ingredient.query_columns:
-                from recipe.exceptions import InvalidColumnError
-                try:
-                    columns.extend(ingredient.query_columns)
-                except InvalidColumnError as e:
-                    raise InvalidColumnError(
-                        'Database column(s) {0} supporting recipe ingredient {1} is invalid'.format
-                        (
-                            ingredient.invalid_columns,
-                            ingredient.id
-                        )
-                    )
+                columns.extend(ingredient.query_columns)
             if ingredient.group_by:
                 group_bys.extend(ingredient.group_by)
             if ingredient.filters:

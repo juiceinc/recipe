@@ -418,6 +418,12 @@ class Recipe(object):
             recipe_parts = extension.modify_recipe_parts(recipe_parts)
 
         # Start building the query
+        for column in recipe_parts["columns"]:
+            from recipe.schemas.utils import DummyTable
+            from recipe.exceptions import InvalidColumnError
+            if column == DummyTable.dummy_column:
+                raise InvalidColumnError('Invalid column {}'.format(column.name))
+
         query = self._session.query(*recipe_parts["columns"])
         if self._select_from is not None:
             query = query.select_from(self._select_from)
