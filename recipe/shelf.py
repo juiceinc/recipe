@@ -36,11 +36,11 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
         return InvalidIngredient(error=error)
     except VisitError as e:
         # Lark returns the InvalidColumnError wrapped in a VisitError
-        if isinstance(e.__context__, InvalidColumnError):
+        if isinstance(e.orig_exc, InvalidColumnError):
             # custom exception handling
             error = {
                 "type": "invalid_column",
-                "extra": {"column_name": e.__context__.column_name},
+                "extra": {"column_name": e.orig_exc.column_name},
             }
             return InvalidIngredient(error=error)
         else:
