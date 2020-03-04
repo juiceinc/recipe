@@ -31,12 +31,7 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
         else:
             return create_ingredient_from_parsed(ingr_dict, selectable)
     except InvalidColumnError as e:
-        error = {
-            'type': 'invalid_column',
-            'extra': {
-                'column_name': e.column_name
-            }
-        }
+        error = {"type": "invalid_column", "extra": {"column_name": e.column_name}}
         return InvalidIngredient(error=error)
 
 
@@ -264,9 +259,9 @@ class Shelf(object):
         for k, v in iteritems(validated_shelf):
             d[k] = ingredient_constructor(v, selectable)
             if isinstance(d[k], InvalidIngredient):
-                if not d[k].error.get('extra'):
-                    d[k].error['extra'] = {}
-                d[k].error['extra']['ingredient_name'] = k
+                if not d[k].error.get("extra"):
+                    d[k].error["extra"] = {}
+                d[k].error["extra"]["ingredient_name"] = k
         shelf = cls(d, select_from=selectable)
 
         return shelf
@@ -317,7 +312,7 @@ class Shelf(object):
             if isinstance(ingredient, InvalidIngredient):
                 # allow InvalidIngredient, it will be handled at a later time
                 return ingredient
-                
+
             if not isinstance(ingredient, filter_to_class):
                 raise BadRecipe("{} is not a {}".format(obj, filter_to_class))
 
@@ -338,13 +333,14 @@ class Shelf(object):
 
         for ingredient in self.ingredients():
             if ingredient.error:
-                error_type = ingredient.error.get('type')
-                if error_type == 'invalid_column':
-                    extra = ingredient.error.get('extra', {})
-                    column_name = extra.get('column_name')
-                    ingredient_name = extra.get('ingredient_name')
+                error_type = ingredient.error.get("type")
+                if error_type == "invalid_column":
+                    extra = ingredient.error.get("extra", {})
+                    column_name = extra.get("column_name")
+                    ingredient_name = extra.get("ingredient_name")
                     error_msg = 'Invalid column "{0}" in ingredient "{1}"'.format(
-                        column_name, ingredient_name)
+                        column_name, ingredient_name
+                    )
                     raise InvalidColumnError(error_msg, column_name=column_name)
                 raise BadIngredient(str(ingredient.error))
             if ingredient.query_columns:
