@@ -186,6 +186,7 @@ def find_column(selectable, name):
 
     raise InvalidColumnError(column_name=name)
 
+
 def ingredient_class_for_name(class_name):
     """Get the class in the recipe.ingredients module with the given name."""
     from recipe import ingredients

@@ -86,7 +86,7 @@ class Ingredient(object):
         self.anonymize = False
         self.roles = {}
         self._labels = []
-        self.error = kwargs.pop('error', None)
+        self.error = kwargs.pop("error", None)
 
         # What order should this be in
         self.ordering = kwargs.pop("ordering", "asc")

@@ -136,7 +136,7 @@ GROUP BY state"""
             find_column(1, "foo")
         with pytest.raises(InvalidColumnError):
             find_column(MyTable.first, "foo")
-        
+
 
 class TestShelfConstruction(object):
     def test_pass_some_metadata(self):
@@ -584,10 +584,12 @@ invalid_in_referred:
     divide_by: '@invalid'
 """
         self.make_shelf(content)
-        assert isinstance(self.shelf['oldage'], Metric)
-        assert isinstance(self.shelf['invalid'], InvalidIngredient)
-        assert self.shelf['invalid'].error['extra']['column_name'] == 'invalid'
-        assert self.shelf['invalid_in_referred'].error['extra']['column_name'] == 'invalid'
+        assert isinstance(self.shelf["oldage"], Metric)
+        assert isinstance(self.shelf["invalid"], InvalidIngredient)
+        assert self.shelf["invalid"].error["extra"]["column_name"] == "invalid"
+        assert (
+            self.shelf["invalid_in_referred"].error["extra"]["column_name"] == "invalid"
+        )
 
 
 class TestShelfFromConfig(TestShelfFromValidatedYaml):

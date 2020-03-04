@@ -827,10 +827,7 @@ class TestParse(object):
                 parse_field(input_field, MyTable)
 
     def test_field_with_invalid_column(self):
-        bad_data = [
-            "abb",
-            {"value": "abb"}
-        ]
+        bad_data = ["abb", {"value": "abb"}]
         for input_field in bad_data:
             with pytest.raises(InvalidColumnError):
                 field = parse_field(input_field, MyTable)
