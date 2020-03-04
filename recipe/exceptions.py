@@ -7,8 +7,8 @@ class BadRecipe(Exception):
 
 class InvalidColumnError(Exception):
 
-    def __init__(self, *args, column_name='', **kwargs):
-        self.column_name = column_name
+    def __init__(self, *args, **kwargs):
+        self.column_name = kwargs.pop('column_name', None)
         if not args:
             # default exception message
             args = ['Invalid column "{}"'.format(column_name)]
