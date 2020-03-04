@@ -1,5 +1,6 @@
 from copy import copy
 
+from lark.exceptions import VisitError
 from ordered_set import OrderedSet
 from six import iteritems
 from sqlalchemy import Float, Integer, String, Table
@@ -33,6 +34,17 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
     except InvalidColumnError as e:
         error = {"type": "invalid_column", "extra": {"column_name": e.column_name}}
         return InvalidIngredient(error=error)
+    except VisitError as e:
+        # Lark returns the InvalidColumnError wrapped in a VisitError
+        if isinstance(e.__context__, InvalidColumnError):
+            # custom exception handling
+            error = {
+                "type": "invalid_column",
+                "extra": {"column_name": e.__context__.column_name}
+            }
+            return InvalidIngredient(error=error)
+        else:
+            raise
 
 
 class Shelf(object):
