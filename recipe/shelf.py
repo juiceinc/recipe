@@ -40,7 +40,7 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
             # custom exception handling
             error = {
                 "type": "invalid_column",
-                "extra": {"column_name": e.__context__.column_name}
+                "extra": {"column_name": e.__context__.column_name},
             }
             return InvalidIngredient(error=error)
         else:

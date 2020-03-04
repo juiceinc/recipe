@@ -10,8 +10,14 @@ import pytest
 from six import text_type
 from tests.test_base import Census, MyTable, oven, ScoresWithNulls
 
-from recipe import AutomaticFilters, BadIngredient, Recipe, Shelf, BadRecipe, \
-    InvalidColumnError
+from recipe import (
+    AutomaticFilters,
+    BadIngredient,
+    Recipe,
+    Shelf,
+    BadRecipe,
+    InvalidColumnError,
+)
 
 
 class TestRecipeIngredientsYaml(object):
@@ -512,9 +518,9 @@ Vermont,0.4374284968466095,The Green Mountain State,Vermont
         shelf = self.validated_shelf("census_references.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
-                .dimensions("state")
-                .metrics("badfield")
-                .order_by("state")
+            .dimensions("state")
+            .metrics("badfield")
+            .order_by("state")
         )
         with pytest.raises(InvalidColumnError):
             recipe.to_sql()
