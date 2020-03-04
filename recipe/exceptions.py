@@ -11,5 +11,5 @@ class InvalidColumnError(Exception):
         self.column_name = kwargs.pop('column_name', None)
         if not args:
             # default exception message
-            args = ['Invalid column "{}"'.format(column_name)]
+            args = ['Invalid column "{}"'.format(self.column_name)]
         super(InvalidColumnError, self).__init__(*args, **kwargs)
