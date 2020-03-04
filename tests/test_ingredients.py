@@ -6,6 +6,7 @@ from tests.test_base import MyTable, mytable_shelf
 
 from recipe import (
     BadIngredient,
+    InvalidColumnError,
     Dimension,
     DivideMetric,
     Filter,
@@ -22,7 +23,6 @@ from recipe.schemas.config_constructors import (
 )
 from recipe.schemas.config_constructors import parse_unvalidated_field as parse_field
 from recipe.schemas.config_constructors import SAFE_DIVISON_EPSILON
-from recipe.schemas.utils import DummyTable
 
 
 class TestIngredients(object):
@@ -813,7 +813,6 @@ class TestParse(object):
 
     def test_bad_field_definitions(self):
         bad_data = [
-            "abb",
             {},
             [],
             ["abb"],
@@ -829,8 +828,9 @@ class TestParse(object):
 
     def test_field_with_invalid_column(self):
         bad_data = [
+            "abb",
             {"value": "abb"}
         ]
         for input_field in bad_data:
-            field = parse_field(input_field, MyTable)
-            assert field.clauses.clauses[0] == DummyTable.dummy_column
+            with pytest.raises(InvalidColumnError):
+                field = parse_field(input_field, MyTable)

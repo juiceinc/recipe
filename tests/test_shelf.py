@@ -9,13 +9,14 @@ from yaml import safe_load
 from recipe import (
     AutomaticShelf,
     BadIngredient,
+    InvalidColumnError,
     BadRecipe,
     Dimension,
     Metric,
     Recipe,
     Shelf,
 )
-from recipe.ingredients import Ingredient
+from recipe.ingredients import Ingredient, InvalidIngredient
 from recipe.shelf import introspect_table
 from recipe.schemas.utils import find_column
 
@@ -65,16 +66,15 @@ GROUP BY state"""
         col = find_column(recipe, "state")
         assert isinstance(col, (ColumnElement, InstrumentedAttribute))
 
-        with pytest.raises(BadIngredient):
+        with pytest.raises(InvalidColumnError):
             find_column(recipe, "census_state")
-
-        with pytest.raises(BadIngredient):
+        with pytest.raises(InvalidColumnError):
             find_column(recipe, "foo")
 
         col = find_column(recipe, "sum_pop2000")
         assert isinstance(col, (ColumnElement, InstrumentedAttribute))
 
-        with pytest.raises(BadIngredient):
+        with pytest.raises(InvalidColumnError):
             find_column(recipe, "pop2000")
 
     def test_find_column_from_table_mytable(self):
@@ -96,7 +96,7 @@ GROUP BY state"""
         col = find_column(MyTable, "foo_age")
         assert isinstance(col, (ColumnElement, InstrumentedAttribute))
 
-        with pytest.raises(BadIngredient):
+        with pytest.raises(InvalidColumnError):
             find_column(MyTable, "foo")
 
     def test_find_column_from_join(self):
@@ -109,7 +109,7 @@ GROUP BY state"""
 
         col2 = find_column(j, "census_state")
         assert isinstance(col, (ColumnElement, InstrumentedAttribute))
-        assert col == col2
+        assert col == col2  # jingwei look into this
 
         # Names can be either the column name or the {tablename}_{column}
         col = find_column(j, "sex")
@@ -127,17 +127,16 @@ GROUP BY state"""
         assert isinstance(col, (ColumnElement, InstrumentedAttribute))
         assert col == col2
 
-        with pytest.raises(BadIngredient):
+        with pytest.raises(InvalidColumnError):
             find_column(j, "foo")
 
     def test_find_column_from_invalid_type(self):
         """ Columns can be found in a join """
-        with pytest.raises(BadIngredient):
+        with pytest.raises(InvalidColumnError):
             find_column(1, "foo")
-
-        with pytest.raises(BadIngredient):
+        with pytest.raises(InvalidColumnError):
             find_column(MyTable.first, "foo")
-
+        
 
 class TestShelfConstruction(object):
     def test_pass_some_metadata(self):
@@ -569,6 +568,26 @@ oldage:
         self.make_shelf(content)
         # Explicit null aggregations are respected, even in metrics
         assert str(self.shelf["oldage"]) == "(Metric)oldage MyTable.age"
+
+    def test_invalid_column(self):
+        content = """
+oldage:
+    kind: Metric
+    field:
+        value: age
+invalid:
+    kind: Metric
+    field: invalid
+invalid_in_referred:
+    kind: Metric
+    field: age
+    divide_by: '@invalid'
+"""
+        self.make_shelf(content)
+        assert isinstance(self.shelf['oldage'], Metric)
+        assert isinstance(self.shelf['invalid'], InvalidIngredient)
+        assert self.shelf['invalid'].error['extra']['column_name'] == 'invalid'
+        assert self.shelf['invalid_in_referred'].error['extra']['column_name'] == 'invalid'
 
 
 class TestShelfFromConfig(TestShelfFromValidatedYaml):

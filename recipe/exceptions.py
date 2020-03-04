@@ -9,4 +9,7 @@ class InvalidColumnError(Exception):
 
     def __init__(self, *args, column_name='', **kwargs):
         self.column_name = column_name
+        if not args:
+            # default exception message
+            args = ['Invalid column "{}"'.format(column_name)]
         super(InvalidColumnError, self).__init__(*args, **kwargs)

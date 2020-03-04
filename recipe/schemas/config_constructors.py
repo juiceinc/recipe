@@ -185,21 +185,4 @@ def create_ingredient_from_config(ingr_dict, selectable):
             extra.get("field"), selectable
         )
 
-    from recipe.schemas.utils import DummyTable
-    has_invalid_column = False
-    from sqlalchemy import Column
-    if isinstance(field, Column):
-        if field == DummyTable.dummy_column:
-            has_invalid_column = True
-    elif any(x for x in field.clauses.clauses if x == DummyTable.dummy_column):
-        has_invalid_column = True
-        
-    if has_invalid_column:
-        if 'errors' not in ingr_dict:
-            ingr_dict['errors'] = []
-        ingr_dict['errors'].append({
-            'error': 'invalid_columns',
-            'extra': field_defn.get('value', '?')
-        })
-
     return IngredientClass(*args, **ingr_dict)
