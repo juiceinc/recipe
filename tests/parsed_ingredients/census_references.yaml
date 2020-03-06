@@ -11,6 +11,9 @@ pop2000:
 pop2008:
     kind: Metric
     field: sum(pop2008)
+badfield:
+    kind: Metric
+    field: unknown
 pop2008oldsters:
     kind: Metric
     field: "sum(if(age>40,pop2008))"

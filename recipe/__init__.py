@@ -6,7 +6,7 @@ Recipe
 import logging
 
 from recipe.core import Recipe
-from recipe.exceptions import BadIngredient, BadRecipe
+from recipe.exceptions import BadIngredient, BadRecipe, InvalidColumnError
 from recipe.extensions import (
     Anonymize,
     AutomaticFilters,

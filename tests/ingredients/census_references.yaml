@@ -14,6 +14,9 @@ pop2000:
 pop2008:
     kind: Metric
     field: pop2008
+badfield:
+    kind: Metric
+    field: unknown
 pop2008oldsters:
     kind: Metric
     field:

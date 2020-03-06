@@ -86,6 +86,7 @@ class Ingredient(object):
         self.anonymize = False
         self.roles = {}
         self._labels = []
+        self.error = kwargs.pop("error", None)
 
         # What order should this be in
         self.ordering = kwargs.pop("ordering", "asc")
@@ -699,3 +700,7 @@ class WtdAvgMetric(DivideMetric):
         numerator = func.sum(expression * weight_expression)
         denominator = func.sum(weight_expression)
         super(WtdAvgMetric, self).__init__(numerator, denominator, **kwargs)
+
+
+class InvalidIngredient(Ingredient):
+    pass

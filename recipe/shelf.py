@@ -1,5 +1,6 @@
 from copy import copy
 
+from lark.exceptions import VisitError
 from ordered_set import OrderedSet
 from six import iteritems
 from sqlalchemy import Float, Integer, String, Table
@@ -9,8 +10,8 @@ from sureberus import normalize_schema
 from yaml import safe_load
 
 from recipe.compat import basestring
-from recipe.exceptions import BadIngredient, BadRecipe
-from recipe.ingredients import Dimension, Filter, Ingredient, Metric
+from recipe.exceptions import BadIngredient, BadRecipe, InvalidColumnError
+from recipe.ingredients import Dimension, Filter, Ingredient, Metric, InvalidIngredient
 from recipe.schemas import shelf_schema
 from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
 from recipe.schemas.config_constructors import (
@@ -24,11 +25,26 @@ _POP_DEFAULT = object()
 
 def ingredient_from_validated_dict(ingr_dict, selectable):
     """Create an ingredient object from a validated ingredient schema"""
-    version = ingr_dict.pop("_version", "1")
-    if version == "1":
-        return create_ingredient_from_config(ingr_dict, selectable)
-    else:
-        return create_ingredient_from_parsed(ingr_dict, selectable)
+    try:
+        version = ingr_dict.pop("_version", "1")
+        if version == "1":
+            return create_ingredient_from_config(ingr_dict, selectable)
+        else:
+            return create_ingredient_from_parsed(ingr_dict, selectable)
+    except InvalidColumnError as e:
+        error = {"type": "invalid_column", "extra": {"column_name": e.column_name}}
+        return InvalidIngredient(error=error)
+    except VisitError as e:
+        # Lark returns the InvalidColumnError wrapped in a VisitError
+        if isinstance(e.orig_exc, InvalidColumnError):
+            # custom exception handling
+            error = {
+                "type": "invalid_column",
+                "extra": {"column_name": e.orig_exc.column_name},
+            }
+            return InvalidIngredient(error=error)
+        else:
+            raise
 
 
 class Shelf(object):
@@ -254,6 +270,10 @@ class Shelf(object):
         d = {}
         for k, v in iteritems(validated_shelf):
             d[k] = ingredient_constructor(v, selectable)
+            if isinstance(d[k], InvalidIngredient):
+                if not d[k].error.get("extra"):
+                    d[k].error["extra"] = {}
+                d[k].error["extra"]["ingredient_name"] = k
         shelf = cls(d, select_from=selectable)
 
         return shelf
@@ -301,6 +321,10 @@ class Shelf(object):
                 raise BadRecipe("{} doesn't exist on the shelf".format(obj))
 
             ingredient = self[obj]
+            if isinstance(ingredient, InvalidIngredient):
+                # allow InvalidIngredient, it will be handled at a later time
+                return ingredient
+
             if not isinstance(ingredient, filter_to_class):
                 raise BadRecipe("{} is not a {}".format(obj, filter_to_class))
 
@@ -320,6 +344,17 @@ class Shelf(object):
         order_by_keys = list(order_by_keys)
 
         for ingredient in self.ingredients():
+            if ingredient.error:
+                error_type = ingredient.error.get("type")
+                if error_type == "invalid_column":
+                    extra = ingredient.error.get("extra", {})
+                    column_name = extra.get("column_name")
+                    ingredient_name = extra.get("ingredient_name")
+                    error_msg = 'Invalid column "{0}" in ingredient "{1}"'.format(
+                        column_name, ingredient_name
+                    )
+                    raise InvalidColumnError(error_msg, column_name=column_name)
+                raise BadIngredient(str(ingredient.error))
             if ingredient.query_columns:
                 columns.extend(ingredient.query_columns)
             if ingredient.group_by:

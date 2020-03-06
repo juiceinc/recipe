@@ -6,6 +6,7 @@ from tests.test_base import MyTable, mytable_shelf
 
 from recipe import (
     BadIngredient,
+    InvalidColumnError,
     Dimension,
     DivideMetric,
     Filter,
@@ -812,12 +813,10 @@ class TestParse(object):
 
     def test_bad_field_definitions(self):
         bad_data = [
-            "abb",
             {},
             [],
             ["abb"],
             ["age"],
-            {"value": "abb"},
             {"value": ["age"]},
             {"condition": ["age"]},
             {"condition": "foo"},
@@ -826,3 +825,9 @@ class TestParse(object):
         for input_field in bad_data:
             with pytest.raises(BadIngredient):
                 parse_field(input_field, MyTable)
+
+    def test_field_with_invalid_column(self):
+        bad_data = ["abb", {"value": "abb"}]
+        for input_field in bad_data:
+            with pytest.raises(InvalidColumnError):
+                field = parse_field(input_field, MyTable)

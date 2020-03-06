@@ -10,7 +10,14 @@ import pytest
 from six import text_type
 from tests.test_base import Census, MyTable, oven, ScoresWithNulls
 
-from recipe import AutomaticFilters, BadIngredient, Recipe, Shelf, BadRecipe
+from recipe import (
+    AutomaticFilters,
+    BadIngredient,
+    Recipe,
+    Shelf,
+    BadRecipe,
+    InvalidColumnError,
+)
 
 
 class TestRecipeIngredientsYaml(object):
@@ -505,6 +512,18 @@ Tennessee,0.3856763995010324,The Volunteer State,Tennessee
 Vermont,0.4374284968466095,The Green Mountain State,Vermont
 """,
         )
+
+    def test_shelf_with_invalidcolumn(self):
+        """Build a recipe using a shelf that uses field references """
+        shelf = self.validated_shelf("census_references.yaml", Census)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("state")
+            .metrics("badfield")
+            .order_by("state")
+        )
+        with pytest.raises(InvalidColumnError):
+            recipe.to_sql()
 
     def test_shelf_with_condition_references(self):
         """Build a recipe using a shelf that uses condition references """
@@ -1094,8 +1113,6 @@ Vermont,609480.0,The Green Mountain State,Vermont
             .order_by("state_idval")
             .limit(10)
         )
-        print(recipe.to_sql())
-        print(recipe.dataset.csv)
         assert (
             recipe.to_sql()
             == """SELECT census.pop2000 AS state_idval_id,
