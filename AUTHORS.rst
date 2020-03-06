@@ -2,5 +2,7 @@
 Authors
 *******
 
-* Chris Gemignani - www.github.com/juiceinc/recipe
-* Jason Myers
+* Chris Gemignani https://github.com/chrisgemignani
+* Jason Myers https://github.com/jasonamyers
+* Jingwei https://github.com/mulog1990
+* Radix https://github.com/radix
