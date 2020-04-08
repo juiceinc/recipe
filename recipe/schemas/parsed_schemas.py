@@ -250,6 +250,7 @@ ingredient_schema = S.Dict(
         "kind",
         {
             "Metric": metric_schema,
+            "Measure": metric_schema,
             "Dimension": dimension_schema,
             "Filter": filter_schema,
             "Having": having_schema,

@@ -130,6 +130,9 @@ class TransformToSQLAlchemyExpression(Transformer):
 def create_ingredient_from_parsed(ingr_dict, selectable):
     """ Create an ingredient from config version 2 object . """
     kind = ingr_dict.pop("kind", "Metric")
+    # Measure is a synonym for Metric
+    if kind == "Measure": 
+        kind = "Metric"
     IngredientClass = ingredient_class_for_name(kind)
     if IngredientClass is None:
         raise BadIngredient("Unknown ingredient kind")

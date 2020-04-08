@@ -8,10 +8,10 @@ age:
     kind: Dimension
     field: age
 pop2000:
-    kind: Metric
+    kind: Measure
     field: pop2000
 pop2008:
-    kind: Metric
+    kind: Measure
     field: pop2008
 age_buckets:
     kind: Dimension
@@ -39,12 +39,12 @@ mixed_buckets:
       lt: 20
     buckets_default_label: 'oldsters'
 teenagers:
-    kind: Metric
+    kind: Measure
     field: 
       value: pop2000
       condition:
         field: age
         between: [13,19]
 ttlpop:
-    kind: Metric
+    kind: Measure
     field: pop2000 + pop2008
