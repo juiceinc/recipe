@@ -59,6 +59,7 @@ and response formatting.
    concepts/overview
    concepts/ingredients
    concepts/shelves
+   concepts/from_field_expression_config
    concepts/from_config
    concepts/using_from_config
    extensions/intro_to_extensions
