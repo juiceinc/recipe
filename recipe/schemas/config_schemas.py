@@ -428,18 +428,16 @@ quickselect_schema = S.List(
     schema=S.Dict(schema={"condition": "condition", "name": S.String(required=True)}),
 )
 
-metric_schema = S.Dict(
-    allow_unknown=True,
-    schema={
-        "field": "aggregated_field",
-        "divide_by": "optional_aggregated_field",
-        "format": S.String(coerce=coerce_format, required=False),
-        "quickselects": quickselect_schema,
-    },
-)
-
 ingredient_schema_choices = {
-    "metric": metric_schema,
+    "metric": S.Dict(
+        allow_unknown=True,
+        schema={
+            "field": "aggregated_field",
+            "divide_by": "optional_aggregated_field",
+            "format": S.String(coerce=coerce_format, required=False),
+            "quickselects": quickselect_schema,
+        },
+    ),
     "dimension": S.Dict(
         allow_unknown=True,
         coerce=_move_extra_fields,
