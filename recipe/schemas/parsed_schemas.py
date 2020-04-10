@@ -118,7 +118,7 @@ def _convert_bucket_to_field(bucket, bucket_default_label, use_indices=False):
 def _lowercase_kind(value):
     """Ensure kind is lowercase with a default of "metric" """
     if isinstance(value, dict):
-        kind = value.get("kind", "metric").lower()        
+        kind = value.get("kind", "metric").lower()
         # measure is a synonym for metric
         if kind == "measure":
             kind = "metric"
