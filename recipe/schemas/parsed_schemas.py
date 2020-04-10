@@ -115,6 +115,18 @@ def _convert_bucket_to_field(bucket, bucket_default_label, use_indices=False):
     return "if(" + ",".join(parts) + ")"
 
 
+def _lowercase_kind(value):
+    """Ensure kind is lowercase with a default of "metric" """
+    if isinstance(value, dict):
+        kind = value.get("kind", "metric").lower()        
+        # measure is a synonym for metric
+        if kind == "measure":
+            kind = "metric"
+        value["kind"] = kind
+
+    return value
+
+
 def _convert_partial_conditions(value):
     """Convert all partial conditions to full conditions in buckets and quickselects."""
     field = value.get("field")
@@ -249,14 +261,14 @@ ingredient_schema = S.Dict(
     choose_schema=S.when_key_is(
         "kind",
         {
-            "Metric": metric_schema,
-            "Measure": metric_schema,
-            "Dimension": dimension_schema,
-            "Filter": filter_schema,
-            "Having": having_schema,
+            "metric": metric_schema,
+            "dimension": dimension_schema,
+            "filter": filter_schema,
+            "having": having_schema,
         },
-        default_choice="Metric",
+        default_choice="metric",
     ),
+    coerce=_lowercase_kind,
     registry={},
 )
 

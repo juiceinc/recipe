@@ -142,11 +142,8 @@ def parse_validated_field(fld, selectable, use_bucket_labels=True):
 
 def create_ingredient_from_config(ingr_dict, selectable):
     """ Create an ingredient from a validated config object. """
-    kind = ingr_dict.pop("kind", "Metric")
-    # Measure is a synonym for Metric
-    if kind == "Measure": 
-        kind = "Metric"
-    IngredientClass = ingredient_class_for_name(kind)
+    kind = ingr_dict.pop("kind", "metric")
+    IngredientClass = ingredient_class_for_name(kind.title())
 
     if IngredientClass is None:
         raise BadIngredient("Unknown ingredient kind")

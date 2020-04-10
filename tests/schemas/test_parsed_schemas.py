@@ -30,35 +30,35 @@ VALID_PARTIAL_CONDITIONS = [">10", 'in ("a", "b")', "notin (1,2,3)", "=  \t b", 
 
 def test_valid_metric_field_parsing():
     for _ in VALID_METRIC_FIELDS:
-        v = {"foo": {"kind": "Metric", "field": _}, "_version": "2"}
+        v = {"foo": {"kind": "metric", "field": _}, "_version": "2"}
         x = normalize_schema(shelf_schema, v, allow_unknown=False)
-        assert x == {"foo": {"kind": "Metric", "field": _, "_version": "2"}}
+        assert x == {"foo": {"kind": "metric", "field": _, "_version": "2"}}
 
 
 def test_invalid_metric_field_parsing():
     for _ in INVALID_METRIC_FIELDS:
-        v = {"foo": {"kind": "Metric", "field": _}, "_version": "2"}
+        v = {"foo": {"kind": "metric", "field": _}, "_version": "2"}
         with pytest.raises(E.SureError):
             normalize_schema(shelf_schema, v, allow_unknown=False)
 
 
 def test_ensure_aggregation():
     """ Metrics where the field doesn't aggregate get wrapped in a sum """
-    v = {"foo": {"kind": "Metric", "field": "foo"}, "_version": "2"}
+    v = {"foo": {"kind": "metric", "field": "foo"}, "_version": "2"}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
-    assert x == {"foo": {"kind": "Metric", "field": "sum(foo)", "_version": "2"}}
+    assert x == {"foo": {"kind": "metric", "field": "sum(foo)", "_version": "2"}}
 
 
 def test_valid_dimension_field_parsing():
     for _ in VALID_DIMENSION_FIELDS:
-        v = {"foo": {"kind": "Dimension", "field": _}, "_version": "2"}
+        v = {"foo": {"kind": "dimension", "field": _}, "_version": "2"}
         x = normalize_schema(shelf_schema, v, allow_unknown=False)
-        assert x == {"foo": {"kind": "Dimension", "field": _, "_version": "2"}}
+        assert x == {"foo": {"kind": "dimension", "field": _, "_version": "2"}}
 
 
 def test_invalid_dimension_field_parsing():
     for _ in INVALID_DIMENSION_FIELDS:
-        v = {"foo": {"kind": "Dimension", "field": _}, "_version": "2"}
+        v = {"foo": {"kind": "dimension", "field": _}, "_version": "2"}
         with pytest.raises(E.SureError):
             normalize_schema(shelf_schema, v, allow_unknown=False)
 
@@ -72,7 +72,7 @@ def test_format():
     ]
     for fmt, expected in values:
         v = {
-            "foo": {"kind": "Metric", "field": "sum(foo)", "format": fmt},
+            "foo": {"kind": "metric", "field": "sum(foo)", "format": fmt},
             "_version": "2",
         }
         x = normalize_schema(shelf_schema, v, allow_unknown=False)
@@ -83,7 +83,7 @@ def test_move_extra_fields():
     """ Extra _fields get moved into the extra_fields list """
     for _ in VALID_DIMENSION_FIELDS:
         v = {
-            "foo": {"kind": "Dimension", "field": "moo", "other_field": _},
+            "foo": {"kind": "dimension", "field": "moo", "other_field": _},
             "_version": "2",
         }
         result = normalize_schema(shelf_schema, v, allow_unknown=False)
@@ -92,14 +92,14 @@ def test_move_extra_fields():
                 "_version": "2",
                 "extra_fields": [{"field": _, "name": "other_expression"}],
                 "field": "moo",
-                "kind": "Dimension",
+                "kind": "dimension",
             }
         }
 
     # Other fields must be non aggregates
     for _ in INVALID_DIMENSION_FIELDS:
         v = {
-            "foo": {"kind": "Dimension", "field": "moo", "other_field": _},
+            "foo": {"kind": "dimension", "field": "moo", "other_field": _},
             "_version": "2",
         }
         with pytest.raises(E.SureError):
@@ -108,7 +108,7 @@ def test_move_extra_fields():
     # Multiple extra fields
     v = {
         "foo": {
-            "kind": "Dimension",
+            "kind": "dimension",
             "field": "moo",
             "latitude_field": "lat",
             "other_field": "cow + milk",
@@ -126,7 +126,7 @@ def test_move_extra_fields():
                 {"field": "cow + milk", "name": "other_expression"},
             ],
             "field": "moo",
-            "kind": "Dimension",
+            "kind": "dimension",
         }
     }
 
@@ -136,7 +136,7 @@ def test_bucket():
     content = """
 _version: "2"
 test:
-    kind: Dimension
+    kind: dimension
     field: moo
     buckets:
     - label: foo
@@ -155,7 +155,7 @@ test:
     content = """
 _version: "2"
 test:
-    kind: Dimension
+    kind: dimension
     field: moo
     buckets:
     - label: undertwo
@@ -179,7 +179,7 @@ test:
     content = """
 _version: "2"
 age_buckets:
-    kind: Dimension
+    kind: dimension
     field: age
     buckets:
     - label: 'babies'
@@ -207,7 +207,7 @@ def test_quickselects():
     content = """
 _version: "2"
 test:
-    kind: Dimension
+    kind: DIMENSION
     field: moo+foo
     quickselects:
     - name: foo
@@ -219,7 +219,7 @@ test:
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert result == {
         "test": {
-            "kind": "Dimension",
+            "kind": "dimension",
             "field": "moo+foo",
             "quickselects": [
                 {"condition": '(moo+foo)>"2"', "name": "foo"},
@@ -235,25 +235,25 @@ def test_replace_refs():
     content = """
 _version: "2"
 ttl:
-    kind: Metric
+    kind: metric
     field: sum(moo)
 cnt:
-    kind: Metric
+    kind: metric
     field: count(moo)
 avg:
-    kind: Metric
+    kind: metric
     field: '@ttl / @cnt'
 city:
-    kind: Dimension
+    kind: dimension
     field: city
 city_lat:
-    kind: Dimension
+    kind: dimension
     field: lat
 city_lng:
-    kind: Dimension
+    kind: dimension
     field: lng
 city_place:
-    kind: Dimension
+    kind: dimension
     field: '@city'
     latitude_field: '@city_lat'
     longitude_field: '@city_lng'
@@ -269,5 +269,5 @@ city_place:
             {"field": "lng", "name": "longitude_expression"},
         ],
         "field": "city",
-        "kind": "Dimension",
+        "kind": "dimension",
     }
