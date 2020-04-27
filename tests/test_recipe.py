@@ -329,6 +329,8 @@ ORDER BY d_order_by,
          d_id"""
         )
 
+
+
     def test_recipe_init(self):
         """Test that all options can be passed in the init"""
         recipe = self.recipe(metrics=("age",), dimensions=("last",)).order_by("last")
@@ -382,6 +384,13 @@ WHERE foo.age > 4
 GROUP BY first,
          last"""
         )
+
+    def test_order_bys_not_matching_ingredients(self):
+        """When ordering by an ingredient that doesn't exist in dimensions
+        or metrics, we get a BadRecipe"""
+        recipe = self.recipe().metrics("age").dimensions("first").order_by("last")
+        with pytest.raises(BadRecipe):
+            recipe.to_sql()
 
     def test_from_config_filter_object(self):
         config = {
