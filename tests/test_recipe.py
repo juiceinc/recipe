@@ -329,8 +329,6 @@ ORDER BY d_order_by,
          d_id"""
         )
 
-
-
     def test_recipe_init(self):
         """Test that all options can be passed in the init"""
         recipe = self.recipe(metrics=("age",), dimensions=("last",)).order_by("last")
