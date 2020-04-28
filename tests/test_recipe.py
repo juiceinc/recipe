@@ -386,10 +386,13 @@ GROUP BY first,
     def test_order_bys_not_matching_ingredients(self):
         """If an order_by is not found in dimensions+metrics, we ignore it"""
         recipe = self.recipe().metrics("age").dimensions("first").order_by("last")
-        assert recipe.to_sql() == """SELECT foo.first AS first,
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
 GROUP BY first"""
+        )
         assert recipe.all()[0].first == "hi"
         assert recipe.all()[0].age == 15
         assert recipe.stats.rows == 1

@@ -385,8 +385,8 @@ class Shelf(object):
                     if str(c) not in [str(o) for o in order_bys]:
                         order_bys.add(c)
             except BadRecipe as e:
-                # Ignore order_by if the dimension/metric is not 
-                # used. 
+                # Ignore order_by if the dimension/metric is not
+                # used.
                 # TODO: Add structlog warning
                 pass
 
