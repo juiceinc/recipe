@@ -2,21 +2,21 @@
 Defining Shelves with Field Expressions
 =======================================
 
-Shelves are defined as dictionaries containing keys and ingredient definitions.
+Shelves can be created using dictionaries containing keys and ingredient definitions.
+The shelf configuration can then be bound to a SQLAlchemy selectable.
 The best way of doing this is to use the field expression syntax.
-All the examples below use YAML.
+All the examples below use YAML to define a python dictionary.
 
 Defining Shelves using Field Expressions
 ----------------------------------------
 
-Shelves are defined in configuration as dictionaries with keys and values that
-are Ingredient configuration definitions. A simple example looks like this.
+A simple example looks like this.
 
 .. code:: YAML
 
   total_population:
     kind: Metric
-    field: pop2000
+    field: sum(pop2000)
   state:
     kind: Dimension
     field: state
@@ -30,8 +30,8 @@ Defining Ingredients
 
 Ingredients are defined using fields_ defined in expression syntax.
 
-Metric/Measure
-~~~~~~~~~~~~~~
+Defining Metrics
+~~~~~~~~~~~~~~~~
 
 Metrics will always apply a default aggregation of 'sum' to any fields used.
 The "Measure" can be used as a synonym of "Metric".
@@ -43,6 +43,11 @@ The "Measure" can be used as a synonym of "Metric".
 
 The field expression can use functions to perform aggregation. If no function
 is provided then the field will be summed by default.
+
+Math and functions on fields
+............................
+
+Fields can be added together and be wrapped in functions.
 
 .. list-table:: Field function list
    :widths: 5 10 30
@@ -111,8 +116,20 @@ is provided then the field will be summed by default.
      - age({date_field})
      - Calculate current age in years for a date.
 
+These functions and math can be combined. Division will be performed safely to ensure
+that division by zero is not performed. Here's an example:
 
+.. code::
 
+  avg_profit_per_facility:
+    kind: Metric
+    field: sum(sales - expenses) / count(facilities)
+
+Defining contant values and lists of values
+...........................................
+
+Values are numbers, strings or dates that can be used anywhere
+a field is.
 
 .. list-table:: How to define values
    :widths: 5 10 30
@@ -157,7 +174,22 @@ is provided then the field will be summed by default.
        All values should be the same type, but Recipe does not 
        validate this.
 
-Expressions can be used to calculate true or false values.
+Values can be used in field math. Here are some examples:
+
+.. code::
+
+   avg_population:
+     kind: Metric
+     field: sum(population_in_2010 + population_in_2020) / 2.0
+   tax_paid:
+     kind: Metric
+     field: sum(sales)*0.0725
+
+
+Defining true and false conditions
+...................................
+
+Conditions can be used to calculate true or false values.
 
 .. list-table:: How to calculate true or false expressions
    :widths: 5 10 30
@@ -166,55 +198,75 @@ Expressions can be used to calculate true or false values.
    * - Type
      - Function
      - Description
-   * - expression
+   * - condition
      - {field} = {field}|{value}
      - Is a field equal to a field or a value
-   * - expression
+   * - condition
      - {field} != {field}|{value}
      - Is a field not equal to a field or a value
-   * - expression
+   * - condition
      - {field} > {field}|{value}
      - Is a field greater than a field or a value
-   * - expression
+   * - condition
      - {field} >= {field}|{value}
      - Is a field greater than or equal to a field or a value
-   * - expression
+   * - condition
      - {field} < {field}|{value}
      - Is a field less than a field or a value
-   * - expression
+   * - condition
      - {field} <= {field}|{value}
      - Is a field less than or equal to a field or a value
-   * - expression
+   * - condition
      - {field} IN ({list})
      - Is a field in a comma separate list of fields or values.
-   * - expression
+   * - condition
      - {field} NOT IN ({list})
      - Is a field not in a comma separate list of fields or values.
-   * - expression
+   * - condition
      - {field} BETWEEN {value} AND {value}
      - Is a field between two values.
-   * - expression 
-     - {expression} AND {expression}
+   * - condition 
+     - {condition} AND {condition}
      - Are both expressions true.
-   * - expression 
-     - {expression} OR {expression}
-     - Is either expression true,
-
-
+   * - condition 
+     - {condition} OR {condition}
+     - Is either condition true.
    
+Using conditions and fields with the ``IF`` function
+.....................................................
 
-Metrics can also perform math calculations. Division will be performed safely to ensure
-that division by zero is not performed. Here's an example:
+The ``IF`` function lets you combine conditions.
 
 .. code::
 
+  if({condition}, {field}, {else_field})
+
+If the condition is true, use ``{{field}}`` otherwise use {{else_field}}.
+More than one condition and field pair can can be provided.
+
+.. code::
+
+  if({condition1}, {field1}, {condition2}, {field2}, {else_field})
+
+Let's look at an example. Here is how to sum up ``sales_dollars`` in the
+last week.
+
+.. code::
+
+  sales_in_last_week:
     kind: Metric
-    field: sum(sales - expenses) / count(facilities)
+    field: sum(if(sales_date>"7 days ago",sales_dollars,0.0))
 
-Dimension
-~~~~~~~~~
+Metrics must aggregate
+......................
 
-Dimensions must be defined with unaggregated fields. 
+Metrics must define an aggregated field. If a Metric definition does not
+include an aggregation function, it will be wrapped in a ``sum()``.
+
+Defining Dimensions
+~~~~~~~~~~~~~~~~~~~
+
+Dimensions are simple to define but include a number of optional features. 
 
 .. code::
 
@@ -225,11 +277,33 @@ Dimensions must be defined with unaggregated fields.
     buckets_default_label: string (optional)
     quickselects: A list of labeled conditions (optional)
 
-Adding `id` and other roles to a Dimension
+Defining simple dimensions
+..........................
+
+Dimensions can be use fields, expressions, conditions and even the ``IF``
+function as long as they do not use aggregation functions. Here are some
+examples.
+
+.. code::
+
+  hospital:
+    kind: Dimension
+    field: hospital_name
+  student:
+    kind: Dimension
+    field: student_last_name
+  student_full_name:
+    kind: Dimension
+    field: student_first_name + " " + student_last_name
+  new_york_hospitals:
+    kind: Dimension
+    field: IF(state="New York",hospital_name,"Other")
+
+Adding ``id`` and other roles to a Dimension
 ..........................................
 
 Dimensions can be defined with extra fields. The prefix before ``_field``
-is the field's role. The role will be suffixed to each value in the
+is the field's role. The role will be **suffixed** to each value in the
 recipe rows. Let's look at an example.
 
 .. code::
@@ -250,8 +324,8 @@ Each result row will include
 Defining buckets
 ................
 
-Buckets let you group continuous values (like salaries or ages). Here's
-an example:
+Buckets let you group continuous values (like salaries or ages) into a dimension. 
+Here's an example:
 
 .. code:: YAML
 
@@ -319,359 +393,6 @@ The ``AutomaticFilters`` extension is an easy way to use this.
                 'date__quickselect': 'Last 90 days'
               })
 
-.. _fields:
-
-Defining Fields
----------------
-
-Fields can be defined with a short string syntax or a dictionary syntax.
-The string syntax always is normalized into the dictionary syntax.
-
-.. code::
-
-    field:
-        value: '{column reference}'
-        aggregation: '{aggregation (optional)}'
-        operators: {list of operators}
-        as: {optional type to coerce into}
-        default: {default value, optional}
-
-    or
-
-    field: '{string field definition}'
-    This may include field references that look like
-    @{ingredient name from the shelf}.
-
-Defining Fields with Dicts
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Dictionaries provide access to all options when defining a
-field.
-
-.. list-table:: dictionary field options
-   :widths: 10 5 30
-   :header-rows: 1
-
-   * - Key
-     - Required
-     - Description
-   * - value
-     - required
-     - string
-
-       What column to use.
-   * - aggregation
-     - optional
-     - string
-
-       (default is 'sum' for Metric and 'none' for Dimension)
-
-       What aggregation to use, if any. Possible aggregations are:
-
-       - 'sum'
-       - 'min'
-       - 'max'
-       - 'avg'
-       - 'count'
-       - 'count_distinct'
-       - 'month' (round to the nearest month for dates)
-       - 'week' (round to the nearest week for dates)
-       - 'year' (round to the nearest year for dates)
-       - 'quarter' (round to the nearest quarter for dates)
-       - 'age' (calculate age based on a date and the current date)
-       - 'none' (perform no aggregation)
-       - 'median' (calculate the median value, note: this aggregation is not available
-         on all databases).
-       - 'percentile[1,5,10,25,50,75,90,95,99]' (calculate the nth percentile value
-         where higher values correspond to higher percentiles, note: this aggregation
-         is not available on all databases).
-
-   * - condition
-     - optional
-     - A ``condition``
-
-       Condition will limit what rows of data are aggregated for a field.
-
-   * - operators
-     - optional
-     - A list of ``operator``
-
-       Operators are fields combined with a math operator to the base field.
-
-   * - default
-     - optional
-     - An integer, string, float, or boolean value (optional)
-
-       A value to use if the column is NULL.
-
-.. warning:: The following two fields are for internal use.
-
-.. list-table:: internal dictionary field options
-   :widths: 10 5 30
-   :header-rows: 1
-
-   * - Key
-     - Required
-     - Description
-
-   * - ref
-     - optional
-     - string
-
-       Replace this field with the field defined in
-       the specified key in the shelf.
-
-   * - _use_raw_value
-     - optional
-     - boolean
-
-       Don't evaluate value as a column, treat
-       it as a constant in the SQL expression.
-
-
-Defining Fields with Strings
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Fields can be defined using strings. When using
-strings, words are treated as column references. If the
-words are prefixed with an '@' (like @sales), the field of the ingredient
-named sales in the shelf will be injected.
-
-Aggregations can be called like functions to apply that aggregation
-to a column.
-
-.. list-table:: string field examples
-   :widths: 10 20
-   :header-rows: 1
-
-   * - Field string
-     - Description
-
-   * - revenue - expenses
-     - The sum of column revenue minus the sum of column expenses.
-
-       .. code::
-
-         field: revenue - expenses
-
-         # is the same as
-
-         field:
-           value: revenue
-           aggregation: sum  # this may be omitted because 'sum'
-                             # is the default aggregation for Metrics
-           operators:
-           - operator: '-'
-             field:
-               value: expenses
-               aggregation: sum
-
-   * - @sales / @student_count
-     - Find the field definition of the field named 'sales' in the shelf.
-
-       Divide it by the field definition of the field named 'student_count'.
-
-   * - count_distinct(student_id)
-     - Count the distinct values of column student_id.
-
-       .. code::
-
-         field: count_distinct(student_id)
-
-         # is the same as
-
-         field:
-            value: student_id
-            aggregation: count_distinct
-
-.. _operators:
-
-Defining Field Operators
-------------------------
-
-Operators lets you perform math with fields.
-
-.. list-table:: operator options
-   :widths: 10 5 30
-   :header-rows: 1
-
-   * - Key
-     - Required
-     - Description
-   * - operator
-     - required
-     - string
-
-       One of '+', '-', '*', '/'
-
-   * - field
-     - required
-     - A field definition (either a string or a dictionary)
-
-For instance, operators can be used like this:
-
-.. code:: YAML
-
-  # profit - taxes - interest
-  field:
-    value: profit
-    operators:
-    - operator: '-'
-      field: taxes
-    - operator: '-'
-      field: interest
-
-.. _conditions:
-
-Defining Conditions
--------------------
-
-Conditions can include a field and operator or a list of
-conditions and-ed or or-ed together.
-
-.. code::
-
-    field: {field definition}
-    label: string (an optional string label)
-    {operator}: {value} or {list of values}
-
-    or
-
-    or:     # a list of conditions
-    - {condition1}
-    - {condition2}
-    ...
-    - {conditionN}
-
-    or
-
-    and:    # a list of conditions
-    - {condition1}
-    - {condition2}
-    ...
-    - {conditionN}
-
-    or
-
-    a condition reference @{ingredient name from the shelf}.
-
-
-Conditions consist of a field and **exactly one** operator.
-
-.. list-table:: condition options
-   :widths: 10 5 30
-   :header-rows: 1
-
-   * - Condition
-     - Value is...
-     - Description
-   * - gt
-     - A string, int, or float.
-     - Find values that are greater than the value
-
-       For example:
-
-       .. code::
-
-         # Sales dollars are greater than 100.
-         condition:
-           field: sales_dollars
-           gt: 100
-
-   * - gte (or ge)
-     - A string, int, or float.
-     - Find values that are greater than or equal to the value
-
-   * - lt
-     - A string, int, or float.
-     - Find values that are less than the value
-
-   * - lte (or le)
-     - A string, int, or float.
-     - Find values that are less than or equal to the value
-
-   * - eq
-     - A string, int, or float.
-     - Find values that are equal to the value
-
-   * - ne
-     - A string, int, or float.
-     - Find values that are not equal to the value
-
-   * - like
-     - A string
-     - Find values that match the SQL LIKE expression
-
-       For example:
-
-       .. code::
-
-         # States that start with the capital letter C
-         condition:
-           field: state
-           like: 'C%'
-
-   * - ilike
-     - A string
-     - Find values that match the SQL ILIKE (case insensitive like) expression.
-
-   * - between
-     - A list of **two** values
-     - Find values that are between the two values.
-
-   * - in
-     - A list of values
-     - Find values that are in the list of values
-
-   * - notin
-     - A list of values
-     - Find values that are not in the list of values
-
-ands and ors in conditions
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Conditions can ``and`` and ``or`` a list of conditions together.
-
-Here's an example:
-
-.. code:: YAML
-
-  # Find states that start with 'C' and end with 'a'
-  # Note the conditions in the list don't have to
-  # use the same field.
-  condition:
-    and:
-    - field: state
-      like: 'C%'
-    - field: state
-      like: '%a'
-
-Date conditions
-~~~~~~~~~~~~~~~
-
-If the ``field`` is a date or datetime, absolute and relative dates
-can be defined in values using string syntax. Recipe uses the
-`Dateparser <https://dateparser.readthedocs.io/en/latest/>`_ library.
-
-Here's an example.
-
-.. code:: YAML
-
-  # Find sales that occured within the last 90 days.
-  condition:
-    field: sales_date
-    between:
-    - '90 days ago'
-    - 'tomorrow'
-
-Labeled conditions
-~~~~~~~~~~~~~~~~~~
-
-Conditions may optionally be labeled by adding a label property.
-
-quickselects are a feature of Dimension that are defined with a list
-of labeled conditions.
-
 .. _expression_examples:
 
 Examples
@@ -685,7 +406,7 @@ This shelf is basic.
 .. code:: YAML
 
   teens:
-      kind: Metric
+      kind: Metric    
       field: sum(if(age 
       field:
           value: pop2000

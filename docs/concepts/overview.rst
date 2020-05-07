@@ -5,7 +5,7 @@ Overview of Recipe Concepts
 
 **Ingredients** are reusable fragments of SQL defined in SQLAlchemy. Ingredients
 can contribute to a SQL query's select, group by, where clause or having clause.
-For convenience, we define **Metric**, **Dimension**, **Filter**, and **Having**
+Recipe defines **Metric**, **Dimension**, **Filter**, and **Having**
 classes which support common query patterns.
 
 A **Shelf** is a container for holding named ingredients. 
@@ -18,7 +18,7 @@ Shelves defined with configuration can be bound to a SQLAlchemy selectable.
 
 A **Recipe** uses a **Shelf**. The Recipe picks dimensions, metrics, filters,
 and havings from the shelf. Dimensions and metrics can also be used to order results.
-While the Recipe can refer to items in the shelf by name, you can also supply
+While the **Recipe** can refer to items in the shelf by name, you can also supply
 raw Ingredient objects. Recipe uses a builder pattern to allow a recipe object to be 
 modified.
 
