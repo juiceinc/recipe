@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.15.0 (2020-05-08)
+-----------------------------------------
+* Ignore order_by if ingredients have not been added
+* Support measure as a synonym for metric and be lenient about capitalization
+  in shelf config
+
 0.14.0 (2020-03-06)
 -----------------------------------------
 * Support graceful ingredient failures when ingredients can not be constructed from config.
