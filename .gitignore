@@ -52,6 +52,7 @@ output/*/index.html
 docs/_build
 
 .DS_Store
+.direnv
 *~
 .*.sw[po]
 .build

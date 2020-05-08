@@ -380,16 +380,15 @@ class Shelf(object):
         for key in order_by_keys:
             try:
                 ingr = self.find(key, (Dimension, Metric))
+                for c in ingr.order_by_columns:
+                    # Avoid duplicate order by columns
+                    if str(c) not in [str(o) for o in order_bys]:
+                        order_bys.add(c)
             except BadRecipe as e:
-                if "doesn't exist on the shelf" in str(e):
-                    raise BadRecipe(
-                        "{} can't be used for order_by unless it has "
-                        "already been added as a dimension or metric".format(key)
-                    )
-            for c in ingr.order_by_columns:
-                # Avoid duplicate order by columns
-                if str(c) not in [str(o) for o in order_bys]:
-                    order_bys.add(c)
+                # Ignore order_by if the dimension/metric is not
+                # used.
+                # TODO: Add structlog warning
+                pass
 
         return {
             "columns": columns,
