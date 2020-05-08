@@ -129,13 +129,13 @@ class TransformToSQLAlchemyExpression(Transformer):
 
 def create_ingredient_from_parsed(ingr_dict, selectable):
     """ Create an ingredient from config version 2 object . """
-    kind = ingr_dict.pop("kind", "Metric")
-    IngredientClass = ingredient_class_for_name(kind)
+    kind = ingr_dict.pop("kind", "metric")
+    IngredientClass = ingredient_class_for_name(kind.title())
     if IngredientClass is None:
         raise BadIngredient("Unknown ingredient kind")
 
-    if kind in ("Metric", "Dimension"):
-        parser = field_parser if kind == "Metric" else noag_field_parser
+    if kind in ("metric", "dimension"):
+        parser = field_parser if kind == "metric" else noag_field_parser
         fld_defn = ingr_dict.pop("field", None)
         tree = parser.parse(fld_defn)
         # Create a sqlalchemy expression from 'field' and pass it as the first arg
@@ -165,7 +165,7 @@ def create_ingredient_from_parsed(ingr_dict, selectable):
                 selectable=selectable
             ).transform(parser.parse(extra.get("field")))
 
-    elif kind == "Filter":
+    elif kind == "filter":
         # Create a sqlalchemy expression from 'condition' and pass it as the first arg
         args = [
             TransformToSQLAlchemyExpression(selectable=selectable).transform(
@@ -173,7 +173,7 @@ def create_ingredient_from_parsed(ingr_dict, selectable):
             )
         ]
 
-    elif kind == "Having":
+    elif kind == "having":
         # Create a sqlalchemy expression from 'condition' and pass it as the first arg
         # TODO: Force this to be an aggregate
         args = [

@@ -327,29 +327,31 @@ def _move_extra_fields(value):
 
 
 def _adjust_kinds(value):
+    """Ensure kind is lowercase with a default of "metric".
+    
+    Rewrite deprecated field definitions for DivideMetirc, WtdAvgMetric,
+    IdValueDimension, LookupDimension.
+    """
     if isinstance(value, dict):
-        if "kind" not in value:
-            value["kind"] = "Metric"
-
-        if value.get("kind") == "IdValueDimension":
-            value["kind"] = "Dimension"
-
-        if value.get("kind") == "LookupDimension":
-            value["kind"] = "Dimension"
-
-        if value.get("kind") == "DivideMetric":
-            value["kind"] = "Metric"
+        kind = value.get("kind", "metric").lower()
+        # measure is a synonym for metric
+        if kind == "measure":
+            kind = "metric"
+        if kind in ("idvaluedimension", "lookupdimension"):
+            kind = "dimension"
+        elif kind == "dividemetric":
+            kind = "metric"
             value["field"] = value.pop("numerator_field")
             value["divide_by"] = value.pop("denominator_field")
-
-        if value.get("kind") == "WtdAvgMetric":
-            value["kind"] = "Metric"
+        elif kind == "wtdavgmetric":
+            kind = "metric"
             fld = value.pop("field")
             wt = value.pop("weight")
             # assumes both field and weight are strings
             value["field"] = "{}*{}".format(fld, wt)
             value["divide_by"] = wt
 
+        value["kind"] = kind
     return value
 
 
@@ -427,7 +429,7 @@ quickselect_schema = S.List(
 )
 
 ingredient_schema_choices = {
-    "Metric": S.Dict(
+    "metric": S.Dict(
         allow_unknown=True,
         schema={
             "field": "aggregated_field",
@@ -436,7 +438,7 @@ ingredient_schema_choices = {
             "quickselects": quickselect_schema,
         },
     ),
-    "Dimension": S.Dict(
+    "dimension": S.Dict(
         allow_unknown=True,
         coerce=_move_extra_fields,
         coerce_post=_move_buckets_to_field,
@@ -457,14 +459,14 @@ ingredient_schema_choices = {
             "quickselects": quickselect_schema,
         },
     ),
-    "Filter": S.Dict(allow_unknown=True, schema={"condition": "condition"}),
-    "Having": S.Dict(allow_unknown=True, schema={"condition": "having_condition"}),
+    "filter": S.Dict(allow_unknown=True, schema={"condition": "condition"}),
+    "having": S.Dict(allow_unknown=True, schema={"condition": "having_condition"}),
 }
 
 # Create a full schema that uses a registry
 ingredient_schema = S.Dict(
     choose_schema=S.when_key_is(
-        "kind", ingredient_schema_choices, default_choice="Metric"
+        "kind", ingredient_schema_choices, default_choice="metric"
     ),
     coerce=_adjust_kinds,
     registry={

@@ -15,33 +15,37 @@ from recipe.schemas import recipe_schema
 
 
 def test_field_parsing():
+    """Measure and Metric are synonyms
+
+    All kinds are normalized, so casing of kind doesn't matter
+    """
     v = {"foo": {"kind": "Metric", "field": {"value": "foo"}}, "_version": "1"}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
-        "foo": {"field": {"aggregation": "sum", "value": "foo"}, "kind": "Metric"}
+        "foo": {"field": {"aggregation": "sum", "value": "foo"}, "kind": "metric"}
     }
 
-    v = {"foo": {"kind": "Metric", "field": "foo"}, "_version": "1"}
+    v = {"foo": {"kind": "METRIC", "field": "foo"}, "_version": "1"}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
-        "foo": {"field": {"aggregation": "sum", "value": "foo"}, "kind": "Metric"}
+        "foo": {"field": {"aggregation": "sum", "value": "foo"}, "kind": "metric"}
     }
 
-    v = {"foo": {"kind": "Metric", "field": "max(a)"}, "_version": "1"}
+    v = {"foo": {"kind": "MEASURE", "field": "max(a)"}, "_version": "1"}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
-        "foo": {"field": {"aggregation": "max", "value": "a"}, "kind": "Metric"}
+        "foo": {"field": {"aggregation": "max", "value": "a"}, "kind": "metric"}
     }
 
-    v = {"foo": {"kind": "Metric", "field": "max(a)"}, "_version": "1"}
+    v = {"foo": {"kind": "meaSURE", "field": "max(a)"}, "_version": "1"}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
-        "foo": {"field": {"aggregation": "max", "value": "a"}, "kind": "Metric"}
+        "foo": {"field": {"aggregation": "max", "value": "a"}, "kind": "metric"}
     }
 
 
 def test_field_as():
-    v = {"foo": {"kind": "Metric", "field": {"value": "foo", "as": "integer"}}}
+    v = {"foo": {"kind": "metric", "field": {"value": "foo", "as": "integer"}}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         "foo": {
@@ -50,29 +54,14 @@ def test_field_as():
                 "aggregation": "sum",
                 "value": "foo",
             },
-            "kind": "Metric",
+            "kind": "metric",
         }
     }
 
     # Bad data type to cast to
-    v = {"foo": {"kind": "Metric", "field": {"value": "foo", "as": "squee"}}}
+    v = {"foo": {"kind": "metric", "field": {"value": "foo", "as": "squee"}}}
     with pytest.raises(E.DisallowedValue):
         normalize_schema(shelf_schema, v, allow_unknown=False)
-
-
-"""
-
-state:
-  singular: State
-  plural: States
-  kind: Dimension
-  field:
-    value: state
-    aggregation: none
-  role: 'dimension:place'
-  latitude_field: state_lat
-  longitude_field: state_long
-"""
 
 
 def test_dimension_extra_fields():
@@ -88,7 +77,7 @@ def test_dimension_extra_fields():
     x = normalize_schema(shelf_schema, value)
     assert x == {
         "state": {
-            "kind": "Dimension",
+            "kind": "dimension",
             "field": {"value": "state", "aggregation": "none"},
             "extra_fields": [
                 {
@@ -108,7 +97,7 @@ def test_field_default():
     defaults = [24, True, 11.21243, "heythere"]
 
     for d in defaults:
-        v = {"foo": {"kind": "Metric", "field": {"value": "foo", "default": d}}}
+        v = {"foo": {"kind": "metric", "field": {"value": "foo", "default": d}}}
         x = normalize_schema(shelf_schema, v, allow_unknown=False)
         assert x == {
             "foo": {
@@ -117,39 +106,39 @@ def test_field_default():
                     "aggregation": "sum",
                     "value": "foo",
                 },
-                "kind": "Metric",
+                "kind": "metric",
             }
         }
 
     # Bad data type for default
-    v = {"foo": {"kind": "Metric", "field": {"value": "foo", "default": {}}}}
+    v = {"foo": {"kind": "metric", "field": {"value": "foo", "default": {}}}}
     with pytest.raises(E.NoneMatched):
         normalize_schema(shelf_schema, v, allow_unknown=False)
 
 
 def test_field_format():
-    v = {"foo": {"kind": "Metric", "field": {"value": "foo"}, "format": "comma"}}
+    v = {"foo": {"kind": "metric", "field": {"value": "foo"}, "format": "comma"}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         "foo": {
             "field": {"aggregation": "sum", "value": "foo"},
-            "kind": "Metric",
+            "kind": "metric",
             "format": ",.0f",
         }
     }
 
 
 def test_field_ref():
-    v = {"foo": {"kind": "Metric", "field": "@foo"}}
+    v = {"foo": {"kind": "metric", "field": "@foo"}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         "foo": {
             "field": {"ref": "foo", "aggregation": "sum", "value": "foo"},
-            "kind": "Metric",
+            "kind": "metric",
         }
     }
 
-    v = {"foo": {"kind": "Metric", "field": "@foo + @moo"}}
+    v = {"foo": {"kind": "metric", "field": "@foo + @moo"}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         "foo": {
@@ -161,7 +150,7 @@ def test_field_ref():
                 "aggregation": "sum",
                 "value": "foo",
             },
-            "kind": "Metric",
+            "kind": "metric",
         }
     }
 
@@ -191,7 +180,7 @@ def test_field_buckets_ref():
                 },
                 "value": "foo",
             },
-            "kind": "Dimension",
+            "kind": "dimension",
         },
         "moo": {
             "field": {
@@ -207,7 +196,7 @@ def test_field_buckets_ref():
                 ],
                 "value": "moo",
             },
-            "kind": "Dimension",
+            "kind": "dimension",
         },
     }
 
@@ -246,7 +235,7 @@ def test_find_operators():
 
 
 def test_field_operators():
-    v = {"foo": {"kind": "Metric", "field": "foo   + moo", "format": "comma"}}
+    v = {"foo": {"kind": "metric", "field": "foo   + moo", "format": "comma"}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         "foo": {
@@ -255,12 +244,12 @@ def test_field_operators():
                 "aggregation": "sum",
                 "operators": [{"operator": "+", "field": {"value": "moo"}}],
             },
-            "kind": "Metric",
+            "kind": "metric",
             "format": ",.0f",
         }
     }
 
-    v = {"foo": {"kind": "Metric", "field": "foo   + moo  / cows"}}
+    v = {"foo": {"kind": "metric", "field": "foo   + moo  / cows"}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         "foo": {
@@ -272,12 +261,12 @@ def test_field_operators():
                     {"operator": "/", "field": {"value": "cows"}},
                 ],
             },
-            "kind": "Metric",
+            "kind": "metric",
         }
     }
 
     # numeric values are supported
-    v = {"foo": {"kind": "Metric", "field": "foo   + 1.02"}}
+    v = {"foo": {"kind": "metric", "field": "foo   + 1.02"}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         "foo": {
@@ -291,12 +280,12 @@ def test_field_operators():
                 "aggregation": "sum",
                 "value": "foo",
             },
-            "kind": "Metric",
+            "kind": "metric",
         }
     }
 
     # numeric values are supported
-    v = {"foo": {"kind": "Metric", "field": "foo   + 1.02 + moo  / 523.5"}}
+    v = {"foo": {"kind": "metric", "field": "foo   + 1.02 + moo  / 523.5"}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         "foo": {
@@ -315,31 +304,31 @@ def test_field_operators():
                 "aggregation": "sum",
                 "value": "foo",
             },
-            "kind": "Metric",
+            "kind": "metric",
         }
     }
 
 
 def test_field_divide_by():
-    v = {"foo": {"kind": "Metric", "field": "foo", "divide_by": "moo"}}
+    v = {"foo": {"kind": "metric", "field": "foo", "divide_by": "moo"}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         "foo": {
             "divide_by": {"aggregation": "sum", "value": "moo"},
             "field": {"aggregation": "sum", "value": "foo"},
-            "kind": "Metric",
+            "kind": "metric",
         }
     }
 
 
 def test_valid_metric():
     valid_metrics = [
-        {"kind": "Metric", "field": "foo", "icon": "squee"},
-        {"kind": "Metric", "field": "foo", "aggregation": "sum", "icon": "squee"},
-        {"kind": "Metric", "field": "foo", "aggregation": "none", "icon": "squee"},
-        {"kind": "Metric", "field": "sum(foo)", "icon": "squee"},
-        {"kind": "Metric", "field": "squee(foo)", "icon": "squee"},
-        {"kind": "Metric", "field": "foo", "condition": {}},
+        {"kind": "metric", "field": "foo", "icon": "squee"},
+        {"kind": "metric", "field": "foo", "aggregation": "sum", "icon": "squee"},
+        {"kind": "metric", "field": "foo", "aggregation": "none", "icon": "squee"},
+        {"kind": "metric", "field": "sum(foo)", "icon": "squee"},
+        {"kind": "metric", "field": "squee(foo)", "icon": "squee"},
+        {"kind": "metric", "field": "foo", "condition": {}},
     ]
 
     for m in valid_metrics:
@@ -351,10 +340,10 @@ def test_invalid_metric():
     invalid_metrics = [
         {
             "field": {"value": "foo", "aggregation": "squee"},
-            "kind": "Metric",
+            "kind": "metric",
             "icon": "squee",
         },
-        {"kind": "Metric", "icon": "squee"},
+        {"kind": "metric", "icon": "squee"},
     ]
 
     for m in invalid_metrics:
@@ -370,7 +359,7 @@ def test_dimension():
     assert x == {
         "a": {
             "field": {"aggregation": "none", "value": "foo"},
-            "kind": "Dimension",
+            "kind": "dimension",
             "icon": "squee",
         }
     }
@@ -384,7 +373,7 @@ def test_dimension():
                 "aggregation": "none",
                 "value": "foo",
             },
-            "kind": "Dimension",
+            "kind": "dimension",
             "icon": "squee",
         }
     }
@@ -419,7 +408,7 @@ def test_dimension_buckets():
                 "value": "foo",
             },
             "icon": "squee",
-            "kind": "Dimension",
+            "kind": "dimension",
         }
     }
 
@@ -427,7 +416,7 @@ def test_dimension_buckets():
 def test_and_condition():
     shelf = {
         "a": {
-            "kind": "Metric",
+            "kind": "metric",
             "field": {
                 "value": "a",
                 "condition": {
@@ -462,20 +451,20 @@ def test_and_condition():
                     ]
                 },
             },
-            "kind": "Metric",
+            "kind": "metric",
         }
     }
 
 
 def test_condition_ref():
     shelf = {
-        "a": {"kind": "Metric", "field": {"value": "a", "condition": "@foo"}},
+        "a": {"kind": "metric", "field": {"value": "a", "condition": "@foo"}},
         "foo": {"field": "b"},
     }
     x = normalize_schema(shelf_schema, shelf, allow_unknown=False)
     assert x == {
-        "a": {"field": {"aggregation": "sum", "value": "a"}, "kind": "Metric"},
-        "foo": {"field": {"aggregation": "sum", "value": "b"}, "kind": "Metric"},
+        "a": {"field": {"aggregation": "sum", "value": "a"}, "kind": "metric"},
+        "foo": {"field": {"aggregation": "sum", "value": "b"}, "kind": "metric"},
     }
 
 
@@ -500,7 +489,7 @@ def test_valid_conditions():
         },
     ]
 
-    shelf = {"a": {"kind": "Metric", "field": {"value": "a"}}}
+    shelf = {"a": {"kind": "metric", "field": {"value": "a"}}}
     for cond in conditions:
         v = deepcopy(shelf)
         v["a"]["field"]["condition"] = cond
@@ -515,7 +504,7 @@ def test_invalid_conditions():
         {"field": "foo", "notin": {}},
     ]
 
-    shelf = {"a": {"kind": "Metric", "field": {"value": "a"}}}
+    shelf = {"a": {"kind": "metric", "field": {"value": "a"}}}
     for cond in conditions:
         v = deepcopy(shelf)
         v["a"]["field"]["condition"] = cond
@@ -524,21 +513,21 @@ def test_invalid_conditions():
 
 
 def test_ingredient():
-    v = {"a": {"kind": "Metric", "field": "foo"}}
+    v = {"a": {"kind": "metric", "field": "foo"}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
-        "a": {"field": {"aggregation": "sum", "value": "foo"}, "kind": "Metric"}
+        "a": {"field": {"aggregation": "sum", "value": "foo"}, "kind": "metric"}
     }
 
-    v = {"a": {"kind": "Metric", "field": "max(foo)"}}
+    v = {"a": {"kind": "metric", "field": "max(foo)"}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
-        "a": {"field": {"aggregation": "max", "value": "foo"}, "kind": "Metric"}
+        "a": {"field": {"aggregation": "max", "value": "foo"}, "kind": "metric"}
     }
 
     v = {
         "a": {
-            "kind": "Metric",
+            "kind": "metric",
             "field": {"value": "foo", "condition": {"field": "moo", "gt": "cow"}},
         }
     }
@@ -555,45 +544,45 @@ def test_ingredient():
                     "_op_value": "cow",
                 },
             },
-            "kind": "Metric",
+            "kind": "metric",
         }
     }
 
 
 def test_shelf():
-    v = {"foo": {"kind": "Metric", "field": "foo"}}
+    v = {"foo": {"kind": "metric", "field": "foo"}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
-        "foo": {"field": {"aggregation": "sum", "value": "foo"}, "kind": "Metric"}
+        "foo": {"field": {"aggregation": "sum", "value": "foo"}, "kind": "metric"}
     }
 
 
 def test_valid_ingredients():
     examples = [
         (
-            {"kind": "Metric", "field": "moo", "format": "comma"},
+            {"kind": "metric", "field": "moo", "format": "comma"},
             {
                 "field": {"aggregation": "sum", "value": "moo"},
-                "kind": "Metric",
+                "kind": "metric",
                 "format": ",.0f",
             },
         ),
         #
         (
-            {"kind": "Metric", "field": "moo+foo", "format": "comma"},
+            {"kind": "metric", "field": "moo+foo", "format": "comma"},
             {
                 "field": {
                     "operators": [{"operator": "+", "field": {"value": "foo"}}],
                     "aggregation": "sum",
                     "value": "moo",
                 },
-                "kind": "Metric",
+                "kind": "metric",
                 "format": ",.0f",
             },
         ),
         #
         (
-            {"kind": "Metric", "field": "moo+foo-coo+cow", "format": "comma"},
+            {"kind": "metric", "field": "moo+foo-coo+cow", "format": "comma"},
             {
                 "field": {
                     "operators": [
@@ -604,14 +593,14 @@ def test_valid_ingredients():
                     "aggregation": "sum",
                     "value": "moo",
                 },
-                "kind": "Metric",
+                "kind": "metric",
                 "format": ",.0f",
             },
         ),
         #
         (
             {
-                "kind": "Metric",
+                "kind": "metric",
                 "format": "comma",
                 "icon": "foo",
                 "field": {"value": "cow", "condition": {"field": "moo2", "in": "wo"}},
@@ -627,7 +616,7 @@ def test_valid_ingredients():
                     "aggregation": "sum",
                     "value": "cow",
                 },
-                "kind": "Metric",
+                "kind": "metric",
                 "format": ",.0f",
                 "icon": "foo",
             },
@@ -665,7 +654,7 @@ def test_valid_ingredients_format():
             {"format": "comma", "field": "moo"},
             {
                 "field": {"aggregation": "sum", "value": "moo"},
-                "kind": "Metric",
+                "kind": "metric",
                 "format": ",.0f",
             },
         ),
@@ -673,7 +662,7 @@ def test_valid_ingredients_format():
             {"format": ",.0f", "field": "moo"},
             {
                 "field": {"aggregation": "sum", "value": "moo"},
-                "kind": "Metric",
+                "kind": "metric",
                 "format": ",.0f",
             },
         ),
@@ -681,7 +670,7 @@ def test_valid_ingredients_format():
             {"format": "cow", "field": "moo"},
             {
                 "field": {"aggregation": "sum", "value": "moo"},
-                "kind": "Metric",
+                "kind": "metric",
                 "format": "cow",
             },
         ),
@@ -689,7 +678,7 @@ def test_valid_ingredients_format():
             {"format": "cow", "field": "grass"},
             {
                 "field": {"aggregation": "sum", "value": "grass"},
-                "kind": "Metric",
+                "kind": "metric",
                 "format": "cow",
             },
         ),
