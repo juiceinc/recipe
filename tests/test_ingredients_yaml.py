@@ -274,7 +274,17 @@ FROM census"""
            WHEN (census.state IN ('Vermont',
                                   'New Hampshire')) THEN 'northeast'
            WHEN (census.age < 2) THEN 'babies'
-           WHEN (census.age < 13) THEN 'children'
+           WHEN (census.age IN (2,
+                                3,
+                                4,
+                                5,
+                                6,
+                                7,
+                                8,
+                                9,
+                                10,
+                                11,
+                                12)) THEN 'children'
            WHEN (census.age < 20) THEN 'teens'
            ELSE 'oldsters'
        END AS mixed_buckets,
@@ -282,7 +292,17 @@ FROM census"""
            WHEN (census.state IN ('Vermont',
                                   'New Hampshire')) THEN 0
            WHEN (census.age < 2) THEN 1
-           WHEN (census.age < 13) THEN 2
+           WHEN (census.age IN (2,
+                                3,
+                                4,
+                                5,
+                                6,
+                                7,
+                                8,
+                                9,
+                                10,
+                                11,
+                                12)) THEN 2
            WHEN (census.age < 20) THEN 3
            ELSE 9999
        END AS mixed_buckets_order_by,
