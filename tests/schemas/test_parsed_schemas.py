@@ -148,7 +148,10 @@ test:
 """
     v = yaml.safe_load(content)
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
-    assert result["test"]["field"] == 'if((moo)>2,"foo",state in (1,2),"cow",(moo)in (3,4),"horse",NULL)'
+    assert (
+        result["test"]["field"]
+        == 'if((moo)>2,"foo",state in (1,2),"cow",(moo)in (3,4),"horse",NULL)'
+    )
     assert (
         result["test"]["extra_fields"][0]["field"]
         == "if((moo)>2,0,state in (1,2),1,(moo)in (3,4),2,9999)"
