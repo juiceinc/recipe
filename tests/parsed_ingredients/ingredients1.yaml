@@ -17,3 +17,6 @@ dt_between:
 dt_test:
     kind: Metric
     field: 'if(birth_date is NULL, age, 1)'
+intelligent_date_test:
+    kind: Metric
+    field: 'if(birth_date is prior year, age, 2)'

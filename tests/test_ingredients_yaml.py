@@ -1166,6 +1166,31 @@ GROUP BY first"""
 hi,2,hi
 """,
         )
+
+    def test_intelligent_date(self):
+        """Test intelligent dates like `date is last year`"""
+        shelf = self.validated_shelf("ingredients1.yaml", MyTable)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session).metrics("intelligent_date_test").dimensions("first")
+        )
+        from datetime import date
+        from dateutil.relativedelta import relativedelta
+        today = date.today()
+        start_dt = date(today.year-1, 1, 1)
+        end_dt = start_dt + relativedelta(years=1, days=-1)
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(CASE
+               WHEN (foo.birth_date BETWEEN '{}' AND '{}') THEN foo.age
+               ELSE 2
+           END) AS intelligent_date_test
+FROM foo
+GROUP BY first""".format(start_dt, end_dt)
+        self.assert_recipe_csv(
+            recipe,
+            """first,intelligent_date_test,first_id
+hi,4,hi
+""",
+        )
         
 
 

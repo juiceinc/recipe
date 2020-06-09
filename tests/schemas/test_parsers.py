@@ -208,9 +208,11 @@ expr
 expr
   case
     relation_expr_using_is
-      column\tage
+      column\tbirth_date
       is
-      null\tnull
+      is_comparison
+        prior
+        year
     expr
       number\t1
     expr
@@ -220,5 +222,4 @@ expr
     ]
     for v, pretty_tree in values:
         tree = field_parser.parse(v)
-        print(tree.pretty())
         assert tree.pretty().strip() == pretty_tree.strip()

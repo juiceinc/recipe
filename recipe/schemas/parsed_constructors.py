@@ -90,6 +90,65 @@ class TransformToSQLAlchemyExpression(Transformer):
         return case(pairs, else_=else_expr)
 
 
+    def is_comparison(self, *args):
+        """Things that can be compared with IS
+        
+        will be either IS NULL or an intelligent date
+        like "IS prior year" or "IS next week"
+        """
+        if len(args) == 1 and args[0] is None:
+            return None
+        else:
+            # INTELLIGENT_DATE_RELATIVE: /prior/i | /current/i | /next/i
+            # INTELLIGENT_DATE_UNITS: /ytd/i | /year/i | /qtr/i | /month/i | /week/i | /day/i
+            offset, units = str(args[0]).lower(), str(args[1]).lower()
+
+            from datetime import date
+            from dateutil.relativedelta import relativedelta
+            today = date.today()
+            if units == 'year':
+                start_dt = date(today.year, 1, 1)
+                end_dt = date(today.year, 12, 31)
+                offset_units = 'years'
+                offset_counter = 1
+            elif units == 'ytd':
+                start_dt = date(today.year, 1, 1)
+                end_dt = today
+                offset_units = 'years'
+                offset_counter = 1
+            elif units == 'qtr':
+                qtr = today.month // 3
+                start_dt = date(today.year, qtr*3+1, 1)
+                end_dt = date(today.year, qtr*3+3, 1) + relativedelta(months=1, days=-1)
+                offset_units = 'months'
+                offset_counter = 3
+            elif units == 'month':
+                start_dt = date(today.year, today.month, 1)
+                end_dt = start_dt + relativedelta(months=1, days=-1)
+                offset_units = 'months'
+                offset_counter = 1
+            elif units == 'mtd':
+                start_dt = date(today.year, today.month, 1)
+                end_dt = today
+                offset_units = 'months'
+                offset_counter = 1
+            elif units == 'day':
+                start_dt = date(today.year, today.month, 1)
+                end_dt = start_dt
+                offset_units = 'days'
+                offset_counter = 1
+
+            if offset in ('prior', 'previous', 'last'):
+                start_dt -= relativedelta(**{offset_units: offset_counter})
+                end_dt -= relativedelta(**{offset_units: offset_counter})
+            elif offset == 'current':
+                pass
+            elif offset == 'next':
+                start_dt += relativedelta(**{offset_units: offset_counter})
+                end_dt += relativedelta(**{offset_units: offset_counter})
+            
+            return start_dt, end_dt
+
     def relation_expr(self, left, rel, right):
         rel = rel.lower()
         comparators = {
@@ -106,16 +165,22 @@ class TransformToSQLAlchemyExpression(Transformer):
         right = convert_value(left, right)
         return getattr(left, comparators[rel])(right)
 
-    def relation_expr_using_is(self, left, rel, *args):
+    def relation_expr_using_is(self, left, rel, right):
         """A relation expression like age is null """
         rel = rel.lower()
-        if len(args) == 1:
-            arg = args[0]
-        comparators = {
-            "isnot": "isnot",
-            "is": "is_",
-        }
-        return getattr(left, comparators[rel])(None)
+        if right is None:
+            comparators = {
+                "isnot": "isnot",
+                "is": "is_",
+            }
+            return getattr(left, comparators[rel])(right)
+        else:
+            if rel == 'is':
+                return left.between(*right)
+            elif rel == 'isnot':
+                return not_(left.between(*right))
+            else:
+                raise Exception("Unknown relation when using is")
 
     def array(self, *args):
         # TODO  check these are all the same type
