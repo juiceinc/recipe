@@ -34,6 +34,7 @@ def test_parsers():
     max(war_total) - min(war_total)                 # 1,0,0,0,0,0
     min(war_total)-max(war_total-war_total)         # 1,0,0,0,0,0
     avg(war_total + 2.0)                            # 1,0,0,0,0,0
+    count_distinct(war_total + 2.0)                 # 1,0,0,0,0,0
     avg(war_total) + 2.0                            # 1,0,0,0,0,0
     min(a+b)/max(b*c)                               # 1,0,0,0,0,0
     min(2+\"a\")/max(b*c)                           # 1,0,0,0,0,0
@@ -63,7 +64,7 @@ def test_parsers():
                     tree = parser.parse(row)
                     # print(f"{parser_name:30s} succeeded ({expected_result})")
                     assert expected_result == "1"
-                    print(tree.pretty())
+                    # print(tree.pretty())
                 except:
                     # print(f"{parser_name:30s} failed ({expected_result})")
                     assert expected_result == "0"

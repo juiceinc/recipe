@@ -45,7 +45,7 @@ install = [
 setup(
     name="recipe",
     version="0.15.0",
-    description="Lego consstruction kit for SQL",
+    description="Lego construction kit for SQL",
     long_description=(open("README.rst").read()),
     author="Chris Gemignani",
     author_email="chris.gemignani@juiceanalytics.com",
