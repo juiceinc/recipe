@@ -195,7 +195,22 @@ expr
     relation_expr_using_is
       column\tage
       is
-      null
+      null\tnull
+    expr
+      number\t1
+    expr
+      number\t0
+""",
+        ),
+        (
+            'if(birth_date is prior year,1,0)',
+            """
+expr
+  case
+    relation_expr_using_is
+      column\tage
+      is
+      null\tnull
     expr
       number\t1
     expr
@@ -205,4 +220,5 @@ expr
     ]
     for v, pretty_tree in values:
         tree = field_parser.parse(v)
+        print(tree.pretty())
         assert tree.pretty().strip() == pretty_tree.strip()

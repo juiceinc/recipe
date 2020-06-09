@@ -40,7 +40,17 @@ class TransformToSQLAlchemyExpression(Transformer):
     def NOTIN(self, value):
         return "NOTIN"
 
+    def IS(self, value):
+        print("found is")
+        return "IS"
+
+    def ISNOT(self, value):
+        return "ISNOT"
+
     def NULL(self, value):
+        return None
+
+    def null(self, value):
         return None
 
     def BETWEEN(self, value):
@@ -98,12 +108,12 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def relation_expr_using_is(self, left, rel, *args):
         """A relation expression like age is null """
-        print("here we go", left, rel, *args)
+        rel = rel.lower()
         if len(args) == 1:
-            rel = args[0].upper()
+            arg = args[0]
         comparators = {
-            "ISNOT": "isnot",
-            "IS": "is_",
+            "isnot": "isnot",
+            "is": "is_",
         }
         return getattr(left, comparators[rel])(None)
 

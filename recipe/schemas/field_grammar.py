@@ -41,16 +41,16 @@ base_grammar = """
     ?partial_relation_expr.0: comparator atom
                 | vector_comparator array
                 | BETWEEN atom AND atom
-                | is_comparator NULL
+                | is_comparator null
     ?relation_expr.1:        atom comparator atom
-                           | atom is_comparator NULL   -> relation_expr_using_is
+                           | atom is_comparator null   -> relation_expr_using_is
     ?vector_relation_expr.1: atom vector_comparator array
     ?between_relation_expr.1: atom BETWEEN atom AND atom
     ?array:                "(" [const ("," const)*] ")"
     ?comparator: EQ | NE | LT | LTE | GT | GTE
     ?vector_comparator.1: IN | NOTIN
     ?is_comparator.1: IS | ISNOT
-    ?is_comparison.1: NULL
+    //?is_comparison.1: NULL | ESCAPED_STRING
     OR: /OR/i
     AND: /AND/i
     NOT: /NOT/i
@@ -65,15 +65,12 @@ base_grammar = """
     ISNOT: IS NOT
     NOTIN: NOT IN
     BETWEEN: /BETWEEN/i
-    NULL: /NULL/i
-    DYNAMIC_DATE_RELATIVE: /(prior|this|next)/i
-    DYNAMIC_DATE_PERIOD: /(ytd|year|quarter|month|week|day)/i
+    null: /NULL/i
 
     ?const.1: NUMBER                           -> number
             | ESCAPED_STRING                   -> string_literal
             | /true/i                          -> true
             | /false/i                         -> false
-            | NULL
     STAR: "*"
     COMMENT: /#.*/
 
