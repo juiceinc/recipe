@@ -28,6 +28,7 @@ def test_parsers():
     (war_total + war_total) / war_total             # 1,1,0,0,0,0
     if(war_total BETWEEN 1 AND 5, 5)                # 1,1,0,0,0,0
     if(war_total BETWEEN 1 AND 5, 4, 2)             # 1,1,0,0,0,0
+    if(war_total is null, 4, 2)                     # 1,1,0,0,0,0    
     couNT(*)                                        # 1,0,0,0,0,0
     AVG(war_total) + 1.0                            # 1,0,0,0,0,0
     sum(war_total)                                  # 1,0,0,0,0,0
@@ -186,8 +187,22 @@ expr
       string_literal	"oldsters"
 """,
         ),
+        (
+            'if(age is null,1,0)',
+            """
+expr
+  case
+    relation_expr_using_is
+      column\tage
+      is
+      null
+    expr
+      number\t1
+    expr
+      number\t0
+""",
+        ),
     ]
     for v, pretty_tree in values:
         tree = field_parser.parse(v)
-        print(tree.pretty())
         assert tree.pretty().strip() == pretty_tree.strip()

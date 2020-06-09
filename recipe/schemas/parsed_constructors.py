@@ -34,14 +34,14 @@ class TransformToSQLAlchemyExpression(Transformer):
     def false(self, value):
         return False
 
-    def null(self, value):
-        return None
-
     def IN(self, value):
         return "IN"
 
     def NOTIN(self, value):
         return "NOTIN"
+
+    def NULL(self, value):
+        return None
 
     def BETWEEN(self, value):
         return "BETWEEN"
@@ -79,7 +79,9 @@ class TransformToSQLAlchemyExpression(Transformer):
         pairs = zip(args[::2], args[1::2])
         return case(pairs, else_=else_expr)
 
+
     def relation_expr(self, left, rel, right):
+        rel = rel.lower()
         comparators = {
             "=": "__eq__",
             ">": "__gt__",
@@ -93,6 +95,17 @@ class TransformToSQLAlchemyExpression(Transformer):
         # Convert the right into a type compatible with the left
         right = convert_value(left, right)
         return getattr(left, comparators[rel])(right)
+
+    def relation_expr_using_is(self, left, rel, *args):
+        """A relation expression like age is null """
+        print("here we go", left, rel, *args)
+        if len(args) == 1:
+            rel = args[0].upper()
+        comparators = {
+            "ISNOT": "isnot",
+            "IS": "is_",
+        }
+        return getattr(left, comparators[rel])(None)
 
     def array(self, *args):
         # TODO  check these are all the same type

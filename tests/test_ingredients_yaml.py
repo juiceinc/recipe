@@ -1146,3 +1146,26 @@ OFFSET 0"""
 11168,Tennessee,77.0,11168
 """,
         )
+
+    def test_is(self):
+        """Test fields using is"""
+        shelf = self.validated_shelf("ingredients1.yaml", MyTable)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session).metrics("dt_test").dimensions("first")
+        )
+        assert recipe.to_sql() == """SELECT foo.first AS first,
+       sum(CASE
+               WHEN (foo.birth_date IS NULL) THEN foo.age
+               ELSE 1
+           END) AS dt_test
+FROM foo
+GROUP BY first"""
+        self.assert_recipe_csv(
+            recipe,
+            """first,dt_test,first_id
+hi,2,hi
+""",
+        )
+        
+
+
