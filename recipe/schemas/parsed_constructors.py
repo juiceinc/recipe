@@ -94,12 +94,15 @@ class TransformToSQLAlchemyExpression(Transformer):
         """Things that can be compared with IS
         
         will be either IS NULL or an intelligent date
-        like "IS prior year" or "IS next week"
+        like "IS prior year" or "IS next week".
+
+        If intelligent dates are used, determine the relevant dates and 
+        return a tuple of start_date, end_date
         """
         if len(args) == 1 and args[0] is None:
             return None
         else:
-            # INTELLIGENT_DATE_RELATIVE: /prior/i | /current/i | /next/i
+            # INTELLIGENT_DATE_OFFSET: /prior/i | /current/i | /next/i
             # INTELLIGENT_DATE_UNITS: /ytd/i | /year/i | /qtr/i | /month/i | /week/i | /day/i
             offset, units = str(args[0]).lower(), str(args[1]).lower()
 
@@ -137,15 +140,20 @@ class TransformToSQLAlchemyExpression(Transformer):
                 end_dt = start_dt
                 offset_units = 'days'
                 offset_counter = 1
+            else:
+                raise Exception("Unknown intelligent date units")
 
+            offset_params = {offset_units: offset_counter}
             if offset in ('prior', 'previous', 'last'):
-                start_dt -= relativedelta(**{offset_units: offset_counter})
-                end_dt -= relativedelta(**{offset_units: offset_counter})
-            elif offset == 'current':
-                pass
+                start_dt -= relativedelta(**offset_params)
+                end_dt -= relativedelta(**offset_params)
             elif offset == 'next':
-                start_dt += relativedelta(**{offset_units: offset_counter})
-                end_dt += relativedelta(**{offset_units: offset_counter})
+                start_dt += relativedelta(**offset_params)
+                end_dt += relativedelta(**offset_params)
+            elif offset in ('current', 'this'):
+                pass
+            else:
+                raise Exception("Unknown intelligent date offset")
             
             return start_dt, end_dt
 

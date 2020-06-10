@@ -66,7 +66,7 @@ base_grammar = """
     NOTIN: NOT IN
     BETWEEN: /BETWEEN/i
     null: /NULL/i
-    INTELLIGENT_DATE_OFFSET: /prior/i | /last/i | /previous/i | /current/i | /next/i
+    INTELLIGENT_DATE_OFFSET: /prior/i | /last/i | /previous/i | /current/i | /this/i | /next/i
     INTELLIGENT_DATE_UNITS: /ytd/i | /year/i | /qtr/i | /month/i | /mtd/i | /day/i
 
     ?const.1: NUMBER                           -> number

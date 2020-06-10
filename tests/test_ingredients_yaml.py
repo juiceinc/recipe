@@ -8,7 +8,7 @@ import os
 from datetime import date
 import pytest
 from six import text_type
-from tests.test_base import Census, MyTable, oven, ScoresWithNulls
+from tests.test_base import Census, MyTable, oven, ScoresWithNulls, DateTester
 
 from recipe import (
     AutomaticFilters,
@@ -1192,5 +1192,109 @@ hi,4,hi
 """,
         )
         
+from datetime import date
+from dateutil.relativedelta import relativedelta
 
 
+class TestParsedIntellligentDates(object):
+    def setup(self):
+        self.session = oven.Session()
+
+    def assert_recipe_csv(self, recipe, csv_text):
+        assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
+
+    def parsed_shelf(self, config):
+        """Load a file from the sample ingredients.yaml files."""
+        return Shelf.from_validated_yaml(config, DateTester)
+
+    def test_is_current_year(self):
+        """Test current year with a variety of spacing and capitalization"""
+        
+        data = [
+            "is current year",
+            "is   current\t  \t year",
+            " IS  CURRENT YEAR",
+            "is Current  Year  ",
+        ]
+
+        for is_current_year in data:
+            shelf = self.parsed_shelf("""
+_version: 2
+test:
+    kind: Metric
+    field: "if(dt {}, count, 0)"
+""".format(is_current_year))
+            recipe = (
+                Recipe(shelf=shelf, session=self.session).metrics("test")
+            )
+            today = date.today()
+            start_dt = date(today.year, 1, 1)
+            end_dt = start_dt + relativedelta(years=1, days=-1)
+            assert recipe.to_sql() == """SELECT sum(CASE
+               WHEN (datetester.dt BETWEEN '{}' AND '{}') THEN datetester.count
+               ELSE 0
+           END) AS test
+FROM datetester""".format(start_dt, end_dt)
+            print(recipe.dataset.csv)
+            self.assert_recipe_csv(
+                recipe,
+                """test
+12
+""")
+
+    def test_prior_years(self):
+        """Test current year with a variety of spacing and capitalization"""
+        
+        data = [
+            "is prior year ",
+            "is  PREVIOUS year  ",
+            "is Last  Year"
+        ]
+
+        for is_prior_year in data:
+            shelf = self.parsed_shelf("""
+_version: 2
+test:
+    kind: Metric
+    field: "if(dt {}, count, 0)"
+""".format(is_prior_year))
+            recipe = (
+                Recipe(shelf=shelf, session=self.session).metrics("test")
+            )
+            today = date.today()
+            start_dt = date(today.year-1, 1, 1)
+            end_dt = start_dt + relativedelta(years=1, days=-1)
+            assert recipe.to_sql() == """SELECT sum(CASE
+               WHEN (datetester.dt BETWEEN '{}' AND '{}') THEN datetester.count
+               ELSE 0
+           END) AS test
+FROM datetester""".format(start_dt, end_dt)
+            self.assert_recipe_csv(recipe, "test\n12\n")
+
+    def test_ytd(self):
+        """Test current year with a variety of spacing and capitalization"""
+        
+        data = [
+            "is current ytd ",
+            "is prior ytd  ",
+            "is this  ytd",
+            "is last ytd",
+            "is next ytd",
+        ]
+
+        unique_sql = set()
+        today = date.today()
+        
+        for ytd in data:
+            shelf = self.parsed_shelf("""
+_version: 2
+test:
+    kind: Metric
+    field: "if(dt {}, count, 0)"
+""".format(ytd))
+            recipe = (
+                Recipe(shelf=shelf, session=self.session).metrics("test")
+            )
+            self.assert_recipe_csv(recipe, "test\n{}\n".format(today.month))
+            unique_sql.add(recipe.to_sql())
+        assert len(unique_sql) == 3
