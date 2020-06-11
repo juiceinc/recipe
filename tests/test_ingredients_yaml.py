@@ -6,6 +6,7 @@ Test recipes built from yaml files in the ingredients directory.
 import os
 
 from datetime import date
+from dateutil.relativedelta import relativedelta
 import pytest
 from six import text_type
 from tests.test_base import Census, MyTable, oven, ScoresWithNulls, DateTester
@@ -1192,8 +1193,6 @@ hi,4,hi
 """,
         )
         
-from datetime import date
-from dateutil.relativedelta import relativedelta
 
 
 class TestParsedIntellligentDates(object):
@@ -1296,5 +1295,58 @@ test:
                 Recipe(shelf=shelf, session=self.session).metrics("test")
             )
             self.assert_recipe_csv(recipe, "test\n{}\n".format(today.month))
+            unique_sql.add(recipe.to_sql())
+        assert len(unique_sql) == 3
+
+    def test_is_not(self):
+        """Test current year with a variety of spacing and capitalization"""
+        
+        data = [
+            "is current ytd ",
+            "is prior ytd  ",
+            "is this  ytd",
+            "is last ytd",
+            "is next ytd",
+        ]
+
+        unique_sql = set()
+        today = date.today()
+        
+        for ytd in data:
+            shelf = self.parsed_shelf("""
+_version: 2
+test:
+    kind: Metric
+    field: "if(not(dt {}), count, 0)"
+""".format(ytd))
+            recipe = (
+                Recipe(shelf=shelf, session=self.session).metrics("test")
+            )
+            self.assert_recipe_csv(recipe, "test\n{}\n".format(100 - today.month))
+            unique_sql.add(recipe.to_sql())
+        assert len(unique_sql) == 3
+
+    def test_qtr(self):
+        """Quarters are always three months"""
+        data = [
+            "is current qtr",
+            "IS PRIOR Qtr",
+            "Is NEXT QTR"
+        ]
+
+        unique_sql = set()
+        today = date.today()
+        
+        for ytd in data:
+            shelf = self.parsed_shelf("""
+_version: 2
+test:
+    kind: Metric
+    field: "if(dt {}, count, 0)"
+""".format(ytd))
+            recipe = (
+                Recipe(shelf=shelf, session=self.session).metrics("test")
+            )
+            self.assert_recipe_csv(recipe, "test\n3\n")
             unique_sql.add(recipe.to_sql())
         assert len(unique_sql) == 3

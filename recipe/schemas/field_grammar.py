@@ -41,16 +41,17 @@ base_grammar = """
     ?partial_relation_expr.0: comparator atom
                 | vector_comparator array
                 | BETWEEN atom AND atom
-                | is_comparator is_comparison
+                | IS is_comparison
     ?relation_expr.1:        atom comparator atom
-                           | atom is_comparator is_comparison   -> relation_expr_using_is
+                           | atom IS is_comparison   -> relation_expr_using_is
     ?vector_relation_expr.1: atom vector_comparator array
     ?between_relation_expr.1: atom BETWEEN atom AND atom
     ?array:                "(" [const ("," const)*] ")"
     ?comparator: EQ | NE | LT | LTE | GT | GTE
     ?vector_comparator.1: IN | NOTIN
-    ?is_comparator.1: IS | ISNOT
-    ?is_comparison.1: null | INTELLIGENT_DATE_OFFSET INTELLIGENT_DATE_UNITS
+    ?is_comparator.1: IS
+    ?is_comparison.1: NULL | INTELLIGENT_DATE_OFFSET INTELLIGENT_DATE_UNITS
+    NOTIN: NOT IN
     OR: /OR/i
     AND: /AND/i
     NOT: /NOT/i
@@ -62,10 +63,8 @@ base_grammar = """
     GTE: ">="
     IN: /IN/i
     IS: /IS/i
-    ISNOT: IS NOT
-    NOTIN: NOT IN
     BETWEEN: /BETWEEN/i
-    null: /NULL/i
+    NULL: /NULL/i
     INTELLIGENT_DATE_OFFSET: /prior/i | /last/i | /previous/i | /current/i | /this/i | /next/i
     INTELLIGENT_DATE_UNITS: /ytd/i | /year/i | /qtr/i | /month/i | /mtd/i | /day/i
 

@@ -1,6 +1,8 @@
 """Convert parsed trees into SQLAlchemy objects """
 from lark import Lark, Transformer, v_args
 from sqlalchemy import func, distinct, case, and_, or_, not_, cast, Float
+from datetime import date
+from dateutil.relativedelta import relativedelta
 
 from .field_grammar import (
     field_parser,
@@ -8,7 +10,7 @@ from .field_grammar import (
     noag_full_condition_parser,
     full_condition_parser,
 )
-from .utils import aggregations, find_column, ingredient_class_for_name, convert_value
+from .utils import aggregations, find_column, ingredient_class_for_name, convert_value, calc_date_range
 from recipe.exceptions import BadIngredient
 
 
@@ -41,16 +43,9 @@ class TransformToSQLAlchemyExpression(Transformer):
         return "NOTIN"
 
     def IS(self, value):
-        print("found is")
         return "IS"
 
-    def ISNOT(self, value):
-        return "ISNOT"
-
     def NULL(self, value):
-        return None
-
-    def null(self, value):
         return None
 
     def BETWEEN(self, value):
@@ -89,7 +84,6 @@ class TransformToSQLAlchemyExpression(Transformer):
         pairs = zip(args[::2], args[1::2])
         return case(pairs, else_=else_expr)
 
-
     def is_comparison(self, *args):
         """Things that can be compared with IS
         
@@ -105,57 +99,7 @@ class TransformToSQLAlchemyExpression(Transformer):
             # INTELLIGENT_DATE_OFFSET: /prior/i | /current/i | /next/i
             # INTELLIGENT_DATE_UNITS: /ytd/i | /year/i | /qtr/i | /month/i | /week/i | /day/i
             offset, units = str(args[0]).lower(), str(args[1]).lower()
-
-            from datetime import date
-            from dateutil.relativedelta import relativedelta
-            today = date.today()
-            if units == 'year':
-                start_dt = date(today.year, 1, 1)
-                end_dt = date(today.year, 12, 31)
-                offset_units = 'years'
-                offset_counter = 1
-            elif units == 'ytd':
-                start_dt = date(today.year, 1, 1)
-                end_dt = today
-                offset_units = 'years'
-                offset_counter = 1
-            elif units == 'qtr':
-                qtr = today.month // 3
-                start_dt = date(today.year, qtr*3+1, 1)
-                end_dt = date(today.year, qtr*3+3, 1) + relativedelta(months=1, days=-1)
-                offset_units = 'months'
-                offset_counter = 3
-            elif units == 'month':
-                start_dt = date(today.year, today.month, 1)
-                end_dt = start_dt + relativedelta(months=1, days=-1)
-                offset_units = 'months'
-                offset_counter = 1
-            elif units == 'mtd':
-                start_dt = date(today.year, today.month, 1)
-                end_dt = today
-                offset_units = 'months'
-                offset_counter = 1
-            elif units == 'day':
-                start_dt = date(today.year, today.month, 1)
-                end_dt = start_dt
-                offset_units = 'days'
-                offset_counter = 1
-            else:
-                raise Exception("Unknown intelligent date units")
-
-            offset_params = {offset_units: offset_counter}
-            if offset in ('prior', 'previous', 'last'):
-                start_dt -= relativedelta(**offset_params)
-                end_dt -= relativedelta(**offset_params)
-            elif offset == 'next':
-                start_dt += relativedelta(**offset_params)
-                end_dt += relativedelta(**offset_params)
-            elif offset in ('current', 'this'):
-                pass
-            else:
-                raise Exception("Unknown intelligent date offset")
-            
-            return start_dt, end_dt
+            return calc_date_range(offset, units, date.today())
 
     def relation_expr(self, left, rel, right):
         rel = rel.lower()
@@ -174,21 +118,13 @@ class TransformToSQLAlchemyExpression(Transformer):
         return getattr(left, comparators[rel])(right)
 
     def relation_expr_using_is(self, left, rel, right):
-        """A relation expression like age is null """
-        rel = rel.lower()
-        if right is None:
-            comparators = {
-                "isnot": "isnot",
-                "is": "is_",
-            }
-            return getattr(left, comparators[rel])(right)
+        """A relation expression like age is null or
+        birth_date is last month"""
+        # TODO: Why is this not handled by the tokenization
+        if str(right).upper() == 'NULL':
+            return left.is_(None)
         else:
-            if rel == 'is':
-                return left.between(*right)
-            elif rel == 'isnot':
-                return not_(left.between(*right))
-            else:
-                raise Exception("Unknown relation when using is")
+            return left.between(*right)
 
     def array(self, *args):
         # TODO  check these are all the same type
@@ -219,7 +155,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         else:
             return exprs[0]
 
-    def not_bool_factor(self, expr):
+    def not_bool_factor(self, notval, expr):
         return not_(expr)
 
 

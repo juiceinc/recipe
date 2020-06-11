@@ -195,7 +195,7 @@ expr
     relation_expr_using_is
       column\tage
       is
-      null\tnull
+      null
     expr
       number\t1
     expr
@@ -213,6 +213,25 @@ expr
       is_comparison
         prior
         year
+    expr
+      number\t1
+    expr
+      number\t0
+""",
+        ),
+        (
+            'if(not(birth_date is prior year),1,0)',
+            """
+expr
+  case
+    not_bool_factor
+      not
+      relation_expr_using_is
+        column\tbirth_date
+        is
+        is_comparison
+          prior
+          year
     expr
       number\t1
     expr
