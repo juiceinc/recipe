@@ -143,13 +143,18 @@ test:
       condition: ">2"
     - label: cow
       condition: "state in (1,2)"
+    - label: horse
+      condition: "in (3,4)"
 """
     v = yaml.safe_load(content)
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
-    assert result["test"]["field"] == 'if(moo>2,"foo",state in (1,2),"cow",NULL)'
+    assert (
+        result["test"]["field"]
+        == 'if((moo)>2,"foo",state in (1,2),"cow",(moo)in (3,4),"horse",NULL)'
+    )
     assert (
         result["test"]["extra_fields"][0]["field"]
-        == "if(moo>2,0,state in (1,2),1,9999)"
+        == "if((moo)>2,0,state in (1,2),1,(moo)in (3,4),2,9999)"
     )
 
     content = """
@@ -169,11 +174,11 @@ test:
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert (
         result["test"]["field"]
-        == 'if(moo<2,"undertwo",moo>"2","foo",state in ("1", "2"),"cow",NULL)'
+        == 'if((moo)<2,"undertwo",(moo)>"2","foo",state in ("1", "2"),"cow",NULL)'
     )
     assert (
         result["test"]["extra_fields"][0]["field"]
-        == 'if(moo<2,0,moo>"2",1,state in ("1", "2"),2,9999)'
+        == 'if((moo)<2,0,(moo)>"2",1,state in ("1", "2"),2,9999)'
     )
 
     content = """
@@ -194,11 +199,11 @@ age_buckets:
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert (
         result["age_buckets"]["field"]
-        == 'if(age<2,"babies",age<13,"children",age<20,"teens","oldsters")'
+        == 'if((age)<2,"babies",(age)<13,"children",(age)<20,"teens","oldsters")'
     )
     assert (
         result["age_buckets"]["extra_fields"][0]["field"]
-        == "if(age<2,0,age<13,1,age<20,2,9999)"
+        == "if((age)<2,0,(age)<13,1,(age)<20,2,9999)"
     )
 
 

@@ -127,19 +127,29 @@ def _lowercase_kind(value):
     return value
 
 
+def _build_full_condition(field, itm):
+    """
+    Test if the itm["condition"] is a partial relation expression
+
+    If so, convert it in place into a full relation expression by including the field.
+    """
+    tree = noag_any_condition_parser.parse(itm["condition"])
+    if tree.data == "partial_relation_expr":
+        itm["condition"] = "(" + field + ")" + itm["condition"]
+
+
 def _convert_partial_conditions(value):
     """Convert all partial conditions to full conditions in buckets and quickselects."""
     field = value.get("field")
+
     # Convert all bucket conditions to full conditions
     for itm in value.get("buckets", []):
-        tree = noag_any_condition_parser.parse(itm["condition"])
-        if tree.data == "partial_relation_expr":
-            itm["condition"] = field + itm["condition"]
+        _build_full_condition(field, itm)
+
     # Convert all quickselects conditions to full conditions
     for itm in value.get("quickselects", []):
-        tree = noag_any_condition_parser.parse(itm["condition"])
-        if tree.data == "partial_relation_expr":
-            itm["condition"] = "(" + field + ")" + itm["condition"]
+        _build_full_condition(field, itm)
+
     return value
 
 
