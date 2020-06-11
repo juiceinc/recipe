@@ -33,6 +33,7 @@ def test_parsers():
     sum(war_total)                                  # 1,0,0,0,0,0
     max(war_total) - min(war_total)                 # 1,0,0,0,0,0
     min(war_total)-max(war_total-war_total)         # 1,0,0,0,0,0
+    count_distinct(war_total + 2.0)                 # 1,0,0,0,0,0
     avg(war_total + 2.0)                            # 1,0,0,0,0,0
     avg(war_total) + 2.0                            # 1,0,0,0,0,0
     min(a+b)/max(b*c)                               # 1,0,0,0,0,0
@@ -188,5 +189,5 @@ expr
     ]
     for v, pretty_tree in values:
         tree = field_parser.parse(v)
-        print(tree.pretty())
+        # print(tree.pretty())
         assert tree.pretty().strip() == pretty_tree.strip()
