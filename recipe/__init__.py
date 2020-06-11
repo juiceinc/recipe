@@ -52,7 +52,7 @@ except ImportError:
 
 logging.getLogger(__name__).addHandler(NullHandler())
 
-__version__ = "0.14.1"
+__version__ = "0.14.2"
 
 __all__ = [
     "BadIngredient",
