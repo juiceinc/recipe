@@ -2,9 +2,11 @@ from lark import Lark, Transformer, v_args
 from .utils import aggregations
 from ..compat import basestring
 
-allowed_aggr_keys = "|".join(
-    k for k in aggregations.keys() if isinstance(k, basestring)
-)
+aggr_keys = [k for k in aggregations.keys() if isinstance(k, basestring)]
+# Sort the keys in descending order of length
+aggr_keys.sort(key=lambda item: (len(item), item), reverse=True)
+allowed_aggr_keys = "|".join(aggr_keys)
+
 
 # Grammar for boolean expressions
 boolean_expr_grammar = """

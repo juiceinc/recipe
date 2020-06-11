@@ -2,8 +2,20 @@
 Changelog
 =========
 
+0.14.1 (2020-06-11)
+-----------------------------------------
+
+* Fix count_distinct in parsed ingredients
+
+
+0.14.0 (2020-03-06)
+-----------------------------------------
+
+* Support graceful ingredient failures when ingredients can not be constructed from config.
+
 0.13.1 (2020-02-11)
 -----------------------------------------
+
 * Fix a pg8000 issue
 
 0.13.0 (2020-01-28)
