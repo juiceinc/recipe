@@ -23,7 +23,6 @@ oven.engine.execute(
 )
 
 
-
 # Test dynamic date filtering
 TABLEDEF = """
         CREATE TABLE IF NOT EXISTS datetester
@@ -36,9 +35,7 @@ start_dt = date(date.today().year, date.today().month, 1)
 # Add dates for the 50 months around the current date
 for offset_month in range(-50, 50):
     dt = start_dt + relativedelta(months=offset_month)
-    oven.engine.execute(
-        "insert into datetester values ('{}', 1)".format(dt)
-    )
+    oven.engine.execute("insert into datetester values ('{}', 1)".format(dt))
 
 
 # Create a table for testing summarization
@@ -338,6 +335,7 @@ class ScoresWithNulls(Base):
 
     __tablename__ = "scores_with_nulls"
     __table_args__ = {"extend_existing": True}
+
 
 class TagScores(Base):
     username = Column("username", String(), primary_key=True)

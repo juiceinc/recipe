@@ -1152,15 +1152,20 @@ OFFSET 0"""
         """Test fields using is"""
         shelf = self.validated_shelf("ingredients1.yaml", MyTable)
         recipe = (
-            Recipe(shelf=shelf, session=self.session).metrics("dt_test").dimensions("first")
+            Recipe(shelf=shelf, session=self.session)
+            .metrics("dt_test")
+            .dimensions("first")
         )
-        assert recipe.to_sql() == """SELECT foo.first AS first,
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
        sum(CASE
                WHEN (foo.birth_date IS NULL) THEN foo.age
                ELSE 1
            END) AS dt_test
 FROM foo
 GROUP BY first"""
+        )
         self.assert_recipe_csv(
             recipe,
             """first,dt_test,first_id
@@ -1172,20 +1177,28 @@ hi,2,hi
         """Test intelligent dates like `date is last year`"""
         shelf = self.validated_shelf("ingredients1.yaml", MyTable)
         recipe = (
-            Recipe(shelf=shelf, session=self.session).metrics("intelligent_date_test").dimensions("first")
+            Recipe(shelf=shelf, session=self.session)
+            .metrics("intelligent_date_test")
+            .dimensions("first")
         )
         from datetime import date
         from dateutil.relativedelta import relativedelta
+
         today = date.today()
-        start_dt = date(today.year-1, 1, 1)
+        start_dt = date(today.year - 1, 1, 1)
         end_dt = start_dt + relativedelta(years=1, days=-1)
-        assert recipe.to_sql() == """SELECT foo.first AS first,
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
        sum(CASE
                WHEN (foo.birth_date BETWEEN '{}' AND '{}') THEN foo.age
                ELSE 2
            END) AS intelligent_date_test
 FROM foo
-GROUP BY first""".format(start_dt, end_dt)
+GROUP BY first""".format(
+                start_dt, end_dt
+            )
+        )
         self.assert_recipe_csv(
             recipe,
             """first,intelligent_date_test,first_id
@@ -1194,9 +1207,9 @@ hi,4,hi
         )
 
 
-
 class TestParsedSQLGeneration(object):
     """More tests of SQL generation on complex parsed expressions """
+
     def setup(self):
         self.session = oven.Session()
 
@@ -1207,7 +1220,8 @@ class TestParsedSQLGeneration(object):
         assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
 
     def test_complex_field(self):
-        shelf = self.create_shelf("""
+        shelf = self.create_shelf(
+            """
 _version: 2
 count_star:
     kind: Metric
@@ -1237,39 +1251,55 @@ parentheses:
     kind: Metric
     field: "@count_star / (@count_star + (12.0 / 2.0))"
 
-""", ScoresWithNulls)
+""",
+            ScoresWithNulls,
+        )
         recipe = Recipe(shelf=shelf, session=self.session).metrics("count_star")
-        assert recipe.to_sql() == """SELECT count(*) AS count_star
+        assert (
+            recipe.to_sql()
+            == """SELECT count(*) AS count_star
 FROM scores_with_nulls"""
+        )
         self.assert_recipe_csv(recipe, "count_star\n6\n")
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("total_nulls")
-        assert recipe.to_sql() == """SELECT count(DISTINCT CASE
+        assert (
+            recipe.to_sql()
+            == """SELECT count(DISTINCT CASE
                           WHEN (scores_with_nulls.score IS NULL) THEN scores_with_nulls.username
                       END) AS total_nulls
 FROM scores_with_nulls"""
+        )
         self.assert_recipe_csv(recipe, "total_nulls\n3\n")
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("chip_nulls")
-        assert recipe.to_sql() == """SELECT sum(CASE
+        assert (
+            recipe.to_sql()
+            == """SELECT sum(CASE
                WHEN (scores_with_nulls.score IS NULL
                      AND scores_with_nulls.username = 'chip') THEN 1
                ELSE 0
            END) AS chip_nulls
 FROM scores_with_nulls"""
+        )
         self.assert_recipe_csv(recipe, "chip_nulls\n1\n")
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("chip_or_nulls")
-        assert recipe.to_sql() == """SELECT sum(CASE
+        assert (
+            recipe.to_sql()
+            == """SELECT sum(CASE
                WHEN (scores_with_nulls.score IS NULL
                      OR scores_with_nulls.username = 'chip') THEN 1
                ELSE 0
            END) AS chip_or_nulls
 FROM scores_with_nulls"""
+        )
         self.assert_recipe_csv(recipe, "chip_or_nulls\n5\n")
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("simple_math")
-        assert recipe.to_sql() == """SELECT count(*) + count(DISTINCT CASE
+        assert (
+            recipe.to_sql()
+            == """SELECT count(*) + count(DISTINCT CASE
                                      WHEN (scores_with_nulls.score IS NULL) THEN scores_with_nulls.username
                                  END) + sum(CASE
                                                 WHEN (scores_with_nulls.score IS NULL
@@ -1277,35 +1307,48 @@ FROM scores_with_nulls"""
                                                 ELSE 0
                                             END) AS simple_math
 FROM scores_with_nulls"""
+        )
         self.assert_recipe_csv(recipe, "simple_math\n10\n")
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("refs_division")
-        assert recipe.to_sql() == """SELECT CAST(count(*) AS FLOAT) / 100.0 AS refs_division
+        assert (
+            recipe.to_sql()
+            == """SELECT CAST(count(*) AS FLOAT) / 100.0 AS refs_division
 FROM scores_with_nulls"""
+        )
         self.assert_recipe_csv(recipe, "refs_division\n0.06\n")
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("refs_as_denom")
-        assert recipe.to_sql() == """SELECT CASE
+        assert (
+            recipe.to_sql()
+            == """SELECT CASE
            WHEN (count(*) = 0) THEN NULL
            ELSE 12 / CAST(count(*) AS FLOAT)
        END AS refs_as_denom
 FROM scores_with_nulls"""
+        )
         self.assert_recipe_csv(recipe, "refs_as_denom\n2.0\n")
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("math")
-        assert recipe.to_sql() == """SELECT CASE
+        assert (
+            recipe.to_sql()
+            == """SELECT CASE
            WHEN (count(*) = 0) THEN NULL
            ELSE CAST(count(*) AS FLOAT) / CAST(count(*) AS FLOAT)
        END + 2.5 AS math
 FROM scores_with_nulls"""
+        )
         self.assert_recipe_csv(recipe, "math\n3.5\n")
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("parentheses")
-        assert recipe.to_sql() == """SELECT CASE
+        assert (
+            recipe.to_sql()
+            == """SELECT CASE
            WHEN (count(*) + 6.0 = 0) THEN NULL
            ELSE CAST(count(*) AS FLOAT) / CAST(count(*) + 6.0 AS FLOAT)
        END AS parentheses
 FROM scores_with_nulls"""
+        )
         self.assert_recipe_csv(recipe, "parentheses\n0.5\n")
 
 
@@ -1322,7 +1365,7 @@ class TestParsedIntellligentDates(object):
 
     def test_is_current_year(self):
         """Test current year with a variety of spacing and capitalization"""
-        
+
         data = [
             "is current year",
             "is   current\t  \t year",
@@ -1331,57 +1374,67 @@ class TestParsedIntellligentDates(object):
         ]
 
         for is_current_year in data:
-            shelf = self.parsed_shelf("""
+            shelf = self.parsed_shelf(
+                """
 _version: 2
 test:
     kind: Metric
     field: "if(dt {}, count, 0)"
-""".format(is_current_year))
-            recipe = (
-                Recipe(shelf=shelf, session=self.session).metrics("test")
+""".format(
+                    is_current_year
+                )
             )
+            recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
             today = date.today()
             start_dt = date(today.year, 1, 1)
             end_dt = start_dt + relativedelta(years=1, days=-1)
-            assert recipe.to_sql() == """SELECT sum(CASE
+            assert (
+                recipe.to_sql()
+                == """SELECT sum(CASE
                WHEN (datetester.dt BETWEEN '{}' AND '{}') THEN datetester.count
                ELSE 0
            END) AS test
-FROM datetester""".format(start_dt, end_dt)
+FROM datetester""".format(
+                    start_dt, end_dt
+                )
+            )
             self.assert_recipe_csv(recipe, "test\n12\n")
 
     def test_prior_years(self):
         """Test current year with a variety of spacing and capitalization"""
-        
-        data = [
-            "is prior year ",
-            "is  PREVIOUS year  ",
-            "is Last  Year"
-        ]
+
+        data = ["is prior year ", "is  PREVIOUS year  ", "is Last  Year"]
 
         for is_prior_year in data:
-            shelf = self.parsed_shelf("""
+            shelf = self.parsed_shelf(
+                """
 _version: 2
 test:
     kind: Metric
     field: "if(dt {}, count, 0)"
-""".format(is_prior_year))
-            recipe = (
-                Recipe(shelf=shelf, session=self.session).metrics("test")
+""".format(
+                    is_prior_year
+                )
             )
+            recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
             today = date.today()
-            start_dt = date(today.year-1, 1, 1)
+            start_dt = date(today.year - 1, 1, 1)
             end_dt = start_dt + relativedelta(years=1, days=-1)
-            assert recipe.to_sql() == """SELECT sum(CASE
+            assert (
+                recipe.to_sql()
+                == """SELECT sum(CASE
                WHEN (datetester.dt BETWEEN '{}' AND '{}') THEN datetester.count
                ELSE 0
            END) AS test
-FROM datetester""".format(start_dt, end_dt)
+FROM datetester""".format(
+                    start_dt, end_dt
+                )
+            )
             self.assert_recipe_csv(recipe, "test\n12\n")
 
     def test_ytd(self):
         """Test current year with a variety of spacing and capitalization"""
-        
+
         data = [
             "is current ytd ",
             "is prior ytd  ",
@@ -1392,24 +1445,26 @@ FROM datetester""".format(start_dt, end_dt)
 
         unique_sql = set()
         today = date.today()
-        
+
         for ytd in data:
-            shelf = self.parsed_shelf("""
+            shelf = self.parsed_shelf(
+                """
 _version: 2
 test:
     kind: Metric
     field: "if(dt {}, count, 0)"
-""".format(ytd))
-            recipe = (
-                Recipe(shelf=shelf, session=self.session).metrics("test")
+""".format(
+                    ytd
+                )
             )
+            recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
             self.assert_recipe_csv(recipe, "test\n{}\n".format(today.month))
             unique_sql.add(recipe.to_sql())
         assert len(unique_sql) == 3
 
     def test_is_not(self):
         """Test current year with a variety of spacing and capitalization"""
-        
+
         data = [
             "is current ytd ",
             "is prior ytd  ",
@@ -1420,42 +1475,42 @@ test:
 
         unique_sql = set()
         today = date.today()
-        
+
         for ytd in data:
-            shelf = self.parsed_shelf("""
+            shelf = self.parsed_shelf(
+                """
 _version: 2
 test:
     kind: Metric
     field: "if(not(dt {}), count, 0)"
-""".format(ytd))
-            recipe = (
-                Recipe(shelf=shelf, session=self.session).metrics("test")
+""".format(
+                    ytd
+                )
             )
+            recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
             self.assert_recipe_csv(recipe, "test\n{}\n".format(100 - today.month))
             unique_sql.add(recipe.to_sql())
         assert len(unique_sql) == 3
 
     def test_qtr(self):
         """Quarters are always three months"""
-        data = [
-            "is current qtr",
-            "IS PRIOR Qtr",
-            "Is NEXT QTR"
-        ]
+        data = ["is current qtr", "IS PRIOR Qtr", "Is NEXT QTR"]
 
         unique_sql = set()
         today = date.today()
-        
+
         for ytd in data:
-            shelf = self.parsed_shelf("""
+            shelf = self.parsed_shelf(
+                """
 _version: 2
 test:
     kind: Metric
     field: "if(dt {}, count, 0)"
-""".format(ytd))
-            recipe = (
-                Recipe(shelf=shelf, session=self.session).metrics("test")
+""".format(
+                    ytd
+                )
             )
+            recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
             self.assert_recipe_csv(recipe, "test\n3\n")
             unique_sql.add(recipe.to_sql())
         assert len(unique_sql) == 3

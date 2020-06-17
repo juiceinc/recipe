@@ -82,7 +82,8 @@ base_grammar = """
     %ignore COMMENT
     %ignore WS_INLINE
 """
-base_field_grammar = """
+base_field_grammar = (
+    """
     ?sum: product
         | sum "+" product                      -> add
         | sum "-" product                      -> sub
@@ -92,24 +93,32 @@ base_field_grammar = """
     ?column.0: {boolean_column_defn}           -> boolean_column
         | {string_column_defn}                 -> string_column
         | {column_defn}                        -> column
-""".format(**base_field_grammar_args) + base_grammar
+""".format(
+        **base_field_grammar_args
+    )
+    + base_grammar
+)
 
 
 # A grammar that does not include aggregate expressions
-noag_field_grammar = """
+noag_field_grammar = (
+    """
     ?expr: sum                                 -> expr
     ?atom: const
            | column
            | case
            | "(" sum ")"
-""" + base_field_grammar
+"""
+    + base_field_grammar
+)
 
 
 # Grammar for expressions that allow aggregations
 # for instance:
 # "sum(sales)" or "max(yards) - min(yards)"
 # Aggregations are keys defined in
-agex_field_grammar = """
+agex_field_grammar = (
+    """
     ?expr: agex | sum                          -> expr
     ?agex: aggr "(" sum ")"
         | /count/i "(" STAR ")"                -> agex
@@ -119,7 +128,11 @@ agex_field_grammar = """
            | column
            | case
            | "(" sum ")"
-""".format(**base_field_grammar_args) + base_field_grammar
+""".format(
+        **base_field_grammar_args
+    )
+    + base_field_grammar
+)
 
 
 ambig = "resolve"

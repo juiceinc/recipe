@@ -10,7 +10,13 @@ from .field_grammar import (
     noag_full_condition_parser,
     full_condition_parser,
 )
-from .utils import aggregations, find_column, ingredient_class_for_name, convert_value, calc_date_range
+from .utils import (
+    aggregations,
+    find_column,
+    ingredient_class_for_name,
+    convert_value,
+    calc_date_range,
+)
 from recipe.exceptions import BadIngredient
 
 
@@ -56,7 +62,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def div(self, num, denom):
         """SQL safe division"""
-        if isinstance(denom, (int, float)):            
+        if isinstance(denom, (int, float)):
             if denom == 0:
                 raise ValueError("Denominator can not be zero")
             elif isinstance(num, (int, float)):
@@ -67,7 +73,9 @@ class TransformToSQLAlchemyExpression(Transformer):
             if isinstance(num, (int, float)):
                 return case([(denom == 0, None)], else_=num / cast(denom, Float))
             else:
-                return case([(denom == 0, None)], else_=cast(num, Float) / cast(denom, Float))
+                return case(
+                    [(denom == 0, None)], else_=cast(num, Float) / cast(denom, Float)
+                )
 
     def column(self, name):
         return find_column(self.selectable, name)
@@ -132,7 +140,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         """A relation expression like age is null or
         birth_date is last month"""
         # TODO: Why is this not handled by the tokenization
-        if str(right).upper() == 'NULL':
+        if str(right).upper() == "NULL":
             return left.is_(None)
         else:
             return left.between(*right)

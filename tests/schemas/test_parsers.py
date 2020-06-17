@@ -188,7 +188,7 @@ expr
 """,
         ),
         (
-            'if(age is null,1,0)',
+            "if(age is null,1,0)",
             """
 expr
   case
@@ -203,7 +203,7 @@ expr
 """,
         ),
         (
-            'if(birth_date is prior year,1,0)',
+            "if(birth_date is prior year,1,0)",
             """
 expr
   case
@@ -220,7 +220,7 @@ expr
 """,
         ),
         (
-            'if(not(birth_date is prior year),1,0)',
+            "if(not(birth_date is prior year),1,0)",
             """
 expr
   case
@@ -239,7 +239,7 @@ expr
 """,
         ),
         (
-            'if(birth_date is THIS qtr or age > 12,1,0)',
+            "if(birth_date is THIS qtr or age > 12,1,0)",
             """
 expr
   case
