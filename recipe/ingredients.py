@@ -235,7 +235,7 @@ class Ingredient(object):
             A Filter object
         """
         filter_column = self.columns[0]
-        
+
         # If we pass a string value, convert the column to string for comparison
         if isinstance(value, str) and not isinstance(filter_column.type, String):
             filter_column = cast(filter_column, String)

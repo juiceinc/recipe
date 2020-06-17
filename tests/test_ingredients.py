@@ -204,7 +204,10 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter("moo", "like")
         assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) LIKE :param_1"
         filt = d.build_filter("moo", "ilike")
-        assert str(filt.filters[0]) == "lower(CAST(foo.age AS VARCHAR)) LIKE lower(:param_1)"
+        assert (
+            str(filt.filters[0])
+            == "lower(CAST(foo.age AS VARCHAR)) LIKE lower(:param_1)"
+        )
         # None values get converted to IS
         filt = d.build_filter(None, "eq")
         assert str(filt.filters[0]) == "foo.age IS NULL"
