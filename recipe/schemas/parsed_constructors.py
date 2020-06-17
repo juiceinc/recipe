@@ -56,7 +56,18 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def div(self, num, denom):
         """SQL safe division"""
-        return case([(denom == 0, None)], else_=cast(num, Float) / cast(denom, Float))
+        if isinstance(denom, (int, float)):            
+            if denom == 0:
+                raise ValueError("Denominator can not be zero")
+            elif isinstance(num, (int, float)):
+                return num / denom
+            else:
+                return cast(num, Float) / denom
+        else:
+            if isinstance(num, (int, float)):
+                return case([(denom == 0, None)], else_=num / cast(denom, Float))
+            else:
+                return case([(denom == 0, None)], else_=cast(num, Float) / cast(denom, Float))
 
     def column(self, name):
         return find_column(self.selectable, name)
@@ -141,7 +152,8 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def bool_expr(self, *exprs):
         if len(exprs) > 1:
-            return or_(*exprs)
+            left, _, right = exprs
+            return or_(left, right)
         else:
             return exprs[0]
 
@@ -151,7 +163,8 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def bool_term(self, *exprs):
         if len(exprs) > 1:
-            return and_(*exprs)
+            left, _, right = exprs
+            return and_(left, right)
         else:
             return exprs[0]
 
