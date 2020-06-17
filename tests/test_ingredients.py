@@ -134,6 +134,7 @@ class TestIngredients(object):
 
 class TestIngredientBuildFilter(object):
     def test_scalar_fitler(self):
+        """Test scalar filters on a string dimension """
         d = Dimension(MyTable.first)
 
         # Test building scalar filters
@@ -176,6 +177,98 @@ class TestIngredientBuildFilter(object):
         # Unknown operator
         with pytest.raises(ValueError):
             filt = d.build_filter(["moo"], "cows")
+
+    def test_scalar_fitler_on_int(self):
+        """Test scalar filters on an integer dimension """
+        d = Dimension(MyTable.age)
+
+        # Test building scalar filters
+        filt = d.build_filter("moo")
+        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) = :param_1"
+        filt = d.build_filter("moo", "eq")
+        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) = :param_1"
+        filt = d.build_filter("moo", "ne")
+        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) != :param_1"
+        filt = d.build_filter("moo", "lt")
+        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) < :param_1"
+        filt = d.build_filter("moo", "lte")
+        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) <= :param_1"
+        filt = d.build_filter("moo", "gt")
+        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) > :param_1"
+        filt = d.build_filter("moo", "gte")
+        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) >= :param_1"
+        filt = d.build_filter("moo", "is")
+        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) IS :param_1"
+        filt = d.build_filter("moo", "isnot")
+        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) IS NOT :param_1"
+        filt = d.build_filter("moo", "like")
+        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) LIKE :param_1"
+        filt = d.build_filter("moo", "ilike")
+        assert str(filt.filters[0]) == "lower(CAST(foo.age AS VARCHAR)) LIKE lower(:param_1)"
+        # None values get converted to IS
+        filt = d.build_filter(None, "eq")
+        assert str(filt.filters[0]) == "foo.age IS NULL"
+
+        # str filter values are acceptable
+        filt = d.build_filter(u"Τη γλώσ")
+        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) = :param_1"
+
+        # operator must agree with value
+        with pytest.raises(ValueError):
+            d.build_filter(["moo"], "eq")
+        with pytest.raises(ValueError):
+            d.build_filter(["moo"], "lt")
+
+        # Unknown operator
+        with pytest.raises(ValueError):
+            d.build_filter(["moo"], "cows")
+
+    def test_scalar_fitler_on_int_dim_int_value(self):
+        """Test scalar filters on an integer dimension passing an integer value"""
+        d = Dimension(MyTable.age)
+
+        # Test building scalar filters
+        filt = d.build_filter(5)
+        assert str(filt.filters[0]) == "foo.age = :age_1"
+        filt = d.build_filter(5, "eq")
+        assert str(filt.filters[0]) == "foo.age = :age_1"
+        filt = d.build_filter(5, "ne")
+        assert str(filt.filters[0]) == "foo.age != :age_1"
+        filt = d.build_filter(5, "lt")
+        assert str(filt.filters[0]) == "foo.age < :age_1"
+        filt = d.build_filter(5, "lte")
+        assert str(filt.filters[0]) == "foo.age <= :age_1"
+        filt = d.build_filter(5, "gt")
+        assert str(filt.filters[0]) == "foo.age > :age_1"
+        filt = d.build_filter(5, "gte")
+        assert str(filt.filters[0]) == "foo.age >= :age_1"
+        filt = d.build_filter(5, "is")
+        assert str(filt.filters[0]) == "foo.age IS :age_1"
+        filt = d.build_filter(5, "isnot")
+        assert str(filt.filters[0]) == "foo.age IS NOT :age_1"
+        # None values get converted to IS
+        filt = d.build_filter(None, "eq")
+        assert str(filt.filters[0]) == "foo.age IS NULL"
+
+        # str filter values are acceptable
+        filt = d.build_filter(u"Τη γλώσ")
+        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) = :param_1"
+
+        # operator must agree with value
+        with pytest.raises(ValueError):
+            d.build_filter(["moo"], "eq")
+        with pytest.raises(ValueError):
+            d.build_filter(["moo"], "lt")
+        with pytest.raises(ValueError):
+            # Must pass a string to like
+            d.build_filter(5, "like")
+        with pytest.raises(ValueError):
+            # Must pass a string to ulike
+            d.build_filter(5, "ilike")
+
+        # Unknown operator
+        with pytest.raises(ValueError):
+            d.build_filter(["moo"], "cows")
 
     def test_vector_filter(self):
         d = Dimension(MyTable.first)
