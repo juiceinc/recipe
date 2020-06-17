@@ -238,6 +238,29 @@ expr
       number\t0
 """,
         ),
+        (
+            'if(birth_date is THIS qtr or age > 12,1,0)',
+            """
+expr
+  case
+    bool_expr
+      relation_expr_using_is
+        column\tbirth_date
+        is
+        is_comparison
+          THIS
+          qtr
+      or
+      relation_expr
+        column\tage
+        >
+        number\t12
+    expr
+      number\t1
+    expr
+      number\t0
+""",
+        ),
     ]
     for v, pretty_tree in values:
         tree = field_parser.parse(v)

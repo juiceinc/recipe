@@ -1192,7 +1192,121 @@ GROUP BY first""".format(start_dt, end_dt)
 hi,4,hi
 """,
         )
-        
+
+
+
+class TestParsedSQLGeneration(object):
+    """More tests of SQL generation on complex parsed expressions """
+    def setup(self):
+        self.session = oven.Session()
+
+    def create_shelf(self, config, selectable):
+        return Shelf.from_validated_yaml(config, selectable)
+
+    def assert_recipe_csv(self, recipe, csv_text):
+        assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
+
+    def test_complex_field(self):
+        shelf = self.create_shelf("""
+_version: 2
+count_star:
+    kind: Metric
+    field: "count(*)"
+total_nulls:
+    kind: Metric
+    field: "count_distinct(if(score IS NULL, username))"
+chip_nulls:
+    kind: Metric
+    field: 'sum(if(score IS NULL and username = \"chip\",1,0))'
+chip_or_nulls:
+    kind: Metric
+    field: 'sum(if(score IS NULL OR (username = \"chip\"),1,0))'
+simple_math:
+    kind: Metric
+    field: "@count_star +  @total_nulls   + @chip_nulls"
+refs_division:
+    kind: Metric
+    field: "@count_star / 100.0"
+refs_as_denom:
+    kind: Metric
+    field: "12 / @count_star"
+math:
+    kind: Metric
+    field: "(@count_star / @count_star) + (5.0 / 2.0)"
+parentheses:
+    kind: Metric
+    field: "@count_star / (@count_star + (12.0 / 2.0))"
+
+""", ScoresWithNulls)
+        recipe = Recipe(shelf=shelf, session=self.session).metrics("count_star")
+        assert recipe.to_sql() == """SELECT count(*) AS count_star
+FROM scores_with_nulls"""
+        self.assert_recipe_csv(recipe, "count_star\n6\n")
+
+        recipe = Recipe(shelf=shelf, session=self.session).metrics("total_nulls")
+        assert recipe.to_sql() == """SELECT count(DISTINCT CASE
+                          WHEN (scores_with_nulls.score IS NULL) THEN scores_with_nulls.username
+                      END) AS total_nulls
+FROM scores_with_nulls"""
+        self.assert_recipe_csv(recipe, "total_nulls\n3\n")
+
+        recipe = Recipe(shelf=shelf, session=self.session).metrics("chip_nulls")
+        assert recipe.to_sql() == """SELECT sum(CASE
+               WHEN (scores_with_nulls.score IS NULL
+                     AND scores_with_nulls.username = 'chip') THEN 1
+               ELSE 0
+           END) AS chip_nulls
+FROM scores_with_nulls"""
+        self.assert_recipe_csv(recipe, "chip_nulls\n1\n")
+
+        recipe = Recipe(shelf=shelf, session=self.session).metrics("chip_or_nulls")
+        assert recipe.to_sql() == """SELECT sum(CASE
+               WHEN (scores_with_nulls.score IS NULL
+                     OR scores_with_nulls.username = 'chip') THEN 1
+               ELSE 0
+           END) AS chip_or_nulls
+FROM scores_with_nulls"""
+        self.assert_recipe_csv(recipe, "chip_or_nulls\n5\n")
+
+        recipe = Recipe(shelf=shelf, session=self.session).metrics("simple_math")
+        assert recipe.to_sql() == """SELECT count(*) + count(DISTINCT CASE
+                                     WHEN (scores_with_nulls.score IS NULL) THEN scores_with_nulls.username
+                                 END) + sum(CASE
+                                                WHEN (scores_with_nulls.score IS NULL
+                                                      AND scores_with_nulls.username = 'chip') THEN 1
+                                                ELSE 0
+                                            END) AS simple_math
+FROM scores_with_nulls"""
+        self.assert_recipe_csv(recipe, "simple_math\n10\n")
+
+        recipe = Recipe(shelf=shelf, session=self.session).metrics("refs_division")
+        assert recipe.to_sql() == """SELECT CAST(count(*) AS FLOAT) / 100.0 AS refs_division
+FROM scores_with_nulls"""
+        self.assert_recipe_csv(recipe, "refs_division\n0.06\n")
+
+        recipe = Recipe(shelf=shelf, session=self.session).metrics("refs_as_denom")
+        assert recipe.to_sql() == """SELECT CASE
+           WHEN (count(*) = 0) THEN NULL
+           ELSE 12 / CAST(count(*) AS FLOAT)
+       END AS refs_as_denom
+FROM scores_with_nulls"""
+        self.assert_recipe_csv(recipe, "refs_as_denom\n2.0\n")
+
+        recipe = Recipe(shelf=shelf, session=self.session).metrics("math")
+        assert recipe.to_sql() == """SELECT CASE
+           WHEN (count(*) = 0) THEN NULL
+           ELSE CAST(count(*) AS FLOAT) / CAST(count(*) AS FLOAT)
+       END + 2.5 AS math
+FROM scores_with_nulls"""
+        self.assert_recipe_csv(recipe, "math\n3.5\n")
+
+        recipe = Recipe(shelf=shelf, session=self.session).metrics("parentheses")
+        assert recipe.to_sql() == """SELECT CASE
+           WHEN (count(*) + 6.0 = 0) THEN NULL
+           ELSE CAST(count(*) AS FLOAT) / CAST(count(*) + 6.0 AS FLOAT)
+       END AS parentheses
+FROM scores_with_nulls"""
+        self.assert_recipe_csv(recipe, "parentheses\n0.5\n")
 
 
 class TestParsedIntellligentDates(object):
@@ -1234,12 +1348,7 @@ test:
                ELSE 0
            END) AS test
 FROM datetester""".format(start_dt, end_dt)
-            print(recipe.dataset.csv)
-            self.assert_recipe_csv(
-                recipe,
-                """test
-12
-""")
+            self.assert_recipe_csv(recipe, "test\n12\n")
 
     def test_prior_years(self):
         """Test current year with a variety of spacing and capitalization"""

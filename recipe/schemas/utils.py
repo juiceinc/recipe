@@ -214,9 +214,9 @@ def calc_date_range(offset, units, dt):
     Args:
 
         offset: An offset
-            current|this mean the current period
-            prior|previous|last mean the previous period
-            next means the next period
+            current|this options for the current period
+            prior|previous|last options for the previous period
+            next options the next period
         units: The kind of date range to create
             year: A full year
             ytd: The year up to the provided date
@@ -224,12 +224,14 @@ def calc_date_range(offset, units, dt):
             month: The full month of the provided date
             mtd: The month up to the provided date
             day: The provided date
-        today
+        dt
+            The date that will be used for calculations
             
     Returns:
 
-        A tuple of dates constructed using the 
+        A tuple of dates constructed using the offsets and units
     """
+    # TODO: Add a week unit
     if units == 'year':
         dt = date_offset(dt, offset, years=1)
         return date(dt.year, 1, 1), date(dt.year, 12, 31)
