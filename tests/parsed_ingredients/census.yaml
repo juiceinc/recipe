@@ -34,7 +34,7 @@ mixed_buckets:
     - label: 'babies'
       condition: '<2'
     - label: 'children'
-      condition: '<13'
+      condition: 'in (2,3,4,5,6,7,8,9,10,11,12)'
     - label: 'teens'
       condition: '<20'
     buckets_default_label: 'oldsters'
