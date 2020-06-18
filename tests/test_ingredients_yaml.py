@@ -1240,9 +1240,13 @@ class TestParsedSQLGeneration(object):
         assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
 
     def test_complex_field(self):
+        """Test parsed field definitions that use math, field references and more"""
         shelf = self.create_shelf(
             """
 _version: 2
+username:
+    kind: Dimension
+    field: username
 count_star:
     kind: Metric
     field: "count(*)"
@@ -1270,7 +1274,6 @@ math:
 parentheses:
     kind: Metric
     field: "@count_star / (@count_star + (12.0 / 2.0))"
-
 """,
             ScoresWithNulls,
         )
@@ -1370,6 +1373,55 @@ FROM scores_with_nulls"""
 FROM scores_with_nulls"""
         )
         self.assert_recipe_csv(recipe, "parentheses\n0.5\n")
+
+    def test_selectables(self):
+        """Test parsed field definitions built on top of other selectables"""
+        shelf = self.create_shelf(
+            """
+_version: 2
+username:
+    kind: Dimension
+    field: username
+count_star:
+    kind: Metric
+    field: "count(*)"
+""",
+            ScoresWithNulls,
+        )
+        recipe = Recipe(shelf=shelf, session=self.session).dimensions("username").metrics("count_star")        
+        assert (
+            recipe.to_sql()
+            == """SELECT scores_with_nulls.username AS username,
+       count(*) AS count_star
+FROM scores_with_nulls
+GROUP BY username"""
+        )
+        self.assert_recipe_csv(recipe, """username,count_star,username_id
+annika,2,annika
+chip,3,chip
+chris,1,chris
+""")
+
+        # Build a recipe using the first recipe
+        shelf2 = self.create_shelf("""
+_version: 2
+count_star:
+    kind: Metric
+    field: "count(*)"
+max_username:
+    kind: Metric
+    field: "max(username)"        
+""", recipe)
+        recipe2 = Recipe(shelf=shelf2, session=self.session).metrics("count_star", "max_username")
+        print("two")
+        assert recipe2.to_sql() == """SELECT count(*) AS count_star,
+       max(anon_1.username) AS max_username
+FROM
+  (SELECT scores_with_nulls.username AS username,
+          count(*) AS count_star
+   FROM scores_with_nulls
+   GROUP BY username) AS anon_1"""
+        self.assert_recipe_csv(recipe2, "count_star,max_username\n3,chris\n")
 
 
 class TestParsedIntellligentDates(object):
