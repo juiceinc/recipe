@@ -1,8 +1,9 @@
 from functools import total_ordering
 from uuid import uuid4
 
-from sqlalchemy import Float, and_, between, case, cast, func, or_, text
+from sqlalchemy import Float, String, and_, between, case, cast, func, or_, text
 
+from six import string_types
 from recipe.compat import str
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict
@@ -236,6 +237,12 @@ class Ingredient(object):
         """
         filter_column = self.columns[0]
 
+        # If we pass a string value, convert the column to string for comparison
+        if isinstance(value, string_types) and not isinstance(
+            filter_column.type, String
+        ):
+            filter_column = cast(filter_column, String)
+
         if operator is None or operator == "eq":
             # Default operator is 'eq' so if no operator is provided, handle
             # like an 'eq'
@@ -258,8 +265,12 @@ class Ingredient(object):
         elif operator == "isnot":
             return Filter(filter_column.isnot(value))
         elif operator == "like":
+            if not isinstance(value, string_types):
+                raise ValueError("Building a filter with like must use a str value")
             return Filter(filter_column.like(value))
         elif operator == "ilike":
+            if not isinstance(value, string_types):
+                raise ValueError("Building a filter with ilike must use a str value")
             return Filter(filter_column.ilike(value))
         elif operator == "quickselect":
             for qs in self.quickselects:
