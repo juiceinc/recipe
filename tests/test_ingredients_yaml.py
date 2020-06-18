@@ -1388,7 +1388,11 @@ count_star:
 """,
             ScoresWithNulls,
         )
-        recipe = Recipe(shelf=shelf, session=self.session).dimensions("username").metrics("count_star")        
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("username")
+            .metrics("count_star")
+        )
         assert (
             recipe.to_sql()
             == """SELECT scores_with_nulls.username AS username,
@@ -1396,14 +1400,18 @@ count_star:
 FROM scores_with_nulls
 GROUP BY username"""
         )
-        self.assert_recipe_csv(recipe, """username,count_star,username_id
+        self.assert_recipe_csv(
+            recipe,
+            """username,count_star,username_id
 annika,2,annika
 chip,3,chip
 chris,1,chris
-""")
+""",
+        )
 
         # Build a recipe using the first recipe
-        shelf2 = self.create_shelf("""
+        shelf2 = self.create_shelf(
+            """
 _version: 2
 count_star:
     kind: Metric
@@ -1411,16 +1419,23 @@ count_star:
 max_username:
     kind: Metric
     field: "max(username)"        
-""", recipe)
-        recipe2 = Recipe(shelf=shelf2, session=self.session).metrics("count_star", "max_username")
+""",
+            recipe,
+        )
+        recipe2 = Recipe(shelf=shelf2, session=self.session).metrics(
+            "count_star", "max_username"
+        )
         print("two")
-        assert recipe2.to_sql() == """SELECT count(*) AS count_star,
+        assert (
+            recipe2.to_sql()
+            == """SELECT count(*) AS count_star,
        max(anon_1.username) AS max_username
 FROM
   (SELECT scores_with_nulls.username AS username,
           count(*) AS count_star
    FROM scores_with_nulls
    GROUP BY username) AS anon_1"""
+        )
         self.assert_recipe_csv(recipe2, "count_star,max_username\n3,chris\n")
 
 

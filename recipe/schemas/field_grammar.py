@@ -8,7 +8,7 @@ aggr_keys.sort(key=lambda item: (len(item), item), reverse=True)
 allowed_aggr_keys = "|".join(aggr_keys)
 
 
-# TODO: We may want to match columns based on fields that exist in 
+# TODO: We may want to match columns based on fields that exist in
 # a source table. Allowing column definition to be changed is a start.
 column_defn = "NAME"
 base_field_grammar_args = {
