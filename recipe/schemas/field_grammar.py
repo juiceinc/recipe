@@ -8,13 +8,11 @@ aggr_keys.sort(key=lambda item: (len(item), item), reverse=True)
 allowed_aggr_keys = "|".join(aggr_keys)
 
 
-boolean_column_defn = "/NOMATCHBOOL/"
-string_column_defn = "/NOMATCHSTRING/"
+# TODO: We may want to match columns based on fields that exist in 
+# a source table. Allowing column definition to be changed is a start.
 column_defn = "NAME"
 base_field_grammar_args = {
     "allowed_aggr_keys": allowed_aggr_keys,
-    "boolean_column_defn": boolean_column_defn,
-    "string_column_defn": string_column_defn,
     "column_defn": column_defn,
 }
 
@@ -90,9 +88,7 @@ base_field_grammar = (
     ?product: atom
            | product "*" atom                  -> mul
            | product "/" atom                  -> div
-    ?column.0: {boolean_column_defn}           -> boolean_column
-        | {string_column_defn}                 -> string_column
-        | {column_defn}                        -> column
+    ?column.0: {column_defn}                   -> column
 """.format(
         **base_field_grammar_args
     )
@@ -133,7 +129,6 @@ agex_field_grammar = (
     )
     + base_field_grammar
 )
-
 
 ambig = "resolve"
 
