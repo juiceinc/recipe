@@ -47,7 +47,6 @@ base_grammar = """
     ?array:                "(" [const ("," const)*] ")"
     ?comparator: EQ | NE | LT | LTE | GT | GTE
     ?vector_comparator.1: IN | NOTIN
-    ?is_comparator.1: IS
     ?is_comparison.1: NULL | INTELLIGENT_DATE_OFFSET INTELLIGENT_DATE_UNITS
     NOTIN: NOT IN
     OR: /OR/i
