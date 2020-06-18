@@ -308,12 +308,12 @@ class TestIngredientBuildFilter(object):
         assert str(filt.filters[0]) == "foo.first BETWEEN :first_1 AND :first_2"
 
         with pytest.raises(ValueError):
-            filt = d.build_filter("moo", "in")
+            d.build_filter("moo", "in")
         # Between must have 2 values
         with pytest.raises(ValueError):
-            filt = d.build_filter(["moo", "foo", "tru"], operator="between")
+            d.build_filter(["moo", "foo", "tru"], operator="between")
         with pytest.raises(ValueError):
-            filt = d.build_filter(["moo"], operator="between")
+            d.build_filter(["moo"], operator="between")
 
     def test_quickselects(self):
         d = Dimension(
