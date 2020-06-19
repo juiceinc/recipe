@@ -2,6 +2,16 @@
 Changelog
 =========
 
+0.16.0 (2020-06-19)
+-----------------------------------------
+* Ignore order_by on a recipe if the ingredient has not been added to the dimensions or metrics.
+* Allows case insensitivity in "kind:" and support "kind: Measure" as an alternative to "kind: Metric"
+* Fix like/ilike and pagination_q filtering against dimensions that have a non-string ID.
+* Fix parsed sql generation for AND and OR
+* Fix parsed sql generation for division when one of the terms is a constant (like sum(people) / 100.0)
+* Adds IS NULL as a boolean expression 
+* Adds "Intelligent date" calculations to allow more useful date calculations relative to current date
+
 0.15.0 (2020-05-08)
 -----------------------------------------
 * Ignore order_by if ingredients have not been added
