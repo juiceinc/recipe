@@ -2,6 +2,8 @@ from sqlalchemy import Column, Date, DateTime, Float, Integer, String, distinct,
 from sqlalchemy.ext.declarative import declarative_base
 
 from recipe import Dimension, Metric, Shelf, get_oven
+from datetime import date
+from dateutil.relativedelta import relativedelta
 
 oven = get_oven("sqlite://")
 Base = declarative_base(bind=oven.engine)
@@ -19,6 +21,22 @@ oven.engine.execute(TABLEDEF)
 oven.engine.execute(
     "insert into foo values ('hi', 'there', 5, '2005-01-01', '2005-01-01 12:15:00'), ('hi', 'fred', 10, '2015-05-15', '2013-10-15 05:20:10')"
 )
+
+
+# Test dynamic date filtering
+TABLEDEF = """
+        CREATE TABLE IF NOT EXISTS datetester
+        (dt date,
+         count integer);
+"""
+
+oven.engine.execute(TABLEDEF)
+start_dt = date(date.today().year, date.today().month, 1)
+# Add dates for the 50 months around the current date
+for offset_month in range(-50, 50):
+    dt = start_dt + relativedelta(months=offset_month)
+    oven.engine.execute("insert into datetester values ('{}', 1)".format(dt))
+
 
 # Create a table for testing summarization
 TABLEDEF = """
@@ -338,6 +356,13 @@ class Census(Base):
     pop2008 = Column("pop2008", Integer())
 
     __tablename__ = "census"
+    __table_args__ = {"extend_existing": True}
+
+
+class DateTester(Base):
+    dt = Column("dt", Date(), primary_key=True)
+    count = Column("count", Integer())
+    __tablename__ = "datetester"
     __table_args__ = {"extend_existing": True}
 
 

@@ -1,6 +1,8 @@
 """Convert parsed trees into SQLAlchemy objects """
 from lark import Lark, Transformer, v_args
 from sqlalchemy import func, distinct, case, and_, or_, not_, cast, Float
+from datetime import date
+from dateutil.relativedelta import relativedelta
 
 from .field_grammar import (
     field_parser,
@@ -8,7 +10,13 @@ from .field_grammar import (
     noag_full_condition_parser,
     full_condition_parser,
 )
-from .utils import aggregations, find_column, ingredient_class_for_name, convert_value
+from .utils import (
+    aggregations,
+    find_column,
+    ingredient_class_for_name,
+    convert_value,
+    calc_date_range,
+)
 from recipe.exceptions import BadIngredient
 
 
@@ -34,14 +42,17 @@ class TransformToSQLAlchemyExpression(Transformer):
     def false(self, value):
         return False
 
-    def null(self, value):
-        return None
-
     def IN(self, value):
         return "IN"
 
     def NOTIN(self, value):
         return "NOTIN"
+
+    def IS(self, value):
+        return "IS"
+
+    def NULL(self, value):
+        return None
 
     def BETWEEN(self, value):
         return "BETWEEN"
@@ -51,7 +62,20 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def div(self, num, denom):
         """SQL safe division"""
-        return case([(denom == 0, None)], else_=cast(num, Float) / cast(denom, Float))
+        if isinstance(denom, (int, float)):
+            if denom == 0:
+                raise ValueError("Denominator can not be zero")
+            elif isinstance(num, (int, float)):
+                return num / denom
+            else:
+                return cast(num, Float) / denom
+        else:
+            if isinstance(num, (int, float)):
+                return case([(denom == 0, None)], else_=num / cast(denom, Float))
+            else:
+                return case(
+                    [(denom == 0, None)], else_=cast(num, Float) / cast(denom, Float)
+                )
 
     def column(self, name):
         return find_column(self.selectable, name)
@@ -79,7 +103,25 @@ class TransformToSQLAlchemyExpression(Transformer):
         pairs = zip(args[::2], args[1::2])
         return case(pairs, else_=else_expr)
 
+    def is_comparison(self, *args):
+        """Things that can be compared with IS
+        
+        will be either IS NULL or an intelligent date
+        like "IS prior year" or "IS next week".
+
+        If intelligent dates are used, determine the relevant dates and 
+        return a tuple of start_date, end_date
+        """
+        if len(args) == 1 and args[0] is None:
+            return None
+        else:
+            # INTELLIGENT_DATE_OFFSET: /prior/i | /current/i | /next/i
+            # INTELLIGENT_DATE_UNITS: /ytd/i | /year/i | /qtr/i | /month/i | /week/i | /day/i
+            offset, units = str(args[0]).lower(), str(args[1]).lower()
+            return calc_date_range(offset, units, date.today())
+
     def relation_expr(self, left, rel, right):
+        rel = rel.lower()
         comparators = {
             "=": "__eq__",
             ">": "__gt__",
@@ -93,6 +135,15 @@ class TransformToSQLAlchemyExpression(Transformer):
         # Convert the right into a type compatible with the left
         right = convert_value(left, right)
         return getattr(left, comparators[rel])(right)
+
+    def relation_expr_using_is(self, left, rel, right):
+        """A relation expression like age is null or
+        birth_date is last month"""
+        # TODO: Why is this not handled by the tokenization
+        if str(right).upper() == "NULL":
+            return left.is_(None)
+        else:
+            return left.between(*right)
 
     def array(self, *args):
         # TODO  check these are all the same type
@@ -109,7 +160,8 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def bool_expr(self, *exprs):
         if len(exprs) > 1:
-            return or_(*exprs)
+            left, _, right = exprs
+            return or_(left, right)
         else:
             return exprs[0]
 
@@ -119,11 +171,12 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def bool_term(self, *exprs):
         if len(exprs) > 1:
-            return and_(*exprs)
+            left, _, right = exprs
+            return and_(left, right)
         else:
             return exprs[0]
 
-    def not_bool_factor(self, expr):
+    def not_bool_factor(self, notval, expr):
         return not_(expr)
 
 

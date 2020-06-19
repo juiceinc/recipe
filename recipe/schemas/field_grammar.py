@@ -8,8 +8,19 @@ aggr_keys.sort(key=lambda item: (len(item), item), reverse=True)
 allowed_aggr_keys = "|".join(aggr_keys)
 
 
-# Grammar for boolean expressions
-boolean_expr_grammar = """
+# TODO: We may want to match columns based on fields that exist in
+# a source table. Allowing column definition to be changed is a start.
+column_defn = "NAME"
+base_field_grammar_args = {
+    "allowed_aggr_keys": allowed_aggr_keys,
+    "column_defn": column_defn,
+}
+
+
+# Base grammar for boolean expressions
+# This grammar depends on a definition of atom which will be
+# added in the field grammars
+base_grammar = """
     ?start: bool_expr | partial_relation_expr
 
     // Pairs of boolean expressions and expressions
@@ -28,13 +39,16 @@ boolean_expr_grammar = """
     ?partial_relation_expr.0: comparator atom
                 | vector_comparator array
                 | BETWEEN atom AND atom
+                | IS is_comparison
     ?relation_expr.1:        atom comparator atom
+                           | atom IS is_comparison   -> relation_expr_using_is
     ?vector_relation_expr.1: atom vector_comparator array
     ?between_relation_expr.1: atom BETWEEN atom AND atom
-    ?pair_array:           "(" const "," const ")"            -> array
     ?array:                "(" [const ("," const)*] ")"
     ?comparator: EQ | NE | LT | LTE | GT | GTE
     ?vector_comparator.1: IN | NOTIN
+    ?is_comparison.1: NULL | INTELLIGENT_DATE_OFFSET INTELLIGENT_DATE_UNITS
+    NOTIN: NOT IN
     OR: /OR/i
     AND: /AND/i
     NOT: /NOT/i
@@ -45,29 +59,16 @@ boolean_expr_grammar = """
     GT: ">"
     GTE: ">="
     IN: /IN/i
-    NOTIN: NOT IN
+    IS: /IS/i
     BETWEEN: /BETWEEN/i
-"""
+    NULL: /NULL/i
+    INTELLIGENT_DATE_OFFSET: /prior/i | /last/i | /previous/i | /current/i | /this/i | /next/i
+    INTELLIGENT_DATE_UNITS: /ytd/i | /year/i | /qtr/i | /month/i | /mtd/i | /day/i
 
-noag_field_grammar = (
-    """
-    ?expr: sum                                 -> expr
-    ?sum: product
-        | sum "+" product                      -> add
-        | sum "-" product                      -> sub
-    ?product: atom
-           | product "*" atom                  -> mul
-           | product "/" atom                  -> div
-    ?atom: const
-           | column
-           | case
-           | "(" sum ")"
-    ?column.0:  NAME                           -> column
     ?const.1: NUMBER                           -> number
             | ESCAPED_STRING                   -> string_literal
             | /true/i                          -> true
             | /false/i                         -> false
-            | /null/i                          -> null
     STAR: "*"
     COMMENT: /#.*/
 
@@ -78,7 +79,32 @@ noag_field_grammar = (
     %ignore COMMENT
     %ignore WS_INLINE
 """
-    + boolean_expr_grammar
+base_field_grammar = (
+    """
+    ?sum: product
+        | sum "+" product                      -> add
+        | sum "-" product                      -> sub
+    ?product: atom
+           | product "*" atom                  -> mul
+           | product "/" atom                  -> div
+    ?column.0: {column_defn}                   -> column
+""".format(
+        **base_field_grammar_args
+    )
+    + base_grammar
+)
+
+
+# A grammar that does not include aggregate expressions
+noag_field_grammar = (
+    """
+    ?expr: sum                                 -> expr
+    ?atom: const
+           | column
+           | case
+           | "(" sum ")"
+"""
+    + base_field_grammar
 )
 
 
@@ -91,41 +117,17 @@ agex_field_grammar = (
     ?expr: agex | sum                          -> expr
     ?agex: aggr "(" sum ")"
         | /count/i "(" STAR ")"                -> agex
-    ?sum: product
-        | sum "+" product                      -> add
-        | sum "-" product                      -> sub
-    ?product: atom
-           | product "*" atom                  -> mul
-           | product "/" atom                  -> div
-
     ?aggr:  /({allowed_aggr_keys})/i           -> aggregate
     ?atom: agex
            | const
            | column
            | case
            | "(" sum ")"
-    ?column.0:  NAME                           -> column
-    ?const.1: NUMBER                           -> number
-            | ESCAPED_STRING                   -> string_literal
-            | /true/i                          -> true
-            | /false/i                         -> false
-            | /null/i                          -> null
-
-    STAR: "*"
-    COMMENT: /#.*/
-
-    %import common.CNAME                       -> NAME
-    %import common.SIGNED_NUMBER               -> NUMBER
-    %import common.ESCAPED_STRING
-    %import common.WS_INLINE
-    %ignore COMMENT
-    %ignore WS_INLINE
 """.format(
-        allowed_aggr_keys=allowed_aggr_keys
+        **base_field_grammar_args
     )
-    + boolean_expr_grammar
+    + base_field_grammar
 )
-
 
 ambig = "resolve"
 

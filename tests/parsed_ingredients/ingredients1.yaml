@@ -14,3 +14,9 @@ date_between:
 dt_between:
     kind: Metric
     field: 'if(birth_date between "20 years ago" and "now", age)'
+dt_test:
+    kind: Metric
+    field: 'if(birth_date is NULL, age, 1)'
+intelligent_date_test:
+    kind: Metric
+    field: 'if(birth_date is prior year, age, 2)'
