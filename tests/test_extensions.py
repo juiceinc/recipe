@@ -656,6 +656,31 @@ OFFSET 1"""
             "totalItems": 2,
         }
 
+    def test_pagination_nodata(self):
+        """What does pagination do when there is no data"""
+        recipe = (
+            self.recipe().metrics("pop2000").dimensions("age")\
+                .filters("filter_all")\
+                .pagination_page_size(10)
+        )
+        print(recipe.to_sql())
+        assert (
+            recipe.to_sql()
+            == """SELECT census.age AS age,
+       sum(census.pop2000) AS pop2000
+FROM census
+WHERE 0 = 1
+GROUP BY age
+LIMIT 10
+OFFSET 0"""
+        )
+        assert recipe.validated_pagination() == {
+            "page": 1,
+            "pageSize": 10,
+            "requestedPage": 1,
+            "totalItems": 0,
+        }
+
     def test_apply_pagination(self):
         recipe = (
             self.recipe()

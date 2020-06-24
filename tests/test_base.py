@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Date, DateTime, Float, Integer, String, distinct, func
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import Dimension, Metric, Shelf, get_oven
+from recipe import Dimension, Metric, Filter, Shelf, get_oven
 from datetime import date
 from dateutil.relativedelta import relativedelta
 
@@ -440,6 +440,7 @@ census_shelf = Shelf(
         "pop2000": Metric(func.sum(Census.pop2000)),
         "pop2000_sum": Metric(func.sum(Census.pop2000), summary_aggregation=func.sum),
         "pop2008": Metric(func.sum(Census.pop2008)),
+        "filter_all": Filter(1 == 0)
     }
 )
 
