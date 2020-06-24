@@ -13,6 +13,7 @@ from .utils import (
     find_column,
     ingredient_class_for_name,
 )
+from recipe.ingredients import InvalidIngredient
 
 
 # constant used for ensuring safe division
@@ -185,4 +186,13 @@ def create_ingredient_from_config(ingr_dict, selectable):
             extra.get("field"), selectable
         )
 
-    return IngredientClass(*args, **ingr_dict)
+    try:
+        return IngredientClass(*args, **ingr_dict)
+    except BadIngredient as e:
+        error = {
+            "type": "bad_ingredient",
+            "extra": {
+                "details": str(e),
+            }
+        }
+        return InvalidIngredient(error=error)

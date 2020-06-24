@@ -18,6 +18,7 @@ from .utils import (
     calc_date_range,
 )
 from recipe.exceptions import BadIngredient
+from recipe.ingredients import InvalidIngredient
 
 
 @v_args(inline=True)  # Affects the signatures of the methods
@@ -235,4 +236,13 @@ def create_ingredient_from_parsed(ingr_dict, selectable):
             )
         ]
 
-    return IngredientClass(*args, **ingr_dict)
+    try:
+        return IngredientClass(*args, **ingr_dict)
+    except BadIngredient as e:
+        error = {
+            "type": "bad_ingredient",
+            "extra": {
+                "details": str(e),
+            }
+        }
+        return InvalidIngredient(error=error)

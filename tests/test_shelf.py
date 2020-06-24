@@ -591,6 +591,23 @@ invalid_in_referred:
             self.shelf["invalid_in_referred"].error["extra"]["column_name"] == "invalid"
         )
 
+    def test_invalid_definition(self):
+        content = """
+oldage:
+    kind: Metric
+    field:
+        value: age
+invalid:
+    kind: Dimension
+    field: age
+    lookup: moo
+"""
+        self.make_shelf(content)
+        assert isinstance(self.shelf["oldage"], Metric)
+        assert isinstance(self.shelf["invalid"], InvalidIngredient)
+        print(self.shelf["invalid"].error)
+        assert self.shelf["invalid"].error["extra"]["details"] == "lookup must be a dictionary"
+
 
 class TestShelfFromConfig(TestShelfFromValidatedYaml):
     def make_shelf(self, content, table=MyTable):
