@@ -239,10 +239,5 @@ def create_ingredient_from_parsed(ingr_dict, selectable):
     try:
         return IngredientClass(*args, **ingr_dict)
     except BadIngredient as e:
-        error = {
-            "type": "bad_ingredient",
-            "extra": {
-                "details": str(e),
-            }
-        }
+        error = {"type": "bad_ingredient", "extra": {"details": str(e),}}
         return InvalidIngredient(error=error)

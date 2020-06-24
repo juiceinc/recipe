@@ -606,7 +606,10 @@ invalid:
         assert isinstance(self.shelf["oldage"], Metric)
         assert isinstance(self.shelf["invalid"], InvalidIngredient)
         print(self.shelf["invalid"].error)
-        assert self.shelf["invalid"].error["extra"]["details"] == "lookup must be a dictionary"
+        assert (
+            self.shelf["invalid"].error["extra"]["details"]
+            == "lookup must be a dictionary"
+        )
 
 
 class TestShelfFromConfig(TestShelfFromValidatedYaml):
