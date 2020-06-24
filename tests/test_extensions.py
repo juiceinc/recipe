@@ -659,9 +659,11 @@ OFFSET 1"""
     def test_pagination_nodata(self):
         """What does pagination do when there is no data"""
         recipe = (
-            self.recipe().metrics("pop2000").dimensions("age")\
-                .filters("filter_all")\
-                .pagination_page_size(10)
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("age")
+            .filters("filter_all")
+            .pagination_page_size(10)
         )
         print(recipe.to_sql())
         assert (

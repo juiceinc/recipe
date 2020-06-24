@@ -440,7 +440,7 @@ census_shelf = Shelf(
         "pop2000": Metric(func.sum(Census.pop2000)),
         "pop2000_sum": Metric(func.sum(Census.pop2000), summary_aggregation=func.sum),
         "pop2008": Metric(func.sum(Census.pop2008)),
-        "filter_all": Filter(1 == 0)
+        "filter_all": Filter(1 == 0),
     }
 )
 
