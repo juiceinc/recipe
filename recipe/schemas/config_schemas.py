@@ -296,7 +296,7 @@ def _move_buckets_to_field(value):
     """ Move buckets from a dimension into the field """
     # return value
     buckets = value.pop("buckets", None)
-    buckets_default_label = value.pop("buckets_default_label", None)
+    buckets_default_label = value.pop("buckets_default_label", "Not found")
     if buckets:
         if "field" in value:
             value["field"]["buckets"] = buckets

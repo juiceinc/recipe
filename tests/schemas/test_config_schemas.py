@@ -194,6 +194,7 @@ def test_field_buckets_ref():
                         "lt": 200,
                     }
                 ],
+                "buckets_default_label": "Not found",
                 "value": "moo",
             },
             "kind": "dimension",
@@ -390,7 +391,6 @@ def test_dimension_buckets():
     }
 
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
-
     # The dimension field gets inserted into the buckets
     assert x == {
         "a": {
@@ -405,6 +405,7 @@ def test_dimension_buckets():
                         "label": "over20",
                     }
                 ],
+                "buckets_default_label": "Not found",
                 "value": "foo",
             },
             "icon": "squee",
