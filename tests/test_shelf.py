@@ -611,6 +611,7 @@ invalid:
             == "raw is a reserved role in dimensions"
         )
 
+
 class TestShelfFromConfig(TestShelfFromValidatedYaml):
     def make_shelf(self, content, table=MyTable):
         obj = safe_load(content)
