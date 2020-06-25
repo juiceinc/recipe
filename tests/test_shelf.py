@@ -600,17 +600,16 @@ oldage:
 invalid:
     kind: Dimension
     field: age
-    lookup: moo
+    # raw_field is a reserved name and can't be assigned in config.
+    raw_field: first
 """
         self.make_shelf(content)
         assert isinstance(self.shelf["oldage"], Metric)
         assert isinstance(self.shelf["invalid"], InvalidIngredient)
-        print(self.shelf["invalid"].error)
         assert (
             self.shelf["invalid"].error["extra"]["details"]
-            == "lookup must be a dictionary"
+            == "raw is a reserved role in dimensions"
         )
-
 
 class TestShelfFromConfig(TestShelfFromValidatedYaml):
     def make_shelf(self, content, table=MyTable):

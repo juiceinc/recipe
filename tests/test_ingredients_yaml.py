@@ -14,6 +14,7 @@ from tests.test_base import Census, MyTable, oven, ScoresWithNulls, DateTester
 from recipe import (
     AutomaticFilters,
     BadIngredient,
+    InvalidIngredient,
     Recipe,
     Shelf,
     BadRecipe,
@@ -1134,6 +1135,19 @@ Tennessee,0.38567639950103244,The Volunteer State,Tennessee
 Vermont,0.4374284968466102,The Green Mountain State,Vermont
 """,
         )
+
+    def test_shelf_with_invalidingredient(self):
+        """Build a recipe using a shelf that uses field references """
+        shelf = self.validated_shelf("census.yaml", Census)
+        assert isinstance(shelf["baddim"], InvalidIngredient)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("baddim")
+            .metrics("pop2000")
+        )
+        # Trying to run the recipe raises an exception with the bad ingredient details
+        with pytest.raises(BadIngredient):
+            recipe.to_sql()
 
     def test_complex_census_from_validated_yaml_math(self):
         """Build a recipe that uses complex definitions dimensions and
