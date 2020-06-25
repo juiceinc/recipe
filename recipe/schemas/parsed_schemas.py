@@ -252,6 +252,7 @@ dimension_schema = S.Dict(
         "buckets": S.List(required=False, schema=labeled_condition_schema),
         "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
         "format": format_schema,
+        "lookup": S.Dict(required=False),
         "quickselects": S.List(required=False, schema=named_condition_schema),
     },
     coerce=_chain(move_extra_fields, _convert_partial_conditions),

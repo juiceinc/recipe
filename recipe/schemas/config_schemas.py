@@ -456,6 +456,7 @@ ingredient_schema_choices = {
             "buckets": S.List(required=False, schema="labeled_condition"),
             "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
             "format": S.String(coerce=coerce_format, required=False),  # noqa: E123
+            "lookup": S.Dict(required=False),
             "quickselects": quickselect_schema,
         },
     ),
