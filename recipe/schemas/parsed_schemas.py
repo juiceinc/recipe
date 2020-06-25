@@ -107,6 +107,8 @@ def _convert_bucket_to_field(bucket, bucket_default_label, use_indices=False):
         idx += 1
 
     # Add the default value
+    if bucket_default_label is None:
+        bucket_default_label = "Not found"
     if use_indices:
         parts.append(str(9999))
     else:

@@ -150,7 +150,7 @@ test:
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert (
         result["test"]["field"]
-        == 'if((moo)>2,"foo",state in (1,2),"cow",(moo)in (3,4),"horse",NULL)'
+        == 'if((moo)>2,"foo",state in (1,2),"cow",(moo)in (3,4),"horse","Not found")'
     )
     assert (
         result["test"]["extra_fields"][0]["field"]
@@ -174,7 +174,7 @@ test:
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert (
         result["test"]["field"]
-        == 'if((moo)<2,"undertwo",(moo)>"2","foo",state in ("1", "2"),"cow",NULL)'
+        == 'if((moo)<2,"undertwo",(moo)>"2","foo",state in ("1", "2"),"cow","Not found")'
     )
     assert (
         result["test"]["extra_fields"][0]["field"]
