@@ -23,6 +23,7 @@ from recipe.ingredients import (
     Having,
     IdValueDimension,
     Ingredient,
+    InvalidIngredient,
     LookupDimension,
     Metric,
     WtdAvgMetric,

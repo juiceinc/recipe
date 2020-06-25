@@ -14,6 +14,11 @@ pop2000:
 pop2008:
     kind: Measure
     field: pop2008
+baddim:
+    kind: Dimension
+    field: sex
+    # raw_field is a reserved key
+    raw_field: age
 age_buckets:
     kind: Dimension
     field: age

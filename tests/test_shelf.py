@@ -591,6 +591,26 @@ invalid_in_referred:
             self.shelf["invalid_in_referred"].error["extra"]["column_name"] == "invalid"
         )
 
+    def test_invalid_definition(self):
+        content = """
+oldage:
+    kind: Metric
+    field:
+        value: age
+invalid:
+    kind: Dimension
+    field: age
+    # raw_field is a reserved name and can't be assigned in config.
+    raw_field: first
+"""
+        self.make_shelf(content)
+        assert isinstance(self.shelf["oldage"], Metric)
+        assert isinstance(self.shelf["invalid"], InvalidIngredient)
+        assert (
+            self.shelf["invalid"].error["extra"]["details"]
+            == "raw is a reserved role in dimensions"
+        )
+
 
 class TestShelfFromConfig(TestShelfFromValidatedYaml):
     def make_shelf(self, content, table=MyTable):
