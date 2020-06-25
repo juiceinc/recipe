@@ -132,15 +132,19 @@ def test_field_lookup():
     v = {"foo": {"kind": "dimension", "field": {"value": "foo"}, "lookup": "potatoe"}}
     with pytest.raises(E.BadType):
         normalize_schema(shelf_schema, v, allow_unknown=False)
-    v = {"foo": {"kind": "dimension", "field": {"value": "foo"}, "lookup": {"eat": "potatoe"}}}
+    v = {
+        "foo": {
+            "kind": "dimension",
+            "field": {"value": "foo"},
+            "lookup": {"eat": "potatoe"},
+        }
+    }
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert x == {
         "foo": {
             "field": {"aggregation": "none", "value": "foo"},
             "kind": "dimension",
-            "lookup": {
-                "eat": "potatoe",
-            }
+            "lookup": {"eat": "potatoe",},
         }
     }
 
