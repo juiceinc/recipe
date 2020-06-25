@@ -150,7 +150,7 @@ test:
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert (
         result["test"]["field"]
-        == 'if((moo)>2,"foo",state in (1,2),"cow",(moo)in (3,4),"horse",NULL)'
+        == 'if((moo)>2,"foo",state in (1,2),"cow",(moo)in (3,4),"horse","Not found")'
     )
     assert (
         result["test"]["extra_fields"][0]["field"]
@@ -174,7 +174,7 @@ test:
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert (
         result["test"]["field"]
-        == 'if((moo)<2,"undertwo",(moo)>"2","foo",state in ("1", "2"),"cow",NULL)'
+        == 'if((moo)<2,"undertwo",(moo)>"2","foo",state in ("1", "2"),"cow","Not found")'
     )
     assert (
         result["test"]["extra_fields"][0]["field"]
@@ -230,6 +230,40 @@ test:
                 {"condition": '(moo+foo)>"2"', "name": "foo"},
                 {"condition": 'state in ("1", "2")', "name": "cow"},
             ],
+            "_version": "2",
+        }
+    }
+
+
+def test_lookup():
+    """Lookup must be a dict on dimesnsions"""
+    content = """
+_version: "2"
+test:
+    kind: DIMENSION
+    field: moo
+    lookup: 
+        foo:doo
+"""
+    v = yaml.safe_load(content)
+    with pytest.raises(E.BadType):
+        normalize_schema(shelf_schema, v, allow_unknown=False)
+
+    content = """
+_version: "2"
+test:
+    kind: DIMENSION
+    field: moo
+    lookup: 
+        foo: doo
+"""
+    v = yaml.safe_load(content)
+    result = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert result == {
+        "test": {
+            "kind": "dimension",
+            "field": "moo",
+            "lookup": {"foo": "doo"},
             "_version": "2",
         }
     }

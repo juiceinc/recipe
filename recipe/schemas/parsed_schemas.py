@@ -107,6 +107,8 @@ def _convert_bucket_to_field(bucket, bucket_default_label, use_indices=False):
         idx += 1
 
     # Add the default value
+    if bucket_default_label is None:
+        bucket_default_label = "Not found"
     if use_indices:
         parts.append(str(9999))
     else:
@@ -252,6 +254,7 @@ dimension_schema = S.Dict(
         "buckets": S.List(required=False, schema=labeled_condition_schema),
         "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
         "format": format_schema,
+        "lookup": S.Dict(required=False),
         "quickselects": S.List(required=False, schema=named_condition_schema),
     },
     coerce=_chain(move_extra_fields, _convert_partial_conditions),
