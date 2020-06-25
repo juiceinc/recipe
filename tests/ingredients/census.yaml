@@ -24,6 +24,16 @@ age_buckets:
     - label: 'teens'
       lt: 20
     buckets_default_label: 'oldsters'
+age_buckets_nolabel:
+    kind: Dimension
+    field: age
+    buckets:
+    - label: 'babies'
+      lt: 2
+    - label: 'children'
+      lt: 13
+    - label: 'teens'
+      lt: 20
 mixed_buckets:
     kind: Dimension
     field: age

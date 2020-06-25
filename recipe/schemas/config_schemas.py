@@ -296,7 +296,7 @@ def _move_buckets_to_field(value):
     """ Move buckets from a dimension into the field """
     # return value
     buckets = value.pop("buckets", None)
-    buckets_default_label = value.pop("buckets_default_label", None)
+    buckets_default_label = value.pop("buckets_default_label", "Not found")
     if buckets:
         if "field" in value:
             value["field"]["buckets"] = buckets
@@ -456,6 +456,7 @@ ingredient_schema_choices = {
             "buckets": S.List(required=False, schema="labeled_condition"),
             "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
             "format": S.String(coerce=coerce_format, required=False),  # noqa: E123
+            "lookup": S.Dict(required=False),
             "quickselects": quickselect_schema,
         },
     ),

@@ -716,7 +716,7 @@ class Paginate(RecipeExtension):
         total_count = self.recipe.total_count(postquery_parts["query"])
 
         d, m = divmod(total_count, limit)
-        total_pages = d + (1 if m > 0 else 0)
+        total_pages = max(1, d + (1 if m > 0 else 0))
         page = self._pagination_page
         validated_page = min(max(1, page), total_pages)
 

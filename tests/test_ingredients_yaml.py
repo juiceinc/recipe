@@ -401,6 +401,46 @@ babies,0,164043,babies
 """,
         )
 
+    def test_census_buckets_nolabel(self):
+        """If not default label is provided, buckets default to "Not found" """
+        shelf = self.validated_shelf("census.yaml", Census)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("age_buckets_nolabel")
+            .metrics("pop2000")
+            .order_by("age_buckets_nolabel")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT CASE
+           WHEN (census.age < 2) THEN 'babies'
+           WHEN (census.age < 13) THEN 'children'
+           WHEN (census.age < 20) THEN 'teens'
+           ELSE 'Not found'
+       END AS age_buckets_nolabel,
+       CASE
+           WHEN (census.age < 2) THEN 0
+           WHEN (census.age < 13) THEN 1
+           WHEN (census.age < 20) THEN 2
+           ELSE 9999
+       END AS age_buckets_nolabel_order_by,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY age_buckets_nolabel,
+         age_buckets_nolabel_order_by
+ORDER BY age_buckets_nolabel_order_by,
+         age_buckets_nolabel"""
+        )
+        self.assert_recipe_csv(
+            recipe,
+            """age_buckets_nolabel,age_buckets_nolabel_order_by,pop2000,age_buckets_nolabel_id
+babies,0,164043,babies
+children,1,948240,children
+teens,2,614548,teens
+Not found,9999,4567879,Not found
+""",
+        )
+
     def test_complex_census_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
         metrics """

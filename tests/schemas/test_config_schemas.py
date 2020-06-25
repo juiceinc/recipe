@@ -128,6 +128,27 @@ def test_field_format():
     }
 
 
+def test_field_lookup():
+    v = {"foo": {"kind": "dimension", "field": {"value": "foo"}, "lookup": "potatoe"}}
+    with pytest.raises(E.BadType):
+        normalize_schema(shelf_schema, v, allow_unknown=False)
+    v = {
+        "foo": {
+            "kind": "dimension",
+            "field": {"value": "foo"},
+            "lookup": {"eat": "potatoe"},
+        }
+    }
+    x = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert x == {
+        "foo": {
+            "field": {"aggregation": "none", "value": "foo"},
+            "kind": "dimension",
+            "lookup": {"eat": "potatoe",},
+        }
+    }
+
+
 def test_field_ref():
     v = {"foo": {"kind": "metric", "field": "@foo"}}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
@@ -194,6 +215,7 @@ def test_field_buckets_ref():
                         "lt": 200,
                     }
                 ],
+                "buckets_default_label": "Not found",
                 "value": "moo",
             },
             "kind": "dimension",
@@ -390,7 +412,6 @@ def test_dimension_buckets():
     }
 
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
-
     # The dimension field gets inserted into the buckets
     assert x == {
         "a": {
@@ -405,6 +426,7 @@ def test_dimension_buckets():
                         "label": "over20",
                     }
                 ],
+                "buckets_default_label": "Not found",
                 "value": "foo",
             },
             "icon": "squee",
