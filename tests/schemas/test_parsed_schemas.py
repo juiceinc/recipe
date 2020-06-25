@@ -235,6 +235,40 @@ test:
     }
 
 
+def test_lookup():
+    """Lookup must be a dict on dimesnsions"""
+    content = """
+_version: "2"
+test:
+    kind: DIMENSION
+    field: moo
+    lookup: 
+        foo:doo
+"""
+    v = yaml.safe_load(content)
+    with pytest.raises(E.BadType):
+        normalize_schema(shelf_schema, v, allow_unknown=False)
+
+    content = """
+_version: "2"
+test:
+    kind: DIMENSION
+    field: moo
+    lookup: 
+        foo: doo
+"""
+    v = yaml.safe_load(content)
+    result = normalize_schema(shelf_schema, v, allow_unknown=False)
+    assert result == {
+        "test": {
+            "kind": "dimension",
+            "field": "moo",
+            "lookup": {"foo": "doo"},
+            "_version": "2",
+        }
+    }
+
+
 def test_replace_refs():
     """ Test that field references get replaced with the field"""
     content = """

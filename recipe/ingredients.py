@@ -95,13 +95,13 @@ class Ingredient(object):
 
         if not isinstance(self.formatters, (list, tuple)):
             raise BadIngredient(
-                "formatters passed to an ingredient must be a " "list or tuple"
+                "formatters passed to an ingredient must be a list or tuple"
             )
         # If explicit suffixes are passed in, there must be one for each column
         if self.column_suffixes is not None and len(self.column_suffixes) != len(
             self.columns
         ):
-            raise BadIngredient("column_suffixes must be the same length as " "columns")
+            raise BadIngredient("column_suffixes must be the same length as columns")
 
         # Any remaining passed properties are available in self.meta
         self.meta = AttrDict(kwargs)
