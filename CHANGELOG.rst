@@ -2,6 +2,13 @@
 Changelog
 =========
 
+0.17.0 (2020-06-26)
+-----------------------------------------
+* Set bucket default label to "Not found"
+* Use sureberus to validate lookup is a dictionary if present in Dimension config
+* Fix to ensure pagination page is 1 even if there is no data
+* On shelf construction, create InvalidIngredient for ingredients that fail construction
+
 0.16.0 (2020-06-19)
 -----------------------------------------
 * Ignore order_by on a recipe if the ingredient has not been added to the dimensions or metrics.
@@ -40,18 +47,15 @@ Changelog
 * Use more accurate fetched_from_cache caching query attribute
 * Add grouping strategies so recipes can group by column labels
 
-
 0.11.0 (2019-11-07)
 -----------------------------------------
 * Add Paginate extension
 * Fix deterministic Anonymization in python3
 * CI improvements
 
-
 0.10.0 (2019-08-07)
 -----------------------------------------
 * Support multiple quickselects which are ORed together
-
 
 0.9.0 (2019-08-07)
 -----------------------------------------
@@ -59,11 +63,9 @@ Changelog
 * Improve and publish docs on at recipe.readthedocs.io
 * Happy birthday, Zoe!
 
-
 0.8.0 (2019-07-08)
 -----------------------------------------
 * Add cache control options.
-
 
 0.7.0 (2019-06-24)
 -----------------------------------------
@@ -77,7 +79,6 @@ Changelog
 
 0.6.2 (2019-06-11)
 -----------------------------------------
-
 
 
 0.1.0 (2017-02-05)
