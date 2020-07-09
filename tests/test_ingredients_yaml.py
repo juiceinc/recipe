@@ -1310,6 +1310,9 @@ total_nulls:
 chip_nulls:
     kind: Metric
     field: 'sum(if(score IS NULL and username = \"chip\",1,0))'
+user_null_counter:
+    kind: Metric
+    field: 'if(username IS NULL, 1, 0)'
 chip_or_nulls:
     kind: Metric
     field: 'sum(if(score IS NULL OR (username = \"chip\"),1,0))'
@@ -1372,6 +1375,18 @@ FROM scores_with_nulls"""
 FROM scores_with_nulls"""
         )
         self.assert_recipe_csv(recipe, "chip_or_nulls\n5\n")
+
+        recipe = Recipe(shelf=shelf, session=self.session).metrics("user_null_counter")
+        assert (
+            recipe.to_sql()
+            == """SELECT sum(CASE
+               WHEN (scores_with_nulls.username IS NULL) THEN 1
+               ELSE 0
+           END) AS user_null_counter
+FROM scores_with_nulls"""
+        )
+
+        self.assert_recipe_csv(recipe, "user_null_counter\n0\n")
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("simple_math")
         assert (
