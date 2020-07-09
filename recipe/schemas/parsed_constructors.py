@@ -141,7 +141,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         """A relation expression like age is null or
         birth_date is last month"""
         # TODO: Why is this not handled by the tokenization
-        if str(right).upper() == "NULL":
+        if str(right).upper() == "NULL" or right is None:
             return left.is_(None)
         else:
             return left.between(*right)
