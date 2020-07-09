@@ -2,6 +2,10 @@
 Changelog
 =========
 
+0.17.1 (2020-07-09)
+-----------------------------------------
+* Fix parsed syntax for `field IS NULL`
+
 0.17.0 (2020-06-26)
 -----------------------------------------
 * Set bucket default label to "Not found"
