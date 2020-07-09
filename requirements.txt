@@ -5,7 +5,7 @@ SQLAlchemy>=1.2.2
 sqlparse==0.3.0
 stevedore==1.31.0
 tablib==0.12.1
-pyyaml==5.1.2
+pyyaml>=5
 sureberus==0.14.0
 dateparser==0.7.2
 attrs==19.3.0
