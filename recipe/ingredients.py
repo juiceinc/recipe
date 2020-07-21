@@ -221,7 +221,7 @@ class Ingredient(object):
         """
         return not (self._order() == other._order())
 
-    def _build_scalar_filter(self, value, operator=None):
+    def _build_scalar_filter(self, value, operator=None, target_role=None):
         """Build a Filter given a single value.
 
         Args:
@@ -230,12 +230,17 @@ class Ingredient(object):
             operator (`str`)
                 A valid scalar operator. The default operator
                 is `eq`
+            target_role (`str`) 
+                An optional role to build the filter against
 
         Returns:
 
             A Filter object
         """
-        filter_column = self.columns[0]
+        if target_role and target_role in self.roles:
+            filter_column = self.roles.get(target_role)
+        else:
+            filter_column = self.columns[0]
 
         # If we pass a string value, convert the column to string for comparison
         if isinstance(value, string_types) and not isinstance(
@@ -283,7 +288,7 @@ class Ingredient(object):
         else:
             raise ValueError("Unknown operator {}".format(operator))
 
-    def _build_vector_filter(self, value, operator=None):
+    def _build_vector_filter(self, value, operator=None, target_role=None):
         """Build a Filter given a list of values.
 
         Args:
@@ -292,12 +297,17 @@ class Ingredient(object):
             operator (:obj:`str`)
                 A valid vector operator. The default operator is
                 `in`.
+            target_role (`str`) 
+                An optional role to build the filter against
 
         Returns:
 
             A Filter object
         """
-        filter_column = self.columns[0]
+        if target_role and target_role in self.roles:
+            filter_column = self.roles.get(target_role)
+        else:
+            filter_column = self.columns[0]
 
         if operator is None or operator == "in":
             # Default operator is 'in' so if no operator is provided, handle
@@ -358,7 +368,7 @@ class Ingredient(object):
         else:
             raise ValueError("Unknown operator {}".format(operator))
 
-    def build_filter(self, value, operator=None):
+    def build_filter(self, value, operator=None, target_role=None):
         """
         Builds a filter based on a supplied value and optional operator. If
         no operator is supplied an ``in`` filter will be used for a list and a
@@ -376,6 +386,8 @@ class Ingredient(object):
 
                 The default operator is 'in' if value is a list and
                 'eq' if value is a string, number, boolean or None.
+            target_role (`str`) 
+                An optional role to build the filter against
 
         Returns:
 
@@ -385,9 +397,13 @@ class Ingredient(object):
         value_is_scalar = not isinstance(value, (list, tuple))
 
         if value_is_scalar:
-            return self._build_scalar_filter(value, operator=operator)
+            return self._build_scalar_filter(
+                value, operator=operator, target_role=target_role
+            )
         else:
-            return self._build_vector_filter(value, operator=operator)
+            return self._build_vector_filter(
+                value, operator=operator, target_role=target_role
+            )
 
     @property
     def expression(self):

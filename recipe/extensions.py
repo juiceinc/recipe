@@ -481,6 +481,7 @@ class Paginate(RecipeExtension):
     The default search fields are all dimensions used in the recipe.
     Search keys can be customized with `pagination_search_keys`.
     Search may be disabled by setting `.apply_pagination_filters(False)`
+    The value role will be targetted when searching dimensions.
 
     **Sorting**
 
@@ -691,7 +692,11 @@ class Paginate(RecipeExtension):
                 # build a filter for each search key and use in the recipe
                 ingredient = self.recipe._shelf.get(key, None)
                 if ingredient:
-                    filters.append(ingredient.build_filter(q, operator="ilike"))
+                    filters.append(
+                        ingredient.build_filter(
+                            q, operator="ilike", target_role="value"
+                        )
+                    )
 
             # Build a big or filter for the search
             if filters:

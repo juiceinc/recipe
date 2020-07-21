@@ -665,7 +665,6 @@ OFFSET 1"""
             .filters("filter_all")
             .pagination_page_size(10)
         )
-        print(recipe.to_sql())
         assert (
             recipe.to_sql()
             == """SELECT census.age AS age,
@@ -748,49 +747,99 @@ LIMIT 10
 OFFSET 0"""
         )
 
-        def test_pagination_q(self):
-            recipe = (
-                self.recipe()
-                .metrics("pop2000")
-                .dimensions("state")
-                .pagination_page_size(10)
-                .pagination_q("T%")
-            )
-            assert (
-                recipe.to_sql()
-                == """SELECT census.state AS state,
-           sum(census.pop2000) AS pop2000
-    FROM census
-    WHERE lower(census.state) LIKE lower('T%')
-    GROUP BY state
-    LIMIT 10
-    OFFSET 0"""
-            )
-            assert (
-                recipe.dataset.csv.replace("\r\n", "\n")
-                == """state,pop2000,state_id
-    Tennessee,5685230,Tennessee
-    """
-            )
+    def test_pagination_q(self):
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .pagination_page_size(10)
+            .pagination_q("T%")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+WHERE lower(census.state) LIKE lower('T%')
+GROUP BY state
+LIMIT 10
+OFFSET 0"""
+        )
+        assert (
+            recipe.dataset.csv.replace("\r\n", "\n")
+            == """state,pop2000,state_id
+Tennessee,5685230,Tennessee
+"""
+        )
 
-            recipe = self.recipe_from_config(
-                {
-                    "metrics": ["pop2000"],
-                    "dimensions": ["state"],
-                    "pagination_page_size": 10,
-                    "pagination_q": "T%",
-                }
-            )
-            assert (
-                recipe.to_sql()
-                == """SELECT census.state AS state,
-           sum(census.pop2000) AS pop2000
-    FROM census
-    WHERE lower(census.state) LIKE lower('T%')
-    GROUP BY state
-    LIMIT 10
-    OFFSET 0"""
-            )
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+                "pagination_q": "T%",
+            }
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+WHERE lower(census.state) LIKE lower('T%')
+GROUP BY state
+LIMIT 10
+OFFSET 0"""
+        )
+
+    def test_pagination_q_idvalue(self):
+        """ Pagination queries use the value of an id value dimension """
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("idvalue_state")
+            .pagination_page_size(10)
+            .pagination_q("T%")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS idvalue_state_id,
+       'State:' || census.state AS idvalue_state,
+       sum(census.pop2000) AS pop2000
+FROM census
+WHERE lower('State:' || census.state) LIKE lower('T%')
+GROUP BY idvalue_state_id,
+         idvalue_state
+LIMIT 10
+OFFSET 0"""
+        )
+        assert len(recipe.all()) == 0
+
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["idvalue_state"],
+                "pagination_page_size": 10,
+                "pagination_q": "State:T%",
+            }
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS idvalue_state_id,
+       'State:' || census.state AS idvalue_state,
+       sum(census.pop2000) AS pop2000
+FROM census
+WHERE lower('State:' || census.state) LIKE lower('State:T%')
+GROUP BY idvalue_state_id,
+         idvalue_state
+LIMIT 10
+OFFSET 0"""
+        )
+        assert (
+            recipe.dataset.csv.replace("\r\n", "\n")
+            == """idvalue_state_id,idvalue_state,pop2000,idvalue_state_id
+Tennessee,State:Tennessee,5685230,Tennessee
+"""
+        )
 
     def test_apply_pagination_filters(self):
         """apply_pagination_filters False will disable adding search"""
@@ -1155,38 +1204,39 @@ OFFSET 0""",
         assert sales_row.department == "sales"
         assert sales_row.score == 80.0
 
-        def test_summarize_over_scores_order(self):
-            """ Order bys are hoisted to the outer query """
-            self.shelf = scores_shelf
+    def test_summarize_over_scores_order(self):
+        """ Order bys are hoisted to the outer query """
+        self.shelf = scores_shelf
 
-            recipe = (
-                self.recipe()
-                .metrics("score")
-                .dimensions("department", "username")
-                .summarize_over("username")
-                .order_by("department")
-            )
+        recipe = (
+            self.recipe()
+            .metrics("score")
+            .dimensions("department", "username")
+            .summarize_over("username")
+            .order_by("department")
+        )
 
-            assert (
-                recipe.to_sql()
-                == """SELECT summarize.department,
-           avg(summarize.score) AS score
-    FROM
-      (SELECT scores.department AS department,
-              scores.username AS username,
-              avg(scores.score) AS score
-       FROM scores
-       GROUP BY scores.department,
-                scores.username
-       ORDER BY scores.department) AS summarize
-    GROUP BY summarize.department
-    ORDER BY summarize.department"""
-            )
-            ops_row, sales_row = recipe.all()
-            assert ops_row.department == "ops"
-            assert ops_row.score == 87.5
-            assert sales_row.department == "sales"
-            assert sales_row.score == 80.0
+        print(recipe.to_sql())
+        assert (
+            recipe.to_sql()
+            == """SELECT summarize.department,
+       avg(summarize.score) AS score
+FROM
+  (SELECT scores.department AS department,
+          scores.username AS username,
+          avg(scores.score) AS score
+   FROM scores
+   GROUP BY department,
+            username
+   ORDER BY department) AS summarize
+GROUP BY summarize.department
+ORDER BY summarize.department"""
+        )
+        ops_row, sales_row = recipe.all()
+        assert ops_row.department == "ops"
+        assert ops_row.score == 87.5
+        assert sales_row.department == "sales"
+        assert sales_row.score == 80.0
 
     def test_summarize_over_scores_order_anonymize(self):
         """ Order bys are hoisted to the outer query """
