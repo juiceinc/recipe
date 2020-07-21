@@ -397,9 +397,13 @@ class Ingredient(object):
         value_is_scalar = not isinstance(value, (list, tuple))
 
         if value_is_scalar:
-            return self._build_scalar_filter(value, operator=operator, target_role=target_role)
+            return self._build_scalar_filter(
+                value, operator=operator, target_role=target_role
+            )
         else:
-            return self._build_vector_filter(value, operator=operator, target_role=target_role)
+            return self._build_vector_filter(
+                value, operator=operator, target_role=target_role
+            )
 
     @property
     def expression(self):
