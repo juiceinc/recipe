@@ -694,9 +694,7 @@ class Paginate(RecipeExtension):
                 if ingredient:
                     filters.append(
                         ingredient.build_filter(
-                            q, 
-                            operator="ilike", 
-                            target_role="value"
+                            q, operator="ilike", target_role="value"
                         )
                     )
 
