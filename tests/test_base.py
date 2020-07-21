@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Date, DateTime, Float, Integer, String, distinct, func
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import Dimension, Metric, Filter, Shelf, get_oven
+from recipe import IdValueDimension, Dimension, Metric, Filter, Shelf, get_oven
 from datetime import date
 from dateutil.relativedelta import relativedelta
 
@@ -435,6 +435,7 @@ tagscores_shelf = Shelf(
 census_shelf = Shelf(
     {
         "state": Dimension(Census.state),
+        "idvalue_state": IdValueDimension(Census.state, "State:"+Census.state),
         "sex": Dimension(Census.sex),
         "age": Dimension(Census.age),
         "pop2000": Metric(func.sum(Census.pop2000)),
