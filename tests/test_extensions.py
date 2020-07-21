@@ -1204,38 +1204,39 @@ OFFSET 0""",
         assert sales_row.department == "sales"
         assert sales_row.score == 80.0
 
-        def test_summarize_over_scores_order(self):
-            """ Order bys are hoisted to the outer query """
-            self.shelf = scores_shelf
+    def test_summarize_over_scores_order(self):
+        """ Order bys are hoisted to the outer query """
+        self.shelf = scores_shelf
 
-            recipe = (
-                self.recipe()
-                .metrics("score")
-                .dimensions("department", "username")
-                .summarize_over("username")
-                .order_by("department")
-            )
+        recipe = (
+            self.recipe()
+            .metrics("score")
+            .dimensions("department", "username")
+            .summarize_over("username")
+            .order_by("department")
+        )
 
-            assert (
-                recipe.to_sql()
-                == """SELECT summarize.department,
-           avg(summarize.score) AS score
-    FROM
-      (SELECT scores.department AS department,
-              scores.username AS username,
-              avg(scores.score) AS score
-       FROM scores
-       GROUP BY scores.department,
-                scores.username
-       ORDER BY scores.department) AS summarize
-    GROUP BY summarize.department
-    ORDER BY summarize.department"""
-            )
-            ops_row, sales_row = recipe.all()
-            assert ops_row.department == "ops"
-            assert ops_row.score == 87.5
-            assert sales_row.department == "sales"
-            assert sales_row.score == 80.0
+        print(recipe.to_sql())
+        assert (
+            recipe.to_sql()
+            == """SELECT summarize.department,
+       avg(summarize.score) AS score
+FROM
+  (SELECT scores.department AS department,
+          scores.username AS username,
+          avg(scores.score) AS score
+   FROM scores
+   GROUP BY department,
+            username
+   ORDER BY department) AS summarize
+GROUP BY summarize.department
+ORDER BY summarize.department"""
+        )
+        ops_row, sales_row = recipe.all()
+        assert ops_row.department == "ops"
+        assert ops_row.score == 87.5
+        assert sales_row.department == "sales"
+        assert sales_row.score == 80.0
 
     def test_summarize_over_scores_order_anonymize(self):
         """ Order bys are hoisted to the outer query """
