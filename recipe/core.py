@@ -393,12 +393,13 @@ class Recipe(object):
 
         :return: A SQLAlchemy query
         """
+        if self._query is not None:
+            print("QUERY ALREADY exists", len(self._cauldron.ingredients()))
+            return self._query
+
         if hasattr(self, 'optimize_redshift'):
             print("Optimizing redshift", self._is_redshift())
             self.optimize_redshift(self._is_redshift())
-
-        if self._query is not None:
-            return self._query
 
         if len(self._cauldron.ingredients()) == 0:
             raise BadRecipe("No ingredients have been added to this recipe")
