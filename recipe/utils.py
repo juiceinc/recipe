@@ -183,6 +183,7 @@ def pad_values(values, prefix="RECIPE-DUMMY-VAL-", bin_size=5):
     different number of values. To avoid this, pad out the list
     of string values to certain fixed lengths
     """
+    assert isinstance(values, (list, tuple))
     cnt = len(values)
     if cnt and isinstance(values[0], str):
         # Round up to the nearest bin_size

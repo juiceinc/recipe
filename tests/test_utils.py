@@ -12,6 +12,7 @@ from recipe.utils import (
     FakerFormatter,
     replace_whitespace_with_space,
     generate_faker_seed,
+    pad_values,
 )
 from recipe.compat import str as compat_str
 
@@ -31,6 +32,64 @@ class TestUtils(object):
         assert generate_faker_seed(u"hi") == 5329599339005471788
         assert generate_faker_seed("hi") == 5329599339005471788
         assert generate_faker_seed([]) == 15515306683186839187
+
+
+class TestPadValues(object):
+    def test_pad_values(self):
+        """A list or tuple of values are padded to a multiple of bin size """
+        with pytest.raises(Exception):
+            pad_values("rocket")
+
+        v = pad_values([])
+        assert v == []
+
+        v = pad_values(tuple())
+        assert v == tuple()
+
+        v = pad_values(("hi",))
+        assert (
+            "hi",
+            "RECIPE-DUMMY-VAL-1",
+            "RECIPE-DUMMY-VAL-2",
+            "RECIPE-DUMMY-VAL-3",
+            "RECIPE-DUMMY-VAL-4",
+        ) == v
+        v = pad_values(["hi",])
+        assert [
+            "hi",
+            "RECIPE-DUMMY-VAL-1",
+            "RECIPE-DUMMY-VAL-2",
+            "RECIPE-DUMMY-VAL-3",
+            "RECIPE-DUMMY-VAL-4",
+        ] == v
+
+        v = pad_values(list("rocket"))
+        assert v == [
+            "r",
+            "o",
+            "c",
+            "k",
+            "e",
+            "t",
+            "RECIPE-DUMMY-VAL-1",
+            "RECIPE-DUMMY-VAL-2",
+            "RECIPE-DUMMY-VAL-3",
+            "RECIPE-DUMMY-VAL-4",
+        ]
+
+        v = pad_values(["a"], prefix="COW", bin_size=10)
+        assert v == [
+            "a",
+            "COW1",
+            "COW2",
+            "COW3",
+            "COW4",
+            "COW5",
+            "COW6",
+            "COW7",
+            "COW8",
+            "COW9",
+        ]
 
 
 class TestAttrDict(object):
