@@ -120,7 +120,6 @@ bool_expr
     ]
     for v, pretty_tree in values:
         tree = noag_any_condition_parser.parse(v)
-        print(tree.pretty())
         assert tree.pretty().strip() == pretty_tree.strip()
 
 

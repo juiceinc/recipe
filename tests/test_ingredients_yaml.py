@@ -1494,7 +1494,6 @@ max_username:
         recipe2 = Recipe(shelf=shelf2, session=self.session).metrics(
             "count_star", "max_username"
         )
-        print("two")
         assert (
             recipe2.to_sql()
             == """SELECT count(*) AS count_star,

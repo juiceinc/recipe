@@ -394,11 +394,9 @@ class Recipe(object):
         :return: A SQLAlchemy query
         """
         if self._query is not None:
-            print("QUERY ALREADY exists", len(self._cauldron.ingredients()))
             return self._query
 
         if hasattr(self, 'optimize_redshift'):
-            print("Optimizing redshift", self._is_redshift())
             self.optimize_redshift(self._is_redshift())
 
         if len(self._cauldron.ingredients()) == 0:
@@ -473,7 +471,6 @@ class Recipe(object):
         # cache results
 
         self._query = recipe_parts["query"]
-        print("RECIPE CONSTRUCTED QUERY", self._query)
         return self._query
 
     def _table(self):
@@ -519,9 +516,6 @@ class Recipe(object):
                 if hasattr(self._query, "invalidate"):
                     self._query.invalidate()
 
-            print("Getting values")
-            print(type(self._query))
-            print(self._query)
             self._all = self._cauldron.enchant(
                 self._query.all(), cache_context=self.cache_context
             )
