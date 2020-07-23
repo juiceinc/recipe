@@ -308,7 +308,7 @@ class Recipe(object):
 
         :param filters: Filters to add to the recipe. Filters can
                          either be keys on the ``shelf`` or
-                         Filter objects
+                         Filter objects or binary expressions
         :type filters: list
         """
 
@@ -472,6 +472,7 @@ class Recipe(object):
         # cache results
 
         self._query = recipe_parts["query"]
+        print("RECIPE CONSTRUCTED QUERY", self._query)
         return self._query
 
     def _table(self):
