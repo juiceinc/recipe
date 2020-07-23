@@ -144,7 +144,6 @@ class AutomaticFilters(RecipeExtension):
         "include_automatic_filter_keys": {"type": "list", "schema": {"type": "string"}},
         "exclude_automatic_filter_keys": {"type": "list", "schema": {"type": "string"}},
         "apply_automatic_filters": {"type": "boolean"},
-        "optimize_redshift": {"type": "boolean"},
     }
 
     def __init__(self, *args, **kwargs):
@@ -153,7 +152,7 @@ class AutomaticFilters(RecipeExtension):
         self._automatic_filters = {}
         self.exclude_keys = None
         self.include_keys = None
-        self.optimize_redshift = False
+        self._optimize_redshift = False
 
     @recipe_arg()
     def from_config(self, obj):
@@ -188,13 +187,13 @@ class AutomaticFilters(RecipeExtension):
                 # TODO: If dim can't be found, optionally raise a warning
                 dimension = self.recipe._shelf.find(dim, Dimension)
                 # make a Filter and add it to filters
-                if self.optimize_redshift and operator is None and isinstance(values, (list, tuple)):
+                if self._optimize_redshift and operator is None and isinstance(values, (list, tuple)):
                     values = pad_values(values)
 
                 self.recipe.filters(dimension.build_filter(values, operator))
 
     @recipe_arg()
-    def optimize_redshift(self, value):
+    def soptimize_redshift(self, value):
         """Toggles whether automatic filters that filter on lists of strings
         are automatically padded to multiples of 5. Doing so will avoid query 
         re-compilation for queries that have approximately the same number
@@ -202,7 +201,7 @@ class AutomaticFilters(RecipeExtension):
 
             recipe.optimize_redshift(True)
         """
-        self.optimize_redshift = value
+        self._optimize_redshift = value
 
     @recipe_arg()
     def apply_automatic_filters(self, value):
