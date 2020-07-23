@@ -518,6 +518,9 @@ class Recipe(object):
                 if hasattr(self._query, "invalidate"):
                     self._query.invalidate()
 
+            print("Getting values")
+            print(type(self._query))
+            print(self._query)
             self._all = self._cauldron.enchant(
                 self._query.all(), cache_context=self.cache_context
             )
