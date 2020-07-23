@@ -193,7 +193,7 @@ class AutomaticFilters(RecipeExtension):
                 self.recipe.filters(dimension.build_filter(values, operator))
 
     @recipe_arg()
-    def soptimize_redshift(self, value):
+    def optimize_redshift(self, value):
         """Toggles whether automatic filters that filter on lists of strings
         are automatically padded to multiples of 5. Doing so will avoid query 
         re-compilation for queries that have approximately the same number
