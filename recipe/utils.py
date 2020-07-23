@@ -187,8 +187,8 @@ def pad_values(values, prefix="RECIPE-DUMMY-VAL-", bin_size=5):
     cnt = len(values)
     if cnt and isinstance(values[0], str):
         # Round up to the nearest bin_size
-        desired_cnt = int(math.ceil(float(cnt)/bin_size)*bin_size)
-        added_values = [prefix + str(i+1) for i in range(desired_cnt-cnt)]
+        desired_cnt = int(math.ceil(float(cnt) / bin_size) * bin_size)
+        added_values = [prefix + str(i + 1) for i in range(desired_cnt - cnt)]
         if isinstance(values, tuple):
             return values + tuple(added_values)
         else:

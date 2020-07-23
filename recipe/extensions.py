@@ -187,7 +187,11 @@ class AutomaticFilters(RecipeExtension):
                 # TODO: If dim can't be found, optionally raise a warning
                 dimension = self.recipe._shelf.find(dim, Dimension)
                 # make a Filter and add it to filters
-                if self._optimize_redshift and operator is None and isinstance(values, (list, tuple)):
+                if (
+                    self._optimize_redshift
+                    and operator is None
+                    and isinstance(values, (list, tuple))
+                ):
                     values = pad_values(values)
 
                 self.recipe.filters(dimension.build_filter(values, operator))

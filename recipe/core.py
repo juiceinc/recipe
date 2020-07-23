@@ -396,7 +396,7 @@ class Recipe(object):
         if self._query is not None:
             return self._query
 
-        if hasattr(self, 'optimize_redshift'):
+        if hasattr(self, "optimize_redshift"):
             self.optimize_redshift(self._is_redshift())
 
         if len(self._cauldron.ingredients()) == 0:

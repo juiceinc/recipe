@@ -189,7 +189,7 @@ class TestShelf(object):
         assert ingredient.id == "last"
 
     def test_find_filter(self):
-        self.shelf["age_gt_20"] = Filter(MyTable.age>20)
+        self.shelf["age_gt_20"] = Filter(MyTable.age > 20)
 
         ingredient = self.shelf.find("age_gt_20", Filter)
         assert ingredient.id == "age_gt_20"
