@@ -31,6 +31,13 @@ class TransformToSQLAlchemyExpression(Transformer):
     def __init__(self, selectable, require_aggregation=False):
         self.selectable = selectable
         self.require_aggregation = require_aggregation
+        # Database driver
+        try:
+            self.drivername = selectable.metadata.bind.url.drivername
+        except:
+            self.drivername = 'unknown'
+
+        self.allowed_aggregations = aggregations
 
     def number(self, value):
         try:
@@ -60,7 +67,13 @@ class TransformToSQLAlchemyExpression(Transformer):
         return "BETWEEN"
 
     def aggregate(self, name):
-        return aggregations.get(name.lower())
+        """Return a callable that generates SQLAlchemy to aggregate a field.
+        
+        Aggregations may be database specific
+        """
+        if name.lower() not in self.aggregations:
+            raise ValueError(f"Aggregation {name} is not supported on engine {self.drivername}"))
+        return self.aggregations.get(name.lower())
 
     def div(self, num, denom):
         """SQL safe division"""

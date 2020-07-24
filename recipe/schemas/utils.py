@@ -83,6 +83,7 @@ aggregations = {
     "percentile99": lambda fld: func.percentile_cont(0.99).within_group(fld),
 }
 
+
 # Conversions are a callable on a column expression that yields a
 # nonaggregated column expression
 # for instance, quarter(sales_date) => func.date_trunc('quarter', MyTable.sales_date)
