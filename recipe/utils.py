@@ -178,10 +178,15 @@ def disaggregate(expr):
         return expr
 
 
-def pad_values(values, prefix="RECIPE-DUMMY-VAL-", bin_size=5):
+def pad_values(values, prefix="RECIPE-DUMMY-VAL-", bin_size=11):
     """Redshift recompiles queries when a where IN clause includes a 
     different number of values. To avoid this, pad out the list
-    of string values to certain fixed lengths
+    of string values to certain fixed lengths.
+
+    The default bin size is 11. During testing we discovered that 
+    compilation was required for where clauses with different numbers
+    of items but all queries with 11 or more items shared a compiled
+    query.
     """
     assert isinstance(values, (list, tuple))
     cnt = len(values)

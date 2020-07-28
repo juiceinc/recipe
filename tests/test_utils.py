@@ -53,6 +53,12 @@ class TestPadValues(object):
             "RECIPE-DUMMY-VAL-2",
             "RECIPE-DUMMY-VAL-3",
             "RECIPE-DUMMY-VAL-4",
+            "RECIPE-DUMMY-VAL-5",
+            "RECIPE-DUMMY-VAL-6",
+            "RECIPE-DUMMY-VAL-7",
+            "RECIPE-DUMMY-VAL-8",
+            "RECIPE-DUMMY-VAL-9",
+            "RECIPE-DUMMY-VAL-10",
         ) == v
         v = pad_values(["hi",])
         assert [
@@ -61,6 +67,12 @@ class TestPadValues(object):
             "RECIPE-DUMMY-VAL-2",
             "RECIPE-DUMMY-VAL-3",
             "RECIPE-DUMMY-VAL-4",
+            "RECIPE-DUMMY-VAL-5",
+            "RECIPE-DUMMY-VAL-6",
+            "RECIPE-DUMMY-VAL-7",
+            "RECIPE-DUMMY-VAL-8",
+            "RECIPE-DUMMY-VAL-9",
+            "RECIPE-DUMMY-VAL-10",
         ] == v
 
         v = pad_values(list("rocket"))
@@ -75,6 +87,7 @@ class TestPadValues(object):
             "RECIPE-DUMMY-VAL-2",
             "RECIPE-DUMMY-VAL-3",
             "RECIPE-DUMMY-VAL-4",
+            "RECIPE-DUMMY-VAL-5",
         ]
 
         v = pad_values(["a"], prefix="COW", bin_size=10)
