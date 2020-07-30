@@ -4,7 +4,7 @@ from recipe.schemas.field_grammar import *
 
 
 def test_parsers():
-    """ Test expressions against parsers"""
+    """ Test expressions against parsers """
 
     # An expression to parse and the parsers it should pass
     #                                                 field_parser
@@ -41,6 +41,9 @@ def test_parsers():
     min(2+\"a\")/max(b*c)                           # 1,0,0,0,0,0
     min(a+-2.0)/max(b*c)                            # 1,0,0,0,0,0
     min(x)                                          # 1,0,0,0,0,0
+    month(x)                                        # 1,1,0,0,0,0
+    # Converters can only operate on a single column
+    month(x+y)                                      # 0,0,0,0,0,0
     """
 
     parsers = (
@@ -54,7 +57,7 @@ def test_parsers():
 
     for row in values.split("\n"):
         row = row.strip()
-        if row:
+        if row and not row.startswith("#"):            
             row, expected = row.split("#")
             expected_by_parser = expected.strip().split(",")
             # print(f"\n\n\n\n{row}")
@@ -66,10 +69,9 @@ def test_parsers():
                     # print(f"{parser_name:30s} succeeded ({expected_result})")
                     assert expected_result == "1"
                     # print(tree.pretty())
-                except:
+                except LarkError:
                     # print(f"{parser_name:30s} failed ({expected_result})")
                     assert expected_result == "0"
-
 
 def test_complex_condition_parser():
     values = [
@@ -125,6 +127,7 @@ bool_expr
 
 
 def test_complex_field_parser():
+    """Test the parse trees generated """
     values = [
         (
             "couNT(*)",

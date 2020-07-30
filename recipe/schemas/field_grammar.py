@@ -1,11 +1,16 @@
 from lark import Lark, Transformer, v_args
-from .utils import aggregations
+from .utils import aggregations, conversions
 from ..compat import basestring
 
-aggr_keys = [k for k in aggregations.keys() if isinstance(k, basestring)]
-# Sort the keys in descending order of length
-aggr_keys.sort(key=lambda item: (len(item), item), reverse=True)
-allowed_aggr_keys = "|".join(aggr_keys)
+def convert_keys_to_regex(d):
+    """ Convert a dictionary of key->callable into a regex """
+    keys = [k for k in d.keys() if isinstance(k, basestring)]
+    keys.sort(key=lambda item: (len(item), item), reverse=True)
+    return "|".join(keys)
+
+
+allowed_aggr_keys = convert_keys_to_regex(aggregations)
+allowed_conv_keys = convert_keys_to_regex(conversions)
 
 
 # TODO: We may want to match columns based on fields that exist in
@@ -13,6 +18,7 @@ allowed_aggr_keys = "|".join(aggr_keys)
 column_defn = "NAME"
 base_field_grammar_args = {
     "allowed_aggr_keys": allowed_aggr_keys,
+    "allowed_conv_keys": allowed_conv_keys,
     "column_defn": column_defn,
 }
 
@@ -24,7 +30,7 @@ base_grammar = """
     ?start: bool_expr | partial_relation_expr
 
     // Pairs of boolean expressions and expressions
-    // forming case when {BOOL_EXPR} then {EXPR}
+    // forming case when BOOL_EXPR then EXPR
     // an optional final expression is the else.T
     ?case: "if" "(" (bool_expr "," expr ","?)+ (expr)? ")"
 
@@ -87,11 +93,10 @@ base_field_grammar = (
     ?product: atom
            | product "*" atom                  -> mul
            | product "/" atom                  -> div
+    ?conversion:  /({allowed_conv_keys})/i    
+    ?convertedcol: conversion "(" column ")"
     ?column.0: {column_defn}                   -> column
-""".format(
-        **base_field_grammar_args
-    )
-    + base_grammar
+""".format(**base_field_grammar_args) + base_grammar
 )
 
 
@@ -99,12 +104,13 @@ base_field_grammar = (
 noag_field_grammar = (
     """
     ?expr: sum                                 -> expr
+    ?aggr:  /({allowed_aggr_keys})/i           -> aggregate
     ?atom: const
            | column
+           | convertedcol
            | case
            | "(" sum ")"
-"""
-    + base_field_grammar
+""".format(**base_field_grammar_args) + base_field_grammar
 )
 
 
@@ -121,12 +127,10 @@ agex_field_grammar = (
     ?atom: agex
            | const
            | column
+           | convertedcol
            | case
            | "(" sum ")"
-""".format(
-        **base_field_grammar_args
-    )
-    + base_field_grammar
+""".format(**base_field_grammar_args) + base_field_grammar
 )
 
 ambig = "resolve"

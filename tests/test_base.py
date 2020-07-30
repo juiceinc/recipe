@@ -44,18 +44,19 @@ TABLEDEF = """
         (username text,
          department text,
          testid text,
-         score float);
+         score float,
+         test_date date);
 """
 
 oven.engine.execute(TABLEDEF)
 oven.engine.execute(
     """insert into scores values
-('chris', 'sales', '1', 80),
-('chip', 'ops', '2', 80),
-('chip', 'ops', '3', 90),
-('chip', 'ops', '4', 100),
-('annika', 'ops', '5', 80),
-('annika', 'ops', '6', 90)
+('chris', 'sales', '1', 80, '2005-01-02'),
+('chip', 'ops', '2', 80, '2005-01-03'),
+('chip', 'ops', '3', 90, '2005-01-04'),
+('chip', 'ops', '4', 100, '2005-02-05'),
+('annika', 'ops', '5', 80, '2005-02-06'),
+('annika', 'ops', '6', 90, '2005-02-07')
 """
 )
 
@@ -66,17 +67,18 @@ TABLEDEF = """
         (username text,
          department text,
          testid text,
-         score float);
+         score float,
+         test_date date);
 """
 oven.engine.execute(TABLEDEF)
 oven.engine.execute(
     """insert into scores_with_nulls values
-('chris', 'sales', '1', NULL),
-('chip', 'ops', '2', 80),
-('chip', 'ops', '3', NULL),
-('chip', 'ops', '4', 100),
-('annika', NULL, '5', 80),
-('annika', NULL, '6', NULL)
+('chris', 'sales', '1', NULL, '2005-01-02'),
+('chip', 'ops', '2', 80, '2005-01-04'),
+('chip', 'ops', '3', NULL, '2005-01-05'),
+('chip', 'ops', '4', 100, '2005-01-07'),
+('annika', NULL, '5', 80, '2005-02-01'),
+('annika', NULL, '6', NULL, '2005-02-02')
 """
 )
 
@@ -322,6 +324,7 @@ class Scores(Base):
     department = Column("department", String())
     testid = Column("testid", String())
     score = Column("score", Float())
+    test_date = Column("test_date", Date())
 
     __tablename__ = "scores"
     __table_args__ = {"extend_existing": True}
@@ -332,6 +335,7 @@ class ScoresWithNulls(Base):
     department = Column("department", String())
     testid = Column("testid", String())
     score = Column("score", Float())
+    test_date = Column("test_date", Date())
 
     __tablename__ = "scores_with_nulls"
     __table_args__ = {"extend_existing": True}

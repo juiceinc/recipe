@@ -20,7 +20,7 @@ VALID_METRIC_FIELDS = [
 INVALID_METRIC_FIELDS = ["fo(", "fo)", "su(x + y)"]
 
 # Valid non-aggregated fields
-VALID_DIMENSION_FIELDS = ["foo", "foo + moo", "FALSE"]
+VALID_DIMENSION_FIELDS = ["foo", "foo + moo", "FALSE",]
 
 # Invalid non-aggregated fields
 INVALID_DIMENSION_FIELDS = ["fo(", "sum(foo)", "fo)", "su(x + y)"]

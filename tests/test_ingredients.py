@@ -781,31 +781,7 @@ class TestParse(object):
                 {"value": "age", "aggregation": "count_distinct"},
                 func.count(distinct(MyTable.age)),
             ),
-            # Date trunc
-            (
-                {"value": "age", "aggregation": "month"},
-                func.date_trunc("month", MyTable.age),
-            ),
-            (
-                {"value": "age", "aggregation": "week"},
-                func.date_trunc("week", MyTable.age),
-            ),
-            (
-                {"value": "age", "aggregation": "year"},
-                func.date_trunc("year", MyTable.age),
-            ),
-            (
-                {"value": "age", "aggregation": "age"},
-                func.date_part("year", func.age(MyTable.age)),
-            ),
-            # Conditions
-            (
-                {
-                    "value": "age",
-                    "condition": {"field": "last", "in": ["Jones", "Punjabi"]},
-                },
-                func.sum(case([(MyTable.last.in_(["Jones", "Punjabi"]), MyTable.age)])),
-            ),
+
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, MyTable)
@@ -882,6 +858,31 @@ class TestParse(object):
                 },
                 case([(MyTable.last.in_(["Jones", "Punjabi"]), MyTable.age)]),
             ),
+            # # Date trunc
+            # (
+            #     {"value": "age", "aggregation": "month"},
+            #     func.date_trunc("month", MyTable.age),
+            # ),
+            # (
+            #     {"value": "age", "aggregation": "week"},
+            #     func.date_trunc("week", MyTable.age),
+            # ),
+            # (
+            #     {"value": "age", "aggregation": "year"},
+            #     func.date_trunc("year", MyTable.age),
+            # ),
+            # (
+            #     {"value": "age", "aggregation": "age"},
+            #     func.date_part("year", func.age(MyTable.age)),
+            # ),
+            # # Conditions
+            # (
+            #     {
+            #         "value": "age",
+            #         "condition": {"field": "last", "in": ["Jones", "Punjabi"]},
+            #     },
+            #     func.sum(case([(MyTable.last.in_(["Jones", "Punjabi"]), MyTable.age)])),
+            # ),            
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, selectable=MyTable, aggregated=False)

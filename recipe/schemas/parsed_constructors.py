@@ -12,6 +12,7 @@ from .field_grammar import (
 )
 from .utils import (
     aggregations,
+    conversions,
     find_column,
     ingredient_class_for_name,
     convert_value,
@@ -86,6 +87,14 @@ class TransformToSQLAlchemyExpression(Transformer):
             return func.count()
         else:
             return aggr(val)
+
+    def conversion(self, name):
+        return conversions.get(name.lower())
+
+    def convertedcol(self, conversion, col):
+        print(conversion, type(conversion), col, type(col))
+        conv_fn = conversions.get(conversion.lower())
+        return conv_fn(col)
 
     def expr(self, expr):
         return expr
