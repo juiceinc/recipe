@@ -1449,7 +1449,11 @@ FROM scores_with_nulls"""
         )
         self.assert_recipe_csv(recipe, "parentheses\n0.5\n")
 
-        recipe = Recipe(shelf=shelf, session=self.session).dimensions("convertdate").metrics("count_star")
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("convertdate")
+            .metrics("count_star")
+        )
         assert (
             recipe.to_sql()
             == """SELECT date_trunc('month', scores_with_nulls.test_date) AS convertdate,
@@ -1466,13 +1470,15 @@ GROUP BY convertdate"""
 FROM scores_with_nulls
 GROUP BY strings"""
         )
-        self.assert_recipe_csv(recipe, """strings,strings_id
+        self.assert_recipe_csv(
+            recipe,
+            """strings,strings_id
 ,
 2005-01-0480.0,2005-01-0480.0
 2005-01-07100.0,2005-01-07100.0
 2005-02-0180.0,2005-02-0180.0
-""")
-
+""",
+        )
 
     def test_selectables(self):
         """Test parsed field definitions built on top of other selectables"""

@@ -57,7 +57,7 @@ def test_parsers():
 
     for row in values.split("\n"):
         row = row.strip()
-        if row and not row.startswith("#"):            
+        if row and not row.startswith("#"):
             row, expected = row.split("#")
             expected_by_parser = expected.strip().split(",")
             # print(f"\n\n\n\n{row}")
@@ -72,6 +72,7 @@ def test_parsers():
                 except LarkError:
                     # print(f"{parser_name:30s} failed ({expected_result})")
                     assert expected_result == "0"
+
 
 def test_complex_condition_parser():
     values = [
