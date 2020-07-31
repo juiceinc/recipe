@@ -66,7 +66,8 @@ aggregations = {
     "avg": func.avg,
     "count": func.count,
     "count_distinct": lambda fld: func.count(distinct(fld)),
-    # Technically "none" is not an aggregation
+    # Technically "none" is not an aggregation but we're keeping 
+    # it here for backward compatibility
     "none": lambda fld: fld,
     None: lambda fld: fld,
     # Percentile aggregations do not work in all engines

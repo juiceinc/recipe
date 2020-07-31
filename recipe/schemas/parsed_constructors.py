@@ -92,7 +92,6 @@ class TransformToSQLAlchemyExpression(Transformer):
         return conversions.get(name.lower())
 
     def convertedcol(self, conversion, col):
-        print(conversion, type(conversion), col, type(col))
         conv_fn = conversions.get(conversion.lower())
         return conv_fn(col)
 
