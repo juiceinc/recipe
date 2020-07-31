@@ -1216,7 +1216,6 @@ OFFSET 0""",
             .order_by("department")
         )
 
-        print(recipe.to_sql())
         assert (
             recipe.to_sql()
             == """SELECT summarize.department,

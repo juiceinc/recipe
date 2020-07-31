@@ -195,7 +195,7 @@ class Shelf(object):
 
     @property
     def filter_ids(self):
-        """ Return the Metrics on this shelf in the order in which
+        """ Return the Filters on this shelf in the order in which
         they were used. """
         return self._sorted_ingredients(
             [d.id for d in self.values() if isinstance(d, Filter)]
@@ -360,7 +360,15 @@ class Shelf(object):
             if ingredient.group_by:
                 group_bys.extend(ingredient.group_by)
             if ingredient.filters:
-                filters.update(ingredient.filters)
+                # Ensure we don't add duplicate filters
+                for new_f in ingredient.filters:
+                    filter_exists = False
+                    for f in filters:
+                        if new_f.compare(f):
+                            filter_exists = True
+                            break
+                    if not filter_exists:
+                        filters.add(new_f)
             if ingredient.havings:
                 havings.update(ingredient.havings)
 
@@ -385,8 +393,7 @@ class Shelf(object):
                     if str(c) not in [str(o) for o in order_bys]:
                         order_bys.add(c)
             except BadRecipe as e:
-                # Ignore order_by if the dimension/metric is not
-                # used.
+                # Ignore order_by if the dimension/metric is not used.
                 # TODO: Add structlog warning
                 pass
 

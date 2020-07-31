@@ -13,6 +13,7 @@ from recipe import (
     BadRecipe,
     Dimension,
     Metric,
+    Filter,
     Recipe,
     Shelf,
 )
@@ -186,6 +187,15 @@ class TestShelf(object):
         self.shelf["foo"] = Dimension(MyTable.last)
         ingredient = self.shelf.find("last", Dimension)
         assert ingredient.id == "last"
+
+    def test_find_filter(self):
+        self.shelf["age_gt_20"] = Filter(MyTable.age > 20)
+
+        ingredient = self.shelf.find("age_gt_20", Filter)
+        assert ingredient.id == "age_gt_20"
+
+        with pytest.raises(BadRecipe):
+            ingredient = self.shelf.find("age_gt_20", Dimension)
 
     def test_repr(self):
         """ Find ingredients on the shelf """

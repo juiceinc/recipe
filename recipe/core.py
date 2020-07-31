@@ -105,8 +105,6 @@ class Recipe(object):
         self._limit = 0
         self._offset = 0
 
-        self._is_postgres_engine = None
-
         self.recipe_extensions = [
             ExtensionClass(self) for ExtensionClass in extension_classes
         ]
@@ -310,7 +308,7 @@ class Recipe(object):
 
         :param filters: Filters to add to the recipe. Filters can
                          either be keys on the ``shelf`` or
-                         Filter objects
+                         Filter objects or binary expressions
         :type filters: list
         """
 
@@ -372,16 +370,22 @@ class Recipe(object):
 
     def _is_postgres(self):
         """ Determine if the running engine is postgres """
-        if self._is_postgres_engine is None:
-            is_postgres_engine = False
-            try:
-                dialect = self.session.bind.engine.name
-                if "redshift" in dialect or "postg" in dialect or "pg" in dialect:
-                    is_postgres_engine = True
-            except:
-                pass
-            self._is_postgres_engine = is_postgres_engine
-        return self._is_postgres_engine
+        try:
+            driver = self._session.bind.url.drivername
+            if "redshift" in driver or "postg" in driver or "pg" in driver:
+                return True
+        except:
+            pass
+        return False
+
+    def _is_redshift(self):
+        try:
+            driver = self._session.bind.url.drivername
+            if "redshift" in driver:
+                return True
+        except:
+            pass
+        return False
 
     def query(self):
         """
@@ -391,6 +395,9 @@ class Recipe(object):
         """
         if self._query is not None:
             return self._query
+
+        if hasattr(self, "optimize_redshift"):
+            self.optimize_redshift(self._is_redshift())
 
         if len(self._cauldron.ingredients()) == 0:
             raise BadRecipe("No ingredients have been added to this recipe")
