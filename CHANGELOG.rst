@@ -2,6 +2,11 @@
 Changelog
 =========
 
+0.18.0 (2020-07-31)
+-----------------------------------------
+* Add automatic filter binning for redshift to reduce required query compilations
+* Add parsed field converters to perform casting and date truncation.
+
 0.17.2 (2020-07-21)
 -----------------------------------------
 * Fix Paginate search to use value roles
