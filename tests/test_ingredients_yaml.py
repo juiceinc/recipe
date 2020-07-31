@@ -1304,6 +1304,12 @@ username:
 count_star:
     kind: Metric
     field: "count(*)"
+convertdate:
+    kind: Dimension
+    field: "month(test_date)"
+strings:
+    kind: Dimension
+    field: "string(test_date)+string(score)"
 total_nulls:
     kind: Metric
     field: "count_distinct(if(score IS NULL, username))"
@@ -1442,6 +1448,37 @@ FROM scores_with_nulls"""
 FROM scores_with_nulls"""
         )
         self.assert_recipe_csv(recipe, "parentheses\n0.5\n")
+
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("convertdate")
+            .metrics("count_star")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT date_trunc('month', scores_with_nulls.test_date) AS convertdate,
+       count(*) AS count_star
+FROM scores_with_nulls
+GROUP BY convertdate"""
+        )
+        # Can't run this against sqlite so we don't test csv
+
+        recipe = Recipe(shelf=shelf, session=self.session).dimensions("strings")
+        assert (
+            recipe.to_sql()
+            == """SELECT CAST(scores_with_nulls.test_date AS VARCHAR) || CAST(scores_with_nulls.score AS VARCHAR) AS strings
+FROM scores_with_nulls
+GROUP BY strings"""
+        )
+        self.assert_recipe_csv(
+            recipe,
+            """strings,strings_id
+,
+2005-01-0480.0,2005-01-0480.0
+2005-01-07100.0,2005-01-07100.0
+2005-02-0180.0,2005-02-0180.0
+""",
+        )
 
     def test_selectables(self):
         """Test parsed field definitions built on top of other selectables"""

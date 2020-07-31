@@ -2,7 +2,7 @@ from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 import dateparser
 import inspect
-from sqlalchemy import distinct, func
+from sqlalchemy import distinct, func, cast, String, Integer
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sureberus import schema as S
@@ -56,6 +56,9 @@ def coerce_format(v):
     return format_lookup.get(v, v)
 
 
+# Aggregations are a callable on a column expressoin that yields an
+# aggregated column expression
+# for instance sum(sales) => func.sum(MyTable.sales)
 aggregations = {
     "sum": func.sum,
     "min": func.min,
@@ -63,11 +66,8 @@ aggregations = {
     "avg": func.avg,
     "count": func.count,
     "count_distinct": lambda fld: func.count(distinct(fld)),
-    "month": lambda fld: func.date_trunc("month", fld),
-    "week": lambda fld: func.date_trunc("week", fld),
-    "year": lambda fld: func.date_trunc("year", fld),
-    "quarter": lambda fld: func.date_trunc("quarter", fld),
-    "age": lambda fld: func.date_part("year", func.age(fld)),
+    # Technically "none" is not an aggregation but we're keeping
+    # it here for backward compatibility
     "none": lambda fld: fld,
     None: lambda fld: fld,
     # Percentile aggregations do not work in all engines
@@ -81,6 +81,20 @@ aggregations = {
     "percentile90": lambda fld: func.percentile_cont(0.90).within_group(fld),
     "percentile95": lambda fld: func.percentile_cont(0.95).within_group(fld),
     "percentile99": lambda fld: func.percentile_cont(0.99).within_group(fld),
+}
+
+# Conversions are a callable on a column expression that yields a
+# nonaggregated column expression
+# for instance, quarter(sales_date) => func.date_trunc('quarter', MyTable.sales_date)
+conversions = {
+    "month": lambda fld: func.date_trunc("month", fld),
+    "week": lambda fld: func.date_trunc("week", fld),
+    "year": lambda fld: func.date_trunc("year", fld),
+    "quarter": lambda fld: func.date_trunc("quarter", fld),
+    "string": lambda fld: func.cast(fld, String()),
+    "int": lambda fld: func.cast(fld, Integer()),
+    # age doesn't work on all databases
+    "age": lambda fld: func.date_part("year", func.age(fld)),
 }
 
 
