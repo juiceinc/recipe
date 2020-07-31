@@ -781,7 +781,6 @@ class TestParse(object):
                 {"value": "age", "aggregation": "count_distinct"},
                 func.count(distinct(MyTable.age)),
             ),
-
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, MyTable)
@@ -882,7 +881,7 @@ class TestParse(object):
             #         "condition": {"field": "last", "in": ["Jones", "Punjabi"]},
             #     },
             #     func.sum(case([(MyTable.last.in_(["Jones", "Punjabi"]), MyTable.age)])),
-            # ),            
+            # ),
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, selectable=MyTable, aggregated=False)

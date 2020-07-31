@@ -2,6 +2,7 @@ from lark import Lark, Transformer, v_args
 from .utils import aggregations, conversions
 from ..compat import basestring
 
+
 def convert_keys_to_regex(d):
     """ Convert a dictionary of key->callable into a regex """
     keys = [k for k in d.keys() if isinstance(k, basestring)]
@@ -96,7 +97,10 @@ base_field_grammar = (
     ?conversion:  /({allowed_conv_keys})/i    
     ?convertedcol: conversion "(" column ")"
     ?column.0: {column_defn}                   -> column
-""".format(**base_field_grammar_args) + base_grammar
+""".format(
+        **base_field_grammar_args
+    )
+    + base_grammar
 )
 
 
@@ -110,7 +114,10 @@ noag_field_grammar = (
            | convertedcol
            | case
            | "(" sum ")"
-""".format(**base_field_grammar_args) + base_field_grammar
+""".format(
+        **base_field_grammar_args
+    )
+    + base_field_grammar
 )
 
 
@@ -130,7 +137,10 @@ agex_field_grammar = (
            | convertedcol
            | case
            | "(" sum ")"
-""".format(**base_field_grammar_args) + base_field_grammar
+""".format(
+        **base_field_grammar_args
+    )
+    + base_field_grammar
 )
 
 ambig = "resolve"

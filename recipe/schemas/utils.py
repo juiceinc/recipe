@@ -56,7 +56,7 @@ def coerce_format(v):
     return format_lookup.get(v, v)
 
 
-# Aggregations are a callable on a column expressoin that yields an 
+# Aggregations are a callable on a column expressoin that yields an
 # aggregated column expression
 # for instance sum(sales) => func.sum(MyTable.sales)
 aggregations = {
@@ -83,7 +83,7 @@ aggregations = {
     "percentile99": lambda fld: func.percentile_cont(0.99).within_group(fld),
 }
 
-# Conversions are a callable on a column expression that yields a 
+# Conversions are a callable on a column expression that yields a
 # nonaggregated column expression
 # for instance, quarter(sales_date) => func.date_trunc('quarter', MyTable.sales_date)
 conversions = {
@@ -91,8 +91,8 @@ conversions = {
     "week": lambda fld: func.date_trunc("week", fld),
     "year": lambda fld: func.date_trunc("year", fld),
     "quarter": lambda fld: func.date_trunc("quarter", fld),
-    "string": lambda fld: func.cast(fld, String()),    
-    "int": lambda fld: func.cast(fld, Integer()),    
+    "string": lambda fld: func.cast(fld, String()),
+    "int": lambda fld: func.cast(fld, Integer()),
     # age doesn't work on all databases
     "age": lambda fld: func.date_part("year", func.age(fld)),
 }
