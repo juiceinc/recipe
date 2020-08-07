@@ -1,4 +1,4 @@
-from sqlalchemy import and_, func, text, or_
+from sqlalchemy import and_, func, text, or_, String
 from sqlalchemy.ext.declarative import declarative_base
 
 from recipe.compat import basestring, integer_types
@@ -189,8 +189,12 @@ class AutomaticFilters(RecipeExtension):
                 # make a Filter and add it to filters
                 if (
                     self._optimize_redshift
+                    and dimension is not None
                     and operator is None
                     and isinstance(values, (list, tuple))
+                    # The first column is the one that will be filtered
+                    # limit filtering padding to columns that identify as String
+                    and isinstance(dimension.columns[0].type, String)
                 ):
                     values = pad_values(values)
 

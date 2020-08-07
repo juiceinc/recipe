@@ -2,6 +2,11 @@
 Changelog
 =========
 
+0.18.1 (2020-08-07)
+-----------------------------------------
+* Fix a bug in filter binning
+* Happy birthday, Zoe!
+
 0.18.0 (2020-07-31)
 -----------------------------------------
 * Add automatic filter binning for redshift to reduce required query compilations
