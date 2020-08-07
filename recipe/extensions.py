@@ -1,4 +1,4 @@
-from sqlalchemy import and_, func, text, or_
+from sqlalchemy import and_, func, text, or_, String
 from sqlalchemy.ext.declarative import declarative_base
 
 from recipe.compat import basestring, integer_types
