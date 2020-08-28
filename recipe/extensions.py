@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from recipe.compat import basestring, integer_types
 from recipe.core import Recipe
 from recipe.exceptions import BadRecipe
-from recipe.ingredients import Dimension, Metric, Filter
+from recipe.ingredients import Dimension, Ingredient, Metric, Filter
 from recipe.utils import FakerAnonymizer, recipe_arg, pad_values
 
 Base = declarative_base()
@@ -683,10 +683,13 @@ class Paginate(RecipeExtension):
         if self._apply_pagination and self._pagination_order_by:
 
             def make_ordering_key(ingr):
-                if ingr.ordering == "desc":
-                    return "-" + ingr.id
+                if isinstance(ingr, Ingredient):
+                    if ingr.ordering == "desc":
+                        return "-" + ingr.id
+                    else:
+                        return ingr.id
                 else:
-                    return ingr.id
+                    return ingr
 
             # Recover the existing orderings
             existing_orderings = [
