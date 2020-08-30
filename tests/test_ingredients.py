@@ -25,6 +25,11 @@ from recipe.schemas.config_constructors import parse_unvalidated_field as parse_
 from recipe.schemas.config_constructors import SAFE_DIVISON_EPSILON
 
 
+def filter_to_string(filt):
+    """Compile a filter object to a literal string"""
+    return str(filt.filters[0].compile(compile_kwargs={"literal_binds": True}))
+
+
 class TestIngredients(object):
     def setup(self):
         self.shelf = mytable_shelf
@@ -133,7 +138,7 @@ class TestIngredients(object):
 
 
 class TestIngredientBuildFilter(object):
-    def test_scalar_fitler(self):
+    def test_scalar_filter(self):
         """Test scalar filters on a string dimension """
         d = Dimension(MyTable.first)
 
@@ -178,7 +183,7 @@ class TestIngredientBuildFilter(object):
         with pytest.raises(ValueError):
             filt = d.build_filter(["moo"], "cows")
 
-    def test_scalar_fitler_on_int(self):
+    def test_scalar_filter_on_int(self):
         """Test scalar filters on an integer dimension """
         d = Dimension(MyTable.age)
 
@@ -226,7 +231,7 @@ class TestIngredientBuildFilter(object):
         with pytest.raises(ValueError):
             d.build_filter(["moo"], "cows")
 
-    def test_scalar_fitler_on_int_dim_int_value(self):
+    def test_scalar_filter_on_int_dim_int_value(self):
         """Test scalar filters on an integer dimension passing an integer value"""
         d = Dimension(MyTable.age)
 
@@ -314,6 +319,39 @@ class TestIngredientBuildFilter(object):
             d.build_filter(["moo", "foo", "tru"], operator="between")
         with pytest.raises(ValueError):
             d.build_filter(["moo"], operator="between")
+
+    def test_scalar_filter_date(self):
+        d = Dimension(MyTable.birth_date)
+        # Test building scalar filters
+        filt = d.build_filter("2020-01-01")
+        assert (
+            filter_to_string(filt) == "CAST(foo.birth_date AS VARCHAR) = '2020-01-01'"
+        )
+
+        # Evaluated as timestamp=0
+        filt = d.build_filter(0)
+        assert filter_to_string(filt) == "foo.birth_date = '1970-01-01'"
+
+    def test_vector_filter_date(self):
+        d = Dimension(MyTable.birth_date)
+        # Test building scalar filters
+        filt = d.build_filter(["2020-01-01", None, "2020-10-25"])
+        assert (
+            filter_to_string(filt)
+            == "foo.birth_date IS NULL OR foo.birth_date IN ('2020-01-01', '2020-10-25')"
+        )
+
+        filt = d.build_filter([0])
+        assert filter_to_string(filt) == "foo.birth_date IN ('1970-01-01')"
+
+        seconds_in_day = 24 * 60 * 60
+        filt = d.build_filter([seconds_in_day + 0.123565, None, 0])
+        assert (
+            filter_to_string(filt)
+            == "foo.birth_date IS NULL OR foo.birth_date IN ('1970-01-01', '1970-01-02')"
+        )
+        filt = d.build_filter([seconds_in_day * 3], operator="notin")
+        assert filter_to_string(filt) == "foo.birth_date NOT IN ('1970-01-04')"
 
     def test_quickselects(self):
         d = Dimension(
