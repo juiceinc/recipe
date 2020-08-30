@@ -70,8 +70,7 @@ class DBInfo(object):
 
 
 def get_dbinfo(conn_string, schema=None, engine_kwargs=None):
-    """Get a DBInfo object based on a connection string.
-    """
+    """Get a DBInfo object based on a connection string."""
     if engine_kwargs is None:
         engine_kwargs = {}
     if conn_string.startswith("bigquery") and schema:
@@ -81,7 +80,10 @@ def get_dbinfo(conn_string, schema=None, engine_kwargs=None):
     session = sessionmaker(engine)
     metadata = MetaData(bind=engine)
     return DBInfo(
-        engine=engine, schema=schema, session_factory=session, sqlalchemy_meta=metadata,
+        engine=engine,
+        schema=schema,
+        session_factory=session,
+        sqlalchemy_meta=metadata,
     )
 
 
