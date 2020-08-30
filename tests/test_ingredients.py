@@ -320,6 +320,19 @@ class TestIngredientBuildFilter(object):
         with pytest.raises(ValueError):
             d.build_filter(["moo"], operator="between")
 
+    def test_scalar_filter_date(self):
+        d = Dimension(MyTable.birth_date)
+        # Test building scalar filters
+        filt = d.build_filter("2020-01-01")
+        assert (
+            filter_to_string(filt)
+            == "CAST(foo.birth_date AS VARCHAR) = '2020-01-01'"
+        )
+
+        # Evaluated as timestamp=0
+        filt = d.build_filter(0)
+        assert filter_to_string(filt) == "foo.birth_date = '1970-01-01'"
+
     def test_vector_filter_date(self):
         d = Dimension(MyTable.birth_date)
         # Test building scalar filters
@@ -338,6 +351,8 @@ class TestIngredientBuildFilter(object):
             filter_to_string(filt)
             == "foo.birth_date IS NULL OR foo.birth_date IN ('1970-01-01', '1970-01-02')"
         )
+        filt = d.build_filter([seconds_in_day*3], operator="notin")
+        assert filter_to_string(filt) == "foo.birth_date NOT IN ('1970-01-04')"
 
     def test_quickselects(self):
         d = Dimension(
