@@ -13,6 +13,9 @@ from .field_grammar import (
 from .utils import (
     aggregations,
     conversions,
+    aggregations_by_engine,
+    conversions_by_engine,
+    generate_lookup_by_engine,
     find_column,
     ingredient_class_for_name,
     convert_value,
@@ -37,7 +40,8 @@ class TransformToSQLAlchemyExpression(Transformer):
         except:
             self.drivername = 'unknown'
 
-        self.allowed_aggregations = aggregations
+        self.aggregations = generate_lookup_by_engine(aggregations_by_engine, self.drivername)
+        self.conversions = generate_lookup_by_engine(conversions_by_engine, self.drivername)
 
     def number(self, value):
         try:
@@ -71,8 +75,9 @@ class TransformToSQLAlchemyExpression(Transformer):
         
         Aggregations may be database specific
         """
-        if name.lower() not in self.aggregations:
-            raise ValueError(f"Aggregation {name} is not supported on engine {self.drivername}"))
+        ag = self.aggregations.get(name.lower())
+        if ag is None:
+            raise ValueError("Aggregation {} is not supported on engine {}".format(name, self.drivername))
         return self.aggregations.get(name.lower())
 
     def div(self, num, denom):
@@ -102,10 +107,15 @@ class TransformToSQLAlchemyExpression(Transformer):
             return aggr(val)
 
     def conversion(self, name):
-        return conversions.get(name.lower())
+        conv_fn = self.conversions.get(name.lower())
+        if conv_fn is None:
+            raise ValueError("Conversion {} is not supported on engine {}".format(conv_fn, self.drivername))
+        return conv_fn
 
     def convertedcol(self, conversion, col):
-        conv_fn = conversions.get(conversion.lower())
+        conv_fn = self.conversions.get(conversion.lower())
+        if conv_fn is None:
+            raise ValueError("Conversion {} is not supported on engine {}".format(conv_fn, self.drivername))
         return conv_fn(col)
 
     def expr(self, expr):
