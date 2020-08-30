@@ -285,9 +285,9 @@ class Ingredient(object):
         ):
             filter_column = cast(filter_column, String)
         elif isinstance(filter_column.type, Date):
-            value = list(map(convert_date, value))
+            value = convert_date(value)
         elif isinstance(filter_column.type, (DateTime, TIMESTAMP)):
-            value = list(map(convert_datetime, value))
+            value = convert_datetime(value)
 
         if operator is None or operator == "eq":
             # Default operator is 'eq' so if no operator is provided, handle
