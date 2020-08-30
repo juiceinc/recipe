@@ -1,12 +1,50 @@
+import dateparser
 from functools import total_ordering
 from uuid import uuid4
 
 from sqlalchemy import Float, String, and_, between, case, cast, func, or_, text
 
 from six import string_types
+from sqlalchemy.sql.sqltypes import Date, DateTime, TIMESTAMP
+from datetime import date, datetime
+from time import gmtime
 from recipe.compat import str
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict
+
+
+def convert_date(v):
+    """Convert a passed parameter to a date if possible """
+    if v is None:
+        return v
+    elif isinstance(v, (float, int)):
+        # Convert to a date
+        tm = gmtime(v)
+        print(tm)
+        return date(tm.tm_year, tm.tm_mon, tm.tm_mday)
+    elif isinstance(v, str):
+        try:
+            return dateparser.parse(v).date()
+        except ValueError:
+            return v
+    else:
+        return v
+
+
+def convert_datetime(v):
+    """Convert a passed parameter to a datetime if possible """
+    if v is None:
+        return v
+    elif isinstance(v, str):
+        try:
+            return dateparser.parse(v)
+        except ValueError:
+            return v
+    elif isinstance(v, (float, int)):
+        # Convert to a date
+        return datetime.fromtimestamp(v)
+    else:
+        return v
 
 
 @total_ordering
@@ -247,6 +285,10 @@ class Ingredient(object):
             filter_column.type, String
         ):
             filter_column = cast(filter_column, String)
+        elif isinstance(filter_column.type, Date):
+            value = list(map(convert_date, value))
+        elif isinstance(filter_column.type, (DateTime, TIMESTAMP)):
+            value = list(map(convert_datetime, value))
 
         if operator is None or operator == "eq":
             # Default operator is 'eq' so if no operator is provided, handle
@@ -308,6 +350,11 @@ class Ingredient(object):
             filter_column = self.roles.get(target_role)
         else:
             filter_column = self.columns[0]
+
+        if isinstance(filter_column.type, Date):
+            value = list(map(convert_date, value))
+        elif isinstance(filter_column.type, (DateTime, TIMESTAMP)):
+            value = list(map(convert_datetime, value))
 
         if operator is None or operator == "in":
             # Default operator is 'in' so if no operator is provided, handle
