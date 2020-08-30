@@ -20,7 +20,6 @@ def convert_date(v):
     elif isinstance(v, (float, int)):
         # Convert to a date
         tm = gmtime(v)
-        print(tm)
         return date(tm.tm_year, tm.tm_mon, tm.tm_mday)
     elif isinstance(v, str):
         try:
