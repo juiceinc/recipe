@@ -1,3 +1,4 @@
+from copy import copy
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 import dateparser
@@ -83,6 +84,22 @@ aggregations = {
     "percentile99": lambda fld: func.percentile_cont(0.99).within_group(fld),
 }
 
+# Additional aggregations supported on redshift
+aggregations_redshift = {
+    # Percentile aggregations do not work in all engines
+    "median": func.median,
+    "percentile1": lambda fld: func.percentile_cont(0.01).within_group(fld),
+    "percentile5": lambda fld: func.percentile_cont(0.05).within_group(fld),
+    "percentile10": lambda fld: func.percentile_cont(0.10).within_group(fld),
+    "percentile25": lambda fld: func.percentile_cont(0.25).within_group(fld),
+    "percentile50": lambda fld: func.percentile_cont(0.50).within_group(fld),
+    "percentile75": lambda fld: func.percentile_cont(0.75).within_group(fld),
+    "percentile90": lambda fld: func.percentile_cont(0.90).within_group(fld),
+    "percentile95": lambda fld: func.percentile_cont(0.95).within_group(fld),
+    "percentile99": lambda fld: func.percentile_cont(0.99).within_group(fld),
+}
+
+
 # Conversions are a callable on a column expression that yields a
 # nonaggregated column expression
 # for instance, quarter(sales_date) => func.date_trunc('quarter', MyTable.sales_date)
@@ -93,9 +110,60 @@ conversions = {
     "quarter": lambda fld: func.date_trunc("quarter", fld),
     "string": lambda fld: func.cast(fld, String()),
     "int": lambda fld: func.cast(fld, Integer()),
+}
+
+
+conversions_redshift = {
     # age doesn't work on all databases
     "age": lambda fld: func.date_part("year", func.age(fld)),
 }
+
+conversions_bigquery = {
+    "month": lambda fld: func.date_trunc(fld, "month"),
+    "week": lambda fld: func.date_trunc(fld, "week"),
+    "year": lambda fld: func.date_trunc(fld, "year"),
+    "quarter": lambda fld: func.date_trunc(fld, "quarter"),
+}
+
+
+# A dictionary of aggregations keyed by sqlalchemy drivername
+# 'default' are 
+aggregations_by_engine = {
+    "default": aggregations,
+    "redshift+psycopg2": aggregations_redshift,
+}
+
+# A dictionary of conversions keyed by sqlalchemy drivername
+conversions_by_engine = {
+    "default": conversions,
+    "redshift+psycopg2": conversions_redshift,
+    "bigquery": conversions_bigquery,
+}
+
+
+def generate_lookup_by_engine(lookup_by_engine, engine):
+    """Convert `aggregations_by_engine` or `conversions_by_engine`
+    into a dictionary specific to the provided engine/drivername.
+    """
+    result = copy(lookup_by_engine.get("default", {}))
+    result.update(lookup_by_engine.get(engine, {}))
+    for k, v in result.items():
+        if v is None:
+            result.pop(k, None)
+    return result
+
+
+def convert_by_engine_keys_to_regex(lookup_by_engine):
+    """ Convert all the keys in a lookup_by_engine to a regex """
+    keys = set()
+    for d in lookup_by_engine.values():
+        for k in d.keys():
+            if isinstance(k, basestring):
+                keys.add(k)
+
+    keys = list(keys)
+    keys.sort(key=lambda item: (len(item), item), reverse=True)
+    return "|".join(keys)
 
 
 def coerce_pop_version(shelf):

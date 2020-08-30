@@ -13,6 +13,9 @@ from .field_grammar import (
 from .utils import (
     aggregations,
     conversions,
+    aggregations_by_engine,
+    conversions_by_engine,
+    generate_lookup_by_engine,
     find_column,
     ingredient_class_for_name,
     convert_value,
@@ -31,6 +34,14 @@ class TransformToSQLAlchemyExpression(Transformer):
     def __init__(self, selectable, require_aggregation=False):
         self.selectable = selectable
         self.require_aggregation = require_aggregation
+        # Database driver
+        try:
+            self.drivername = selectable.metadata.bind.url.drivername
+        except:
+            self.drivername = 'unknown'
+
+        self.aggregations = generate_lookup_by_engine(aggregations_by_engine, self.drivername)
+        self.conversions = generate_lookup_by_engine(conversions_by_engine, self.drivername)
 
     def number(self, value):
         try:
@@ -60,7 +71,14 @@ class TransformToSQLAlchemyExpression(Transformer):
         return "BETWEEN"
 
     def aggregate(self, name):
-        return aggregations.get(name.lower())
+        """Return a callable that generates SQLAlchemy to aggregate a field.
+        
+        Aggregations may be database specific
+        """
+        ag = self.aggregations.get(name.lower())
+        if ag is None:
+            raise ValueError("Aggregation {} is not supported on engine {}".format(name, self.drivername))
+        return ag
 
     def div(self, num, denom):
         """SQL safe division"""
@@ -89,10 +107,15 @@ class TransformToSQLAlchemyExpression(Transformer):
             return aggr(val)
 
     def conversion(self, name):
-        return conversions.get(name.lower())
+        conv_fn = self.conversions.get(name.lower())
+        if conv_fn is None:
+            raise ValueError("Conversion {} is not supported on engine {}".format(conv_fn, self.drivername))
+        return conv_fn
 
     def convertedcol(self, conversion, col):
-        conv_fn = conversions.get(conversion.lower())
+        conv_fn = self.conversions.get(conversion.lower())
+        if conv_fn is None:
+            raise ValueError("Conversion {} is not supported on engine {}".format(conv_fn, self.drivername))
         return conv_fn(col)
 
     def expr(self, expr):

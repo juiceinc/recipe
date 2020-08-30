@@ -1698,9 +1698,7 @@ _version: 2
 test:
     kind: Metric
     field: "if(dt {}, count, 0)"
-""".format(
-                    ytd
-                )
+""".format(ytd)
             )
             recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
             self.assert_recipe_csv(recipe, "test\n3\n")
