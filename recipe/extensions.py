@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from recipe.compat import basestring, integer_types
 from recipe.core import Recipe
 from recipe.exceptions import BadRecipe
-from recipe.ingredients import Dimension, Metric, Filter
+from recipe.ingredients import Dimension, Ingredient, Metric, Filter
 from recipe.utils import FakerAnonymizer, recipe_arg, pad_values
 
 Base = declarative_base()
@@ -66,7 +66,7 @@ class RecipeExtension(object):
         """
         Add ingredients to the recipe
 
-        This method should be overridden by subclasses """
+        This method should be overridden by subclasses"""
         pass
 
     def modify_recipe_parts(self, recipe_parts):
@@ -75,7 +75,7 @@ class RecipeExtension(object):
 
         This method allows extensions to directly modify columns,
         group_bys, filters, and order_bys generated from collected
-        ingredients. """
+        ingredients."""
         return {
             "columns": recipe_parts["columns"],
             "group_bys": recipe_parts["group_bys"],
@@ -98,7 +98,7 @@ class RecipeExtension(object):
         }
 
     def modify_postquery_parts(self, postquery_parts):
-        """ This method allows extensions to directly modify query,
+        """This method allows extensions to directly modify query,
         group_bys, filters, and order_bys generated from collected
         ingredients after a final query using columns has been created.
         """
@@ -111,14 +111,14 @@ class RecipeExtension(object):
         }
 
     def enchant_add_fields(self):
-        """ This method allows extensions to add fields to a result row.
+        """This method allows extensions to add fields to a result row.
         Return a tuple of the field names that are being added with
         this method
         """
         return ()
 
     def enchant_row(self, row):
-        """ This method adds the fields named in ``enchant_add_fields`` to
+        """This method adds the fields named in ``enchant_add_fields`` to
         each result row."""
         return ()
 
@@ -203,7 +203,7 @@ class AutomaticFilters(RecipeExtension):
     @recipe_arg()
     def optimize_redshift(self, value):
         """Toggles whether automatic filters that filter on lists of strings
-        are automatically padded to multiples of 5. Doing so will avoid query 
+        are automatically padded to multiples of 5. Doing so will avoid query
         re-compilation for queries that have approximately the same number
         of filter parameters::
 
@@ -683,10 +683,13 @@ class Paginate(RecipeExtension):
         if self._apply_pagination and self._pagination_order_by:
 
             def make_ordering_key(ingr):
-                if ingr.ordering == "desc":
-                    return "-" + ingr.id
+                if isinstance(ingr, Ingredient):
+                    if ingr.ordering == "desc":
+                        return "-" + ingr.id
+                    else:
+                        return ingr.id
                 else:
-                    return ingr.id
+                    return ingr
 
             # Recover the existing orderings
             existing_orderings = [
@@ -765,7 +768,7 @@ class Paginate(RecipeExtension):
         return postquery_parts
 
     def validated_pagination(self):
-        """ Return pagination validated against the actual number of items in the
+        """Return pagination validated against the actual number of items in the
         response.
 
         :raises BadRecipe:
@@ -779,7 +782,7 @@ class Paginate(RecipeExtension):
 
 
 class BlendRecipe(RecipeExtension):
-    """ Add blend recipes, used for joining data from another table to a base
+    """Add blend recipes, used for joining data from another table to a base
     table
 
     Supply a second recipe with a different ``from``
@@ -828,7 +831,7 @@ class BlendRecipe(RecipeExtension):
         to group_by using the direct strategy. This is because when we join
         the base recipe to the blend recipe we will likely have more than one column
         that has the same label. This will generate invalid sql if a more explicit
-        reference isn't used. """
+        reference isn't used."""
         if self.blend_recipes:
             for ingr in self.recipe._cauldron.ingredients():
                 if isinstance(ingr, Dimension):
@@ -949,7 +952,7 @@ class CompareRecipe(RecipeExtension):
         to group_by using the direct strategy. This is because when we join
         the base recipe to the compare recipe we will likely have more than one column
         that has the same label. This will generate invalid sql if a more explicit
-        reference isn't used. """
+        reference isn't used."""
         if self.compare_recipe:
             for ingr in self.recipe._cauldron.ingredients():
                 if isinstance(ingr, Dimension):
