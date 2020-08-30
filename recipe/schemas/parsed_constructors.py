@@ -78,7 +78,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         ag = self.aggregations.get(name.lower())
         if ag is None:
             raise ValueError("Aggregation {} is not supported on engine {}".format(name, self.drivername))
-        return self.aggregations.get(name.lower())
+        return ag
 
     def div(self, num, denom):
         """SQL safe division"""
