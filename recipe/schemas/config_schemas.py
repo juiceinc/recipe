@@ -11,10 +11,10 @@ from recipe.compat import basestring
 from .utils import (
     sqlalchemy_datatypes,
     coerce_format,
-    aggregations,
     SCALAR_TYPES,
     coerce_pop_version,
 )
+from .engine_support import aggregations
 
 logging.captureWarnings(True)
 
@@ -46,8 +46,8 @@ def find_operators(value):
 
 
 def _coerce_string_into_field(value, search_for_operators=True):
-    """ Convert a string into a field, potentially parsing a functional
-    form into a value and aggregation """
+    """Convert a string into a field, potentially parsing a functional
+    form into a value and aggregation"""
     if isinstance(value, basestring):
         if value.startswith("@"):
             result = _coerce_string_into_field(value[1:])
@@ -161,8 +161,8 @@ def _field_schema(aggr=True, required=True):
 
 
 class ConditionPost(object):
-    """ Convert an operator like 'gt', 'lt' into '_op' and '_op_value'
-    for easier parsing into SQLAlchemy """
+    """Convert an operator like 'gt', 'lt' into '_op' and '_op_value'
+    for easier parsing into SQLAlchemy"""
 
     def __init__(self, operator, _op, scalar):
         self.operator = operator
@@ -223,7 +223,7 @@ def _coerce_string_into_condition_ref(cond):
 
 
 def _full_condition_schema(**kwargs):
-    """ Conditions can be a field with an operator, like this yaml example
+    """Conditions can be a field with an operator, like this yaml example
 
     condition:
         field: foo
@@ -306,7 +306,7 @@ def _move_buckets_to_field(value):
 
 
 def _move_extra_fields(value):
-    """ Move any fields that look like "{role}_field" into the extra_fields
+    """Move any fields that look like "{role}_field" into the extra_fields
     list. These will be processed as fields. Rename them as {role}_expression.
     """
     if isinstance(value, dict):
@@ -328,7 +328,7 @@ def _move_extra_fields(value):
 
 def _adjust_kinds(value):
     """Ensure kind is lowercase with a default of "metric".
-    
+
     Rewrite deprecated field definitions for DivideMetirc, WtdAvgMetric,
     IdValueDimension, LookupDimension.
     """
@@ -414,8 +414,8 @@ def _process_ingredient(ingr, shelf):
 
 
 def _replace_references(shelf):
-    """ Iterate over the shelf and replace and field.value: @ references
-    with the field in another ingredient """
+    """Iterate over the shelf and replace and field.value: @ references
+    with the field in another ingredient"""
     for ingr in shelf.values():
         _process_ingredient(ingr, shelf)
     return shelf

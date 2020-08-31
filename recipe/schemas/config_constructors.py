@@ -8,11 +8,11 @@ from recipe.exceptions import BadIngredient
 from .config_schemas import condition_schema, ingredient_schema, shelf_schema
 from .utils import (
     sqlalchemy_datatypes,
-    aggregations,
     convert_value,
     find_column,
     ingredient_class_for_name,
 )
+from .engine_support import aggregations
 from recipe.ingredients import InvalidIngredient
 
 
@@ -79,8 +79,8 @@ def ingredient_from_unvalidated_dict(unvalidated_ingr, selectable):
 
 
 def parse_validated_field(fld, selectable, use_bucket_labels=True):
-    """ Converts a validated field to a sqlalchemy expression.
-    Field references are looked up in selectable """
+    """Converts a validated field to a sqlalchemy expression.
+    Field references are looked up in selectable"""
     if fld is None:
         return
 
@@ -189,5 +189,10 @@ def create_ingredient_from_config(ingr_dict, selectable):
     try:
         return IngredientClass(*args, **ingr_dict)
     except BadIngredient as e:
-        error = {"type": "bad_ingredient", "extra": {"details": str(e),}}
+        error = {
+            "type": "bad_ingredient",
+            "extra": {
+                "details": str(e),
+            },
+        }
         return InvalidIngredient(error=error)
