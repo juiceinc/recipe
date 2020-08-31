@@ -27,7 +27,7 @@ from recipe.schemas.config_constructors import SAFE_DIVISON_EPSILON
 
 def filter_to_string(filt):
     """Compile a filter object to a literal string"""
-    if hasattr(filt, 'filters'):
+    if hasattr(filt, "filters"):
         return str(filt.compile(compile_kwargs={"literal_binds": True}))
     else:
         return str(filt.compile(compile_kwargs={"literal_binds": True}))
@@ -212,10 +212,7 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter("moo", "like")
         assert str(filt) == "CAST(foo.age AS VARCHAR) LIKE :param_1"
         filt = d.build_filter("moo", "ilike")
-        assert (
-            str(filt)
-            == "lower(CAST(foo.age AS VARCHAR)) LIKE lower(:param_1)"
-        )
+        assert str(filt) == "lower(CAST(foo.age AS VARCHAR)) LIKE lower(:param_1)"
         # None values get converted to IS
         filt = d.build_filter(None, "eq")
         assert str(filt) == "foo.age IS NULL"
@@ -301,15 +298,9 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter(["moo"], operator="notin")
         assert str(filt) == "foo.first NOT IN (:first_1)"
         filt = d.build_filter(["moo", None], operator="notin")
-        assert (
-            str(filt)
-            == "foo.first IS NOT NULL AND foo.first NOT IN (:first_1)"
-        )
+        assert str(filt) == "foo.first IS NOT NULL AND foo.first NOT IN (:first_1)"
         filt = d.build_filter([None, "moo", None], operator="notin")
-        assert (
-            str(filt)
-            == "foo.first IS NOT NULL AND foo.first NOT IN (:first_1)"
-        )
+        assert str(filt) == "foo.first IS NOT NULL AND foo.first NOT IN (:first_1)"
         filt = d.build_filter([None, None], operator="notin")
         assert str(filt) == "foo.first IS NOT NULL"
         filt = d.build_filter(["moo", "foo"], operator="between")

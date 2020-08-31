@@ -33,7 +33,7 @@ class Stats(object):
 
 
 class Recipe(object):
-    """ A tool for getting data.
+    """A tool for getting data.
 
     Args:
 
@@ -266,7 +266,7 @@ class Recipe(object):
 
     @recipe_arg()
     def metrics(self, *metrics):
-        """ Add a list of Metric ingredients to the query. These can either be
+        """Add a list of Metric ingredients to the query. These can either be
         Metric objects or strings representing metrics on the shelf.
 
         The Metric expression will be added to the query's select statement.
@@ -282,7 +282,7 @@ class Recipe(object):
 
     @recipe_arg()
     def dimensions(self, *dimensions):
-        """ Add a list of Dimension ingredients to the query. These can either be
+        """Add a list of Dimension ingredients to the query. These can either be
         Dimension objects or strings representing dimensions on the shelf.
 
         The Dimension expression will be added to the query's select statement
@@ -312,7 +312,7 @@ class Recipe(object):
         :type filters: list
         """
 
-        def filter_constructor(f, shelf=None):            
+        def filter_constructor(f, shelf=None):
             if not isinstance(f, Filter):
                 return Filter(f)
             else:
@@ -322,7 +322,9 @@ class Recipe(object):
             if f is not None:
                 print("About to use", f, type(f))
                 self._cauldron.use(
-                    self._shelf.find(f, (Filter, Having), constructor=filter_constructor)
+                    self._shelf.find(
+                        f, (Filter, Having), constructor=filter_constructor
+                    )
                 )
 
     @recipe_arg()
@@ -348,7 +350,7 @@ class Recipe(object):
 
     @recipe_arg()
     def limit(self, limit):
-        """ Limit the number of rows returned from the database.
+        """Limit the number of rows returned from the database.
 
         :param limit: The number of rows to return in the recipe. 0 will
                       return all rows.
@@ -358,7 +360,7 @@ class Recipe(object):
 
     @recipe_arg()
     def offset(self, offset):
-        """ Offset a number of rows before returning rows from the database.
+        """Offset a number of rows before returning rows from the database.
 
         :param offset: The number of rows to offset in the recipe. 0 will
                        return from the first available row
@@ -476,7 +478,7 @@ class Recipe(object):
         return self._query
 
     def _table(self):
-        """ A convenience method to determine the table the query is
+        """A convenience method to determine the table the query is
         selecting from
         """
         descriptions = self.query().column_descriptions
@@ -486,27 +488,24 @@ class Recipe(object):
             return None
 
     def to_sql(self):
-        """ A string representation of the SQL this recipe will generate.
-        """
+        """A string representation of the SQL this recipe will generate."""
         return prettyprintable_sql(self.query())
 
     def subquery(self, name=None):
-        """ The recipe's query as a subquery suitable for use in joins or other
+        """The recipe's query as a subquery suitable for use in joins or other
         queries.
         """
         query = self.query()
         return query.subquery(name=name)
 
     def as_table(self, name=None):
-        """ Return an alias to a table
-        """
+        """Return an alias to a table"""
         if name is None:
             name = self._id
         return alias(self.subquery(), name=name)
 
     def all(self):
-        """ Return a (potentially cached) list of result objects.
-        """
+        """Return a (potentially cached) list of result objects."""
         starttime = fetchtime = enchanttime = time.time()
         self.query()
 
@@ -534,8 +533,7 @@ class Recipe(object):
         return self._all
 
     def one(self):
-        """ Return the first element on the result
-        """
+        """Return the first element on the result"""
         all = self.all()
         if len(all) > 0:
             return all[0]
@@ -543,8 +541,7 @@ class Recipe(object):
             return []
 
     def first(self):
-        """ Return the first element on the result
-        """
+        """Return the first element on the result"""
         return self.one()
 
     @property

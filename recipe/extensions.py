@@ -313,9 +313,9 @@ class AutomaticFilters(RecipeExtension):
         If the key provided in the automatic_filter dictionary contains a comma,
         the filters will be treated as compound. Compound operators will be matched
         to the values by splitting the key on the commas then zipping the keys
-        to values. 
+        to values.
 
-        For instance, you could find newborns in California and 20 year olds in 
+        For instance, you could find newborns in California and 20 year olds in
         New Hampshire with::
 
             shelf = Shelf({
@@ -334,7 +334,7 @@ class AutomaticFilters(RecipeExtension):
               (Census.state = 'California' and Census.age = 0) OR
               (Census.state = 'New Hampshire' and Census.age = 20)
 
-        Not all keys need to match in compound filters and may be provided. 
+        Not all keys need to match in compound filters and may be provided.
         For instance, the following example uses operators and "unbalanced" keys::
 
             recipe.dimensions('state').metrics('population').automatic_filters({
@@ -796,7 +796,9 @@ class Paginate(RecipeExtension):
 
             # Build a big or filter for the search
             if filters:
-                or_expression = or_(f.filters[0] if hasattr(f, 'filters') else f for f in filters)
+                or_expression = or_(
+                    f.filters[0] if hasattr(f, "filters") else f for f in filters
+                )
                 search_filter = Filter(or_expression)
                 self.recipe._cauldron.use(search_filter)
 
