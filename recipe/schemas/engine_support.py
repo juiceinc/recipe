@@ -4,6 +4,7 @@ from sqlalchemy.types import Numeric, String, Integer
 
 # A custom age function for postgres
 
+
 class postgres_age(expression.FunctionElement):
     type = Numeric()
     name = "postgres_age"
@@ -117,6 +118,7 @@ def bqpercentile99(element, compiler, **kw):
 
 # An age calculation for bigquery
 
+
 class bq_age(expression.FunctionElement):
     type = Numeric()
     name = "bq_age"
@@ -131,7 +133,6 @@ def bqage(element, compiler, **kw):
         + "< EXTRACT(MONTH FROM %s)+ EXTRACT(DAY FROM %s)/100.0, 1, 0)"
         % (clauses, clauses)
     )
-
 
 
 ####################
