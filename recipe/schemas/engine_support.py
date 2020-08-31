@@ -2,6 +2,25 @@ from sqlalchemy.sql import expression, func, distinct, text
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.types import Numeric, String, Integer
 
+# A custom age function for postgres
+
+class postgres_age(expression.FunctionElement):
+    type = Numeric()
+    name = "postgres_age"
+
+
+@compiles(postgres_age)
+def pgage(element, compiler, **kw):
+    # Calculate the difference in years, then adjust based on whether the current date has passed
+    # using EXTRACT('dayofyear') failed on edge cases
+    clauses = compiler.process(element.clauses)
+    return (
+        "DATEDIFF('YEAR', %s, CURRENT_DATE) - " % clauses
+        + "CASE WHEN extract('month' from CURRENT_DATE) + extract('day' from CURRENT_DATE)/100.0 "
+        + "< extract('month' from %s)+ extract('day' from %s)/100.0 THEN 1 ELSE 0 END"
+        % (clauses, clauses)
+    )
+
 
 # Custom function definitions for bigquery
 
@@ -96,6 +115,25 @@ def bqpercentile99(element, compiler, **kw):
     return "approx_quantiles(%s, 100)[OFFSET(99)]" % compiler.process(element.clauses)
 
 
+# An age calculation for bigquery
+
+class bq_age(expression.FunctionElement):
+    type = Numeric()
+    name = "bq_age"
+
+
+@compiles(bq_age, "bigquery")
+def bqage(element, compiler, **kw):
+    clauses = compiler.process(element.clauses)
+    return (
+        "DATE_DIFF(CURRENT_DATE, %s, YEAR) - " % clauses
+        + "IF(EXTRACT(MONTH FROM CURRENT_DATE) + EXTRACT(DAY FROM CURRENT_DATE)/100.0 "
+        + "< EXTRACT(MONTH FROM %s)+ EXTRACT(DAY FROM %s)/100.0, 1, 0)"
+        % (clauses, clauses)
+    )
+
+
+
 ####################
 # Aggregations are a callable on a column expressoin that yields an
 # aggregated column expression
@@ -183,7 +221,7 @@ conversions = {
 
 conversions_redshift = {
     # age doesn't work on all databases
-    "age": lambda fld: func.date_part("year", func.age(fld)),
+    "age": lambda fld: postgres_age(fld),
 }
 
 conversions_bigquery = {
@@ -191,6 +229,7 @@ conversions_bigquery = {
     "week": lambda fld: func.date_trunc(fld, text("week")),
     "year": lambda fld: func.date_trunc(fld, text("year")),
     "quarter": lambda fld: func.date_trunc(fld, text("quarter")),
+    "age": lambda fld: bq_age(fld),
 }
 
 
