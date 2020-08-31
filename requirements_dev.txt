@@ -7,4 +7,9 @@ pytest==4.6.6
 pytest-cov==2.8.1
 twine==1.10.0
 mock==3.0.5
+psycopg2-binary
+sqlalchemy-redshift
+pybigquery
+google-cloud-bigquery-storage
+pyarrow
 -e .
