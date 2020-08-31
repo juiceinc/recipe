@@ -14,7 +14,7 @@ from .utils import (
     SCALAR_TYPES,
     coerce_pop_version,
 )
-from .aggregations import aggregations
+from .engine_support import aggregations
 
 logging.captureWarnings(True)
 

@@ -17,7 +17,7 @@ from .utils import (
     convert_value,
     calc_date_range,
 )
-from .aggregations import aggregations_by_engine, conversions_by_engine
+from .engine_support import aggregations_by_engine, conversions_by_engine
 from recipe.exceptions import BadIngredient
 from recipe.ingredients import InvalidIngredient
 

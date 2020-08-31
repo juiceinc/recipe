@@ -12,7 +12,7 @@ from .utils import (
     find_column,
     ingredient_class_for_name,
 )
-from .aggregations import aggregations
+from .engine_support import aggregations
 from recipe.ingredients import InvalidIngredient
 
 

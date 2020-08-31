@@ -1,5 +1,5 @@
 from lark import Lark, Transformer, v_args
-from .aggregations import aggregations_by_engine, conversions_by_engine
+from .engine_support import aggregations_by_engine, conversions_by_engine
 from .utils import convert_by_engine_keys_to_regex
 from ..compat import basestring
 
