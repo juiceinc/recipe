@@ -173,13 +173,21 @@ pctpop2000:
     field: "percentile5(pop2000)"        
 """
         shelf = self.create_shelf(config, self.redshift_dbinfo, "census")
-        recipe = self.redshift_dbinfo.recipe(shelf=shelf).metrics("count_star", "pctpop2000")
+        recipe = self.redshift_dbinfo.recipe(shelf=shelf).metrics(
+            "count_star", "pctpop2000"
+        )
         print(recipe.to_sql())
-        assert recipe.to_sql() == """SELECT count(*) AS count_star,
+        assert (
+            recipe.to_sql()
+            == """SELECT count(*) AS count_star,
        percentile_cont(0.05) WITHIN GROUP (
                                            ORDER BY recipetest.census.pop2000) AS pctpop2000
 FROM recipetest.census"""
-        assert recipe.dataset.csv.replace("\r\n", "\n") == "count_star,pctpop2000\n344,1723.60\n"
+        )
+        assert (
+            recipe.dataset.csv.replace("\r\n", "\n")
+            == "count_star,pctpop2000\n344,1723.60\n"
+        )
 
     def test_bigquery(self):
         # Percentile not supported on bq
@@ -194,7 +202,10 @@ pctpop2000:
 """
         shelf = self.create_shelf(config, self.bq_dbinfo, "census")
         recipe = self.bq_dbinfo.recipe(shelf=shelf).metrics("count_star", "pctpop2000")
-        assert recipe.dataset.csv.replace("\r\n", "\n") == "count_star,pctpop2000\n344,1723\n"
+        assert (
+            recipe.dataset.csv.replace("\r\n", "\n")
+            == "count_star,pctpop2000\n344,1723\n"
+        )
 
     def test_redshift_datetester(self):
         config = """
@@ -207,12 +218,21 @@ count_star:
     field: "count(*)"        
 """
         shelf = self.create_shelf(config, self.redshift_dbinfo, "datetester")
-        recipe = self.redshift_dbinfo.recipe(shelf=shelf).metrics("count_star").dimensions("yeardt")
-        assert recipe.to_sql() == """SELECT date_trunc('year', recipetest.datetester.dt) AS yeardt,
+        recipe = (
+            self.redshift_dbinfo.recipe(shelf=shelf)
+            .metrics("count_star")
+            .dimensions("yeardt")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT date_trunc('year', recipetest.datetester.dt) AS yeardt,
        count(*) AS count_star
 FROM recipetest.datetester
 GROUP BY yeardt"""
-        assert recipe.dataset.csv.replace("\r\n", "\n") == """yeardt,count_star,yeardt_id
+        )
+        assert (
+            recipe.dataset.csv.replace("\r\n", "\n")
+            == """yeardt,count_star,yeardt_id
 2017-01-01 00:00:00,12,2017-01-01 00:00:00
 2018-01-01 00:00:00,12,2018-01-01 00:00:00
 2019-01-01 00:00:00,12,2019-01-01 00:00:00
@@ -228,7 +248,8 @@ GROUP BY yeardt"""
 2029-01-01 00:00:00,12,2029-01-01 00:00:00
 2030-01-01 00:00:00,12,2030-01-01 00:00:00
 """
- 
+        )
+
     def test_bigquery_datetester(self):
         config = """
 _version: 2
@@ -243,14 +264,23 @@ count_star:
     field: "count(*)"        
 """
         shelf = self.create_shelf(config, self.bq_dbinfo, "datetester")
-        recipe = self.bq_dbinfo.recipe(shelf=shelf).metrics("count_star","cntorig").dimensions("yeardt")
-        assert recipe.to_sql() == """SELECT date_trunc(`datetester`.`dt`, year) AS `yeardt`,
+        recipe = (
+            self.bq_dbinfo.recipe(shelf=shelf)
+            .metrics("count_star", "cntorig")
+            .dimensions("yeardt")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT date_trunc(`datetester`.`dt`, year) AS `yeardt`,
        count(DISTINCT `datetester`.`dt`) AS `cntorig`,
        count(*) AS `count_star`
 FROM `datetester`
 GROUP BY `yeardt`"""
+        )
         print(recipe.dataset.csv)
-        assert recipe.dataset.csv.replace("\r\n", "\n") == """yeardt,cntorig,count_star,yeardt_id
+        assert (
+            recipe.dataset.csv.replace("\r\n", "\n")
+            == """yeardt,cntorig,count_star,yeardt_id
 2017-01-01,12,12,2017-01-01
 2019-01-01,12,12,2019-01-01
 2021-01-01,12,12,2021-01-01
@@ -266,5 +296,4 @@ GROUP BY `yeardt`"""
 2025-01-01,12,12,2025-01-01
 2029-01-01,12,12,2029-01-01
 """
-
- 
+        )
