@@ -172,16 +172,19 @@ class AutomaticFilters(RecipeExtension):
 
     def _build_compound_filter(self, key, values):
         keys = key.split(",")
-        for v in values:
-            items = []
-            for d, v in zip(keys, values):
+        or_items = []
+        for val in values:
+            and_items = []
+            for d, v in zip(keys, val):
                 filt = self._build_automatic_filter(d, v)
-                if filt:
-                    items.append(filt)
-            if items:
-                return or_(*items)
-            else:
-                return None
+                if filt is not None:
+                    and_items.append(filt)
+            if and_items:
+                or_items.append(and_(*and_items))
+        if or_items:
+            return or_(*or_items)
+        else:
+            return None
 
     def _build_automatic_filter(self, dim, values):
         """Build an automatic filter given a dim and a value.
@@ -220,7 +223,9 @@ class AutomaticFilters(RecipeExtension):
                 if "," in dim:
                     self.recipe.filters(self._build_compound_filter(dim, values))
                 else:
-                    self.recipe.filters(self._build_automatic_filter(dim, values))
+                    filt = self._build_automatic_filter(dim, values)
+                    if filt is not None:
+                        self.recipe.filters(filt)
 
     @recipe_arg()
     def optimize_redshift(self, value):
@@ -791,7 +796,7 @@ class Paginate(RecipeExtension):
 
             # Build a big or filter for the search
             if filters:
-                or_expression = or_(f.filters[0] for f in filters)
+                or_expression = or_(f.filters[0] if hasattr(f, 'filters') else f for f in filters)
                 search_filter = Filter(or_expression)
                 self.recipe._cauldron.use(search_filter)
 

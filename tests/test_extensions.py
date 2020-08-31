@@ -330,6 +330,69 @@ WHERE foo.first < 'moo'
 GROUP BY first"""
         )
 
+    def test_compound_filters(self):
+        # A single compound filter item
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters({"first,last": [["foo", "moo"]]})
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.first = 'foo'
+  AND foo.last = 'moo'
+GROUP BY first"""
+        )
+
+        # A multiple items
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters(
+            {"first,last": [["foo", "moo"], ["chicken", "cluck"]]}
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.first = 'foo'
+  AND foo.last = 'moo'
+  OR foo.first = 'chicken'
+  AND foo.last = 'cluck'
+GROUP BY first"""
+        )
+
+        # Unbalanced items
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters({"first,last": [["foo", "moo"], ["chicken"]]})
+        print(recipe.to_sql())
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.first = 'foo'
+  AND foo.last = 'moo'
+  OR foo.first = 'chicken'
+GROUP BY first"""
+        )
+
+        # Using operators
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters(
+            {"first,last__like": [["cow", "moo*"], ["chicken", "cluck*"]]}
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.first = 'cow'
+  AND foo.last LIKE 'moo*'
+  OR foo.first = 'chicken'
+  AND foo.last LIKE 'cluck*'
+GROUP BY first"""
+        )
+
 
 class TestAnonymizeRecipeExtension(object):
     def setup(self):
@@ -889,6 +952,7 @@ OFFSET 0"""
             .pagination_q("M")
             .pagination_search_keys("sex")
         )
+        print(recipe.to_sql())
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,

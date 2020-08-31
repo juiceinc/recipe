@@ -312,16 +312,18 @@ class Recipe(object):
         :type filters: list
         """
 
-        def filter_constructor(f, shelf=None):
-            if isinstance(f, BinaryExpression):
+        def filter_constructor(f, shelf=None):            
+            if not isinstance(f, Filter):
                 return Filter(f)
             else:
                 return f
 
         for f in filters:
-            self._cauldron.use(
-                self._shelf.find(f, (Filter, Having), constructor=filter_constructor)
-            )
+            if f is not None:
+                print("About to use", f, type(f))
+                self._cauldron.use(
+                    self._shelf.find(f, (Filter, Having), constructor=filter_constructor)
+                )
 
     @recipe_arg()
     def order_by(self, *order_bys):
