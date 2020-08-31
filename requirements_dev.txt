@@ -11,4 +11,4 @@ psycopg2-binary
 sqlalchemy-redshift
 pybigquery
 google-cloud-bigquery-storage
-gi-e .
+-e .

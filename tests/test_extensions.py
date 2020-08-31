@@ -364,7 +364,6 @@ GROUP BY first"""
         # Unbalanced items
         recipe = self.recipe().metrics("age").dimensions("first")
         recipe = recipe.automatic_filters({"first,last": [["foo", "moo"], ["chicken"]]})
-        print(recipe.to_sql())
         assert (
             recipe.to_sql()
             == """SELECT foo.first AS first,
@@ -952,7 +951,6 @@ OFFSET 0"""
             .pagination_q("M")
             .pagination_search_keys("sex")
         )
-        print(recipe.to_sql())
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
