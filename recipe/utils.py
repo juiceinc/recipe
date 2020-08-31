@@ -50,7 +50,7 @@ def filter_to_string(filt):
         return str(filt.filters[0].compile(compile_kwargs={"literal_binds": True}))
     elif hasattr(filt, "havings") and filt.havings:
         return str(filt.havings[0].compile(compile_kwargs={"literal_binds": True}))
-    elif isinstance(filt, Boolean):
+    elif isinstance(filt, bool):
         return str(filt)
     else:
         return str(filt.compile(compile_kwargs={"literal_binds": True}))
