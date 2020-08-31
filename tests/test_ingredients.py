@@ -23,14 +23,7 @@ from recipe.schemas.config_constructors import (
 )
 from recipe.schemas.config_constructors import parse_unvalidated_field as parse_field
 from recipe.schemas.config_constructors import SAFE_DIVISON_EPSILON
-
-
-def filter_to_string(filt):
-    """Compile a filter object to a literal string"""
-    if hasattr(filt, "filters"):
-        return str(filt.compile(compile_kwargs={"literal_binds": True}))
-    else:
-        return str(filt.compile(compile_kwargs={"literal_binds": True}))
+from recipe.utils import filter_to_string
 
 
 class TestIngredients(object):

@@ -5,6 +5,8 @@ import math
 import re
 import string
 import unicodedata
+
+from sureberus.schema import Boolean
 from .compat import str as compat_str
 from functools import wraps
 
@@ -39,6 +41,19 @@ __all__ = [
     "FakerFormatter",
     "recipe_arg",
 ]
+
+
+
+def filter_to_string(filt):
+    """Compile a filter object to a literal string"""    
+    if hasattr(filt, "filters") and filt.filters:
+        return str(filt.filters[0].compile(compile_kwargs={"literal_binds": True}))
+    elif hasattr(filt, "havings") and filt.havings:
+        return str(filt.havings[0].compile(compile_kwargs={"literal_binds": True}))
+    elif isinstance(filt, Boolean):
+        return str(filt)
+    else:
+        return str(filt.compile(compile_kwargs={"literal_binds": True}))
 
 
 def generate_faker_seed(value):

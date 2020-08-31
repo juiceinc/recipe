@@ -313,14 +313,13 @@ class Recipe(object):
         """
 
         def filter_constructor(f, shelf=None):
-            if not isinstance(f, Filter):
+            if not isinstance(f, (Filter, Having)) and not isinstance(f, basestring):
                 return Filter(f)
             else:
                 return f
 
         for f in filters:
             if f is not None:
-                print("About to use", f, type(f))
                 self._cauldron.use(
                     self._shelf.find(
                         f, (Filter, Having), constructor=filter_constructor

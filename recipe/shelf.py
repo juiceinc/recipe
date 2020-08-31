@@ -342,6 +342,7 @@ class Shelf(object):
         """
         columns, group_bys, filters, havings = [], [], set(), set()
         order_by_keys = list(order_by_keys)
+        all_filters = set()
 
         for ingredient in self.ingredients():
             if ingredient.error:
@@ -362,13 +363,11 @@ class Shelf(object):
             if ingredient.filters:
                 # Ensure we don't add duplicate filters
                 for new_f in ingredient.filters:
-                    filter_exists = False
-                    for f in filters:
-                        if new_f.compare(f):
-                            filter_exists = True
-                            break
-                    if not filter_exists:
+                    from recipe.utils import filter_to_string
+                    new_f_str = filter_to_string(new_f)
+                    if new_f_str not in all_filters:
                         filters.add(new_f)
+                        all_filters.add(new_f_str)
             if ingredient.havings:
                 havings.update(ingredient.havings)
 
