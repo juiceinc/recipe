@@ -207,7 +207,7 @@ def date_offset(dt, offset, **offset_params):
 
 def calc_date_range(offset, units, dt):
     """Create an intelligent date range using offsets, units and a starting date
-    
+
     Args:
 
         offset: An offset
@@ -223,7 +223,7 @@ def calc_date_range(offset, units, dt):
             day: The provided date
         dt
             The date that will be used for calculations
-            
+
     Returns:
 
         A tuple of dates constructed using the offsets and units

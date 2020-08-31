@@ -35,10 +35,14 @@ class TransformToSQLAlchemyExpression(Transformer):
         try:
             self.drivername = selectable.metadata.bind.url.drivername
         except:
-            self.drivername = 'unknown'
+            self.drivername = "unknown"
 
-        self.aggregations = generate_lookup_by_engine(aggregations_by_engine, self.drivername)
-        self.conversions = generate_lookup_by_engine(conversions_by_engine, self.drivername)
+        self.aggregations = generate_lookup_by_engine(
+            aggregations_by_engine, self.drivername
+        )
+        self.conversions = generate_lookup_by_engine(
+            conversions_by_engine, self.drivername
+        )
 
     def number(self, value):
         try:
@@ -69,12 +73,16 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def aggregate(self, name):
         """Return a callable that generates SQLAlchemy to aggregate a field.
-        
+
         Aggregations may be database specific
         """
         ag = self.aggregations.get(name.lower())
         if ag is None:
-            raise ValueError("Aggregation {} is not supported on {} engine".format(name, self.drivername))
+            raise ValueError(
+                "Aggregation {} is not supported on {} engine".format(
+                    name, self.drivername
+                )
+            )
         return ag
 
     def div(self, num, denom):
@@ -106,13 +114,21 @@ class TransformToSQLAlchemyExpression(Transformer):
     def conversion(self, name):
         conv_fn = self.conversions.get(name.lower())
         if conv_fn is None:
-            raise ValueError("Conversion {} is not supported on {} engine".format(conv_fn, self.drivername))
+            raise ValueError(
+                "Conversion {} is not supported on {} engine".format(
+                    conv_fn, self.drivername
+                )
+            )
         return conv_fn
 
     def convertedcol(self, conversion, col):
         conv_fn = self.conversions.get(conversion.lower())
         if conv_fn is None:
-            raise ValueError("Conversion {} is not supported on {} engine".format(conv_fn, self.drivername))
+            raise ValueError(
+                "Conversion {} is not supported on {} engine".format(
+                    conv_fn, self.drivername
+                )
+            )
         return conv_fn(col)
 
     def expr(self, expr):
@@ -134,11 +150,11 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def is_comparison(self, *args):
         """Things that can be compared with IS
-        
+
         will be either IS NULL or an intelligent date
         like "IS prior year" or "IS next week".
 
-        If intelligent dates are used, determine the relevant dates and 
+        If intelligent dates are used, determine the relevant dates and
         return a tuple of start_date, end_date
         """
         if len(args) == 1 and args[0] is None:
@@ -267,5 +283,10 @@ def create_ingredient_from_parsed(ingr_dict, selectable):
     try:
         return IngredientClass(*args, **ingr_dict)
     except BadIngredient as e:
-        error = {"type": "bad_ingredient", "extra": {"details": str(e),}}
+        error = {
+            "type": "bad_ingredient",
+            "extra": {
+                "details": str(e),
+            },
+        }
         return InvalidIngredient(error=error)

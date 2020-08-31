@@ -444,7 +444,7 @@ Not found,9999,4567879,Not found
 
     def test_complex_census_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
-        metrics """
+        metrics"""
         shelf = self.validated_shelf("census_complex.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
@@ -472,7 +472,7 @@ Vermont,271469,The Green Mountain State,Vermont
 
     def test_complex_census_from_validated_yaml_math(self):
         """Build a recipe that uses complex definitions dimensions and
-        metrics """
+        metrics"""
         shelf = self.validated_shelf("census_complex.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
@@ -1151,7 +1151,7 @@ Vermont,0.4374284968466102,The Green Mountain State,Vermont
 
     def test_complex_census_from_validated_yaml_math(self):
         """Build a recipe that uses complex definitions dimensions and
-        metrics """
+        metrics"""
         shelf = self.validated_shelf("census_complex.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
@@ -1698,7 +1698,9 @@ _version: 2
 test:
     kind: Metric
     field: "if(dt {}, count, 0)"
-""".format(ytd)
+""".format(
+                    ytd
+                )
             )
             recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
             self.assert_recipe_csv(recipe, "test\n3\n")
