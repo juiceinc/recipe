@@ -43,9 +43,8 @@ __all__ = [
 ]
 
 
-
 def filter_to_string(filt):
-    """Compile a filter object to a literal string"""    
+    """Compile a filter object to a literal string"""
     if hasattr(filt, "filters") and filt.filters:
         return str(filt.filters[0].compile(compile_kwargs={"literal_binds": True}))
     elif hasattr(filt, "havings") and filt.havings:
@@ -194,11 +193,11 @@ def disaggregate(expr):
 
 
 def pad_values(values, prefix="RECIPE-DUMMY-VAL-", bin_size=11):
-    """Redshift recompiles queries when a where IN clause includes a 
+    """Redshift recompiles queries when a where IN clause includes a
     different number of values. To avoid this, pad out the list
     of string values to certain fixed lengths.
 
-    The default bin size is 11. During testing we discovered that 
+    The default bin size is 11. During testing we discovered that
     compilation was required for where clauses with different numbers
     of items but all queries with 11 or more items shared a compiled
     query.
@@ -268,7 +267,7 @@ class FakerFormatter(string.Formatter):
 @attr.s
 class FakerAnonymizer(object):
     """Returns a deterministically generated fake value that depends on the
-    input value. """
+    input value."""
 
     format_str = attr.ib()
     postprocessor = attr.ib()
