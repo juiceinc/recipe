@@ -7,7 +7,8 @@ from .config_schemas import (
     ingredient_schema,
 )
 from .parsed_schemas import shelf_schema as parsed_shelf_schema
-from .utils import aggregations, sqlalchemy_datatypes
+from .utils import sqlalchemy_datatypes
+from .aggregations import aggregations
 
 
 shelf_schema = S.Dict(

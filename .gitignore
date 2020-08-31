@@ -67,3 +67,4 @@ docs/_build
 .vscode
 .envrc
 *.ipynb
+tests/test_parsed_engines.py

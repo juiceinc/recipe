@@ -3,12 +3,11 @@ from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 import dateparser
 import inspect
-from sqlalchemy import distinct, func, cast, String, Integer
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sureberus import schema as S
 
-from recipe.exceptions import BadIngredient, InvalidColumnError
+from recipe.exceptions import InvalidColumnError
 from recipe.compat import basestring
 
 SCALAR_TYPES = [S.Integer(), S.String(), S.Float(), S.Boolean()]
@@ -57,97 +56,13 @@ def coerce_format(v):
     return format_lookup.get(v, v)
 
 
-# Aggregations are a callable on a column expressoin that yields an
-# aggregated column expression
-# for instance sum(sales) => func.sum(MyTable.sales)
-aggregations = {
-    "sum": func.sum,
-    "min": func.min,
-    "max": func.max,
-    "avg": func.avg,
-    "count": func.count,
-    "count_distinct": lambda fld: func.count(distinct(fld)),
-    # Technically "none" is not an aggregation but we're keeping
-    # it here for backward compatibility
-    "none": lambda fld: fld,
-    None: lambda fld: fld,
-    # Percentile aggregations do not work in all engines
-    "median": func.median,
-    "percentile1": lambda fld: func.percentile_cont(0.01).within_group(fld),
-    "percentile5": lambda fld: func.percentile_cont(0.05).within_group(fld),
-    "percentile10": lambda fld: func.percentile_cont(0.10).within_group(fld),
-    "percentile25": lambda fld: func.percentile_cont(0.25).within_group(fld),
-    "percentile50": lambda fld: func.percentile_cont(0.50).within_group(fld),
-    "percentile75": lambda fld: func.percentile_cont(0.75).within_group(fld),
-    "percentile90": lambda fld: func.percentile_cont(0.90).within_group(fld),
-    "percentile95": lambda fld: func.percentile_cont(0.95).within_group(fld),
-    "percentile99": lambda fld: func.percentile_cont(0.99).within_group(fld),
-}
-
-# Additional aggregations supported on redshift
-aggregations_redshift = {
-    # Percentile aggregations do not work in all engines
-    "median": func.median,
-    "percentile1": lambda fld: func.percentile_cont(0.01).within_group(fld),
-    "percentile5": lambda fld: func.percentile_cont(0.05).within_group(fld),
-    "percentile10": lambda fld: func.percentile_cont(0.10).within_group(fld),
-    "percentile25": lambda fld: func.percentile_cont(0.25).within_group(fld),
-    "percentile50": lambda fld: func.percentile_cont(0.50).within_group(fld),
-    "percentile75": lambda fld: func.percentile_cont(0.75).within_group(fld),
-    "percentile90": lambda fld: func.percentile_cont(0.90).within_group(fld),
-    "percentile95": lambda fld: func.percentile_cont(0.95).within_group(fld),
-    "percentile99": lambda fld: func.percentile_cont(0.99).within_group(fld),
-}
-
-
-# Conversions are a callable on a column expression that yields a
-# nonaggregated column expression
-# for instance, quarter(sales_date) => func.date_trunc('quarter', MyTable.sales_date)
-conversions = {
-    "month": lambda fld: func.date_trunc("month", fld),
-    "week": lambda fld: func.date_trunc("week", fld),
-    "year": lambda fld: func.date_trunc("year", fld),
-    "quarter": lambda fld: func.date_trunc("quarter", fld),
-    "string": lambda fld: func.cast(fld, String()),
-    "int": lambda fld: func.cast(fld, Integer()),
-}
-
-
-conversions_redshift = {
-    # age doesn't work on all databases
-    "age": lambda fld: func.date_part("year", func.age(fld)),
-}
-
-conversions_bigquery = {
-    "month": lambda fld: func.date_trunc(fld, "month"),
-    "week": lambda fld: func.date_trunc(fld, "week"),
-    "year": lambda fld: func.date_trunc(fld, "year"),
-    "quarter": lambda fld: func.date_trunc(fld, "quarter"),
-}
-
-
-# A dictionary of aggregations keyed by sqlalchemy drivername
-# 'default' are 
-aggregations_by_engine = {
-    "default": aggregations,
-    "redshift+psycopg2": aggregations_redshift,
-}
-
-# A dictionary of conversions keyed by sqlalchemy drivername
-conversions_by_engine = {
-    "default": conversions,
-    "redshift+psycopg2": conversions_redshift,
-    "bigquery": conversions_bigquery,
-}
-
-
 def generate_lookup_by_engine(lookup_by_engine, engine):
     """Convert `aggregations_by_engine` or `conversions_by_engine`
     into a dictionary specific to the provided engine/drivername.
     """
     result = copy(lookup_by_engine.get("default", {}))
     result.update(lookup_by_engine.get(engine, {}))
-    for k, v in result.items():
+    for k, v in list(result.items()):
         if v is None:
             result.pop(k, None)
     return result

@@ -8,11 +8,11 @@ from recipe.exceptions import BadIngredient
 from .config_schemas import condition_schema, ingredient_schema, shelf_schema
 from .utils import (
     sqlalchemy_datatypes,
-    aggregations,
     convert_value,
     find_column,
     ingredient_class_for_name,
 )
+from .aggregations import aggregations
 from recipe.ingredients import InvalidIngredient
 
 

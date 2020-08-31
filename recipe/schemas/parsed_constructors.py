@@ -11,16 +11,13 @@ from .field_grammar import (
     full_condition_parser,
 )
 from .utils import (
-    aggregations,
-    conversions,
-    aggregations_by_engine,
-    conversions_by_engine,
     generate_lookup_by_engine,
     find_column,
     ingredient_class_for_name,
     convert_value,
     calc_date_range,
 )
+from .aggregations import aggregations_by_engine, conversions_by_engine
 from recipe.exceptions import BadIngredient
 from recipe.ingredients import InvalidIngredient
 
@@ -77,7 +74,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         """
         ag = self.aggregations.get(name.lower())
         if ag is None:
-            raise ValueError("Aggregation {} is not supported on engine {}".format(name, self.drivername))
+            raise ValueError("Aggregation {} is not supported on {} engine".format(name, self.drivername))
         return ag
 
     def div(self, num, denom):
@@ -109,13 +106,13 @@ class TransformToSQLAlchemyExpression(Transformer):
     def conversion(self, name):
         conv_fn = self.conversions.get(name.lower())
         if conv_fn is None:
-            raise ValueError("Conversion {} is not supported on engine {}".format(conv_fn, self.drivername))
+            raise ValueError("Conversion {} is not supported on {} engine".format(conv_fn, self.drivername))
         return conv_fn
 
     def convertedcol(self, conversion, col):
         conv_fn = self.conversions.get(conversion.lower())
         if conv_fn is None:
-            raise ValueError("Conversion {} is not supported on engine {}".format(conv_fn, self.drivername))
+            raise ValueError("Conversion {} is not supported on {} engine".format(conv_fn, self.drivername))
         return conv_fn(col)
 
     def expr(self, expr):

@@ -11,10 +11,10 @@ from recipe.compat import basestring
 from .utils import (
     sqlalchemy_datatypes,
     coerce_format,
-    aggregations,
     SCALAR_TYPES,
     coerce_pop_version,
 )
+from .aggregations import aggregations
 
 logging.captureWarnings(True)
 
