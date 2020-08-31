@@ -170,35 +170,57 @@ class AutomaticFilters(RecipeExtension):
             },
         )
 
+    def _build_compound_filter(self, key, values):
+        keys = key.split(",")
+        for v in values:
+            items = []
+            for d, v in zip(keys, values):
+                filt = self._build_automatic_filter(d, v)
+                if filt:
+                    items.append(filt)
+            if items:
+                return or_(*items)
+            else:
+                return None
+
+    def _build_automatic_filter(self, dim, values):
+        """Build an automatic filter given a dim and a value.
+
+        The dim may contain a dimension id and an optional operator
+        """
+        operator = None
+        if "__" in dim:
+            dim, operator = dim.split("__")
+        if self.include_keys is not None and dim not in self.include_keys:
+            # Ignore keys that are not in include_keys
+            return None
+
+        if self.exclude_keys is not None and dim in self.exclude_keys:
+            # Ignore keys that are in exclude_keys
+            return None
+
+        # TODO: If dim can't be found, optionally raise a warning
+        dimension = self.recipe._shelf.find(dim, Dimension)
+        if (
+            self._optimize_redshift
+            and dimension is not None
+            and operator is None
+            and isinstance(values, (list, tuple))
+            # The first column is the one that will be filtered
+            # limit filtering padding to columns that identify as String
+            and isinstance(dimension.columns[0].type, String)
+        ):
+            values = pad_values(values)
+
+        return dimension.build_filter(values, operator)
+
     def add_ingredients(self):
         if self.apply:
             for dim, values in self._automatic_filters.items():
-                operator = None
-                if "__" in dim:
-                    dim, operator = dim.split("__")
-                if self.include_keys is not None and dim not in self.include_keys:
-                    # Ignore keys that are not in include_keys
-                    continue
-
-                if self.exclude_keys is not None and dim in self.exclude_keys:
-                    # Ignore keys that are in exclude_keys
-                    continue
-
-                # TODO: If dim can't be found, optionally raise a warning
-                dimension = self.recipe._shelf.find(dim, Dimension)
-                # make a Filter and add it to filters
-                if (
-                    self._optimize_redshift
-                    and dimension is not None
-                    and operator is None
-                    and isinstance(values, (list, tuple))
-                    # The first column is the one that will be filtered
-                    # limit filtering padding to columns that identify as String
-                    and isinstance(dimension.columns[0].type, String)
-                ):
-                    values = pad_values(values)
-
-                self.recipe.filters(dimension.build_filter(values, operator))
+                if "," in dim:
+                    self.recipe.filters(self._build_compound_filter(dim, values))
+                else:
+                    self.recipe.filters(self._build_automatic_filter(dim, values))
 
     @recipe_arg()
     def optimize_redshift(self, value):
@@ -280,6 +302,49 @@ class AutomaticFilters(RecipeExtension):
             recipe.dimensions('state').metrics('population').automatic_filters({
                 'state__lt': 'D'
             })
+
+        **Compound filters**
+
+        If the key provided in the automatic_filter dictionary contains a comma,
+        the filters will be treated as compound. Compound operators will be matched
+        to the values by splitting the key on the commas then zipping the keys
+        to values. 
+
+        For instance, you could find newborns in California and 20 year olds in 
+        New Hampshire with::
+
+            shelf = Shelf({
+                'state': Dimension(Census.state),
+                'age': Dimension(Census.age),
+                'population': Metric(func.sum(Census.population)),
+            })
+            recipe = Recipe(shelf=shelf)
+            recipe.dimensions('state').metrics('population').automatic_filters({
+                'state,age': [['California',0], ['New Hampshire',20]]
+            })
+
+        This would generate a SQL where clause that looked like::
+
+            WHERE
+              (Census.state = 'California' and Census.age = 0) OR
+              (Census.state = 'New Hampshire' and Census.age = 20)
+
+        Not all keys need to match in compound filters and may be provided. 
+        For instance, the following example uses operators and "unbalanced" keys::
+
+            recipe.dimensions('state').metrics('population').automatic_filters({
+                'state,age__notin': [['California'], ['New Hampshire',[20,21,22,23]]]
+            })
+
+        This would generate a SQL where clause that looked like::
+
+            WHERE
+              (Census.state = 'California') OR
+              (Census.state = 'New Hampshire' and Census.age NOT IN (20,21,22,23))
+
+        Note: Using large numbers of compound filters is not efficient and
+        may generate extremely large SQL.
+
         """
         assert isinstance(value, dict)
         self._automatic_filters = value
