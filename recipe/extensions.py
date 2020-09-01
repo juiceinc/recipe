@@ -171,7 +171,7 @@ class AutomaticFilters(RecipeExtension):
         )
 
     def _build_compound_filter(self, key, values):
-        """Build a filter using a compound key. Compound keys are comma delimited. 
+        """Build a filter using a compound key. Compound keys are comma delimited.
 
         For instance::
 
