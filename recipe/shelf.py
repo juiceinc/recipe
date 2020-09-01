@@ -110,8 +110,8 @@ class Shelf(object):
         return iter(self._ingredients)
 
     def __getitem__(self, key):
-        """ Set the id and anonymize property of the ingredient whenever we
-        get or set items """
+        """Set the id and anonymize property of the ingredient whenever we
+        get or set items"""
         ingr = self._ingredients[key]
         # Ensure the ingredient's `anonymize` matches the shelf.
 
@@ -133,8 +133,8 @@ class Shelf(object):
         return ingr
 
     def __setitem__(self, key, ingredient):
-        """ Set the id and anonymize property of the ingredient whenever we
-        get or set items """
+        """Set the id and anonymize property of the ingredient whenever we
+        get or set items"""
         # Maintainer's note: try to make all mutation of self._ingredients go
         # through this method, so we can reliably copy & annotate the
         # ingredients that go into the Shelf.
@@ -179,7 +179,7 @@ class Shelf(object):
 
     @property
     def dimension_ids(self):
-        """ Return the Dimensions on this shelf in the order in which
+        """Return the Dimensions on this shelf in the order in which
         they were used."""
         return self._sorted_ingredients(
             [d.id for d in self.values() if isinstance(d, Dimension)]
@@ -187,16 +187,16 @@ class Shelf(object):
 
     @property
     def metric_ids(self):
-        """ Return the Metrics on this shelf in the order in which
-        they were used. """
+        """Return the Metrics on this shelf in the order in which
+        they were used."""
         return self._sorted_ingredients(
             [d.id for d in self.values() if isinstance(d, Metric)]
         )
 
     @property
     def filter_ids(self):
-        """ Return the Filters on this shelf in the order in which
-        they were used. """
+        """Return the Filters on this shelf in the order in which
+        they were used."""
         return self._sorted_ingredients(
             [d.id for d in self.values() if isinstance(d, Filter)]
         )
@@ -211,7 +211,7 @@ class Shelf(object):
         return tuple(sorted(ingredients, key=sort_key))
 
     def __repr__(self):
-        """ A string representation of the ingredients used in a recipe
+        """A string representation of the ingredients used in a recipe
         ordered by Dimensions, Metrics, Filters, then Havings
         """
         lines = []
@@ -280,7 +280,7 @@ class Shelf(object):
 
     @classmethod
     def from_yaml(cls, yaml_str, selectable, **kwargs):
-        """ Shim that calls from_validated_yaml.
+        """Shim that calls from_validated_yaml.
 
         This used to call a different implementation of yaml parsing
         """
@@ -338,8 +338,7 @@ class Shelf(object):
             raise BadRecipe("{} is not a {}".format(obj, filter_to_class))
 
     def brew_query_parts(self, order_by_keys=[]):
-        """ Make columns, group_bys, filters, havings
-        """
+        """Make columns, group_bys, filters, havings"""
         columns, group_bys, filters, havings = [], [], set(), set()
         order_by_keys = list(order_by_keys)
         all_filters = set()
@@ -364,6 +363,7 @@ class Shelf(object):
                 # Ensure we don't add duplicate filters
                 for new_f in ingredient.filters:
                     from recipe.utils import filter_to_string
+
                     new_f_str = filter_to_string(new_f)
                     if new_f_str not in all_filters:
                         filters.add(new_f)
@@ -405,7 +405,7 @@ class Shelf(object):
         }
 
     def enchant(self, data, cache_context=None):
-        """ Add any calculated values to each row of a resultset generating a
+        """Add any calculated values to each row of a resultset generating a
         new namedtuple
 
         :param data: a list of row results
