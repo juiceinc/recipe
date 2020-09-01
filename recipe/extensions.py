@@ -171,6 +171,25 @@ class AutomaticFilters(RecipeExtension):
         )
 
     def _build_compound_filter(self, key, values):
+        """Build a filter using a compound key. Compound keys are comma delimited. 
+
+        For instance::
+
+            key=state,age
+            values=[["California",22],["Iowa", 24]]
+
+        will generate a filter equal to the following::
+
+            WHERE (state='California' AND age=22) OR
+                  (state='Iowa' and age=24)
+
+        Args:
+            key (str): A string containing a comma separated list of ids.
+            values (list): A list of lists containing that will be matched to the ids
+
+        Returns:
+            A SQLAlchemy boolean expression
+        """
         keys = key.split(",")
         or_items = []
         for val in values:
