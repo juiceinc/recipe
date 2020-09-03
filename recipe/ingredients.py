@@ -17,15 +17,15 @@ def convert_date(v):
     """Convert a passed parameter to a date if possible """
     if v is None:
         return v
-    elif isinstance(v, (float, int)):
-        # Convert to a date
-        tm = gmtime(v)
-        return date(tm.tm_year, tm.tm_mon, tm.tm_mday)
     elif isinstance(v, str):
         try:
             return dateparser.parse(v).date()
         except ValueError:
             return v
+    elif isinstance(v, (float, int)):
+        # Convert to a date
+        tm = gmtime(v)
+        return date(tm.tm_year, tm.tm_mon, tm.tm_mday)
     else:
         return v
 
@@ -430,7 +430,7 @@ class Ingredient(object):
 
         Returns:
 
-            A Filter object
+            A SQLAlchemy boolean expression
 
         """
         value_is_scalar = not isinstance(value, (list, tuple))
