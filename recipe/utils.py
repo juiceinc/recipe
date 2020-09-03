@@ -5,8 +5,6 @@ import math
 import re
 import string
 import unicodedata
-
-from sureberus.schema import Boolean
 from .compat import str as compat_str
 from functools import wraps
 
