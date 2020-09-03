@@ -17,15 +17,15 @@ def convert_date(v):
     """Convert a passed parameter to a date if possible """
     if v is None:
         return v
-    elif isinstance(v, (float, int)):
-        # Convert to a date
-        tm = gmtime(v)
-        return date(tm.tm_year, tm.tm_mon, tm.tm_mday)
     elif isinstance(v, str):
         try:
             return dateparser.parse(v).date()
         except ValueError:
             return v
+    elif isinstance(v, (float, int)):
+        # Convert to a date
+        tm = gmtime(v)
+        return date(tm.tm_year, tm.tm_mon, tm.tm_mday)
     else:
         return v
 
@@ -288,35 +288,35 @@ class Ingredient(object):
             # Default operator is 'eq' so if no operator is provided, handle
             # like an 'eq'
             if value is None:
-                return Filter(filter_column.is_(value))
+                return filter_column.is_(value)
             else:
-                return Filter(filter_column == value)
+                return filter_column == value
         if operator == "ne":
-            return Filter(filter_column != value)
+            return filter_column != value
         elif operator == "lt":
-            return Filter(filter_column < value)
+            return filter_column < value
         elif operator == "lte":
-            return Filter(filter_column <= value)
+            return filter_column <= value
         elif operator == "gt":
-            return Filter(filter_column > value)
+            return filter_column > value
         elif operator == "gte":
-            return Filter(filter_column >= value)
+            return filter_column >= value
         elif operator == "is":
-            return Filter(filter_column.is_(value))
+            return filter_column.is_(value)
         elif operator == "isnot":
-            return Filter(filter_column.isnot(value))
+            return filter_column.isnot(value)
         elif operator == "like":
             if not isinstance(value, string_types):
                 raise ValueError("Building a filter with like must use a str value")
-            return Filter(filter_column.like(value))
+            return filter_column.like(value)
         elif operator == "ilike":
             if not isinstance(value, string_types):
                 raise ValueError("Building a filter with ilike must use a str value")
-            return Filter(filter_column.ilike(value))
+            return filter_column.ilike(value)
         elif operator == "quickselect":
             for qs in self.quickselects:
                 if qs.get("name") == value:
-                    return Filter(qs.get("condition"))
+                    return qs.get("condition")
             raise ValueError(
                 "quickselect {} was not found in "
                 "ingredient {}".format(value, self.id)
@@ -357,32 +357,30 @@ class Ingredient(object):
                 # filter out the Nones
                 non_none_value = sorted([v for v in value if v is not None])
                 if non_none_value:
-                    return Filter(
-                        or_(filter_column.is_(None), filter_column.in_(non_none_value))
+                    return or_(
+                        filter_column.is_(None), filter_column.in_(non_none_value)
                     )
                 else:
-                    return Filter(filter_column.is_(None))
+                    return filter_column.is_(None)
             else:
                 # Sort to generate deterministic query sql for caching
                 value = sorted(value)
-                return Filter(filter_column.in_(value))
+                return filter_column.in_(value)
         elif operator == "notin":
             if None in value:
                 # filter out the Nones
                 non_none_value = sorted([v for v in value if v is not None])
                 if non_none_value:
-                    return Filter(
-                        and_(
-                            filter_column.isnot(None),
-                            filter_column.notin_(non_none_value),
-                        )
+                    return and_(
+                        filter_column.isnot(None),
+                        filter_column.notin_(non_none_value),
                     )
                 else:
-                    return Filter(filter_column.isnot(None))
+                    return filter_column.isnot(None)
             else:
                 # Sort to generate deterministic query sql for caching
                 value = sorted(value)
-                return Filter(filter_column.notin_(value))
+                return filter_column.notin_(value)
         elif operator == "between":
             if len(value) != 2:
                 ValueError(
@@ -390,7 +388,7 @@ class Ingredient(object):
                     "lower and upper bounds."
                 )
             lower_bound, upper_bound = value
-            return Filter(between(filter_column, lower_bound, upper_bound))
+            return between(filter_column, lower_bound, upper_bound)
         elif operator == "quickselect":
             qs_conditions = []
             for v in value:
@@ -405,7 +403,7 @@ class Ingredient(object):
                         "quickselect {} was not found in "
                         "ingredient {}".format(value, self.id)
                     )
-            return Filter(or_(*qs_conditions))
+            return or_(*qs_conditions)
         else:
             raise ValueError("Unknown operator {}".format(operator))
 
@@ -432,7 +430,7 @@ class Ingredient(object):
 
         Returns:
 
-            A Filter object
+            A SQLAlchemy boolean expression
 
         """
         value_is_scalar = not isinstance(value, (list, tuple))
