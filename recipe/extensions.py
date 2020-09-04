@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from recipe.compat import basestring, integer_types
 from recipe.core import Recipe
 from recipe.exceptions import BadRecipe
-from recipe.ingredients import Dimension, Metric, Filter
+from recipe.ingredients import Dimension, Ingredient, Metric, Filter
 from recipe.utils import FakerAnonymizer, recipe_arg, pad_values
 
 Base = declarative_base()
@@ -66,7 +66,7 @@ class RecipeExtension(object):
         """
         Add ingredients to the recipe
 
-        This method should be overridden by subclasses """
+        This method should be overridden by subclasses"""
         pass
 
     def modify_recipe_parts(self, recipe_parts):
@@ -75,7 +75,7 @@ class RecipeExtension(object):
 
         This method allows extensions to directly modify columns,
         group_bys, filters, and order_bys generated from collected
-        ingredients. """
+        ingredients."""
         return {
             "columns": recipe_parts["columns"],
             "group_bys": recipe_parts["group_bys"],
@@ -98,7 +98,7 @@ class RecipeExtension(object):
         }
 
     def modify_postquery_parts(self, postquery_parts):
-        """ This method allows extensions to directly modify query,
+        """This method allows extensions to directly modify query,
         group_bys, filters, and order_bys generated from collected
         ingredients after a final query using columns has been created.
         """
@@ -111,14 +111,14 @@ class RecipeExtension(object):
         }
 
     def enchant_add_fields(self):
-        """ This method allows extensions to add fields to a result row.
+        """This method allows extensions to add fields to a result row.
         Return a tuple of the field names that are being added with
         this method
         """
         return ()
 
     def enchant_row(self, row):
-        """ This method adds the fields named in ``enchant_add_fields`` to
+        """This method adds the fields named in ``enchant_add_fields`` to
         each result row."""
         return ()
 
@@ -170,40 +170,86 @@ class AutomaticFilters(RecipeExtension):
             },
         )
 
+    def _build_compound_filter(self, key, values):
+        """Build a filter using a compound key. Compound keys are comma delimited.
+
+        For instance::
+
+            key=state,age
+            values=[["California",22],["Iowa", 24]]
+
+        will generate a filter equal to the following::
+
+            WHERE (state='California' AND age=22) OR
+                  (state='Iowa' and age=24)
+
+        Args:
+            key (str): A string containing a comma separated list of ids.
+            values (list): A list of lists containing that will be matched to the ids
+
+        Returns:
+            A SQLAlchemy boolean expression
+        """
+        keys = key.split(",")
+        or_items = []
+        for val in values:
+            and_items = []
+            for d, v in zip(keys, val):
+                filt = self._build_automatic_filter(d, v)
+                if filt is not None:
+                    and_items.append(filt)
+            if and_items:
+                or_items.append(and_(*and_items))
+        if or_items:
+            return or_(*or_items)
+        else:
+            return None
+
+    def _build_automatic_filter(self, dim, values):
+        """Build an automatic filter given a dim and a value.
+
+        The dim may contain a dimension id and an optional operator
+        """
+        operator = None
+        if "__" in dim:
+            dim, operator = dim.split("__")
+        if self.include_keys is not None and dim not in self.include_keys:
+            # Ignore keys that are not in include_keys
+            return None
+
+        if self.exclude_keys is not None and dim in self.exclude_keys:
+            # Ignore keys that are in exclude_keys
+            return None
+
+        # TODO: If dim can't be found, optionally raise a warning
+        dimension = self.recipe._shelf.find(dim, Dimension)
+        if (
+            self._optimize_redshift
+            and dimension is not None
+            and operator is None
+            and isinstance(values, (list, tuple))
+            # The first column is the one that will be filtered
+            # limit filtering padding to columns that identify as String
+            and isinstance(dimension.columns[0].type, String)
+        ):
+            values = pad_values(values)
+
+        return dimension.build_filter(values, operator)
+
     def add_ingredients(self):
         if self.apply:
             for dim, values in self._automatic_filters.items():
-                operator = None
-                if "__" in dim:
-                    dim, operator = dim.split("__")
-                if self.include_keys is not None and dim not in self.include_keys:
-                    # Ignore keys that are not in include_keys
-                    continue
-
-                if self.exclude_keys is not None and dim in self.exclude_keys:
-                    # Ignore keys that are in exclude_keys
-                    continue
-
-                # TODO: If dim can't be found, optionally raise a warning
-                dimension = self.recipe._shelf.find(dim, Dimension)
-                # make a Filter and add it to filters
-                if (
-                    self._optimize_redshift
-                    and dimension is not None
-                    and operator is None
-                    and isinstance(values, (list, tuple))
-                    # The first column is the one that will be filtered
-                    # limit filtering padding to columns that identify as String
-                    and isinstance(dimension.columns[0].type, String)
-                ):
-                    values = pad_values(values)
-
-                self.recipe.filters(dimension.build_filter(values, operator))
+                if "," in dim:
+                    self.recipe.filters(self._build_compound_filter(dim, values))
+                else:
+                    filt = self._build_automatic_filter(dim, values)
+                    if filt is not None:
+                        self.recipe.filters(filt)
 
     @recipe_arg()
     def optimize_redshift(self, value):
         """Toggles whether automatic filters that filter on lists of strings
-        are automatically padded to multiples of 5. Doing so will avoid query 
+        are automatically padded to multiples of 5. Doing so will avoid query
         re-compilation for queries that have approximately the same number
         of filter parameters::
 
@@ -280,6 +326,49 @@ class AutomaticFilters(RecipeExtension):
             recipe.dimensions('state').metrics('population').automatic_filters({
                 'state__lt': 'D'
             })
+
+        **Compound filters**
+
+        If the key provided in the automatic_filter dictionary contains a comma,
+        the filters will be treated as compound. Compound operators will be matched
+        to the values by splitting the key on the commas then zipping the keys
+        to values.
+
+        For instance, you could find newborns in California and 20 year olds in
+        New Hampshire with::
+
+            shelf = Shelf({
+                'state': Dimension(Census.state),
+                'age': Dimension(Census.age),
+                'population': Metric(func.sum(Census.population)),
+            })
+            recipe = Recipe(shelf=shelf)
+            recipe.dimensions('state').metrics('population').automatic_filters({
+                'state,age': [['California',0], ['New Hampshire',20]]
+            })
+
+        This would generate a SQL where clause that looked like::
+
+            WHERE
+              (Census.state = 'California' and Census.age = 0) OR
+              (Census.state = 'New Hampshire' and Census.age = 20)
+
+        Not all keys need to match in compound filters and may be provided.
+        For instance, the following example uses operators and "unbalanced" keys::
+
+            recipe.dimensions('state').metrics('population').automatic_filters({
+                'state,age__notin': [['California'], ['New Hampshire',[20,21,22,23]]]
+            })
+
+        This would generate a SQL where clause that looked like::
+
+            WHERE
+              (Census.state = 'California') OR
+              (Census.state = 'New Hampshire' and Census.age NOT IN (20,21,22,23))
+
+        Note: Using large numbers of compound filters is not efficient and
+        may generate extremely large SQL.
+
         """
         assert isinstance(value, dict)
         self._automatic_filters = value
@@ -683,10 +772,13 @@ class Paginate(RecipeExtension):
         if self._apply_pagination and self._pagination_order_by:
 
             def make_ordering_key(ingr):
-                if ingr.ordering == "desc":
-                    return "-" + ingr.id
+                if isinstance(ingr, Ingredient):
+                    if ingr.ordering == "desc":
+                        return "-" + ingr.id
+                    else:
+                        return ingr.id
                 else:
-                    return ingr.id
+                    return ingr
 
             # Recover the existing orderings
             existing_orderings = [
@@ -723,7 +815,9 @@ class Paginate(RecipeExtension):
 
             # Build a big or filter for the search
             if filters:
-                or_expression = or_(f.filters[0] for f in filters)
+                or_expression = or_(
+                    f.filters[0] if hasattr(f, "filters") else f for f in filters
+                )
                 search_filter = Filter(or_expression)
                 self.recipe._cauldron.use(search_filter)
 
@@ -765,7 +859,7 @@ class Paginate(RecipeExtension):
         return postquery_parts
 
     def validated_pagination(self):
-        """ Return pagination validated against the actual number of items in the
+        """Return pagination validated against the actual number of items in the
         response.
 
         :raises BadRecipe:
@@ -779,7 +873,7 @@ class Paginate(RecipeExtension):
 
 
 class BlendRecipe(RecipeExtension):
-    """ Add blend recipes, used for joining data from another table to a base
+    """Add blend recipes, used for joining data from another table to a base
     table
 
     Supply a second recipe with a different ``from``
@@ -828,7 +922,7 @@ class BlendRecipe(RecipeExtension):
         to group_by using the direct strategy. This is because when we join
         the base recipe to the blend recipe we will likely have more than one column
         that has the same label. This will generate invalid sql if a more explicit
-        reference isn't used. """
+        reference isn't used."""
         if self.blend_recipes:
             for ingr in self.recipe._cauldron.ingredients():
                 if isinstance(ingr, Dimension):
@@ -949,7 +1043,7 @@ class CompareRecipe(RecipeExtension):
         to group_by using the direct strategy. This is because when we join
         the base recipe to the compare recipe we will likely have more than one column
         that has the same label. This will generate invalid sql if a more explicit
-        reference isn't used. """
+        reference isn't used."""
         if self.compare_recipe:
             for ingr in self.recipe._cauldron.ingredients():
                 if isinstance(ingr, Dimension):

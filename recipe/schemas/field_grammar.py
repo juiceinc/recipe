@@ -1,17 +1,12 @@
 from lark import Lark, Transformer, v_args
-from .utils import aggregations, conversions
+from .engine_support import aggregations_by_engine, conversions_by_engine
+from .utils import convert_by_engine_keys_to_regex
 from ..compat import basestring
 
 
-def convert_keys_to_regex(d):
-    """ Convert a dictionary of key->callable into a regex """
-    keys = [k for k in d.keys() if isinstance(k, basestring)]
-    keys.sort(key=lambda item: (len(item), item), reverse=True)
-    return "|".join(keys)
-
-
-allowed_aggr_keys = convert_keys_to_regex(aggregations)
-allowed_conv_keys = convert_keys_to_regex(conversions)
+# Generate a regex expression containing all the by_engine keys
+allowed_aggr_keys = convert_by_engine_keys_to_regex(aggregations_by_engine)
+allowed_conv_keys = convert_by_engine_keys_to_regex(conversions_by_engine)
 
 
 # TODO: We may want to match columns based on fields that exist in

@@ -1,17 +1,54 @@
+import dateparser
 from functools import total_ordering
 from uuid import uuid4
 
 from sqlalchemy import Float, String, and_, between, case, cast, func, or_, text
 
 from six import string_types
+from sqlalchemy.sql.sqltypes import Date, DateTime, TIMESTAMP
+from datetime import date, datetime
+from time import gmtime
 from recipe.compat import str
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict
 
 
+def convert_date(v):
+    """Convert a passed parameter to a date if possible """
+    if v is None:
+        return v
+    elif isinstance(v, str):
+        try:
+            return dateparser.parse(v).date()
+        except ValueError:
+            return v
+    elif isinstance(v, (float, int)):
+        # Convert to a date
+        tm = gmtime(v)
+        return date(tm.tm_year, tm.tm_mon, tm.tm_mday)
+    else:
+        return v
+
+
+def convert_datetime(v):
+    """Convert a passed parameter to a datetime if possible """
+    if v is None:
+        return v
+    elif isinstance(v, str):
+        try:
+            return dateparser.parse(v)
+        except ValueError:
+            return v
+    elif isinstance(v, (float, int)):
+        # Convert to a date
+        return datetime.fromtimestamp(v)
+    else:
+        return v
+
+
 @total_ordering
 class Ingredient(object):
-    """ Ingredients combine to make a SQLAlchemy query.
+    """Ingredients combine to make a SQLAlchemy query.
 
     Any unknown keyword arguments provided to an Ingredient
     during initializatino are stored in a meta object.
@@ -113,9 +150,9 @@ class Ingredient(object):
         return self.describe()
 
     def _stringify(self):
-        """ Return a relevant string based on ingredient type for repr and
+        """Return a relevant string based on ingredient type for repr and
         ordering. Ingredients with the same classname, id and _stringify
-        value are considered the same. """
+        value are considered the same."""
         return " ".join(str(col) for col in self.columns)
 
     def describe(self):
@@ -129,7 +166,7 @@ class Ingredient(object):
         return value
 
     def make_column_suffixes(self):
-        """ Make sure we have the right column suffixes. These will be appended
+        """Make sure we have the right column suffixes. These will be appended
         to `id` when generating the query.
 
         Developers note: These are generated when the query runs because the
@@ -154,8 +191,7 @@ class Ingredient(object):
 
     @property
     def query_columns(self):
-        """Yield labeled columns to be used as a select in a query.
-        """
+        """Yield labeled columns to be used as a select in a query."""
         self._labels = []
         for column, suffix in zip(self.columns, self.make_column_suffixes()):
             self._labels.append(self.id + suffix)
@@ -185,7 +221,7 @@ class Ingredient(object):
 
     @property
     def cauldron_extras(self):
-        """ Yield extra tuples containing a field name and a callable that takes
+        """Yield extra tuples containing a field name and a callable that takes
         a row.
         """
         if self.formatters:
@@ -193,8 +229,7 @@ class Ingredient(object):
             yield self.id, lambda row: self._format_value(getattr(row, raw_property))
 
     def _order(self):
-        """Ingredients are sorted by subclass then by id.
-        """
+        """Ingredients are sorted by subclass then by id."""
         if isinstance(self, Dimension):
             return (0, self.id)
         elif isinstance(self, Metric):
@@ -207,18 +242,15 @@ class Ingredient(object):
             return (4, self.id)
 
     def __lt__(self, other):
-        """ Make ingredients sortable.
-        """
+        """Make ingredients sortable."""
         return self._order() < other._order()
 
     def __eq__(self, other):
-        """ Make ingredients sortable.
-        """
+        """Make ingredients sortable."""
         return self._order() == other._order()
 
     def __ne__(self, other):
-        """ Make ingredients sortable.
-        """
+        """Make ingredients sortable."""
         return not (self._order() == other._order())
 
     def _build_scalar_filter(self, value, operator=None, target_role=None):
@@ -230,7 +262,7 @@ class Ingredient(object):
             operator (`str`)
                 A valid scalar operator. The default operator
                 is `eq`
-            target_role (`str`) 
+            target_role (`str`)
                 An optional role to build the filter against
 
         Returns:
@@ -247,40 +279,44 @@ class Ingredient(object):
             filter_column.type, String
         ):
             filter_column = cast(filter_column, String)
+        elif isinstance(filter_column.type, Date):
+            value = convert_date(value)
+        elif isinstance(filter_column.type, (DateTime, TIMESTAMP)):
+            value = convert_datetime(value)
 
         if operator is None or operator == "eq":
             # Default operator is 'eq' so if no operator is provided, handle
             # like an 'eq'
             if value is None:
-                return Filter(filter_column.is_(value))
+                return filter_column.is_(value)
             else:
-                return Filter(filter_column == value)
+                return filter_column == value
         if operator == "ne":
-            return Filter(filter_column != value)
+            return filter_column != value
         elif operator == "lt":
-            return Filter(filter_column < value)
+            return filter_column < value
         elif operator == "lte":
-            return Filter(filter_column <= value)
+            return filter_column <= value
         elif operator == "gt":
-            return Filter(filter_column > value)
+            return filter_column > value
         elif operator == "gte":
-            return Filter(filter_column >= value)
+            return filter_column >= value
         elif operator == "is":
-            return Filter(filter_column.is_(value))
+            return filter_column.is_(value)
         elif operator == "isnot":
-            return Filter(filter_column.isnot(value))
+            return filter_column.isnot(value)
         elif operator == "like":
             if not isinstance(value, string_types):
                 raise ValueError("Building a filter with like must use a str value")
-            return Filter(filter_column.like(value))
+            return filter_column.like(value)
         elif operator == "ilike":
             if not isinstance(value, string_types):
                 raise ValueError("Building a filter with ilike must use a str value")
-            return Filter(filter_column.ilike(value))
+            return filter_column.ilike(value)
         elif operator == "quickselect":
             for qs in self.quickselects:
                 if qs.get("name") == value:
-                    return Filter(qs.get("condition"))
+                    return qs.get("condition")
             raise ValueError(
                 "quickselect {} was not found in "
                 "ingredient {}".format(value, self.id)
@@ -297,7 +333,7 @@ class Ingredient(object):
             operator (:obj:`str`)
                 A valid vector operator. The default operator is
                 `in`.
-            target_role (`str`) 
+            target_role (`str`)
                 An optional role to build the filter against
 
         Returns:
@@ -309,6 +345,11 @@ class Ingredient(object):
         else:
             filter_column = self.columns[0]
 
+        if isinstance(filter_column.type, Date):
+            value = list(map(convert_date, value))
+        elif isinstance(filter_column.type, (DateTime, TIMESTAMP)):
+            value = list(map(convert_datetime, value))
+
         if operator is None or operator == "in":
             # Default operator is 'in' so if no operator is provided, handle
             # like an 'in'
@@ -316,32 +357,30 @@ class Ingredient(object):
                 # filter out the Nones
                 non_none_value = sorted([v for v in value if v is not None])
                 if non_none_value:
-                    return Filter(
-                        or_(filter_column.is_(None), filter_column.in_(non_none_value))
+                    return or_(
+                        filter_column.is_(None), filter_column.in_(non_none_value)
                     )
                 else:
-                    return Filter(filter_column.is_(None))
+                    return filter_column.is_(None)
             else:
                 # Sort to generate deterministic query sql for caching
                 value = sorted(value)
-                return Filter(filter_column.in_(value))
+                return filter_column.in_(value)
         elif operator == "notin":
             if None in value:
                 # filter out the Nones
                 non_none_value = sorted([v for v in value if v is not None])
                 if non_none_value:
-                    return Filter(
-                        and_(
-                            filter_column.isnot(None),
-                            filter_column.notin_(non_none_value),
-                        )
+                    return and_(
+                        filter_column.isnot(None),
+                        filter_column.notin_(non_none_value),
                     )
                 else:
-                    return Filter(filter_column.isnot(None))
+                    return filter_column.isnot(None)
             else:
                 # Sort to generate deterministic query sql for caching
                 value = sorted(value)
-                return Filter(filter_column.notin_(value))
+                return filter_column.notin_(value)
         elif operator == "between":
             if len(value) != 2:
                 ValueError(
@@ -349,7 +388,7 @@ class Ingredient(object):
                     "lower and upper bounds."
                 )
             lower_bound, upper_bound = value
-            return Filter(between(filter_column, lower_bound, upper_bound))
+            return between(filter_column, lower_bound, upper_bound)
         elif operator == "quickselect":
             qs_conditions = []
             for v in value:
@@ -364,7 +403,7 @@ class Ingredient(object):
                         "quickselect {} was not found in "
                         "ingredient {}".format(value, self.id)
                     )
-            return Filter(or_(*qs_conditions))
+            return or_(*qs_conditions)
         else:
             raise ValueError("Unknown operator {}".format(operator))
 
@@ -386,12 +425,12 @@ class Ingredient(object):
 
                 The default operator is 'in' if value is a list and
                 'eq' if value is a string, number, boolean or None.
-            target_role (`str`) 
+            target_role (`str`)
                 An optional role to build the filter against
 
         Returns:
 
-            A Filter object
+            A SQLAlchemy boolean expression
 
         """
         value_is_scalar = not isinstance(value, (list, tuple))
@@ -407,8 +446,8 @@ class Ingredient(object):
 
     @property
     def expression(self):
-        """ An accessor for the SQLAlchemy expression representing this
-        Ingredient. """
+        """An accessor for the SQLAlchemy expression representing this
+        Ingredient."""
         if self.columns:
             return self.columns[0]
         else:
@@ -416,8 +455,7 @@ class Ingredient(object):
 
 
 class Filter(Ingredient):
-    """ A simple filter created from a single expression.
-    """
+    """A simple filter created from a single expression."""
 
     def __init__(self, expression, **kwargs):
         super(Filter, self).__init__(**kwargs)
@@ -428,8 +466,8 @@ class Filter(Ingredient):
 
     @property
     def expression(self):
-        """ An accessor for the SQLAlchemy expression representing this
-        Ingredient. """
+        """An accessor for the SQLAlchemy expression representing this
+        Ingredient."""
         if self.filters:
             return self.filters[0]
         else:
@@ -437,8 +475,7 @@ class Filter(Ingredient):
 
 
 class Having(Ingredient):
-    """ A Having that limits results based on an aggregate boolean clause
-    """
+    """A Having that limits results based on an aggregate boolean clause"""
 
     def __init__(self, expression, **kwargs):
         super(Having, self).__init__(**kwargs)
@@ -449,8 +486,8 @@ class Having(Ingredient):
 
     @property
     def expression(self):
-        """ An accessor for the SQLAlchemy expression representing this
-        Ingredient. """
+        """An accessor for the SQLAlchemy expression representing this
+        Ingredient."""
         if self.havings:
             return self.havings[0]
         else:
@@ -585,7 +622,7 @@ class Dimension(Ingredient):
 
     @property
     def cauldron_extras(self):
-        """ Yield extra tuples containing a field name and a callable that takes
+        """Yield extra tuples containing a field name and a callable that takes
         a row
         """
         # This will format the value field
@@ -595,7 +632,7 @@ class Dimension(Ingredient):
         yield self.id + "_id", lambda row: getattr(row, self.id_prop)
 
     def make_column_suffixes(self):
-        """ Make sure we have the right column suffixes. These will be appended
+        """Make sure we have the right column suffixes. These will be appended
         to `id` when generating the query.
         """
         if self.formatters:
@@ -650,8 +687,7 @@ class IdValueDimension(Dimension):
 
 
 class LookupDimension(Dimension):
-    """DEPRECATED Returns the expression value looked up in a lookup dictionary
-    """
+    """DEPRECATED Returns the expression value looked up in a lookup dictionary"""
 
     def __init__(self, expression, lookup, **kwargs):
         """A Dimension that replaces values using a lookup table.
@@ -675,8 +711,7 @@ class LookupDimension(Dimension):
 
 
 class Metric(Ingredient):
-    """ A simple metric created from a single expression
-    """
+    """A simple metric created from a single expression"""
 
     def __init__(self, expression, **kwargs):
         super(Metric, self).__init__(**kwargs)
@@ -692,7 +727,7 @@ class Metric(Ingredient):
 
 
 class DivideMetric(Metric):
-    """ A metric that divides a numerator by a denominator handling several
+    """A metric that divides a numerator by a denominator handling several
     possible error conditions
 
     The default strategy is to add an small value to the denominator
@@ -720,8 +755,7 @@ class DivideMetric(Metric):
 
 
 class WtdAvgMetric(DivideMetric):
-    """ A metric that generates the weighted average of a metric by a weight.
-    """
+    """A metric that generates the weighted average of a metric by a weight."""
 
     def __init__(self, expression, weight_expression, **kwargs):
         numerator = func.sum(expression * weight_expression)
