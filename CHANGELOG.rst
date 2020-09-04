@@ -23,7 +23,7 @@ Changelog
 -----------------------------------------
 * Fix Paginate search to use value roles
 
-  0.17.1 (2020-07-09)
+0.17.1 (2020-07-09)
 -----------------------------------------
 * Fix parsed syntax for `field IS NULL`
 
