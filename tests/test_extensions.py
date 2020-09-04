@@ -330,6 +330,68 @@ WHERE foo.first < 'moo'
 GROUP BY first"""
         )
 
+    def test_compound_filters(self):
+        # A single compound filter item
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters({"first,last": [["foo", "moo"]]})
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.first = 'foo'
+  AND foo.last = 'moo'
+GROUP BY first"""
+        )
+
+        # A multiple items
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters(
+            {"first,last": [["foo", "moo"], ["chicken", "cluck"]]}
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.first = 'foo'
+  AND foo.last = 'moo'
+  OR foo.first = 'chicken'
+  AND foo.last = 'cluck'
+GROUP BY first"""
+        )
+
+        # Unbalanced items
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters({"first,last": [["foo", "moo"], ["chicken"]]})
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.first = 'foo'
+  AND foo.last = 'moo'
+  OR foo.first = 'chicken'
+GROUP BY first"""
+        )
+
+        # Using operators
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters(
+            {"first,last__like": [["cow", "moo*"], ["chicken", "cluck*"]]}
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.first = 'cow'
+  AND foo.last LIKE 'moo*'
+  OR foo.first = 'chicken'
+  AND foo.last LIKE 'cluck*'
+GROUP BY first"""
+        )
+
 
 class TestAnonymizeRecipeExtension(object):
     def setup(self):
@@ -1412,7 +1474,7 @@ class TestCompareRecipeExtension(object):
         )
 
     def test_compare(self):
-        """ A basic comparison recipe. The base recipe looks at all data, the
+        """A basic comparison recipe. The base recipe looks at all data, the
         comparison only applies to vermont
 
         Note: Ordering is only preserved on postgres engines.
@@ -1452,7 +1514,7 @@ ORDER BY census.sex"""
         assert rowmen.pop2000_compare == 298532
 
     def test_compare_custom_aggregation(self):
-        """ A basic comparison recipe. The base recipe looks at all data, the
+        """A basic comparison recipe. The base recipe looks at all data, the
         comparison only applies to vermont
 
         Note: Ordering is only preserved on postgres engines.
@@ -1491,8 +1553,7 @@ ORDER BY census.sex"""
         assert rowmen.pop2000_sum_compare == 51347504
 
     def test_compare_suffix(self):
-        """ Test that the proper suffix gets added to the comparison metrics
-        """
+        """Test that the proper suffix gets added to the comparison metrics"""
 
         r = self.recipe().metrics("pop2000").dimensions("sex").order_by("sex")
         r = r.compare(
@@ -1531,8 +1592,7 @@ ORDER BY census.sex"""
         assert not hasattr(rowmen, "pop2000_compare")
 
     def test_multiple_compares(self):
-        """ Test that we can do multiple comparisons
-        """
+        """Test that we can do multiple comparisons"""
 
         r = (
             self.recipe()
@@ -1586,8 +1646,8 @@ ORDER BY census.sex,
         assert not hasattr(vermont_women, "pop2000_compare")
 
     def test_mismatched_dimensions_raises(self):
-        """ Dimensions in the comparison recipe must be a subset of the
-        dimensions in the base recipe """
+        """Dimensions in the comparison recipe must be a subset of the
+        dimensions in the base recipe"""
         r = self.recipe().metrics("pop2000").dimensions("sex").order_by("sex")
         r = r.compare(
             self.recipe()
@@ -1617,7 +1677,7 @@ class TestBlendRecipeExtension(object):
         )
 
     def test_self_blend(self):
-        """ A basic comparison recipe. The base recipe looks at all data, the
+        """A basic comparison recipe. The base recipe looks at all data, the
         comparison only applies to vermont
 
         Note: Ordering is only preserved on postgres engines.
@@ -1659,7 +1719,7 @@ ORDER BY census.sex"""
         assert rowmen.pop2008 is None
 
     def test_blend(self):
-        """ A basic comparison recipe. The base recipe looks at all data, the
+        """A basic comparison recipe. The base recipe looks at all data, the
         comparison only applies to vermont
 
         Note: Ordering is only preserved on postgres engines.

@@ -23,11 +23,7 @@ from recipe.schemas.config_constructors import (
 )
 from recipe.schemas.config_constructors import parse_unvalidated_field as parse_field
 from recipe.schemas.config_constructors import SAFE_DIVISON_EPSILON
-
-
-def filter_to_string(filt):
-    """Compile a filter object to a literal string"""
-    return str(filt.filters[0].compile(compile_kwargs={"literal_binds": True}))
+from recipe.utils import filter_to_string
 
 
 class TestIngredients(object):
@@ -144,34 +140,34 @@ class TestIngredientBuildFilter(object):
 
         # Test building scalar filters
         filt = d.build_filter("moo")
-        assert str(filt.filters[0]) == "foo.first = :first_1"
+        assert str(filt) == "foo.first = :first_1"
         filt = d.build_filter("moo", "eq")
-        assert str(filt.filters[0]) == "foo.first = :first_1"
+        assert str(filt) == "foo.first = :first_1"
         filt = d.build_filter("moo", "ne")
-        assert str(filt.filters[0]) == "foo.first != :first_1"
+        assert str(filt) == "foo.first != :first_1"
         filt = d.build_filter("moo", "lt")
-        assert str(filt.filters[0]) == "foo.first < :first_1"
+        assert str(filt) == "foo.first < :first_1"
         filt = d.build_filter("moo", "lte")
-        assert str(filt.filters[0]) == "foo.first <= :first_1"
+        assert str(filt) == "foo.first <= :first_1"
         filt = d.build_filter("moo", "gt")
-        assert str(filt.filters[0]) == "foo.first > :first_1"
+        assert str(filt) == "foo.first > :first_1"
         filt = d.build_filter("moo", "gte")
-        assert str(filt.filters[0]) == "foo.first >= :first_1"
+        assert str(filt) == "foo.first >= :first_1"
         filt = d.build_filter("moo", "is")
-        assert str(filt.filters[0]) == "foo.first IS :first_1"
+        assert str(filt) == "foo.first IS :first_1"
         filt = d.build_filter("moo", "isnot")
-        assert str(filt.filters[0]) == "foo.first IS NOT :first_1"
+        assert str(filt) == "foo.first IS NOT :first_1"
         filt = d.build_filter("moo", "like")
-        assert str(filt.filters[0]) == "foo.first LIKE :first_1"
+        assert str(filt) == "foo.first LIKE :first_1"
         filt = d.build_filter("moo", "ilike")
-        assert str(filt.filters[0]) == "lower(foo.first) LIKE lower(:first_1)"
+        assert str(filt) == "lower(foo.first) LIKE lower(:first_1)"
         # None values get converted to IS
         filt = d.build_filter(None, "eq")
-        assert str(filt.filters[0]) == "foo.first IS NULL"
+        assert str(filt) == "foo.first IS NULL"
 
         # str filter values are acceptable
         filt = d.build_filter(u"Τη γλώσ")
-        assert str(filt.filters[0]) == "foo.first = :first_1"
+        assert str(filt) == "foo.first = :first_1"
 
         # operator must agree with value
         with pytest.raises(ValueError):
@@ -189,37 +185,34 @@ class TestIngredientBuildFilter(object):
 
         # Test building scalar filters
         filt = d.build_filter("moo")
-        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) = :param_1"
+        assert str(filt) == "CAST(foo.age AS VARCHAR) = :param_1"
         filt = d.build_filter("moo", "eq")
-        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) = :param_1"
+        assert str(filt) == "CAST(foo.age AS VARCHAR) = :param_1"
         filt = d.build_filter("moo", "ne")
-        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) != :param_1"
+        assert str(filt) == "CAST(foo.age AS VARCHAR) != :param_1"
         filt = d.build_filter("moo", "lt")
-        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) < :param_1"
+        assert str(filt) == "CAST(foo.age AS VARCHAR) < :param_1"
         filt = d.build_filter("moo", "lte")
-        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) <= :param_1"
+        assert str(filt) == "CAST(foo.age AS VARCHAR) <= :param_1"
         filt = d.build_filter("moo", "gt")
-        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) > :param_1"
+        assert str(filt) == "CAST(foo.age AS VARCHAR) > :param_1"
         filt = d.build_filter("moo", "gte")
-        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) >= :param_1"
+        assert str(filt) == "CAST(foo.age AS VARCHAR) >= :param_1"
         filt = d.build_filter("moo", "is")
-        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) IS :param_1"
+        assert str(filt) == "CAST(foo.age AS VARCHAR) IS :param_1"
         filt = d.build_filter("moo", "isnot")
-        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) IS NOT :param_1"
+        assert str(filt) == "CAST(foo.age AS VARCHAR) IS NOT :param_1"
         filt = d.build_filter("moo", "like")
-        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) LIKE :param_1"
+        assert str(filt) == "CAST(foo.age AS VARCHAR) LIKE :param_1"
         filt = d.build_filter("moo", "ilike")
-        assert (
-            str(filt.filters[0])
-            == "lower(CAST(foo.age AS VARCHAR)) LIKE lower(:param_1)"
-        )
+        assert str(filt) == "lower(CAST(foo.age AS VARCHAR)) LIKE lower(:param_1)"
         # None values get converted to IS
         filt = d.build_filter(None, "eq")
-        assert str(filt.filters[0]) == "foo.age IS NULL"
+        assert str(filt) == "foo.age IS NULL"
 
         # str filter values are acceptable
         filt = d.build_filter(u"Τη γλώσ")
-        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) = :param_1"
+        assert str(filt) == "CAST(foo.age AS VARCHAR) = :param_1"
 
         # operator must agree with value
         with pytest.raises(ValueError):
@@ -237,30 +230,30 @@ class TestIngredientBuildFilter(object):
 
         # Test building scalar filters
         filt = d.build_filter(5)
-        assert str(filt.filters[0]) == "foo.age = :age_1"
+        assert str(filt) == "foo.age = :age_1"
         filt = d.build_filter(5, "eq")
-        assert str(filt.filters[0]) == "foo.age = :age_1"
+        assert str(filt) == "foo.age = :age_1"
         filt = d.build_filter(5, "ne")
-        assert str(filt.filters[0]) == "foo.age != :age_1"
+        assert str(filt) == "foo.age != :age_1"
         filt = d.build_filter(5, "lt")
-        assert str(filt.filters[0]) == "foo.age < :age_1"
+        assert str(filt) == "foo.age < :age_1"
         filt = d.build_filter(5, "lte")
-        assert str(filt.filters[0]) == "foo.age <= :age_1"
+        assert str(filt) == "foo.age <= :age_1"
         filt = d.build_filter(5, "gt")
-        assert str(filt.filters[0]) == "foo.age > :age_1"
+        assert str(filt) == "foo.age > :age_1"
         filt = d.build_filter(5, "gte")
-        assert str(filt.filters[0]) == "foo.age >= :age_1"
+        assert str(filt) == "foo.age >= :age_1"
         filt = d.build_filter(5, "is")
-        assert str(filt.filters[0]) == "foo.age IS :age_1"
+        assert str(filt) == "foo.age IS :age_1"
         filt = d.build_filter(5, "isnot")
-        assert str(filt.filters[0]) == "foo.age IS NOT :age_1"
+        assert str(filt) == "foo.age IS NOT :age_1"
         # None values get converted to IS
         filt = d.build_filter(None, "eq")
-        assert str(filt.filters[0]) == "foo.age IS NULL"
+        assert str(filt) == "foo.age IS NULL"
 
         # str filter values are acceptable
         filt = d.build_filter(u"Τη γλώσ")
-        assert str(filt.filters[0]) == "CAST(foo.age AS VARCHAR) = :param_1"
+        assert str(filt) == "CAST(foo.age AS VARCHAR) = :param_1"
 
         # operator must agree with value
         with pytest.raises(ValueError):
@@ -283,34 +276,28 @@ class TestIngredientBuildFilter(object):
 
         # Test building scalar filters
         filt = d.build_filter(["moo"])
-        assert str(filt.filters[0]) == "foo.first IN (:first_1)"
+        assert str(filt) == "foo.first IN (:first_1)"
         filt = d.build_filter(["moo", None])
-        assert str(filt.filters[0]) == "foo.first IS NULL OR foo.first IN (:first_1)"
+        assert str(filt) == "foo.first IS NULL OR foo.first IN (:first_1)"
         filt = d.build_filter([None, "moo", None, None])
-        assert str(filt.filters[0]) == "foo.first IS NULL OR foo.first IN (:first_1)"
+        assert str(filt) == "foo.first IS NULL OR foo.first IN (:first_1)"
         filt = d.build_filter([None, None])
-        assert str(filt.filters[0]) == "foo.first IS NULL"
+        assert str(filt) == "foo.first IS NULL"
 
         filt = d.build_filter(["moo", "foo"])
-        assert str(filt.filters[0]) == "foo.first IN (:first_1, :first_2)"
+        assert str(filt) == "foo.first IN (:first_1, :first_2)"
         filt = d.build_filter(["moo"], operator="in")
-        assert str(filt.filters[0]) == "foo.first IN (:first_1)"
+        assert str(filt) == "foo.first IN (:first_1)"
         filt = d.build_filter(["moo"], operator="notin")
-        assert str(filt.filters[0]) == "foo.first NOT IN (:first_1)"
+        assert str(filt) == "foo.first NOT IN (:first_1)"
         filt = d.build_filter(["moo", None], operator="notin")
-        assert (
-            str(filt.filters[0])
-            == "foo.first IS NOT NULL AND foo.first NOT IN (:first_1)"
-        )
+        assert str(filt) == "foo.first IS NOT NULL AND foo.first NOT IN (:first_1)"
         filt = d.build_filter([None, "moo", None], operator="notin")
-        assert (
-            str(filt.filters[0])
-            == "foo.first IS NOT NULL AND foo.first NOT IN (:first_1)"
-        )
+        assert str(filt) == "foo.first IS NOT NULL AND foo.first NOT IN (:first_1)"
         filt = d.build_filter([None, None], operator="notin")
-        assert str(filt.filters[0]) == "foo.first IS NOT NULL"
+        assert str(filt) == "foo.first IS NOT NULL"
         filt = d.build_filter(["moo", "foo"], operator="between")
-        assert str(filt.filters[0]) == "foo.first BETWEEN :first_1 AND :first_2"
+        assert str(filt) == "foo.first BETWEEN :first_1 AND :first_2"
 
         with pytest.raises(ValueError):
             d.build_filter("moo", "in")
@@ -364,9 +351,9 @@ class TestIngredientBuildFilter(object):
 
         # Test building scalar filters
         filt = d.build_filter("a", operator="quickselect")
-        assert str(filt.filters[0]) == "foo.first = :first_1"
+        assert str(filt) == "foo.first = :first_1"
         filt = d.build_filter("b", operator="quickselect")
-        assert str(filt.filters[0]) == "foo.last = :last_1"
+        assert str(filt) == "foo.last = :last_1"
 
         with pytest.raises(ValueError):
             filt = d.build_filter("c", operator="quickselect")
@@ -381,13 +368,13 @@ class TestIngredientBuildFilter(object):
 
         # Test building vector filters
         filt = d.build_filter(["a"], operator="quickselect")
-        assert str(filt.filters[0]) == "foo.first = :first_1"
+        assert str(filt) == "foo.first = :first_1"
         filt = d.build_filter(["b"], operator="quickselect")
-        assert str(filt.filters[0]) == "foo.last = :last_1"
+        assert str(filt) == "foo.last = :last_1"
         filt = d.build_filter(["a", "b"], operator="quickselect")
-        assert str(filt.filters[0]) == "foo.first = :first_1 OR foo.last = :last_1"
+        assert str(filt) == "foo.first = :first_1 OR foo.last = :last_1"
         filt = d.build_filter(["b", "a"], operator="quickselect")
-        assert str(filt.filters[0]) == "foo.last = :last_1 OR foo.first = :first_1"
+        assert str(filt) == "foo.last = :last_1 OR foo.first = :first_1"
 
         with pytest.raises(ValueError):
             filt = d.build_filter(["c"], operator="quickselect")
