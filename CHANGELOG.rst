@@ -2,6 +2,13 @@
 Changelog
 =========
 
+0.19.0 (2020-09-04)
+-----------------------------------------
+* Support and documentation for compound selection in automatic filters
+* Support for different sqlalchemy generation when using parsed fields
+* Add support for date conversions and percentiles in bigquery.
+* Ingredient.build_filters now returns SQLAlchemy BinaryExpression rather than Filter objects.
+
 0.18.1 (2020-08-07)
 -----------------------------------------
 * Fix a bug in filter binning
