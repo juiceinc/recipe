@@ -6,6 +6,7 @@ from sqlalchemy import Float, String, and_, between, case, cast, func, or_, text
 
 from six import string_types
 from sqlalchemy.sql.sqltypes import Date, DateTime, TIMESTAMP
+from sqlalchemy.exc import CompileError
 from datetime import date, datetime
 from time import gmtime
 from recipe.compat import str
@@ -19,7 +20,11 @@ def convert_date(v):
         return v
     elif isinstance(v, str):
         try:
-            return dateparser.parse(v).date()
+            dt = dateparser.parse(v)
+            if dt is not None:
+                return dt.date()
+            else:
+                return v
         except ValueError:
             return v
     elif isinstance(v, (float, int)):
@@ -36,7 +41,11 @@ def convert_datetime(v):
         return v
     elif isinstance(v, str):
         try:
-            return dateparser.parse(v)
+            dt = dateparser.parse(v)
+            if dt is not None:
+                return dt.date()
+            else:
+                return v
         except ValueError:
             return v
     elif isinstance(v, (float, int)):
@@ -44,6 +53,23 @@ def convert_datetime(v):
         return datetime.fromtimestamp(v)
     else:
         return v
+
+
+def column_type(c):
+    """Determine the datatype of a SQLAlchemy column expression """
+    try:
+        if hasattr(c, "type"):
+            col_type = str(c.type).upper()
+        else:
+            col_type = None
+    except CompileError:
+        # Some SQLAlchemy expressions don't have a defined type
+        if str(c).lower().startswith("date_trunc"):
+            col_type = "DATE"
+        else:
+            col_type = "STRING"
+
+    return col_type
 
 
 @total_ordering
@@ -274,15 +300,17 @@ class Ingredient(object):
         else:
             filter_column = self.columns[0]
 
-        # If we pass a string value, convert the column to string for comparison
-        if isinstance(value, string_types) and not isinstance(
-            filter_column.type, String
+        # Support passing ILIKE in Paginate extensions
+        if column_type(filter_column) == "DATE":
+            value = convert_date(value)
+        elif column_type(filter_column) in ("DATETIME", "TIMESTAMP"):
+            value = convert_datetime(value)
+
+        if isinstance(value, string_types) and not column_type(filter_column) in (
+            "STRING",
+            "VARCHAR",
         ):
             filter_column = cast(filter_column, String)
-        elif isinstance(filter_column.type, Date):
-            value = convert_date(value)
-        elif isinstance(filter_column.type, (DateTime, TIMESTAMP)):
-            value = convert_datetime(value)
 
         if operator is None or operator == "eq":
             # Default operator is 'eq' so if no operator is provided, handle
@@ -345,9 +373,9 @@ class Ingredient(object):
         else:
             filter_column = self.columns[0]
 
-        if isinstance(filter_column.type, Date):
+        if column_type(filter_column) == "DATE":
             value = list(map(convert_date, value))
-        elif isinstance(filter_column.type, (DateTime, TIMESTAMP)):
+        elif column_type(filter_column) in ("DATETIME", "TIMESTAMP"):
             value = list(map(convert_datetime, value))
 
         if operator is None or operator == "in":
@@ -372,8 +400,7 @@ class Ingredient(object):
                 non_none_value = sorted([v for v in value if v is not None])
                 if non_none_value:
                     return and_(
-                        filter_column.isnot(None),
-                        filter_column.notin_(non_none_value),
+                        filter_column.isnot(None), filter_column.notin_(non_none_value),
                     )
                 else:
                     return filter_column.isnot(None)
