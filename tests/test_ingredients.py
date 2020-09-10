@@ -205,7 +205,10 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter("moo", "like")
         assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) LIKE 'moo'"
         filt = d.build_filter("moo", "ilike")
-        assert filter_to_string(filt) == "lower(CAST(foo.age AS VARCHAR)) LIKE lower('moo')"
+        assert (
+            filter_to_string(filt)
+            == "lower(CAST(foo.age AS VARCHAR)) LIKE lower('moo')"
+        )
         # None values get converted to IS
         filt = d.build_filter(None, "eq")
         assert filter_to_string(filt) == "foo.age IS NULL"
@@ -292,9 +295,15 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter(["moo"], operator="notin")
         assert filter_to_string(filt) == "foo.first NOT IN ('moo')"
         filt = d.build_filter(["moo", None], operator="notin")
-        assert filter_to_string(filt) == "foo.first IS NOT NULL AND foo.first NOT IN ('moo')"
+        assert (
+            filter_to_string(filt)
+            == "foo.first IS NOT NULL AND foo.first NOT IN ('moo')"
+        )
         filt = d.build_filter([None, "moo", None], operator="notin")
-        assert filter_to_string(filt) == "foo.first IS NOT NULL AND foo.first NOT IN ('moo')"
+        assert (
+            filter_to_string(filt)
+            == "foo.first IS NOT NULL AND foo.first NOT IN ('moo')"
+        )
         filt = d.build_filter([None, None], operator="notin")
         assert filter_to_string(filt) == "foo.first IS NOT NULL"
         filt = d.build_filter(["moo", "foo"], operator="between")
@@ -312,19 +321,16 @@ class TestIngredientBuildFilter(object):
         d = Dimension(MyTable.birth_date)
         # Test building scalar filters
         filt = d.build_filter("2020-01-01")
-        assert (
-            filter_to_string(filt) == "foo.birth_date = '2020-01-01'"
-        )
+        assert filter_to_string(filt) == "foo.birth_date = '2020-01-01'"
 
         filt = d.build_filter("2020-01-01T03:05")
-        assert (
-            filter_to_string(filt) == "foo.birth_date = '2020-01-01'"
-        )
+        assert filter_to_string(filt) == "foo.birth_date = '2020-01-01'"
 
         # An unparsable date will be treated as a string
         filt = d.build_filter("2020-01-01T03:05X523")
         assert (
-            filter_to_string(filt) == "CAST(foo.birth_date AS VARCHAR) = '2020-01-01T03:05X523'"
+            filter_to_string(filt)
+            == "CAST(foo.birth_date AS VARCHAR) = '2020-01-01T03:05X523'"
         )
 
         # Evaluated as timestamp=0
