@@ -8,9 +8,9 @@ Overview
     :alt: PyPI Package latest release
     :target: https://pypi.python.org/pypi/recipe
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/chrisgemignani/recipe/v0.19.0.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/chrisgemignani/recipe/v0.19.1.svg
     :alt: Commits since latest release
-    :target: https://github.com/chrisgemignani/recipe/compare/v0.19.0...master
+    :target: https://github.com/chrisgemignani/recipe/compare/v0.19.1...master
 
 .. |downloads| image:: https://img.shields.io/pypi/dm/recipe.svg
     :alt: PyPI Package monthly downloads
