@@ -2,6 +2,11 @@
 Changelog
 =========
 
+0.19.1 (2020-09-10)
+-----------------------------------------
+* Drop python2.7 testing support (Python2.7 support will be dropped in 0.20)
+* Improve type identification in Ingredient.build_filter
+
 0.19.0 (2020-09-04)
 -----------------------------------------
 * Support and documentation for compound selection in automatic filters
