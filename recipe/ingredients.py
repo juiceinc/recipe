@@ -43,14 +43,14 @@ def convert_datetime(v):
         try:
             dt = dateparser.parse(v)
             if dt is not None:
-                return dt.date()
+                return dt
             else:
                 return v
         except ValueError:
             return v
     elif isinstance(v, (float, int)):
         # Convert to a date
-        return datetime.fromtimestamp(v)
+        return datetime.utcfromtimestamp(v)
     else:
         return v
 

@@ -337,6 +337,38 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter(0)
         assert filter_to_string(filt) == "foo.birth_date = '1970-01-01'"
 
+    def test_scalar_filter_datetime(self):
+        d = Dimension(MyTable.dt)
+        # Test building scalar filters
+        filt = d.build_filter("2020-01-01")
+        assert filter_to_string(filt) == "foo.dt = '2020-01-01 00:00:00'"
+
+        filt = d.build_filter("2020-01-01T03:05")
+        assert filter_to_string(filt) == "foo.dt = '2020-01-01 03:05:00'"
+
+        filt = d.build_filter("2020-01-01T03:05 UTC")
+        assert filter_to_string(filt) == "foo.dt = '2020-01-01 03:05:00+00:00'"
+
+        filt = d.build_filter("2020-01-01T04:06:01Z")
+        assert filter_to_string(filt) == "foo.dt = '2020-01-01 04:06:01+00:00'"
+
+        filt = d.build_filter("2020-01-01T03:05 EST")
+        assert filter_to_string(filt) == "foo.dt = '2020-01-01 03:05:00-05:00'"
+
+        filt = d.build_filter("2020-01-01T06:07:04.123456")
+        assert filter_to_string(filt) == "foo.dt = '2020-01-01 06:07:04.123456'"
+
+        # An unparsable date will be treated as a string
+        filt = d.build_filter("2020-01-01T03:05X523")
+        assert (
+            filter_to_string(filt)
+            == "CAST(foo.dt AS VARCHAR) = '2020-01-01T03:05X523'"
+        )
+
+        # Evaluated as timestamp=0
+        filt = d.build_filter(0)
+        assert filter_to_string(filt) == "foo.dt = '1970-01-01 00:00:00'"
+
     def test_vector_filter_date(self):
         d = Dimension(MyTable.birth_date)
         # Test building scalar filters
