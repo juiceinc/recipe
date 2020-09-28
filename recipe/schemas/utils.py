@@ -8,7 +8,6 @@ from sqlalchemy.sql.base import ImmutableColumnCollection
 from sureberus import schema as S
 
 from recipe.exceptions import InvalidColumnError
-from recipe.compat import basestring
 
 SCALAR_TYPES = [S.Integer(), S.String(), S.Float(), S.Boolean()]
 
@@ -73,7 +72,7 @@ def convert_by_engine_keys_to_regex(lookup_by_engine):
     keys = set()
     for d in lookup_by_engine.values():
         for k in d.keys():
-            if isinstance(k, basestring):
+            if isinstance(k, str):
                 keys.add(k)
 
     keys = list(keys)
@@ -92,7 +91,7 @@ def _convert_date_value(v):
         return v
     elif isinstance(v, datetime):
         return v.date()
-    elif isinstance(v, basestring):
+    elif isinstance(v, str):
         parsed_dt = dateparser.parse(v, **parse_kwargs)
         if parsed_dt is None:
             raise ValueError("Could not parse date in {}".format(v))
@@ -107,7 +106,7 @@ def _convert_datetime_value(v):
         return v
     elif isinstance(v, date):
         return datetime(v.year, v.month, v.day)
-    elif isinstance(v, basestring):
+    elif isinstance(v, str):
         parsed_dt = dateparser.parse(v, **parse_kwargs)
         if parsed_dt is None:
             raise ValueError("Could not parse datetime in {}".format(v))

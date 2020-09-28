@@ -2,22 +2,17 @@ from copy import copy
 
 from lark.exceptions import VisitError
 from ordered_set import OrderedSet
-from six import iteritems
 from sqlalchemy import Float, Integer, String, Table
 from sqlalchemy.util import lightweight_named_tuple
 from sureberus import errors as E
 from sureberus import normalize_schema
 from yaml import safe_load
 
-from recipe.compat import basestring
 from recipe.exceptions import BadIngredient, BadRecipe, InvalidColumnError
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric, InvalidIngredient
 from recipe.schemas import shelf_schema
 from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
-from recipe.schemas.config_constructors import (
-    create_ingredient_from_config,
-    parse_unvalidated_condition,
-)
+from recipe.schemas.config_constructors import create_ingredient_from_config
 
 
 _POP_DEFAULT = object()
@@ -253,7 +248,7 @@ class Shelf(object):
 
         if isinstance(selectable, Recipe):
             selectable = selectable.subquery()
-        elif isinstance(selectable, basestring):
+        elif isinstance(selectable, str):
             if "." in selectable:
                 schema, tablename = selectable.split(".")
             else:
@@ -268,7 +263,7 @@ class Shelf(object):
         except E.SureError as e:
             raise BadIngredient(str(e))
         d = {}
-        for k, v in iteritems(validated_shelf):
+        for k, v in validated_shelf.items():
             d[k] = ingredient_constructor(v, selectable)
             if isinstance(d[k], InvalidIngredient):
                 if not d[k].error.get("extra"):
@@ -312,7 +307,7 @@ class Shelf(object):
         if callable(constructor):
             obj = constructor(obj, shelf=self)
 
-        if isinstance(obj, basestring):
+        if isinstance(obj, str):
             set_descending = obj.startswith("-")
             if set_descending:
                 obj = obj[1:]

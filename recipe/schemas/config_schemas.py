@@ -7,7 +7,6 @@ import re
 
 from copy import copy
 from sureberus import schema as S
-from recipe.compat import basestring
 from .utils import (
     sqlalchemy_datatypes,
     coerce_format,
@@ -22,7 +21,7 @@ default_aggregation = "sum"
 no_aggregation = "none"
 
 
-aggr_keys = "|".join(k for k in aggregations.keys() if isinstance(k, basestring))
+aggr_keys = "|".join(k for k in aggregations.keys() if isinstance(k, str))
 # Match patterns like sum(a)
 field_pattern = re.compile(r"^({})\((.*)\)$".format(aggr_keys))
 
@@ -48,7 +47,7 @@ def find_operators(value):
 def _coerce_string_into_field(value, search_for_operators=True):
     """Convert a string into a field, potentially parsing a functional
     form into a value and aggregation"""
-    if isinstance(value, basestring):
+    if isinstance(value, str):
         if value.startswith("@"):
             result = _coerce_string_into_field(value[1:])
             result["ref"] = result["value"]
@@ -106,7 +105,7 @@ def _field_post(field):
 
 
 def _to_lowercase(value):
-    if isinstance(value, basestring):
+    if isinstance(value, str):
         return value.lower()
     else:
         return value
@@ -211,7 +210,7 @@ def _condition_schema(operator, _op, scalar=True, aggr=False, label_required=Fal
 
 
 def _coerce_string_into_condition_ref(cond):
-    if isinstance(cond, basestring) and cond.startswith("@"):
+    if isinstance(cond, str) and cond.startswith("@"):
         return {"ref": cond[1:]}
     elif isinstance(cond, dict):
         # Removing these fields which are added in validation allows

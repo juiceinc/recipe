@@ -5,7 +5,6 @@ import pytest
 from faker import Faker
 from faker.providers import BaseProvider
 
-from recipe.compat import basestring, integer_types
 from recipe.utils import (
     AttrDict,
     FakerAnonymizer,
@@ -14,7 +13,6 @@ from recipe.utils import (
     generate_faker_seed,
     pad_values,
 )
-from recipe.compat import str as compat_str
 
 uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -26,10 +24,8 @@ class TestUtils(object):
 
     def test_generate_faker_seed(self):
         """ Test we get the same seed values in py2 and py3 """
-        assert compat_str("2") == compat_str(u"2")
         assert generate_faker_seed(None) == 7701040980221191251
         assert generate_faker_seed(0) == 14973660089898329583
-        assert generate_faker_seed(u"hi") == 5329599339005471788
         assert generate_faker_seed("hi") == 5329599339005471788
         assert generate_faker_seed([]) == 15515306683186839187
 
@@ -179,11 +175,11 @@ class TestFakerAnonymizer(object):
         # FakerAnonymizer always returns string unless converted
         a = FakerAnonymizer("{fake:ean8}")
 
-        assert isinstance(a("Value"), basestring)
+        assert isinstance(a("Value"), str)
 
         b = FakerAnonymizer("{fake:ean8}", postprocessor=lambda x: int(x))
 
-        assert isinstance(b("Value"), integer_types)
+        assert isinstance(b("Value"), int)
 
         assert int(a("Value")) == b("Value")
 
@@ -191,21 +187,21 @@ class TestFakerAnonymizer(object):
         """Register a provider"""
         a = FakerAnonymizer("{fake:moo}", providers=[CowProvider])
 
-        assert isinstance(a("Value"), basestring)
+        assert isinstance(a("Value"), str)
         assert a("Value") == "moo"
 
     def test_anonymizer_with_bad_providers(self):
         """Register a provider"""
         a = FakerAnonymizer("{fake:moo}", providers=[None, 4, CowProvider])
 
-        assert isinstance(a("Value"), basestring)
+        assert isinstance(a("Value"), str)
         assert a("Value") == "moo"
 
     def test_anonymizer_with_stringprovider(self):
         """Register a string provider that is dynamically imported"""
         a = FakerAnonymizer("{fake:foo}", providers=["recipe.utils.TestProvider"])
 
-        assert isinstance(a("Value"), basestring)
+        assert isinstance(a("Value"), str)
         assert a("Value") == "foo"
 
     def test_anonymizer_with_multipleproviders(self):
@@ -215,5 +211,5 @@ class TestFakerAnonymizer(object):
             providers=["recipe.utils.TestProvider", CowProvider],
         )
 
-        assert isinstance(a("Value"), basestring)
+        assert isinstance(a("Value"), str)
         assert a("Value") == "foo moo"
