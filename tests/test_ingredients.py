@@ -361,8 +361,7 @@ class TestIngredientBuildFilter(object):
         # An unparsable date will be treated as a string
         filt = d.build_filter("2020-01-01T03:05X523")
         assert (
-            filter_to_string(filt)
-            == "CAST(foo.dt AS VARCHAR) = '2020-01-01T03:05X523'"
+            filter_to_string(filt) == "CAST(foo.dt AS VARCHAR) = '2020-01-01T03:05X523'"
         )
 
         # Evaluated as timestamp=0
