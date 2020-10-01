@@ -1,6 +1,7 @@
 import logging
 import time
 import warnings
+from recipe_caching.mappers import FromCache
 from uuid import uuid4
 
 import attr
@@ -134,6 +135,12 @@ class Recipe(object):
         count_query = self._session.query(func.count().label("count")).select_from(
             query.subquery()
         )
+        if hasattr(query, "region"):
+            count_query.region = query.region
+        if hasattr(query, "cache_prefix"):
+            count_query.cache_prefix = query.cache_prefix
+        if hasattr(query, "cache_key"):
+            count_query.cache_key = query.cache_key
         cnt = count_query.scalar()
 
         # Clear the query so it is regenerated
