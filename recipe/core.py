@@ -135,7 +135,9 @@ class Recipe(object):
             query.limit(None).offset(None).order_by(None).subquery()
         )
         if FromCache:
-            count_query = count_query.options(FromCache(self._cache_region, cache_prefix=self._cache_prefix))
+            count_query = count_query.options(
+                FromCache(self._cache_region, cache_prefix=self._cache_prefix)
+            )
         return count_query.scalar()
 
     def reset(self):
