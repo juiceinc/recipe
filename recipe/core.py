@@ -135,6 +135,8 @@ class Recipe(object):
         count_query = self._session.query(func.count().label("count")).select_from(
             query.subquery()
         )
+        count_query._cache_region = self._cache_region
+
         if hasattr(query, "region"):
             count_query.region = query.region
         if hasattr(query, "cache_prefix"):
