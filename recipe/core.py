@@ -123,8 +123,14 @@ class Recipe(object):
         Returns:
             A count of the number of rows that are returned by this query.
         """
-        self.query()
-        return self._count_query.scalar()
+
+        if query is None:
+            query = self.query()
+
+        count_query = self._session.query(func.count().label("countr")).select_from(
+            query.limit(None).offset(None).order_by(None).subquery()
+        )
+        return count_query.scalar()
 
     def reset(self):
         self._query = None
@@ -460,12 +466,6 @@ class Recipe(object):
         # cache results
 
         self._query = recipe_parts["query"]
-        
-        count_query_inner = self._query.limit(None).offset(None).order_by(None)
-        self._count_query = self._session.query(func.count().label("count")).select_from(
-            count_query_inner.subquery()
-        )
-
         return self._query
 
     def _table(self):
