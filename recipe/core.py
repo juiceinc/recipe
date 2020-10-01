@@ -1,7 +1,6 @@
 import logging
 import time
 import warnings
-from recipe_caching.mappers import FromCache
 from uuid import uuid4
 
 import attr
@@ -123,19 +122,20 @@ class Recipe(object):
         Returns:
             A count of the number of rows that are returned by this query.
         """
-        try:
-            from recipe_caching.mappers import FromCache
-        except ImportError:
-            FromCache = None
-
         if query is None:
             query = self.query()
 
         count_query = self._session.query(func.count().label("countr")).select_from(
             query.limit(None).offset(None).order_by(None).subquery()
         )
-        if FromCache:
+
+        # If recipe_caching is installed, apply caching to this query
+        try:
+            from recipe_caching.mappers import FromCache
             count_query = count_query.options(FromCache(self._cache_region, cache_prefix=self._cache_prefix))
+        except ImportError:
+            pass
+
         return count_query.scalar()
 
     def reset(self):
@@ -388,7 +388,7 @@ class Recipe(object):
             pass
         return False
 
-    def query(self, count_query=False):
+    def query(self):
         """
         Generates a query using the ingredients supplied by the recipe.
 
