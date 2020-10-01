@@ -124,7 +124,7 @@ class Recipe(object):
             A count of the number of rows that are returned by this query.
         """
         self.query()
-        return self._count_query().scalar
+        return self._count_query.scalar
 
     def reset(self):
         self._query = None
