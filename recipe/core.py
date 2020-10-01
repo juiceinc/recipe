@@ -129,7 +129,7 @@ class Recipe(object):
             query.limit(None).offset(None).order_by(None).subquery()
         )
 
-        # If recipe_caching is installed, apply caching to this query
+        # If recipe_caching is installed, apply caching to this query.
         try:
             from recipe_caching.mappers import FromCache
             count_query = count_query.options(FromCache(self._cache_region, cache_prefix=self._cache_prefix))
