@@ -122,23 +122,24 @@ class Recipe(object):
         Returns:
             A count of the number of rows that are returned by this query.
         """
-        # If there is an ordering we take it off to make this
-        # count run faster, then set the recipe to dirty so the
-        # query is generated again
         if query is None:
             query = self.query()
-        if self._limit:
-            query = query.limit(None).offset(None)
-        if self._order_bys:
-            query = query.from_self().order_by(None)
-        count_query = self._session.query(func.count().label("count")).select_from(
-            query.subquery()
-        )
-        cnt = count_query.scalar()
 
-        # Clear the query so it is regenerated
-        self.reset()
-        return cnt
+        count_query = self._session.query(func.count().label("count")).select_from(
+            query.limit(None).offset(None).order_by(None).subquery()
+        )
+
+        # If recipe_caching is installed, apply caching to this query.
+        try:
+            from recipe_caching.mappers import FromCache
+
+            count_query = count_query.options(
+                FromCache(self._cache_region, cache_prefix=self._cache_prefix)
+            )
+        except ImportError:
+            pass
+
+        return count_query.scalar()
 
     def reset(self):
         self._query = None
