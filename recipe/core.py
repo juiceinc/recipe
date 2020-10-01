@@ -127,9 +127,13 @@ class Recipe(object):
         if query is None:
             query = self.query()
 
+        print("CR\n"*20)
+        print(query._cache_region, type(query))
         count_query = self._session.query(func.count().label("countr")).select_from(
             query.limit(None).offset(None).order_by(None).subquery()
         )
+        count_query._cache_region = query._cache_region
+        print(count_query._cache_region, type(count_query))
         return count_query.scalar()
 
     def reset(self):
