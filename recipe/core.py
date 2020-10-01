@@ -123,32 +123,8 @@ class Recipe(object):
         Returns:
             A count of the number of rows that are returned by this query.
         """
-        return 7
-        # If there is an ordering we take it off to make this
-        # count run faster, then set the recipe to dirty so the
-        # query is generated again
-        if query is None:
-            query = self.query()
-        if self._limit:
-            query = query.limit(None).offset(None)
-        if self._order_bys:
-            query = query.from_self().order_by(None)
-        count_query = self._session.query(func.count().label("count")).select_from(
-            query.subquery()
-        )
-        if hasattr(query, "_cache_region"):
-            count_query._cache_region = query._cache_region
-        if hasattr(query, "region"):
-            count_query.region = query.region
-        if hasattr(query, "cache_prefix"):
-            count_query.cache_prefix = query.cache_prefix
-        if hasattr(query, "cache_key"):
-            count_query.cache_key = query.cache_key
-        cnt = count_query.scalar()
-
-        # Clear the query so it is regenerated
-        self.reset()
-        return cnt
+        self.query()
+        return self._count_query().scalar
 
     def reset(self):
         self._query = None
@@ -400,7 +376,7 @@ class Recipe(object):
             pass
         return False
 
-    def query(self):
+    def query(self, count_query=False):
         """
         Generates a query using the ingredients supplied by the recipe.
 
@@ -484,6 +460,12 @@ class Recipe(object):
         # cache results
 
         self._query = recipe_parts["query"]
+        
+        count_query_inner = self._query.limit(None).offset(None).order_by(None)
+        self._count_query = self._session.query(func.count().label("count")).select_from(
+            count_query_inner.subquery()
+        )
+
         return self._query
 
     def _table(self):
