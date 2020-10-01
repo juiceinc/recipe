@@ -123,17 +123,19 @@ class Recipe(object):
         Returns:
             A count of the number of rows that are returned by this query.
         """
+        try:
+            from recipe_caching.mappers import FromCache
+        except ImportError:
+            FromCache = None
 
         if query is None:
             query = self.query()
 
-        print("CR\n"*20)
-        print(query._cache_region, type(query))
         count_query = self._session.query(func.count().label("countr")).select_from(
             query.limit(None).offset(None).order_by(None).subquery()
         )
-        count_query._cache_region = query._cache_region
-        print(count_query._cache_region, type(count_query))
+        if FromCache:
+            count_query = count_query.options(FromCache(self._cache_region, cache_prefix=self._cache_prefix))
         return count_query.scalar()
 
     def reset(self):
