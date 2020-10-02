@@ -2,6 +2,11 @@
 Changelog
 =========
 
+v0.20.0 (2020-10-02)
+-----------------------------------------
+* Update total_count to use caching
+* Fix datatime auto conversions
+
 0.19.1 (2020-09-10)
 -----------------------------------------
 * Drop python2.7 testing support (Python2.7 support will be dropped in 0.20)
