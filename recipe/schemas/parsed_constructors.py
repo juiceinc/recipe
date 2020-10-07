@@ -169,16 +169,14 @@ class TransformToSQLAlchemyExpression(Transformer):
             return calc_date_range(offset, units, date.today())
 
     def relation_expr(self, left, rel, right):
-        log = SLOG.bind()
-        log.info("relation_expr", left=left, rel=rel, right=right, dirleft=dir(left))
         rel = rel.lower()
         comparators = {
             "=": "__eq__",
             ">": "__gt__",
-            ">=": "__gte__",
+            ">=": "__ge__",
             "!=": "__ne__",
             "<": "__lt__",
-            "<=": "__lte__",
+            "<=": "__le__",
         }
         if right is None:
             return
