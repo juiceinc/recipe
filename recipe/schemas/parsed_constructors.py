@@ -1,5 +1,4 @@
 """Convert parsed trees into SQLAlchemy objects """
-import structlog
 from lark import Lark, Transformer, v_args
 from sqlalchemy import func, distinct, case, and_, or_, not_, cast, Float
 from datetime import date
@@ -21,8 +20,6 @@ from .utils import (
 from .engine_support import aggregations_by_engine, conversions_by_engine
 from recipe.exceptions import BadIngredient
 from recipe.ingredients import InvalidIngredient
-
-SLOG = structlog.get_logger(__name__)
 
 
 @v_args(inline=True)  # Affects the signatures of the methods

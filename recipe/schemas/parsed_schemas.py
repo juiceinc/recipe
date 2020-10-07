@@ -3,7 +3,6 @@ import attr
 from lark.exceptions import LarkError
 from six import string_types
 import logging
-import structlog
 from sureberus import schema as S
 
 from .utils import coerce_format, coerce_pop_version, _chain, SCALAR_TYPES
@@ -15,8 +14,7 @@ from .field_grammar import (
     noag_any_condition_parser,
 )
 
-logging.captureWarnings(True)
-SLOG = structlog.get_logger(__name__)
+logging.captureWarnings(True)SLOG = structlog.get_logger(__name__)
 
 
 @attr.s
