@@ -14,7 +14,7 @@ from .field_grammar import (
     noag_any_condition_parser,
 )
 
-logging.captureWarnings(True)SLOG = structlog.get_logger(__name__)
+logging.captureWarnings(True)
 
 
 @attr.s
