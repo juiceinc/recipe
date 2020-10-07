@@ -170,7 +170,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def relation_expr(self, left, rel, right):
         log = SLOG.bind()
-        log.info("relation_expr", left=left, rel=rel, right=right)
+        log.info("relation_expr", left=left, rel=rel, right=right, dirleft=dir(left))
         rel = rel.lower()
         comparators = {
             "=": "__eq__",
