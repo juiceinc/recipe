@@ -1,4 +1,5 @@
 """Convert parsed trees into SQLAlchemy objects """
+import structlog
 from lark import Lark, Transformer, v_args
 from sqlalchemy import func, distinct, case, and_, or_, not_, cast, Float
 from datetime import date
@@ -20,6 +21,8 @@ from .utils import (
 from .engine_support import aggregations_by_engine, conversions_by_engine
 from recipe.exceptions import BadIngredient
 from recipe.ingredients import InvalidIngredient
+
+SLOG = structlog.get_logger(__name__)
 
 
 @v_args(inline=True)  # Affects the signatures of the methods
@@ -166,6 +169,8 @@ class TransformToSQLAlchemyExpression(Transformer):
             return calc_date_range(offset, units, date.today())
 
     def relation_expr(self, left, rel, right):
+        log = SLOG.bind()
+        log.info("relation_expr", left=left, rel=rel, right=right)
         rel = rel.lower()
         comparators = {
             "=": "__eq__",

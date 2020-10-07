@@ -34,6 +34,7 @@ install = [
     'tablib',
     'pyyaml',
     'stevedore',
+    'structlog',
     'sureberus',
     'faker',
     'dateparser',
