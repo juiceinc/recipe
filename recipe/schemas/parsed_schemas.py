@@ -1,5 +1,4 @@
 """Shelf config _version="2" supports parsed fields using a lark parser."""
-import attr
 from lark.exceptions import LarkError
 from six import string_types
 import logging
@@ -15,23 +14,6 @@ from .field_grammar import (
 )
 
 logging.captureWarnings(True)
-
-
-@attr.s
-class ParseValidator(object):
-    """A sureberus validator that checks that a field parses and matches
-    certain tokens"""
-
-    #: Message to display on failure
-    parser = attr.ib(default=field_parser)
-
-    def __call__(self, f, v, e):
-        """Check parsing"""
-        try:
-            tree = self.parser.parse(v)
-        except LarkError as exc:
-            # A Lark error message raised when the value doesn't parse
-            raise exc
 
 
 def move_extra_fields(value):
@@ -197,6 +179,16 @@ def add_version(v):
 
 
 # Sureberus validators that check how a field parses
+
+def ParseValidator(parser):
+    def validate(field, value, error):
+        try:
+            parser.parse(value)
+        except LarkError as exc:
+            error(field, f"Error parsing field: {exc}")
+    return validate
+
+
 validate_parses_with_agex = ParseValidator(parser=field_parser)
 validate_parses_without_agex = ParseValidator(parser=noag_field_parser)
 validate_any_condition = ParseValidator(parser=noag_any_condition_parser)
