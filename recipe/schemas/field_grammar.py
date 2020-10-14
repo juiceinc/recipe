@@ -29,6 +29,7 @@ base_field_grammar = (
     ?convertedcol: conversion "(" fld ")"
     ?fld.0: NAME | column                      -> fld
     ?column.0: "[" NAME "]" | NAME             -> column
+
     ?start: bool_expr | partial_relation_expr
 
     // Pairs of boolean expressions and expressions
@@ -75,8 +76,8 @@ base_field_grammar = (
 
     ?const.1: NUMBER                           -> number
             | ESCAPED_STRING                   -> string_literal
-            | /true/i                          -> bool
-            | /false/i                         -> bool
+            | /true/i                          -> true
+            | /false/i                         -> false
     STAR: "*"
     COMMENT: /#.*/
 
