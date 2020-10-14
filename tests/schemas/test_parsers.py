@@ -130,6 +130,10 @@ bool_expr
 def test_complex_field_parser():
     """Test the parse trees generated """
     values = [
+        ("[foo]", "expr\n  column\tfoo"),
+        ("foo", "expr\n  column\tfoo"),
+        ("True", "expr\n  true\tTrue"),
+
         (
             "couNT(*)",
             """

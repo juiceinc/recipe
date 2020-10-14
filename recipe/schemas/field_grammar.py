@@ -27,7 +27,8 @@ base_field_grammar = (
            | product "/" atom                  -> div
     ?conversion:  /({allowed_conv_keys})/i
     ?convertedcol: conversion "(" column ")"
-    ?column.0: "[" NAME "]" | NAME             -> column
+    ?column.0: "[" NAME "]"     -> column
+             | NAME             -> column
 
     ?start: bool_expr | partial_relation_expr
 

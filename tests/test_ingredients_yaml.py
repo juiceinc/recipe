@@ -9,7 +9,9 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 import pytest
 from six import text_type
-from tests.test_base import Census, MyTable, oven, ScoresWithNulls, DateTester
+from tests.test_base import (
+    Census, MyTable, oven, ScoresWithNulls, DateTester, WeirdTableWithColumnNamedTrue
+)
 
 from recipe import (
     AutomaticFilters,
@@ -1292,6 +1294,23 @@ class TestParsedSQLGeneration(object):
 
     def assert_recipe_csv(self, recipe, csv_text):
         assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
+
+    def test_weird_table_with_column_named_true(self):
+        shelf = self.create_shelf(
+            """
+_version: 2
+"true":
+    kind: Dimension
+    field: "[true]"
+            """,
+            WeirdTableWithColumnNamedTrue
+        )
+
+        recipe = Recipe(shelf=shelf, session=self.session).dimensions("true")
+        assert recipe.to_sql() == """SELECT weird_table_with_column_named_true."true" AS "true"
+FROM weird_table_with_column_named_true
+GROUP BY "true"
+            """.strip()
 
     def test_complex_field(self):
         """Test parsed field definitions that use math, field references and more"""
