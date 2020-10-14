@@ -8,7 +8,6 @@ import os
 from datetime import date
 from dateutil.relativedelta import relativedelta
 import pytest
-from six import text_type
 from tests.test_base import Census, MyTable, oven, ScoresWithNulls, DateTester
 
 from recipe import (
@@ -27,7 +26,7 @@ class TestRecipeIngredientsYaml(object):
         self.session = oven.Session()
 
     def assert_recipe_csv(self, recipe, csv_text):
-        assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
+        assert recipe.dataset.export("csv", lineterminator=str("\n")) == csv_text
 
     def validated_shelf(self, shelf_name, table):
         """Load a file from the sample ingredients.yaml files."""
@@ -1043,7 +1042,7 @@ class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
         self.session = oven.Session()
 
     def assert_recipe_csv(self, recipe, csv_text):
-        assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
+        assert recipe.dataset.export("csv", lineterminator=str("\n")) == csv_text
 
     def validated_shelf(self, shelf_name, table):
         """Load a file from the sample ingredients.yaml files."""
@@ -1291,7 +1290,7 @@ class TestParsedSQLGeneration(object):
         return Shelf.from_validated_yaml(config, selectable)
 
     def assert_recipe_csv(self, recipe, csv_text):
-        assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
+        assert recipe.dataset.export("csv", lineterminator=str("\n")) == csv_text
 
     def test_complex_field(self):
         """Test parsed field definitions that use math, field references and more"""
@@ -1549,7 +1548,7 @@ class TestParsedIntellligentDates(object):
         self.session = oven.Session()
 
     def assert_recipe_csv(self, recipe, csv_text):
-        assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
+        assert recipe.dataset.export("csv", lineterminator=str("\n")) == csv_text
 
     def parsed_shelf(self, config):
         """Load a file from the sample ingredients.yaml files."""

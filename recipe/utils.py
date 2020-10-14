@@ -7,14 +7,7 @@ import string
 import unicodedata
 from .compat import str as compat_str
 from functools import wraps
-
-try:
-    # getfullargspec is not available in python2
-    # getargspec is deprecated
-    # try to use getfullargspec if possible
-    from inspect import isclass, getfullargspec as getargspec
-except ImportError:
-    from inspect import getargspec, isclass
+from inspect import isclass, getfullargspec as getargspec
 
 import attr
 import sqlalchemy.orm
@@ -23,12 +16,11 @@ import hashlib
 
 from faker import Faker
 from faker.providers import BaseProvider
-from six import text_type, string_types
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
 
-from recipe.compat import basestring, integer_types, str, basestring
+from recipe.compat import basestring, integer_types
 
 # only expose the printing sql function
 __all__ = [
@@ -168,8 +160,8 @@ def replace_whitespace_with_space(s):
 
 def clean_unicode(value):
     """Convert value into ASCII bytes by brute force."""
-    if not isinstance(value, string_types):
-        value = text_type(value)
+    if not isinstance(value, str):
+        value = str(value)
     try:
         return value.encode("ascii")
     except UnicodeEncodeError:

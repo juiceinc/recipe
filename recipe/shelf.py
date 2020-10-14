@@ -2,7 +2,6 @@ from copy import copy
 
 from lark.exceptions import VisitError
 from ordered_set import OrderedSet
-from six import iteritems
 from sqlalchemy import Float, Integer, String, Table
 from sqlalchemy.util import lightweight_named_tuple
 from sureberus import errors as E
@@ -268,7 +267,7 @@ class Shelf(object):
         except E.SureError as e:
             raise BadIngredient(str(e))
         d = {}
-        for k, v in iteritems(validated_shelf):
+        for k, v in validated_shelf.items():
             d[k] = ingredient_constructor(v, selectable)
             if isinstance(d[k], InvalidIngredient):
                 if not d[k].error.get("extra"):
