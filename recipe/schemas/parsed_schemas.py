@@ -17,7 +17,7 @@ logging.captureWarnings(True)
 
 
 def move_extra_fields(value):
-    """ Move any fields that look like "{role}_field" into the extra_fields
+    """Move any fields that look like "{role}_field" into the extra_fields
     list. These will be processed as fields. Rename them as {role}_expression.
     """
     if isinstance(value, dict):
@@ -158,8 +158,8 @@ def create_buckets(value):
 
 
 def ensure_aggregation(fld):
-    """ Ensure that a field has an aggregation by wrapping the entire field
-    in a sum if no aggregation is supplied. """
+    """Ensure that a field has an aggregation by wrapping the entire field
+    in a sum if no aggregation is supplied."""
     try:
         tree = field_parser.parse(fld)
         has_agex = list(tree.find_data("agex"))
@@ -180,12 +180,14 @@ def add_version(v):
 
 # Sureberus validators that check how a field parses
 
+
 def ParseValidator(parser):
     def validate(field, value, error):
         try:
             parser.parse(value)
         except LarkError as exc:
             error(field, f"Error parsing field: {exc}")
+
     return validate
 
 

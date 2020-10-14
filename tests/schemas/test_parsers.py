@@ -133,7 +133,6 @@ def test_complex_field_parser():
         ("[foo]", "expr\n  column\tfoo"),
         ("foo", "expr\n  column\tfoo"),
         ("True", "expr\n  true\tTrue"),
-
         (
             "couNT(*)",
             """

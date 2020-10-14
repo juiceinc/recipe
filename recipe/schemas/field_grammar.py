@@ -17,8 +17,7 @@ base_field_grammar_args = {
 # Base grammar for field expressions
 # This grammar depends on a definition of atom which will be
 # added in the specific field grammars
-base_field_grammar = (
-    """
+base_field_grammar = """
     ?sum: product
         | sum "+" product                      -> add
         | sum "-" product                      -> sub
@@ -88,8 +87,7 @@ base_field_grammar = (
     %ignore COMMENT
     %ignore WS_INLINE
 """.format(
-        **base_field_grammar_args
-    )
+    **base_field_grammar_args
 )
 
 # A grammar that does not include aggregate expressions
