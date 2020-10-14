@@ -89,16 +89,15 @@ base_field_grammar = (
     ?product: atom
            | product "*" atom                  -> mul
            | product "/" atom                  -> div
-    ?conversion:  /({allowed_conv_keys})/i    
+    ?conversion:  /({allowed_conv_keys})/i
     ?convertedcol: conversion "(" fld ")"
-    ?fld.0: NAME | column                      
-    ?column.0 "[" NAME "]"                     
+    ?fld.0: NAME | column                      -> fld
+    ?column.0: "[" NAME "]" | NAME             -> column
 """.format(
         **base_field_grammar_args
     )
     + base_grammar
 )
-
 
 # A grammar that does not include aggregate expressions
 noag_field_grammar = (
