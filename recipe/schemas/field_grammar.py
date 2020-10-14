@@ -90,8 +90,9 @@ base_field_grammar = (
            | product "*" atom                  -> mul
            | product "/" atom                  -> div
     ?conversion:  /({allowed_conv_keys})/i    
-    ?convertedcol: conversion "(" column ")"
-    ?column.0: {column_defn}                   -> column
+    ?convertedcol: conversion "(" fld ")"
+    ?fld.0: NAME | column                      
+    ?column.0 "[" NAME "]"                     
 """.format(
         **base_field_grammar_args
     )

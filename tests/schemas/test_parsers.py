@@ -31,7 +31,7 @@ def test_parsers():
     if(war_total is null, 4, 2)                     # 1,1,0,0,0,0    
     couNT(*)                                        # 1,0,0,0,0,0
     AVG(war_total) + 1.0                            # 1,0,0,0,0,0
-    sum(war_total)                                  # 1,0,0,0,0,0
+    sum([war_total])                                  # 1,0,0,0,0,0
     max(war_total) - min(war_total)                 # 1,0,0,0,0,0
     min(war_total)-max(war_total-war_total)         # 1,0,0,0,0,0
     avg(war_total + 2.0)                            # 1,0,0,0,0,0
