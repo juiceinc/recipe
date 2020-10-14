@@ -26,8 +26,7 @@ base_field_grammar = (
            | product "*" atom                  -> mul
            | product "/" atom                  -> div
     ?conversion:  /({allowed_conv_keys})/i
-    ?convertedcol: conversion "(" fld ")"
-    ?fld.0: NAME | column                      -> fld
+    ?convertedcol: conversion "(" column ")"
     ?column.0: "[" NAME "]" | NAME             -> column
 
     ?start: bool_expr | partial_relation_expr
