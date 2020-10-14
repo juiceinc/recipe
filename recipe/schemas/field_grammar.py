@@ -75,8 +75,8 @@ base_field_grammar = (
 
     ?const.1: NUMBER                           -> number
             | ESCAPED_STRING                   -> string_literal
-            | /true/i                          -> true
-            | /false/i                         -> false
+            | /true/i                          -> bool
+            | /false/i                         -> bool
     STAR: "*"
     COMMENT: /#.*/
 
