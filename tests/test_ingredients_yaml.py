@@ -22,22 +22,40 @@ from recipe import (
 )
 
 
-class TestRecipeIngredientsYaml(object):
+class ConfigTestBase(object):
+    """A base class for testing shelves built from v1 or v2 config. """
+
+    # The directory to look for yaml config files
+    yaml_location = "ingredients"
+
+    # A default table to use
+    default_selectable = None
+
     def setup(self):
         self.session = oven.Session()
 
     def assert_recipe_csv(self, recipe, csv_text):
-        assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
+        assert recipe.dataset.export("csv", lineterminator="\n") == csv_text
 
-    def validated_shelf(self, shelf_name, table):
+    def shelf_from_filename(self, shelf_name, selectable=None):
         """Load a file from the sample ingredients.yaml files."""
         d = os.path.dirname(os.path.realpath(__file__))
-        fn = os.path.join(d, "ingredients", shelf_name)
+        fn = os.path.join(d, self.yaml_location, shelf_name)
         contents = open(fn).read()
-        return Shelf.from_validated_yaml(contents, table)
+        return self.shelf_from_yaml(contents, selectable)
 
+    def shelf_from_yaml(self, yaml_config, selectable=None):
+        """Create a shelf directly from configuration """
+
+        if selectable is None:
+            selectable = self.default_selectable
+
+        return Shelf.from_validated_yaml(yaml_config, selectable)
+
+
+class TestRecipeIngredientsYaml(ConfigTestBase):
     def test_ingredients1_from_validated_yaml(self):
-        shelf = self.validated_shelf("ingredients1.yaml", MyTable)
+        shelf = self.shelf_from_filename("ingredients1.yaml", MyTable)
         recipe = (
             Recipe(shelf=shelf, session=self.session).metrics("age").dimensions("first")
         )
@@ -49,7 +67,7 @@ hi,15,hi
         )
 
     def test_ingredients1_from_yaml(self):
-        shelf = self.validated_shelf("ingredients1.yaml", MyTable)
+        shelf = self.shelf_from_filename("ingredients1.yaml", MyTable)
         recipe = (
             Recipe(shelf=shelf, session=self.session).metrics("age").dimensions("first")
         )
@@ -61,7 +79,7 @@ hi,15,hi
         )
 
     def test_ingredients1_between_dates(self):
-        shelf = self.validated_shelf("ingredients1.yaml", MyTable)
+        shelf = self.shelf_from_filename("ingredients1.yaml", MyTable)
         recipe = Recipe(shelf=shelf, session=self.session).metrics("date_between")
         today = date.today()
         assert (
@@ -108,7 +126,7 @@ FROM foo""".format(
         )
 
     def test_census_from_validated_yaml(self):
-        shelf = self.validated_shelf("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("state")
@@ -124,7 +142,7 @@ Vermont,609480,1230082,Vermont
         )
 
     def test_census_from_yaml(self):
-        shelf = self.validated_shelf("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("state")
@@ -141,14 +159,14 @@ Vermont,609480,1230082,Vermont
 
     def test_nested_census_from_validated_yaml(self):
         """Build a recipe that depends on the results of another recipe """
-        shelf = self.validated_shelf("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("state")
             .metrics("pop2000", "ttlpop")
             .order_by("state")
         )
-        nested_shelf = self.validated_shelf("census_nested.yaml", recipe)
+        nested_shelf = self.shelf_from_filename("census_nested.yaml", recipe)
         nested_recipe = Recipe(shelf=nested_shelf, session=self.session).metrics(
             "ttlpop", "num_states"
         )
@@ -172,14 +190,14 @@ FROM
         )
 
     def test_nested_census_from_yaml(self):
-        shelf = self.validated_shelf("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("state")
             .metrics("pop2000", "ttlpop")
             .order_by("state")
         )
-        nested_shelf = self.validated_shelf("census_nested.yaml", recipe)
+        nested_shelf = self.shelf_from_filename("census_nested.yaml", recipe)
         nested_recipe = Recipe(shelf=nested_shelf, session=self.session).metrics(
             "ttlpop", "num_states"
         )
@@ -191,7 +209,7 @@ FROM
         )
 
     def test_census_buckets(self):
-        shelf = self.validated_shelf("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("age_buckets")
@@ -229,7 +247,7 @@ oldsters,9999,4567879,oldsters
         )
 
     def test_census_condition_between(self):
-        shelf = self.validated_shelf("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = Recipe(shelf=shelf, session=self.session).metrics("teenagers")
         assert (
             recipe.to_sql()
@@ -246,7 +264,7 @@ FROM census"""
         )
 
     def test_census_condition_between_dates(self):
-        shelf = self.validated_shelf("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = Recipe(shelf=shelf, session=self.session).metrics("teenagers")
         assert (
             recipe.to_sql()
@@ -263,7 +281,7 @@ FROM census"""
         )
 
     def test_census_mixed_buckets(self):
-        shelf = self.validated_shelf("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("mixed_buckets")
@@ -328,7 +346,7 @@ northeast,0,609480,northeast
         )
 
     def test_census_buckets_ordering(self):
-        shelf = self.validated_shelf("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("age_buckets")
@@ -404,7 +422,7 @@ babies,0,164043,babies
 
     def test_census_buckets_nolabel(self):
         """If not default label is provided, buckets default to "Not found" """
-        shelf = self.validated_shelf("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("age_buckets_nolabel")
@@ -445,7 +463,7 @@ Not found,9999,4567879,Not found
     def test_complex_census_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
         metrics"""
-        shelf = self.validated_shelf("census_complex.yaml", Census)
+        shelf = self.shelf_from_filename("census_complex.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("state")
@@ -473,7 +491,7 @@ Vermont,271469,The Green Mountain State,Vermont
     def test_complex_census_from_validated_yaml_math(self):
         """Build a recipe that uses complex definitions dimensions and
         metrics"""
-        shelf = self.validated_shelf("census_complex.yaml", Census)
+        shelf = self.shelf_from_filename("census_complex.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("state")
@@ -497,7 +515,7 @@ Vermont,660135.4074068918,The Green Mountain State,Vermont
     def test_complex_census_quickselect_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
         metrics and quickselects"""
-        shelf = self.validated_shelf("census_complex.yaml", Census)
+        shelf = self.shelf_from_filename("census_complex.yaml", Census)
         recipe = (
             Recipe(
                 shelf=shelf, session=self.session, extension_classes=(AutomaticFilters,)
@@ -550,7 +568,7 @@ Vermont,620602,The Green Mountain State,Vermont
 
     def test_shelf_with_references(self):
         """Build a recipe using a shelf that uses field references """
-        shelf = self.validated_shelf("census_references.yaml", Census)
+        shelf = self.shelf_from_filename("census_references.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("state")
@@ -577,7 +595,7 @@ Vermont,0.4374284968466095,The Green Mountain State,Vermont
 
     def test_shelf_with_invalidcolumn(self):
         """Build a recipe using a shelf that uses field references """
-        shelf = self.validated_shelf("census_references.yaml", Census)
+        shelf = self.shelf_from_filename("census_references.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("state")
@@ -589,7 +607,7 @@ Vermont,0.4374284968466095,The Green Mountain State,Vermont
 
     def test_shelf_with_condition_references(self):
         """Build a recipe using a shelf that uses condition references """
-        shelf = self.validated_shelf("census_references.yaml", Census)
+        shelf = self.shelf_from_filename("census_references.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("state")
@@ -617,26 +635,26 @@ Vermont,311842,The Green Mountain State,Vermont
     def test_bad_census_from_validated_yaml(self):
         """ Test a bad yaml file """
         with pytest.raises(Exception):
-            self.validated_shelf("census_bad.yaml", Census)
+            self.shelf_from_filename("census_bad.yaml", Census)
 
     def test_bad_census_from_yaml(self):
         """ Test a bad yaml file """
         with pytest.raises(BadIngredient):
-            self.validated_shelf("census_bad.yaml", Census)
+            self.shelf_from_filename("census_bad.yaml", Census)
 
     def test_bad_census_in_from_validated_yaml(self):
         """ Test a bad yaml file """
         with pytest.raises(Exception):
-            self.validated_shelf("census_bad_in.yaml", Census)
+            self.shelf_from_filename("census_bad_in.yaml", Census)
 
     def test_bad_census_in_from_yaml(self):
         """ Test a bad yaml file """
         with pytest.raises(BadIngredient):
-            self.validated_shelf("census_bad_in.yaml", Census)
+            self.shelf_from_filename("census_bad_in.yaml", Census)
 
     def test_deprecated_ingredients_dividemetric(self):
         """ Test deprecated ingredient kinds in a yaml file """
-        shelf = self.validated_shelf("census_deprecated.yaml", Census)
+        shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
 
         # We can DivideMetric
         recipe = (
@@ -663,7 +681,7 @@ Vermont,0.9820786913351858,Vermont
 
     def test_deprecated_ingredients_lookupdimension(self):
         """ Test deprecated ingredient kinds in a yaml file """
-        shelf = self.validated_shelf("census_deprecated.yaml", Census)
+        shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
 
         # We can LookupDimension
         recipe = (
@@ -689,7 +707,7 @@ Vermont,609480,Taciturny,Vermont
         )
 
         """ Test deprecated ingredient kinds in a yaml file """
-        shelf = self.validated_shelf("census_deprecated.yaml", Census)
+        shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
 
         # We can IdValueDimension
         recipe = (
@@ -725,7 +743,7 @@ OFFSET 0"""
 
     def test_deprecated_ingredients_idvaluedim(self):
         """ Test deprecated ingredient kinds in a yaml file """
-        shelf = self.validated_shelf("census_deprecated.yaml", Census)
+        shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
 
         # We can IdValueDimension
         recipe = (
@@ -740,7 +758,7 @@ OFFSET 0"""
 
     def test_deprecated_ingredients_idvaluedim(self):
         """ Test deprecated ingredient kinds in a yaml file """
-        shelf = self.validated_shelf("census_deprecated.yaml", Census)
+        shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
 
         # We can IdValueDimension
         recipe = (
@@ -784,7 +802,7 @@ OFFSET 0"""
 class TestNullHandling(TestRecipeIngredientsYaml):
     def test_dimension_null_handling(self):
         """ Test different ways of handling nulls in dimensions """
-        shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
+        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
 
         recipe = (
             Recipe(shelf=shelf, session=self.session)
@@ -822,7 +840,7 @@ sales,,sales
         #         ops: Operations
         #     lookup_default: Unknown
 
-        shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
+        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("department_lookup")
@@ -859,7 +877,7 @@ sales,,Sales,sales
         #         ops: Operations
         #         null: 'can not find department'
 
-        shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
+        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("department_lookup_with_null")
@@ -893,7 +911,7 @@ sales,,Sales,sales
         #     field:
         #         value: department
         #         default: 'N/A'
-        shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
+        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("department_default")
@@ -927,7 +945,7 @@ sales,,sales
         #     field:
         #         value: department
         #         default: 'N/A'
-        shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
+        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("department_buckets")
@@ -978,7 +996,7 @@ Other,9999,80.0,Other
         #         ops: Operations
         #         null: 'can not find department'
         #     lookup_default: Unknown
-        shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
+        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("department_lookup_with_everything")
@@ -1005,7 +1023,7 @@ N/A,80.0,Unknown,N/A
 
     def test_metric_null_handling(self):
         """ Test handling nulls in metrics """
-        shelf = self.validated_shelf("scores_with_nulls.yaml", ScoresWithNulls)
+        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
 
         # score_with_default:
         #     kind: Metric
@@ -1039,21 +1057,10 @@ sales,-1.0,sales
 
 
 class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
-    def setup(self):
-        self.session = oven.Session()
-
-    def assert_recipe_csv(self, recipe, csv_text):
-        assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
-
-    def validated_shelf(self, shelf_name, table):
-        """Load a file from the sample ingredients.yaml files."""
-        d = os.path.dirname(os.path.realpath(__file__))
-        fn = os.path.join(d, "parsed_ingredients", shelf_name)
-        contents = open(fn).read()
-        return Shelf.from_validated_yaml(contents, table)
+    yaml_location = "parsed_ingredients"
 
     def test_census_buckets(self):
-        shelf = self.validated_shelf("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("age_buckets")
@@ -1108,7 +1115,7 @@ oldsters,9999,4567879,oldsters
 
     def test_shelf_with_references(self):
         """Parsed shelves do division slighly differently"""
-        shelf = self.validated_shelf("census_references.yaml", Census)
+        shelf = self.shelf_from_filename("census_references.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("state")
@@ -1138,7 +1145,7 @@ Vermont,0.4374284968466102,The Green Mountain State,Vermont
 
     def test_shelf_with_invalidingredient(self):
         """Build a recipe using a shelf that uses field references """
-        shelf = self.validated_shelf("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", Census)
         assert isinstance(shelf["baddim"], InvalidIngredient)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
@@ -1152,7 +1159,7 @@ Vermont,0.4374284968466102,The Green Mountain State,Vermont
     def test_complex_census_from_validated_yaml_math(self):
         """Build a recipe that uses complex definitions dimensions and
         metrics"""
-        shelf = self.validated_shelf("census_complex.yaml", Census)
+        shelf = self.shelf_from_filename("census_complex.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("state")
@@ -1178,7 +1185,7 @@ Vermont,609480.0,The Green Mountain State,Vermont
 
     def test_deprecated_ingredients_idvaluedim(self):
         """ Test deprecated ingredient kinds in a yaml file """
-        shelf = self.validated_shelf("census_deprecated.yaml", Census)
+        shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
 
         # We can IdValueDimension
         recipe = (
@@ -1224,7 +1231,7 @@ OFFSET 0"""
 
     def test_is(self):
         """Test fields using is"""
-        shelf = self.validated_shelf("ingredients1.yaml", MyTable)
+        shelf = self.shelf_from_filename("ingredients1.yaml", MyTable)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .metrics("dt_test")
@@ -1249,7 +1256,7 @@ hi,2,hi
 
     def test_intelligent_date(self):
         """Test intelligent dates like `date is last year`"""
-        shelf = self.validated_shelf("ingredients1.yaml", MyTable)
+        shelf = self.shelf_from_filename("ingredients1.yaml", MyTable)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .metrics("intelligent_date_test")
@@ -1281,20 +1288,12 @@ hi,4,hi
         )
 
 
-class TestParsedSQLGeneration(object):
+class TestParsedSQLGeneration(ConfigTestBase):
     """More tests of SQL generation on complex parsed expressions """
-    def setup(self):
-        self.session = oven.Session()
-
-    def create_shelf(self, config, selectable):
-        return Shelf.from_validated_yaml(config, selectable)
-
-    def assert_recipe_csv(self, recipe, csv_text):
-        assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
 
     def test_complex_field(self):
         """Test parsed field definitions that use math, field references and more"""
-        shelf = self.create_shelf(
+        shelf = self.shelf_from_yaml(
             """
 _version: 2
 username:
@@ -1481,7 +1480,7 @@ GROUP BY strings"""
 
     def test_selectables(self):
         """Test parsed field definitions built on top of other selectables"""
-        shelf = self.create_shelf(
+        shelf = self.shelf_from_yaml(
             """
 _version: 2
 username:
@@ -1515,7 +1514,7 @@ chris,1,chris
         )
 
         # Build a recipe using the first recipe
-        shelf2 = self.create_shelf(
+        shelf2 = self.shelf_from_yaml(
             """
 _version: 2
 count_star:
@@ -1543,16 +1542,8 @@ FROM
         self.assert_recipe_csv(recipe2, "count_star,max_username\n3,chris\n")
 
 
-class TestParsedIntellligentDates(object):
-    def setup(self):
-        self.session = oven.Session()
-
-    def assert_recipe_csv(self, recipe, csv_text):
-        assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
-
-    def parsed_shelf(self, config):
-        """Load a file from the sample ingredients.yaml files."""
-        return Shelf.from_validated_yaml(config, DateTester)
+class TestParsedIntellligentDates(ConfigTestBase):
+    default_selectable = DateTester
 
     def test_is_current_year(self):
         """Test current year with a variety of spacing and capitalization"""
@@ -1565,7 +1556,7 @@ class TestParsedIntellligentDates(object):
         ]
 
         for is_current_year in data:
-            shelf = self.parsed_shelf(
+            shelf = self.shelf_from_yaml(
                 """
 _version: 2
 test:
@@ -1597,7 +1588,7 @@ FROM datetester""".format(
         data = ["is prior year ", "is  PREVIOUS year  ", "is Last  Year"]
 
         for is_prior_year in data:
-            shelf = self.parsed_shelf(
+            shelf = self.shelf_from_yaml(
                 """
 _version: 2
 test:
@@ -1638,7 +1629,7 @@ FROM datetester""".format(
         today = date.today()
 
         for ytd in data:
-            shelf = self.parsed_shelf(
+            shelf = self.shelf_from_yaml(
                 """
 _version: 2
 test:
@@ -1668,7 +1659,7 @@ test:
         today = date.today()
 
         for ytd in data:
-            shelf = self.parsed_shelf(
+            shelf = self.shelf_from_yaml(
                 """
 _version: 2
 test:
@@ -1691,7 +1682,7 @@ test:
         today = date.today()
 
         for ytd in data:
-            shelf = self.parsed_shelf(
+            shelf = self.shelf_from_yaml(
                 """
 _version: 2
 test:
@@ -1707,20 +1698,12 @@ test:
         assert len(unique_sql) == 3
 
 
-class TestParsedFieldConfig(object):
+class TestParsedFieldConfig(ConfigTestBase):
     """Parsed fields save the original config"""
-    def setup(self):
-        self.session = oven.Session()
-
-    def create_shelf(self, config, selectable):
-        return Shelf.from_validated_yaml(config, selectable)
-
-    def assert_recipe_csv(self, recipe, csv_text):
-        assert recipe.dataset.export("csv", lineterminator=text_type("\n")) == csv_text
 
     def test_parsed_field_config(self):
         """Test the trees generated by parsing fields"""
-        shelf = self.create_shelf(
+        shelf = self.shelf_from_yaml(
             """
 _version: 2
 convertdate:
