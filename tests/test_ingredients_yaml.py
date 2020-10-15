@@ -1730,15 +1730,14 @@ department_buckets:
             shelf["strings"].meta["_config"]["field"]
             == "string(test_date)+string(score)"
         )
-        # The config is post sureberus transformation
         assert shelf["department_buckets"].meta["_config"] == {
-            "field": 'if((department)="foo","foosers",(department)="moo","moosers","others")',
-            "format": ".2f",
-            "extra_fields": [
-                {
-                    "name": "order_by_expression",
-                    "field": 'if((department)="foo",0,(department)="moo",1,9999)',
-                }
+            "buckets": [
+                {"condition": '="foo"', "label": "foosers"},
+                {"condition": '="moo"', "label": "moosers"},
             ],
+            "buckets_default_label": "others",
+            "field": "department",
+            "format": ".2f",
+            "kind": "dimension",
         }
 

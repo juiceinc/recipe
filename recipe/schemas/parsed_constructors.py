@@ -233,8 +233,6 @@ def create_ingredient_from_parsed(ingr_dict, selectable):
     if IngredientClass is None:
         raise BadIngredient("Unknown ingredient kind")
 
-    # Save the configuration used to create this ingredient
-    ingr_dict["_config"] = deepcopy(ingr_dict)
     if kind in ("metric", "dimension"):
         parser = field_parser if kind == "metric" else noag_field_parser
         fld_defn = ingr_dict.pop("field", None)
