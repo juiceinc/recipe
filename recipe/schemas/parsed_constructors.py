@@ -1,6 +1,7 @@
 """Convert parsed trees into SQLAlchemy objects """
+from copy import deepcopy
 from lark import Lark, Transformer, v_args
-from sqlalchemy import func, distinct, case, and_, or_, not_, cast, Float
+from sqlalchemy import func, case, and_, or_, not_, cast, Float
 from datetime import date
 from dateutil.relativedelta import relativedelta
 
@@ -232,6 +233,8 @@ def create_ingredient_from_parsed(ingr_dict, selectable):
     if IngredientClass is None:
         raise BadIngredient("Unknown ingredient kind")
 
+    # Save the configuration used to create this ingredient
+    ingr_dict["_config"] = deepcopy(ingr_dict)
     if kind in ("metric", "dimension"):
         parser = field_parser if kind == "metric" else noag_field_parser
         fld_defn = ingr_dict.pop("field", None)
