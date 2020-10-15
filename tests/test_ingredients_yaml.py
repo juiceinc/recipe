@@ -1739,8 +1739,33 @@ convertdate:
 strings:
     kind: Dimension
     field: "string(test_date)+string(score)"
+department_buckets:
+    kind: Dimension
+    field: department
+    format: ".2f"
+    buckets:
+    - label: 'foosers'
+      condition: '="foo"'
+    - label: 'moosers'
+      condition: '="moo"'
+    buckets_default_label: 'others'
 """,
             ScoresWithNulls,
         )
         assert shelf["convertdate"].meta["_config"]["field"] == "month(test_date)"
-        assert shelf["strings"].meta["_config"]["field"] == "string(test_date)+string(score)"        
+        assert (
+            shelf["strings"].meta["_config"]["field"]
+            == "string(test_date)+string(score)"
+        )
+        # The config is post sureberus transformation
+        assert shelf["department_buckets"].meta["_config"] == {
+            "field": 'if((department)="foo","foosers",(department)="moo","moosers","others")',
+            "format": ".2f",
+            "extra_fields": [
+                {
+                    "name": "order_by_expression",
+                    "field": 'if((department)="foo",0,(department)="moo",1,9999)',
+                }
+            ],
+        }
+
