@@ -37,7 +37,13 @@ def test_valid_metric_field_parsing():
         v = {"foo": {"kind": "metric", "field": _}, "_version": "2"}
         x = normalize_schema(shelf_schema, v, allow_unknown=False)
         x["foo"].pop("_config", None)
-        assert x == {"foo": {"_version": "2", "field": _, "kind": "metric",}}
+        assert x == {
+            "foo": {
+                "_version": "2",
+                "field": _,
+                "kind": "metric",
+            }
+        }
 
 
 def test_invalid_metric_field_parsing():

@@ -1740,4 +1740,3 @@ department_buckets:
             "format": ".2f",
             "kind": "dimension",
         }
-
