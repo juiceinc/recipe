@@ -1,8 +1,7 @@
 """Convert parsed trees into SQLAlchemy objects """
-from lark import Lark, Transformer, v_args
-from sqlalchemy import func, distinct, case, and_, or_, not_, cast, Float
+from lark import Transformer, v_args
+from sqlalchemy import func, case, and_, or_, not_, cast, Float
 from datetime import date
-from dateutil.relativedelta import relativedelta
 
 from .field_grammar import (
     field_parser,
@@ -26,6 +25,8 @@ from recipe.ingredients import InvalidIngredient
 class TransformToSQLAlchemyExpression(Transformer):
     """Converts a field to a SQLAlchemy expression """
 
+    # We have rules named "add", "sub", "mul", and "neg" in our grammar; Transformer
+    # dispatches to these.
     from operator import add, sub, mul, neg
 
     def __init__(self, selectable, require_aggregation=False):
@@ -34,7 +35,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         # Database driver
         try:
             self.drivername = selectable.metadata.bind.url.drivername
-        except:
+        except Exception:
             self.drivername = "unknown"
 
         self.aggregations = generate_lookup_by_engine(
@@ -230,12 +231,11 @@ def create_ingredient_from_parsed(ingr_dict, selectable):
     kind = ingr_dict.pop("kind", "metric")
     IngredientClass = ingredient_class_for_name(kind.title())
     if IngredientClass is None:
-        raise BadIngredient("Unknown ingredient kind")
+        raise BadIngredient(f"Unknown ingredient kind {kind}")
 
     if kind in ("metric", "dimension"):
         parser = field_parser if kind == "metric" else noag_field_parser
         fld_defn = ingr_dict.pop("field", None)
-        tree = parser.parse(fld_defn)
         # Create a sqlalchemy expression from 'field' and pass it as the first arg
         args = [
             TransformToSQLAlchemyExpression(selectable=selectable).transform(

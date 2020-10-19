@@ -1,5 +1,4 @@
 """Shelf config _version="2" supports parsed fields using a lark parser."""
-import attr
 from lark.exceptions import LarkError
 from six import string_types
 import logging
@@ -17,25 +16,8 @@ from .field_grammar import (
 logging.captureWarnings(True)
 
 
-@attr.s
-class ParseValidator(object):
-    """A sureberus validator that checks that a field parses and matches
-    certain tokens"""
-
-    #: Message to display on failure
-    parser = attr.ib(default=field_parser)
-
-    def __call__(self, f, v, e):
-        """Check parsing"""
-        try:
-            tree = self.parser.parse(v)
-        except LarkError as exc:
-            # A Lark error message raised when the value doesn't parse
-            raise exc
-
-
 def move_extra_fields(value):
-    """ Move any fields that look like "{role}_field" into the extra_fields
+    """Move any fields that look like "{role}_field" into the extra_fields
     list. These will be processed as fields. Rename them as {role}_expression.
     """
     if isinstance(value, dict):
@@ -176,8 +158,8 @@ def create_buckets(value):
 
 
 def ensure_aggregation(fld):
-    """ Ensure that a field has an aggregation by wrapping the entire field
-    in a sum if no aggregation is supplied. """
+    """Ensure that a field has an aggregation by wrapping the entire field
+    in a sum if no aggregation is supplied."""
     try:
         tree = field_parser.parse(fld)
         has_agex = list(tree.find_data("agex"))
@@ -197,6 +179,18 @@ def add_version(v):
 
 
 # Sureberus validators that check how a field parses
+
+
+def ParseValidator(parser):
+    def validate(field, value, error):
+        try:
+            parser.parse(value)
+        except LarkError as exc:
+            error(field, f"Error parsing field: {exc}")
+
+    return validate
+
+
 validate_parses_with_agex = ParseValidator(parser=field_parser)
 validate_parses_without_agex = ParseValidator(parser=noag_field_parser)
 validate_any_condition = ParseValidator(parser=noag_any_condition_parser)

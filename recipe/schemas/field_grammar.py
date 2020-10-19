@@ -1,7 +1,6 @@
-from lark import Lark, Transformer, v_args
+from lark import Lark
 from .engine_support import aggregations_by_engine, conversions_by_engine
 from .utils import convert_by_engine_keys_to_regex
-from ..compat import basestring
 
 
 # Generate a regex expression containing all the by_engine keys
@@ -9,20 +8,27 @@ allowed_aggr_keys = convert_by_engine_keys_to_regex(aggregations_by_engine)
 allowed_conv_keys = convert_by_engine_keys_to_regex(conversions_by_engine)
 
 
-# TODO: We may want to match columns based on fields that exist in
-# a source table. Allowing column definition to be changed is a start.
-column_defn = "NAME"
 base_field_grammar_args = {
     "allowed_aggr_keys": allowed_aggr_keys,
     "allowed_conv_keys": allowed_conv_keys,
-    "column_defn": column_defn,
 }
 
 
-# Base grammar for boolean expressions
+# Base grammar for field expressions
 # This grammar depends on a definition of atom which will be
-# added in the field grammars
-base_grammar = """
+# added in the specific field grammars
+base_field_grammar = """
+    ?sum: product
+        | sum "+" product                      -> add
+        | sum "-" product                      -> sub
+    ?product: atom
+           | product "*" atom                  -> mul
+           | product "/" atom                  -> div
+    ?conversion:  /({allowed_conv_keys})/i
+    ?convertedcol: conversion "(" column ")"
+    ?column.0: "[" NAME "]"     -> column
+             | NAME             -> column
+
     ?start: bool_expr | partial_relation_expr
 
     // Pairs of boolean expressions and expressions
@@ -80,24 +86,9 @@ base_grammar = """
     %import common.WS_INLINE
     %ignore COMMENT
     %ignore WS_INLINE
-"""
-base_field_grammar = (
-    """
-    ?sum: product
-        | sum "+" product                      -> add
-        | sum "-" product                      -> sub
-    ?product: atom
-           | product "*" atom                  -> mul
-           | product "/" atom                  -> div
-    ?conversion:  /({allowed_conv_keys})/i    
-    ?convertedcol: conversion "(" column ")"
-    ?column.0: {column_defn}                   -> column
 """.format(
-        **base_field_grammar_args
-    )
-    + base_grammar
+    **base_field_grammar_args
 )
-
 
 # A grammar that does not include aggregate expressions
 noag_field_grammar = (

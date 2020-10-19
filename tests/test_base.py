@@ -8,6 +8,14 @@ from dateutil.relativedelta import relativedelta
 oven = get_oven("sqlite://")
 Base = declarative_base(bind=oven.engine)
 
+
+oven.engine.execute(
+    """
+    CREATE TABLE IF NOT EXISTS weird_table_with_column_named_true
+        ("true" text);
+    """
+)
+
 TABLEDEF = """
         CREATE TABLE IF NOT EXISTS foo
         (first text,
@@ -338,6 +346,13 @@ class ScoresWithNulls(Base):
     test_date = Column("test_date", Date())
 
     __tablename__ = "scores_with_nulls"
+    __table_args__ = {"extend_existing": True}
+
+
+class WeirdTableWithColumnNamedTrue(Base):
+    true_ = Column("true", String(), primary_key=True)
+
+    __tablename__ = "weird_table_with_column_named_true"
     __table_args__ = {"extend_existing": True}
 
 
