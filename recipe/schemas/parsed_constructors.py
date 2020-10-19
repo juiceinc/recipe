@@ -1,10 +1,5 @@
 """Convert parsed trees into SQLAlchemy objects """
-<<<<<<< HEAD
 from lark import Transformer, v_args
-=======
-from copy import deepcopy
-from lark import Lark, Transformer, v_args
->>>>>>> Save the config used to create a parsed ingredient
 from sqlalchemy import func, case, and_, or_, not_, cast, Float
 from datetime import date
 

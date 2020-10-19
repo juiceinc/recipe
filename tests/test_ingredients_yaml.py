@@ -35,9 +35,6 @@ class ConfigTestBase(object):
     # The directory to look for yaml config files
     yaml_location = "ingredients"
 
-    # A default table to use
-    default_selectable = None
-
     def setup(self):
         self.session = oven.Session()
 
@@ -51,12 +48,8 @@ class ConfigTestBase(object):
         contents = open(fn).read()
         return self.shelf_from_yaml(contents, selectable)
 
-    def shelf_from_yaml(self, yaml_config, selectable=None):
+    def shelf_from_yaml(self, yaml_config, selectable):
         """Create a shelf directly from configuration """
-
-        if selectable is None:
-            selectable = self.default_selectable
-
         return Shelf.from_validated_yaml(yaml_config, selectable)
 
 
@@ -1299,7 +1292,7 @@ class TestParsedSQLGeneration(ConfigTestBase):
     """More tests of SQL generation on complex parsed expressions """
 
     def test_weird_table_with_column_named_true(self):
-        shelf = self.create_shelf(
+        shelf = self.shelf_from_yaml(
             """
 _version: 2
 "true":
@@ -1591,7 +1584,8 @@ test:
     field: "if(dt {}, count, 0)"
 """.format(
                     is_current_year
-                )
+                ),
+                DateTester,
             )
             recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
             today = date.today()
@@ -1623,7 +1617,8 @@ test:
     field: "if(dt {}, count, 0)"
 """.format(
                     is_prior_year
-                )
+                ),
+                DateTester,
             )
             recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
             today = date.today()
@@ -1664,7 +1659,8 @@ test:
     field: "if(dt {}, count, 0)"
 """.format(
                     ytd
-                )
+                ),
+                DateTester,
             )
             recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
             self.assert_recipe_csv(recipe, "test\n{}\n".format(today.month))
@@ -1694,7 +1690,8 @@ test:
     field: "if(not(dt {}), count, 0)"
 """.format(
                     ytd
-                )
+                ),
+                DateTester,
             )
             recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
             self.assert_recipe_csv(recipe, "test\n{}\n".format(100 - today.month))
@@ -1717,7 +1714,8 @@ test:
     field: "if(dt {}, count, 0)"
 """.format(
                     ytd
-                )
+                ),
+                DateTester,
             )
             recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
             self.assert_recipe_csv(recipe, "test\n3\n")
