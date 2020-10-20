@@ -2,6 +2,11 @@
 Changelog
 =========
 
+v0.21.0 (2020-10-20)
+-----------------------------------------
+* Add [syntax] to disambiguate database columns in parsed fields
+* Save original config to ingredient when generating parsed fields.
+
 v0.20.1 (2020-10-07)
 -----------------------------------------
 * Fix issue with parsing >= and <=
