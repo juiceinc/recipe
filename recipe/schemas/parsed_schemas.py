@@ -1,4 +1,5 @@
 """Shelf config _version="2" supports parsed fields using a lark parser."""
+from copy import deepcopy
 from lark.exceptions import LarkError
 from six import string_types
 import logging
@@ -107,6 +108,13 @@ def _lowercase_kind(value):
         if kind == "measure":
             kind = "metric"
         value["kind"] = kind
+
+    return value
+
+
+def _save_raw_config(value):
+    """Save the original config """
+    value["_config"] = deepcopy(value)
 
     return value
 
@@ -275,7 +283,7 @@ ingredient_schema = S.Dict(
         },
         default_choice="metric",
     ),
-    coerce=_lowercase_kind,
+    coerce=_chain(_lowercase_kind, _save_raw_config),
     registry={},
 )
 

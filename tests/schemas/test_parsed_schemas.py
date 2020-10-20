@@ -36,7 +36,14 @@ def test_valid_metric_field_parsing():
     for _ in VALID_METRIC_FIELDS:
         v = {"foo": {"kind": "metric", "field": _}, "_version": "2"}
         x = normalize_schema(shelf_schema, v, allow_unknown=False)
-        assert x == {"foo": {"kind": "metric", "field": _, "_version": "2"}}
+        x["foo"].pop("_config", None)
+        assert x == {
+            "foo": {
+                "_version": "2",
+                "field": _,
+                "kind": "metric",
+            }
+        }
 
 
 def test_invalid_metric_field_parsing():
@@ -50,13 +57,21 @@ def test_ensure_aggregation():
     """ Metrics where the field doesn't aggregate get wrapped in a sum """
     v = {"foo": {"kind": "metric", "field": "foo"}, "_version": "2"}
     x = normalize_schema(shelf_schema, v, allow_unknown=False)
-    assert x == {"foo": {"kind": "metric", "field": "sum(foo)", "_version": "2"}}
+    assert x == {
+        "foo": {
+            "_config": {"field": "foo", "kind": "metric"},
+            "_version": "2",
+            "field": "sum(foo)",
+            "kind": "metric",
+        }
+    }
 
 
 def test_valid_dimension_field_parsing():
     for _ in VALID_DIMENSION_FIELDS:
         v = {"foo": {"kind": "dimension", "field": _}, "_version": "2"}
         x = normalize_schema(shelf_schema, v, allow_unknown=False)
+        x["foo"].pop("_config", None)
         assert x == {"foo": {"kind": "dimension", "field": _, "_version": "2"}}
 
 
@@ -91,15 +106,15 @@ def test_move_extra_fields():
             "_version": "2",
         }
         result = normalize_schema(shelf_schema, v, allow_unknown=False)
+        result["foo"].pop("_config", None)
         assert result == {
             "foo": {
-                "_version": "2",
-                "extra_fields": [{"field": _, "name": "other_expression"}],
-                "field": "moo",
                 "kind": "dimension",
+                "field": "moo",
+                "extra_fields": [{"field": _, "name": "other_expression"}],
+                "_version": "2",
             }
         }
-
     # Other fields must be non aggregates
     for _ in INVALID_DIMENSION_FIELDS:
         v = {
@@ -121,6 +136,7 @@ def test_move_extra_fields():
         "_version": "2",
     }
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
+    result["foo"].pop("_config", None)
     assert result == {
         "foo": {
             "_version": "2",
@@ -228,6 +244,14 @@ test:
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert result == {
         "test": {
+            "_config": {
+                "kind": "dimension",
+                "field": "moo+foo",
+                "quickselects": [
+                    {"name": "foo", "condition": '>"2"'},
+                    {"name": "cow", "condition": 'state in ("1", "2")'},
+                ],
+            },
             "kind": "dimension",
             "field": "moo+foo",
             "quickselects": [
@@ -265,6 +289,7 @@ test:
     result = normalize_schema(shelf_schema, v, allow_unknown=False)
     assert result == {
         "test": {
+            "_config": {"kind": "dimension", "field": "moo", "lookup": {"foo": "doo"}},
             "kind": "dimension",
             "field": "moo",
             "lookup": {"foo": "doo"},
@@ -306,11 +331,17 @@ city_place:
 
     assert result["avg"]["field"] == "sum(moo) / count(moo)"
     assert result["city_place"] == {
-        "_version": "2",
+        "_config": {
+            "kind": "dimension",
+            "field": "city",
+            "latitude_field": "lat",
+            "longitude_field": "lng",
+        },
+        "kind": "dimension",
+        "field": "city",
         "extra_fields": [
             {"field": "lat", "name": "latitude_expression"},
             {"field": "lng", "name": "longitude_expression"},
         ],
-        "field": "city",
-        "kind": "dimension",
+        "_version": "2",
     }
