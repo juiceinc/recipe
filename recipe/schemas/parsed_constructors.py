@@ -170,10 +170,10 @@ class TransformToSQLAlchemyExpression(Transformer):
         comparators = {
             "=": "__eq__",
             ">": "__gt__",
-            ">=": "__gte__",
+            ">=": "__ge__",
             "!=": "__ne__",
             "<": "__lt__",
-            "<=": "__lte__",
+            "<=": "__le__",
         }
         if right is None:
             return
