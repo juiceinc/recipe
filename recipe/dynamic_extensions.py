@@ -1,11 +1,7 @@
 import abc
-
-import six
 from stevedore.named import NamedExtensionManager
 
-
-@six.add_metaclass(abc.ABCMeta)
-class DynamicExtensionBase(object):
+class DynamicExtensionBase(object, metaclass=abc.ABCMeta):
     """Base class for dynamic extensions
     """
 

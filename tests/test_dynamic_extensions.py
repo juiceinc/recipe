@@ -1,10 +1,5 @@
-try:
-    from unittest.mock import patch
-except ImportError:  # python 2.7
-    from mock import patch
-
+from unittest.mock import patch
 from recipe.dynamic_extensions import DynamicExtensionBase, run_hooks
-
 
 class ToyExtension(DynamicExtensionBase):
     def execute(self):

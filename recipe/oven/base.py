@@ -1,14 +1,9 @@
 import abc
-
-import six
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from recipe import SETTINGS
 
-
-@six.add_metaclass(abc.ABCMeta)
-class OvenBase(object):
+class OvenBase(object, metaclass=abc.ABCMeta):
     """Base class for ovens
     """
 
