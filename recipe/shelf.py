@@ -8,15 +8,12 @@ from sureberus import errors as E
 from sureberus import normalize_schema
 from yaml import safe_load
 
-from recipe.compat import basestring
 from recipe.exceptions import BadIngredient, BadRecipe, InvalidColumnError
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric, InvalidIngredient
 from recipe.schemas import shelf_schema
 from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
-from recipe.schemas.config_constructors import (
-    create_ingredient_from_config,
-    parse_unvalidated_condition,
-)
+from recipe.schemas.config_constructors import create_ingredient_from_config
+
 
 
 _POP_DEFAULT = object()
@@ -252,7 +249,7 @@ class Shelf(object):
 
         if isinstance(selectable, Recipe):
             selectable = selectable.subquery()
-        elif isinstance(selectable, basestring):
+        elif isinstance(selectable, str):
             if "." in selectable:
                 schema, tablename = selectable.split(".")
             else:
@@ -311,7 +308,7 @@ class Shelf(object):
         if callable(constructor):
             obj = constructor(obj, shelf=self)
 
-        if isinstance(obj, basestring):
+        if isinstance(obj, str):
             set_descending = obj.startswith("-")
             if set_descending:
                 obj = obj[1:]

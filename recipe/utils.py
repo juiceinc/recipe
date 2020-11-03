@@ -5,9 +5,8 @@ import math
 import re
 import string
 import unicodedata
-from .compat import str as compat_str
 from functools import wraps
-from inspect import isclass, getfullargspec as getargspec
+from inspect import isclass, getfullargspec
 
 import attr
 import sqlalchemy.orm
@@ -19,8 +18,6 @@ from faker.providers import BaseProvider
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
-
-from recipe.compat import basestring, integer_types
 
 # only expose the printing sql function
 __all__ = [
@@ -47,8 +44,8 @@ def filter_to_string(filt):
 
 def generate_faker_seed(value):
     """Generate a seed value for faker. """
-    if not isinstance(value, compat_str):
-        value = compat_str(value)
+    if not isinstance(value, str):
+        value = str(value)
 
     h = hashlib.new("md5")
     h.update(value.encode("utf-8"))
@@ -101,9 +98,9 @@ class StringLiteral(String):
         super_processor = super(StringLiteral, self).literal_processor(dialect)
 
         def process(value):
-            if isinstance(value, integer_types):
+            if isinstance(value, int):
                 return str(value)
-            if not isinstance(value, basestring):
+            if not isinstance(value, str):
                 value = str(value)
             result = super_processor(value)
             if isinstance(result, bytes):
@@ -194,7 +191,7 @@ def pad_values(values, prefix="RECIPE-DUMMY-VAL-", bin_size=11):
     """
     assert isinstance(values, (list, tuple))
     cnt = len(values)
-    if cnt and isinstance(values[0], basestring):
+    if cnt and isinstance(values[0], str):
         # Round up to the nearest bin_size
         desired_cnt = int(math.ceil(float(cnt) / bin_size) * bin_size)
         added_values = [prefix + str(i + 1) for i in range(desired_cnt - cnt)]
@@ -241,7 +238,7 @@ class FakerFormatter(string.Formatter):
         value = None
         if callable(getattr(obj, generator)):
             c = getattr(obj, generator)
-            argspec = getargspec(c)
+            argspec = getfullargspec(c)
             if len(argspec.args) == 1:
                 value = getattr(obj, generator)()
             elif kwargs:
@@ -249,7 +246,7 @@ class FakerFormatter(string.Formatter):
             else:
                 value = c
 
-        if value is not None and not isinstance(value, basestring):
+        if value is not None and not isinstance(value, str):
             value = str(value)
         return value or "Unknown fake generator"
 
@@ -282,7 +279,7 @@ class FakerAnonymizer(object):
 
         cleaned_providers = []
         for provider in providers:
-            if isinstance(provider, basestring):
+            if isinstance(provider, str):
                 # dynamically import the provider
                 parts = provider.split(".")
                 if len(parts) > 1:

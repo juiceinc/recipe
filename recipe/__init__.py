@@ -32,24 +32,16 @@ from recipe.oven import get_oven
 from recipe.shelf import AutomaticShelf, Shelf
 from recipe.utils import FakerAnonymizer
 
-
 class DefaultSettings(object):
     def __init__(self, *args, **kwargs):
         self.POOL_SIZE = 5
         self.POOL_RECYCLE = 60 * 60
 
-
 SETTINGS = DefaultSettings()
 
-
-try:  # Python 2.7+
-    from logging import NullHandler
-except ImportError:
-
-    class NullHandler(logging.Handler):
-        def emit(self, record):
-            pass
-
+class NullHandler(logging.Handler):
+    def emit(self, record):
+        pass
 
 logging.getLogger(__name__).addHandler(NullHandler())
 

@@ -1,7 +1,6 @@
 """Shelf config _version="2" supports parsed fields using a lark parser."""
 import attr
 from lark.exceptions import LarkError
-from six import string_types
 import logging
 from sureberus import schema as S
 
@@ -65,7 +64,7 @@ def coerce_replace_refs(shelf):
         for k in ingr.keys():
             if k == "field" or k.endswith("_field"):
                 v = ingr[k]
-                if isinstance(v, string_types) and "@" in v:
+                if isinstance(v, str) and "@" in v:
                     for search_for, replace_with in replacements:
                         v = v.replace(search_for, replace_with)
                     ingr[k] = v
@@ -81,7 +80,7 @@ def _stringify(value):
         return "TRUE"
     elif value is False:
         return "FALSE"
-    elif isinstance(value, string_types):
+    elif isinstance(value, str):
         return '"' + value.replace('"', '\\"') + '"'
     else:
         return str(value)
