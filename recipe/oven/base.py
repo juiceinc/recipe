@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from recipe import SETTINGS
 
-class OvenBase(object, metaclass=abc.ABCMeta):
+class OvenBase(metaclass=abc.ABCMeta):
     """Base class for ovens
     """
 
