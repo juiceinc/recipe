@@ -9,6 +9,7 @@ from time import gmtime
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict
 
+
 def convert_date(v):
     """Convert a passed parameter to a date if possible """
     if v is None:

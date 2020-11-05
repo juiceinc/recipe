@@ -15,7 +15,6 @@ from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
 from recipe.schemas.config_constructors import create_ingredient_from_config
 
 
-
 _POP_DEFAULT = object()
 
 

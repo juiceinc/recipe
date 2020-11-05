@@ -10,6 +10,7 @@ from recipe.exceptions import InvalidColumnError
 
 SCALAR_TYPES = [S.Integer(), S.String(), S.Float(), S.Boolean()]
 
+
 def _chain(*args):
     """Chain several coercers together"""
 

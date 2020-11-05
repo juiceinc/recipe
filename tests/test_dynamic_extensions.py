@@ -1,6 +1,7 @@
 from unittest.mock import patch
 from recipe.dynamic_extensions import DynamicExtensionBase, run_hooks
 
+
 class ToyExtension(DynamicExtensionBase):
     def execute(self):
         return super(ToyExtension, self).execute()

@@ -3,9 +3,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from recipe import SETTINGS
 
+
 class OvenBase(metaclass=abc.ABCMeta):
-    """Base class for ovens
-    """
+    """Base class for ovens"""
 
     def __init__(self, connection_string=None):
         self.engine = self.init_engine(connection_string)
