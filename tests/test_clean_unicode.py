@@ -1,6 +1,4 @@
 # -*- coding: UTF-8 -*-
-from __future__ import print_function
-
 from recipe.utils import clean_unicode
 
 

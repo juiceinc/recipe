@@ -1,16 +1,11 @@
 import abc
-
-import six
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from recipe import SETTINGS
 
 
-@six.add_metaclass(abc.ABCMeta)
-class OvenBase(object):
-    """Base class for ovens
-    """
+class OvenBase(metaclass=abc.ABCMeta):
+    """Base class for ovens"""
 
     def __init__(self, connection_string=None):
         self.engine = self.init_engine(connection_string)

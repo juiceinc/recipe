@@ -1,7 +1,6 @@
 from sqlalchemy import and_, func, text, or_, String
 from sqlalchemy.ext.declarative import declarative_base
 
-from recipe.compat import basestring, integer_types
 from recipe.core import Recipe
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Ingredient, Metric, Filter
@@ -526,7 +525,7 @@ class Anonymize(RecipeExtension):
                 anonymizer = ingredient.meta.anonymizer
 
                 # Build a FakerAnonymizer if we have a string
-                if isinstance(anonymizer, basestring):
+                if isinstance(anonymizer, str):
 
                     # Check for extra parameters
                     kwargs = {}
@@ -724,7 +723,7 @@ class Paginate(RecipeExtension):
             in the recipe or pagination_search_keys if provided
         :type value: str
         """
-        assert isinstance(value, basestring)
+        assert isinstance(value, str)
         self._pagination_q = value
 
     @recipe_arg()
@@ -748,7 +747,7 @@ class Paginate(RecipeExtension):
         :param value: A page size (zero or a positive integer)
         :type value: integer
         """
-        assert isinstance(value, integer_types)
+        assert isinstance(value, int)
         assert value >= 0
         self._pagination_page_size = value
 
@@ -759,7 +758,7 @@ class Paginate(RecipeExtension):
         :param value: A positive integer page number to fetch
         :type value: integer
         """
-        assert isinstance(value, integer_types)
+        assert isinstance(value, int)
 
         # Pagination page must be a positive integer
         self._pagination_page = max(1, value)
@@ -1034,7 +1033,7 @@ class CompareRecipe(RecipeExtension):
     def compare(self, compare_recipe, suffix="_compare"):
         """Adds a comparison recipe to a base recipe."""
         assert isinstance(compare_recipe, Recipe)
-        assert isinstance(suffix, basestring)
+        assert isinstance(suffix, str)
         self.compare_recipe.append(compare_recipe)
         self.suffix.append(suffix)
 

@@ -1,15 +1,11 @@
 import dateparser
 from functools import total_ordering
 from uuid import uuid4
-
 from sqlalchemy import Float, String, and_, between, case, cast, func, or_, text
-
-from six import string_types
 from sqlalchemy.sql.sqltypes import Date, DateTime, TIMESTAMP
 from sqlalchemy.exc import CompileError
 from datetime import date, datetime
 from time import gmtime
-from recipe.compat import str
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict
 
@@ -306,7 +302,7 @@ class Ingredient(object):
         elif column_type(filter_column) in ("DATETIME", "TIMESTAMP"):
             value = convert_datetime(value)
 
-        if isinstance(value, string_types) and not column_type(filter_column) in (
+        if isinstance(value, str) and not column_type(filter_column) in (
             "STRING",
             "VARCHAR",
         ):
@@ -334,11 +330,11 @@ class Ingredient(object):
         elif operator == "isnot":
             return filter_column.isnot(value)
         elif operator == "like":
-            if not isinstance(value, string_types):
+            if not isinstance(value, str):
                 raise ValueError("Building a filter with like must use a str value")
             return filter_column.like(value)
         elif operator == "ilike":
-            if not isinstance(value, string_types):
+            if not isinstance(value, str):
                 raise ValueError("Building a filter with ilike must use a str value")
             return filter_column.ilike(value)
         elif operator == "quickselect":

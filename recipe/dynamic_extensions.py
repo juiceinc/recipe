@@ -1,13 +1,9 @@
 import abc
-
-import six
 from stevedore.named import NamedExtensionManager
 
 
-@six.add_metaclass(abc.ABCMeta)
-class DynamicExtensionBase(object):
-    """Base class for dynamic extensions
-    """
+class DynamicExtensionBase(metaclass=abc.ABCMeta):
+    """Base class for dynamic extensions"""
 
     def __init__(self, recipe_parts, hook_type="modify_query"):
         self.recipe_parts = recipe_parts
@@ -15,8 +11,7 @@ class DynamicExtensionBase(object):
 
     @abc.abstractmethod
     def execute(self):
-        """Perform transformations on recipe_parts here
-        """
+        """Perform transformations on recipe_parts here"""
         return self.recipe_parts
 
 

@@ -1,7 +1,6 @@
 """Shelf config _version="2" supports parsed fields using a lark parser."""
 import attr
 from lark.exceptions import LarkError
-from six import string_types
 import logging
 from sureberus import schema as S
 
@@ -35,7 +34,7 @@ class ParseValidator(object):
 
 
 def move_extra_fields(value):
-    """ Move any fields that look like "{role}_field" into the extra_fields
+    """Move any fields that look like "{role}_field" into the extra_fields
     list. These will be processed as fields. Rename them as {role}_expression.
     """
     if isinstance(value, dict):
@@ -65,7 +64,7 @@ def coerce_replace_refs(shelf):
         for k in ingr.keys():
             if k == "field" or k.endswith("_field"):
                 v = ingr[k]
-                if isinstance(v, string_types) and "@" in v:
+                if isinstance(v, str) and "@" in v:
                     for search_for, replace_with in replacements:
                         v = v.replace(search_for, replace_with)
                     ingr[k] = v
@@ -81,7 +80,7 @@ def _stringify(value):
         return "TRUE"
     elif value is False:
         return "FALSE"
-    elif isinstance(value, string_types):
+    elif isinstance(value, str):
         return '"' + value.replace('"', '\\"') + '"'
     else:
         return str(value)
@@ -176,8 +175,8 @@ def create_buckets(value):
 
 
 def ensure_aggregation(fld):
-    """ Ensure that a field has an aggregation by wrapping the entire field
-    in a sum if no aggregation is supplied. """
+    """Ensure that a field has an aggregation by wrapping the entire field
+    in a sum if no aggregation is supplied."""
     try:
         tree = field_parser.parse(fld)
         has_agex = list(tree.find_data("agex"))

@@ -6,15 +6,14 @@ from uuid import uuid4
 import attr
 import tablib
 from sqlalchemy import alias, func
-from sqlalchemy.sql.elements import BinaryExpression
 from sureberus import normalize_dict, normalize_schema
 
-from recipe.compat import basestring
 from recipe.dynamic_extensions import run_hooks
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Filter, Having, Metric, Ingredient
 from recipe.schemas import recipe_schema
-from recipe.shelf import Shelf, parse_unvalidated_condition
+from recipe.shelf import Shelf
+from recipe.schemas.config_constructors import parse_unvalidated_condition
 from recipe.utils import prettyprintable_sql, recipe_arg
 
 ALLOW_QUERY_CACHING = True
@@ -235,13 +234,13 @@ class Recipe(object):
     @recipe_arg()
     def cache_region(self, value):
         """Set a cache region for recipe-caching to use """
-        assert isinstance(value, basestring)
+        assert isinstance(value, str)
         self._cache_region = value
 
     @recipe_arg()
     def cache_prefix(self, value):
         """Set a cache prefix for recipe-caching to use """
-        assert isinstance(value, basestring)
+        assert isinstance(value, str)
         self._cache_prefix = value
 
     @recipe_arg()
@@ -314,7 +313,7 @@ class Recipe(object):
         """
 
         def filter_constructor(f, shelf=None):
-            if not isinstance(f, (Filter, Having)) and not isinstance(f, basestring):
+            if not isinstance(f, (Filter, Having)) and not isinstance(f, str):
                 return Filter(f)
             else:
                 return f
