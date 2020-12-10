@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.22.0 (2020-12-10)
+-----------------------------------------
+* Drop python2 support
+
 v0.21.0 (2020-10-20)
 -----------------------------------------
 * Add [syntax] to disambiguate database columns in parsed fields
