@@ -17,7 +17,6 @@ from recipe import (
     Metric,
     WtdAvgMetric,
 )
-from recipe.compat import str
 from recipe.schemas.config_constructors import (
     ingredient_from_unvalidated_dict as ingredient_from_dict,
 )

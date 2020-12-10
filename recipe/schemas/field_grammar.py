@@ -2,7 +2,6 @@ from lark import Lark
 from .engine_support import aggregations_by_engine, conversions_by_engine
 from .utils import convert_by_engine_keys_to_regex
 
-
 # Generate a regex expression containing all the by_engine keys
 allowed_aggr_keys = convert_by_engine_keys_to_regex(aggregations_by_engine)
 allowed_conv_keys = convert_by_engine_keys_to_regex(conversions_by_engine)

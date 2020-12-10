@@ -39,7 +39,7 @@ class ConfigTestBase(object):
         self.session = oven.Session()
 
     def assert_recipe_csv(self, recipe, csv_text):
-        assert recipe.dataset.export("csv", lineterminator="\n") == csv_text
+        assert recipe.dataset.export("csv", lineterminator=str("\n")) == csv_text
 
     def shelf_from_filename(self, shelf_name, selectable=None):
         """Load a file from the sample ingredients.yaml files."""
