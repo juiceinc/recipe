@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.22.1 (2020-12-23)
+-----------------------------------------
+* Like and ilike filter generation is more lenient
+
 v0.22.0 (2020-12-10)
 -----------------------------------------
 * Drop python2 support
