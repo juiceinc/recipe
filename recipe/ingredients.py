@@ -330,12 +330,10 @@ class Ingredient(object):
         elif operator == "isnot":
             return filter_column.isnot(value)
         elif operator == "like":
-            if not isinstance(value, str):
-                raise ValueError("Building a filter with like must use a str value")
+            value = str(value)
             return filter_column.like(value)
         elif operator == "ilike":
-            if not isinstance(value, str):
-                raise ValueError("Building a filter with ilike must use a str value")
+            value = str(value)
             return filter_column.ilike(value)
         elif operator == "quickselect":
             for qs in self.quickselects:
