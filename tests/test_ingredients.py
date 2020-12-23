@@ -160,6 +160,9 @@ class TestIngredientBuildFilter(object):
         assert filter_to_string(filt) == "foo.first LIKE 'moo'"
         filt = d.build_filter("moo", "ilike")
         assert filter_to_string(filt) == "lower(foo.first) LIKE lower('moo')"
+        # Numbers get stringified
+        filt = d.build_filter(5, "ilike")
+        assert filter_to_string(filt) == "lower(foo.first) LIKE lower('5')"
         # None values get converted to IS
         filt = d.build_filter(None, "eq")
         assert filter_to_string(filt) == "foo.first IS NULL"
@@ -262,12 +265,6 @@ class TestIngredientBuildFilter(object):
             d.build_filter(["moo"], "eq")
         with pytest.raises(ValueError):
             d.build_filter(["moo"], "lt")
-        with pytest.raises(ValueError):
-            # Must pass a string to like
-            d.build_filter(5, "like")
-        with pytest.raises(ValueError):
-            # Must pass a string to ulike
-            d.build_filter(5, "ilike")
 
         # Unknown operator
         with pytest.raises(ValueError):
