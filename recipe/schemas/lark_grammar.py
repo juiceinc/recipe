@@ -1,5 +1,7 @@
 import enum
-from lark import Lark, Transformer, Visitor, v_args, UnexpectedInput
+from lark import Lark, Transformer, Visitor, v_args, UnexpectedInput, Tree
+from lark.lexer import Token
+from lark.visitors import inline_args
 from sqlalchemy import String, Float, Date, DateTime, Boolean, Integer, case
 from tests.test_base import Scores2
 from collections import defaultdict
@@ -16,46 +18,6 @@ def convert(lst):
 
 
 from tests.test_base import Scores2
-
-
-# grammar = """
-#     col: boolean | string | num | error_col | error_add
-
-#     // These are my raw columns
-#     error_col.99: "[" + NAME + "]"
-
-#     boolean: TRUE | FALSE | bool_col_1 | bool_col_2
-#     string_add: string "+" string
-#     string: ESCAPED_STRING | str_col_1 | str_col_2 | string_add
-#     num_add: num "+" num
-#     num: NUMBER | num_col_1 | num_col_2 | num_add
-#     error_add: string "+" num | num "+" string
-
-#     TRUE: /TRUE/i
-#     FALSE: /FALSE/i
-#     NOTIN: NOT IN
-#     OR: /OR/i
-#     AND: /AND/i
-#     NOT: /NOT/i
-#     EQ: "="
-#     NE: "!="
-#     LT: "<"
-#     LTE: "<="
-#     GT: ">"
-#     GTE: ">="
-#     IN: /IN/i
-#     IS: /IS/i
-#     BETWEEN: /BETWEEN/i
-#     NULL: /NULL/i
-#     COMMENT: /#.*/
-
-#     %import common.CNAME                       -> NAME
-#     %import common.SIGNED_NUMBER               -> NUMBER
-#     %import common.ESCAPED_STRING
-#     %import common.WS_INLINE
-#     %ignore COMMENT
-#     %ignore WS_INLINE
-# """
 
 
 def make_columns(columns):
@@ -150,10 +112,12 @@ grammar = make_grammar_for_table(Scores2)
 good_examples = """
 [score]
 [ScORE]
+[ScORE] + [ScORE]
+[score] + 2.0
 [username] + [department]
 "foo" + [department]
-[score] + [score]
 1.0 + [score]
+1.0 + [score] + [score]
 [score] + -1.0
 """
 
@@ -185,49 +149,7 @@ class ErrorVisitor(Visitor):
         self.errors.append(f"{tok1} is not a valid column name")
 
 
-class Builder(object):
-    def __init__(self, selectable, require_aggregation=False):
-        self.selectable = selectable
-        self.require_aggregation = require_aggregation
-        self.columns, self.grammar = make_grammar_for_table(selectable)
-        self.parser = Lark(
-            self.grammar, parser="earley", ambiguity="resolve", start="col"
-        )
-
-        # Database driver
-        try:
-            self.drivername = selectable.metadata.bind.url.drivername
-        except Exception:
-            self.drivername = "unknown"
-
-    def parse(self, text):
-        """Return a parse tree for text"""
-        tree = self.parser.parse(text)
-        error_visitor = ErrorVisitor(text)
-        error_visitor.visit(tree)
-        if error_visitor.errors:
-            print("THERE WERE ERRORS\n" + "\n".join(error_visitor.errors))
-            print(tree.pretty())
-        else:
-            print("ALL GOOD")
-            print(tree.pretty())
-
-
-b = Builder(Scores2)
-
-
-# field_parser = Lark(grammar, parser="earley", ambiguity="resolve", start="col")
-for row in good_examples.split("\n"):
-    if row:
-        print(row)
-        tree = b.parse(row)
-
-print("THESE ARE BAD\n" * 5)
-
-for row in bad_examples.split("\n"):
-    if row:
-        print(row)
-        tree = b.parse(row)
+            # TransformToSQLAlchemyExpression(selectable=selectable).transform(tree)
 
 
 @v_args(inline=True)  # Affects the signatures of the methods
@@ -247,3 +169,86 @@ class TransformToSQLAlchemyExpression(Transformer):
             self.drivername = selectable.metadata.bind.url.drivername
         except Exception:
             self.drivername = "unknown"
+
+    def string(self, v):
+        if isinstance(v, Tree):
+            return self.columns[v.data]
+        elif isinstance(v, Token):
+            return str(v)
+        else:
+            return v
+
+    def num(self, v):
+        if isinstance(v, Tree):
+            return self.columns[v.data]
+        elif isinstance(v, Token):
+            return float(v)
+        else:
+            return v
+
+    def num_add(self, a, b):
+        return a + b
+
+    def string_add(self, a, b):
+        return a + b
+
+    def col(self, v):
+        return v
+
+    def TRUE(self, v):
+        return True
+
+
+
+
+class Builder(object):
+    def __init__(self, selectable, require_aggregation=False):
+        self.selectable = selectable
+        self.require_aggregation = require_aggregation
+        self.columns, self.grammar = make_grammar_for_table(selectable)
+        self.parser = Lark(
+            self.grammar, 
+            parser="earley", 
+            ambiguity="resolve", 
+            start="col", 
+            propagate_positions=True,
+        )
+        self.transformer = TransformToSQLAlchemyExpression(self.selectable, self.columns)
+
+        # Database driver
+        try:
+            self.drivername = selectable.metadata.bind.url.drivername
+        except Exception:
+            self.drivername = "unknown"
+
+    def parse(self, text):
+        """Return a parse tree for text"""
+        tree = self.parser.parse(text)
+        error_visitor = ErrorVisitor(text)
+        error_visitor.visit(tree)
+        if error_visitor.errors:
+            print("THERE WERE ERRORS\n" + "\n".join(error_visitor.errors))
+            print(tree.pretty())
+        else:
+            print("ALL GOOD")
+            print(tree.pretty())
+            t = self.transformer.transform(tree)
+            print(t)
+            # print(tree.pretty())
+
+
+b = Builder(Scores2)
+
+
+# field_parser = Lark(grammar, parser="earley", ambiguity="resolve", start="col")
+for row in good_examples.split("\n"):
+    if row:
+        print(row)
+        tree = b.parse(row)
+
+print("THESE ARE BAD\n" * 5)
+
+for row in bad_examples.split("\n"):
+    if row:
+        print(row)
+        tree = b.parse(row)
