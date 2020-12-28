@@ -8,7 +8,6 @@ import os
 from datetime import date
 from dateutil.relativedelta import relativedelta
 import pytest
-from six import text_type
 from tests.test_base import (
     Census,
     MyTable,

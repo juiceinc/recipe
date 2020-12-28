@@ -68,15 +68,19 @@ def make_grammar_for_table(selectable):
 
     // These are the raw columns in the selectable
     {make_columns(columns)}
-    // Low priority matching of any [columnname] values
-    error_col.0: "[" + NAME + "]"
 
     boolean.1: {type_defn(columns, "bool", ["TRUE", "FALSE"])}
     string_add: string "+" string
     string.1: {type_defn(columns, "str", ["ESCAPED_STRING", "string_add"])}
     num_add: num "+" num
-    num.1: {type_defn(columns, "num", ["NUMBER", "num_add"])}
-    error_add: string "+" num | num "+" string 
+    num_sub: num "-" num
+    num_mul: num "*" num
+    num.1: {type_defn(columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul"])}
+
+
+    // Low priority matching of any [columnname] values
+    error_col.0: "[" + NAME + "]"
+    error_add: string "+" num | num "+" string  | error_col "+" num
 
     TRUE: /TRUE/i
     FALSE: /FALSE/i
@@ -109,6 +113,7 @@ def make_grammar_for_table(selectable):
 
 grammar = make_grammar_for_table(Scores2)
 
+
 good_examples = """
 [score]
 [ScORE]
@@ -118,7 +123,8 @@ good_examples = """
 "foo" + [department]
 1.0 + [score]
 1.0 + [score] + [score]
-[score] + -1.0
+[scores] + -1.0
+-0.1 * [score] + 600
 """
 
 bad_examples = """
@@ -149,8 +155,6 @@ class ErrorVisitor(Visitor):
         self.errors.append(f"{tok1} is not a valid column name")
 
 
-            # TransformToSQLAlchemyExpression(selectable=selectable).transform(tree)
-
 
 @v_args(inline=True)  # Affects the signatures of the methods
 class TransformToSQLAlchemyExpression(Transformer):
@@ -174,7 +178,9 @@ class TransformToSQLAlchemyExpression(Transformer):
         if isinstance(v, Tree):
             return self.columns[v.data]
         elif isinstance(v, Token):
-            return str(v)
+            v = str(v)
+            if v.startswith('"') and v.endswith('"'):
+                return v[1:-1]
         else:
             return v
 
@@ -188,6 +194,12 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def num_add(self, a, b):
         return a + b
+
+    def num_sub(self, a, b):
+        return a - b
+
+    def num_mul(self, a, b):
+        return a * b
 
     def string_add(self, a, b):
         return a + b
@@ -221,6 +233,10 @@ class Builder(object):
         except Exception:
             self.drivername = "unknown"
 
+    def raw_sql(self, c):
+        """Utility to print sql for a expression """
+        return str(c.compile(compile_kwargs={"literal_binds": True}))
+
     def parse(self, text):
         """Return a parse tree for text"""
         tree = self.parser.parse(text)
@@ -230,11 +246,9 @@ class Builder(object):
             print("THERE WERE ERRORS\n" + "\n".join(error_visitor.errors))
             print(tree.pretty())
         else:
-            print("ALL GOOD")
-            print(tree.pretty())
+            print("Tree:\n" + tree.pretty())
             t = self.transformer.transform(tree)
-            print(t)
-            # print(tree.pretty())
+            print("Raw sql: " + self.raw_sql(t))
 
 
 b = Builder(Scores2)
@@ -243,10 +257,10 @@ b = Builder(Scores2)
 # field_parser = Lark(grammar, parser="earley", ambiguity="resolve", start="col")
 for row in good_examples.split("\n"):
     if row:
-        print(row)
+        print(f"\nInput: {row}")
         tree = b.parse(row)
 
-print("THESE ARE BAD\n" * 5)
+print("\n\n\n" + "THESE ARE BAD\n" * 5)
 
 for row in bad_examples.split("\n"):
     if row:
