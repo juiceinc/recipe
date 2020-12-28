@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, DateTime, Float, Integer, String, distinct, func
+from sqlalchemy import Column, Date, DateTime, Float, Integer, String, distinct, func, Table
 from sqlalchemy.ext.declarative import declarative_base
 
 from recipe import IdValueDimension, Dimension, Metric, Filter, Shelf, get_oven
@@ -336,6 +336,10 @@ class Scores(Base):
 
     __tablename__ = "scores"
     __table_args__ = {"extend_existing": True}
+
+
+
+Scores2 = Table('scores', Base.metadata, autoload=True, autoload_with=oven.engine)
 
 
 class ScoresWithNulls(Base):
