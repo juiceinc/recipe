@@ -2,7 +2,7 @@ import enum
 from lark import Lark, Transformer, Visitor, v_args, UnexpectedInput, Tree
 from lark.lexer import Token
 from lark.visitors import inline_args
-from sqlalchemy import String, Float, Date, DateTime, Boolean, Integer, case
+from sqlalchemy import String, Float, Date, DateTime, Boolean, Integer, case, inspection
 from tests.test_base import Scores2
 from collections import defaultdict
 
@@ -119,8 +119,6 @@ def make_grammar_for_table(selectable):
     return columns, grammar
 
 
-
-
 class ErrorVisitor(Visitor):
     """Raise descriptive exceptions for any errors found """
 
@@ -133,7 +131,7 @@ class ErrorVisitor(Visitor):
         tok1 = tree.children[0].children[0]
         tok2 = tree.children[1].children[0]
         self.errors.append(f"{tok1.data} and {tok2.data} can not be {verb}")
-    
+
     def error_add(self, tree):
         self._error_math(tree, "added together")
 
@@ -152,6 +150,13 @@ class ErrorVisitor(Visitor):
         # print(f"{tok1.data} and {tok2.data} can not be added together")
         self.errors.append(f"{tok1} is not a valid column name")
 
+    def bool_expr(self, tree):
+        left, _, right = tree.children
+        if isinstance(left, Tree) and isinstance(right, Tree):
+            tok1 = left.children[0]
+            tok2 = right.children[0]
+            if tok1.data != tok2.data:
+                self.errors.append(f"Can't compare {tok1.data} to {tok2.data}")
 
 
 @v_args(inline=True)  # Affects the signatures of the methods
@@ -219,7 +224,7 @@ class TransformToSQLAlchemyExpression(Transformer):
                 ">": "<",
                 "<": ">",
                 ">=": "<=",
-                "<=": ">=",                    
+                "<=": ">=",
             }
             comp = swap_comp.get(comp, comp)
             left, right = right, left
@@ -249,21 +254,21 @@ class TransformToSQLAlchemyExpression(Transformer):
         return True
 
 
-
-
 class Builder(object):
     def __init__(self, selectable, require_aggregation=False):
         self.selectable = selectable
         self.require_aggregation = require_aggregation
         self.columns, self.grammar = make_grammar_for_table(selectable)
         self.parser = Lark(
-            self.grammar, 
-            parser="earley", 
-            ambiguity="resolve", 
-            start="col", 
+            self.grammar,
+            parser="earley",
+            ambiguity="resolve",
+            start="col",
             propagate_positions=True,
         )
-        self.transformer = TransformToSQLAlchemyExpression(self.selectable, self.columns)
+        self.transformer = TransformToSQLAlchemyExpression(
+            self.selectable, self.columns
+        )
 
         # Database driver
         try:
@@ -275,7 +280,7 @@ class Builder(object):
         """Utility to print sql for a expression """
         return str(c.compile(compile_kwargs={"literal_binds": True}))
 
-    def parse(self, text, expected=None, show_tree=True):
+    def parse(self, text, expected=None, show_tree=False):
         """Return a parse tree for text"""
         tree = self.parser.parse(text)
         error_visitor = ErrorVisitor(text)
@@ -322,9 +327,14 @@ bad_examples = """
 
 
 good_examples = """
+[score] = [score]               -> scores.score = scores.score
+[score] >= 2.0                  -> scores.score >= 2.0
+2.0 <= [score]                  -> scores.score >= 2.0
 """
 
-bad_examples = ""
+bad_examples = """
+[score] = [department]
+"""
 
 # field_parser = Lark(grammar, parser="earley", ambiguity="resolve", start="col")
 for row in good_examples.split("\n"):
