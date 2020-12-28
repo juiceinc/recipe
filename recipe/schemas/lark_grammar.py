@@ -64,24 +64,32 @@ def make_grammar_for_table(selectable):
         columns[f"{prefix}_{cnt}"] = c
 
     grammar = f"""
-    col: boolean | string | num | error_col | error_add
+    col: boolean | string | num | unknown_col | error_math
 
     // These are the raw columns in the selectable
     {make_columns(columns)}
 
-    boolean.1: {type_defn(columns, "bool", ["TRUE", "FALSE"])}
+    boolean.1: {type_defn(columns, "bool", ["TRUE", "FALSE", "bool_expr"])}
+    bool_expr: col comparator col
     string_add: string "+" string
     string.1: {type_defn(columns, "str", ["ESCAPED_STRING", "string_add"])}
-    num_add: num "+" num
-    num_sub: num "-" num
-    num_mul: num "*" num
+    num_add.1: num "+" num
+    num_sub.1: num "-" num
+    num_mul.1: num "*" num
+    num_div.1: num "/" num
     num.1: {type_defn(columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul"])}
 
-
     // Low priority matching of any [columnname] values
-    error_col.0: "[" + NAME + "]"
-    error_add: string "+" num | num "+" string  | error_col "+" num
+    unknown_col.0: "[" + NAME + "]"
+    error_math.0: error_add | error_sub | error_mul | error_div
+    error_add.0: col "+" col
+    error_sub.0: col "-" col
+    error_mul.0: col "*" col
+    error_div.0: col "/" col
 
+    comparator: EQ | NE | LT | LTE | GT | GTE
+    vector_comparator.1: IN | NOTIN
+    
     TRUE: /TRUE/i
     FALSE: /FALSE/i
     NOTIN: NOT IN
@@ -111,27 +119,6 @@ def make_grammar_for_table(selectable):
     return columns, grammar
 
 
-grammar = make_grammar_for_table(Scores2)
-
-
-good_examples = """
-[score]
-[ScORE]
-[ScORE] + [ScORE]
-[score] + 2.0
-[username] + [department]
-"foo" + [department]
-1.0 + [score]
-1.0 + [score] + [score]
-[scores] + -1.0
--0.1 * [score] + 600
-"""
-
-bad_examples = """
-[foo_b]
-[username] + [score]
-[score]   + [department]
-"""
 
 
 class ErrorVisitor(Visitor):
@@ -142,13 +129,24 @@ class ErrorVisitor(Visitor):
         self.text = text
         self.errors = []
 
+    def _error_math(self, tree, verb):
+        tok1 = tree.children[0].children[0]
+        tok2 = tree.children[1].children[0]
+        self.errors.append(f"{tok1.data} and {tok2.data} can not be {verb}")
+    
     def error_add(self, tree):
-        # children = [child.data for child in tree.children]
-        tok1 = tree.children[0]
-        tok2 = tree.children[1]
-        self.errors.append(f"{tok1.data} and {tok2.data} can not be added together")
+        self._error_math(tree, "added together")
 
-    def error_col(self, tree):
+    def error_mul(self, tree):
+        self._error_math(tree, "multiplied together")
+
+    def error_sub(self, tree):
+        self._error_math(tree, "subtracted")
+
+    def error_div(self, tree):
+        self._error_math(tree, "divided")
+
+    def unknown_col(self, tree):
         """Column name doesn't exist in the data """
         tok1 = tree.children[0]
         # print(f"{tok1.data} and {tok2.data} can not be added together")
@@ -191,6 +189,46 @@ class TransformToSQLAlchemyExpression(Transformer):
             return float(v)
         else:
             return v
+
+    def boolean(self, v):
+        if isinstance(v, Tree):
+            return self.columns[v.data]
+        elif isinstance(v, Token):
+            return bool(v)
+        else:
+            return v
+
+    def comparator(self, comp):
+        """A comparator like =, !=, >, >= """
+        return str(comp)
+
+    def bool_expr(self, left, comp, right):
+        """ A boolean expression like score > 20 """
+        comparators = {
+            "=": "__eq__",
+            ">": "__gt__",
+            ">=": "__ge__",
+            "!=": "__ne__",
+            "<>": "__ne__",
+            "<": "__lt__",
+            "<=": "__le__",
+        }
+        # If the left is a primitive, try to swap the sides
+        if isinstance(left, (str, int, float, bool)):
+            swap_comp = {
+                ">": "<",
+                "<": ">",
+                ">=": "<=",
+                "<=": ">=",                    
+            }
+            comp = swap_comp.get(comp, comp)
+            left, right = right, left
+
+        if right is None:
+            return
+        # TODO: Convert the right into a type compatible with the left
+        # right = convert_value(left, right)
+        return getattr(left, comparators[comp])(right)
 
     def num_add(self, a, b):
         return a + b
@@ -237,32 +275,67 @@ class Builder(object):
         """Utility to print sql for a expression """
         return str(c.compile(compile_kwargs={"literal_binds": True}))
 
-    def parse(self, text):
+    def parse(self, text, expected=None, show_tree=True):
         """Return a parse tree for text"""
         tree = self.parser.parse(text)
         error_visitor = ErrorVisitor(text)
         error_visitor.visit(tree)
         if error_visitor.errors:
-            print("THERE WERE ERRORS\n" + "\n".join(error_visitor.errors))
-            print(tree.pretty())
+            print("\n".join(error_visitor.errors))
+            if show_tree:
+                print(tree.pretty())
         else:
-            print("Tree:\n" + tree.pretty())
+            if show_tree:
+                print("Tree:\n" + tree.pretty())
             t = self.transformer.transform(tree)
-            print("Raw sql: " + self.raw_sql(t))
+            raw_sql = self.raw_sql(t)
+            print("Raw sql: " + raw_sql)
+            if expected is not None:
+                assert raw_sql.strip() == expected.strip()
 
 
 b = Builder(Scores2)
 
+good_examples = """
+[score]                         -> scores.score
+[ScORE]                         -> scores.score
+[ScORE] + [ScORE]               -> scores.score + scores.score
+[score] + 2.0                   -> scores.score + 2.0
+[username] + [department]       -> scores.username || scores.department
+"foo" + [department]            -> 'foo' || scores.department
+1.0 + [score]                   -> 1.0 + scores.score
+1.0 + [score] + [score]         -> 1.0 + scores.score + scores.score
+-0.1 * [score] + 600            -> -0.1 * scores.score + 600.0
+[score] = [score]               -> scores.score = scores.score
+[score] >= 2.0                  -> scores.score >= 2.0
+2.0 <= [score]                  -> scores.score >= 2.0
+"""
+
+
+bad_examples = """
+[scores] + -1.0
+2.0 + [scores]
+[foo_b]
+[username] + [score]
+[score]   + [department]
+"""
+
+
+good_examples = """
+"""
+
+bad_examples = ""
 
 # field_parser = Lark(grammar, parser="earley", ambiguity="resolve", start="col")
 for row in good_examples.split("\n"):
     if row:
+        row, expected = row.split("->")
         print(f"\nInput: {row}")
-        tree = b.parse(row)
+        tree = b.parse(row, expected)
 
-print("\n\n\n" + "THESE ARE BAD\n" * 5)
+print("\n\n" + "THESE ARE BAD\n")
 
 for row in bad_examples.split("\n"):
     if row:
-        print(row)
+        print(f"\nInput: {row}")
         tree = b.parse(row)
