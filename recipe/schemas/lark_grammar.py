@@ -2,7 +2,7 @@ import enum
 from lark import Lark, Transformer, Visitor, v_args, UnexpectedInput, Tree
 from lark.lexer import Token
 from lark.visitors import inline_args
-from sqlalchemy import String, Float, Date, DateTime, Boolean, Integer, case, inspection
+from sqlalchemy import String, Float, Date, DateTime, Boolean, Integer, case, inspection, not_, and_, or_
 from tests.test_base import Scores2
 from collections import defaultdict
 
@@ -65,12 +65,12 @@ def make_grammar_for_table(selectable):
         columns[f"{prefix}_{cnt}"] = c
 
     grammar = f"""
-    col: boolean | string | num | unknown_col | error_math | error_vector_expr
+    col: boolean | string | num | unknown_col | error_math | error_vector_expr | error_not_nonboolean
 
     // These are the raw columns in the selectable
     {make_columns(columns)}
 
-    boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr"])}
+    boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "not_boolean"])}
     string_add: string "+" string                -> add
     string.1: {gather_columns(columns, "str", ["ESCAPED_STRING", "string_add"])}
     num_add.1: num "+" num                       -> add
@@ -88,10 +88,12 @@ def make_grammar_for_table(selectable):
     error_mul.0: col "*" col
     error_div.0: col "/" col
     error_vector_expr.0: col vector_comparator mixedarray
+    error_not_nonboolean: NOT string | NOT num
     mixedarray.0: "(" [CONSTANT ("," CONSTANT)*] ","? ")"
     CONSTANT: ESCAPED_STRING | NUMBER
 
     // Boolean scalar expressions like 'a > b'
+    not_boolean.0: NOT boolean
     bool_expr: col comparator col
     comparator: EQ | NE | LT | LTE | GT | GTE
     EQ: "="
@@ -181,6 +183,10 @@ class ErrorVisitor(Visitor):
         tok1 = tree.children[0]
         self._add_error(f"{tok1} is not a valid column name", tree)
 
+    def error_not_nonboolean(self, tree):
+        """NOT string or NOT num """
+        self._add_error(f"NOT requires a boolean value", tree)
+
     def mixedarray(self, tree):
         """An array containing a mix of strings and numbers """
         self._add_error(f"An array may not contain both strings and numbers", tree)
@@ -223,10 +229,37 @@ class TransformToSQLAlchemyExpression(Transformer):
     def boolean(self, v):
         if isinstance(v, Tree):
             return self.columns[v.data]
-        elif isinstance(v, Token):
-            return bool(v)
         else:
             return v
+
+    def add(self, a, b):
+        """ Add numbers or strings """
+        return a + b
+
+    def num_sub(self, a, b):
+        return a - b
+
+    def num_mul(self, a, b):
+        return a * b
+
+    def col(self, v):
+        return v
+
+    # Booleans
+
+    def not_boolean(self, NOT, boolean_expr):
+
+        if boolean_expr is True:
+            return False
+        elif boolean_expr is False:
+            return True
+        else:
+            return not_(boolean_expr)
+
+    def consistent_array(self, *args):
+        """A comma separated, variable length array of all numbers
+        or all strings"""
+        return args
 
     def vector_comparator(self, *args):
         """Can be one token "IN" or two "NOT IN" """
@@ -254,11 +287,6 @@ class TransformToSQLAlchemyExpression(Transformer):
         else:
             raise UnexpectedInput(left)
 
-    def consistent_array(self, *args):
-        """A comma separated, variable length array of all numbers
-        or all strings"""
-        return args
-
     def bool_expr(self, left, comparator, right):
         """A boolean expression like score > 20
 
@@ -279,19 +307,6 @@ class TransformToSQLAlchemyExpression(Transformer):
         # TODO: Convert the right into a type compatible with the left
         # right = convert_value(left, right)
         return getattr(left, comparator)(right)
-
-    def add(self, a, b):
-        """ Add numbers or strings """
-        return a + b
-
-    def num_sub(self, a, b):
-        return a - b
-
-    def num_mul(self, a, b):
-        return a * b
-
-    def col(self, v):
-        return v
 
     # Constants
 

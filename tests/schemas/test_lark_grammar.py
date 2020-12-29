@@ -58,6 +58,8 @@ class TestScores2(TestCase):
         [score] = [score]               -> scores.score = scores.score
         [score] >= 2.0                  -> scores.score >= 2.0
         2.0 <= [score]                  -> scores.score >= 2.0
+        NOT [score] >= 2.0              -> scores.score < 2.0
+        NOT 2.0 <= [score]              -> scores.score < 2.0
         """
 
         b = Builder(Scores2)
@@ -73,8 +75,11 @@ class TestScores2(TestCase):
         [score] NOT in (1,2,3)            -> scores.score NOT IN (1, 2, 3)
         [score] In (1,2,   3.0)           -> scores.score IN (1, 2, 3.0)
         [score] In (1)                    -> scores.score IN (1)
+        NOT [score] In (1)                -> scores.score NOT IN (1)
+        NOT NOT [score] In (1)                -> scores.score IN (1)
         [department] In ("A", "B")        -> scores.department IN ('A', 'B')
         [department] In ("A",)            -> scores.department IN ('A')
+        [department] In ("A")             -> scores.department IN ('A')
         [department] + [username] In ("A", "B")        -> scores.department || scores.username IN ('A', 'B')
         """
 
@@ -140,6 +145,11 @@ An array may not contain both strings and numbers
 An array may not contain both strings and numbers
 [username] NOT IN (2, "B")
                    ^
+
+NOT [department]
+NOT requires a boolean value
+NOT [department]
+^
 """
 
         b = Builder(Scores2)
