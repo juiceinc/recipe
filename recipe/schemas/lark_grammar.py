@@ -65,7 +65,7 @@ def make_grammar_for_table(selectable):
         columns[f"{prefix}_{cnt}"] = c
 
     grammar = f"""
-    col: boolean | string | num | unknown_col | error_math
+    col: boolean | string | num | unknown_col | error_math | error_vector_expr
 
     // These are the raw columns in the selectable
     {make_columns(columns)}
@@ -87,8 +87,11 @@ def make_grammar_for_table(selectable):
     error_sub.0: col "-" col
     error_mul.0: col "*" col
     error_div.0: col "/" col
+    error_vector_expr.0: col vector_comparator mixedarray
+    mixedarray.0: "(" [CONSTANT ("," CONSTANT)*] ","? ")"
+    CONSTANT: ESCAPED_STRING | NUMBER
 
-    // Boolean scalar expressions a > b
+    // Boolean scalar expressions like 'a > b'
     bool_expr: col comparator col
     comparator: EQ | NE | LT | LTE | GT | GTE
     EQ: "="
@@ -98,7 +101,7 @@ def make_grammar_for_table(selectable):
     GT: ">"
     GTE: ">="
 
-    // Boolean vector expressions a in (array)
+    // Boolean vector expressions like 'a in (array of constants)'
     vector_expr: string vector_comparator stringarray | num vector_comparator numarray
     vector_comparator.1: NOT? IN
     stringarray.1: "(" [ESCAPED_STRING ("," ESCAPED_STRING)*] ","? ")"  -> consistent_array
@@ -133,10 +136,32 @@ class ErrorVisitor(Visitor):
         self.text = text
         self.errors = []
 
+    def _add_error(self, message, tree):
+        tok = None
+        # Find the first token
+        while tree and tree.children:
+            tree = tree.children[0]
+            if isinstance(tree, Token):
+                tok = tree
+                break
+        
+        if tok:
+            extra_context = self._get_context_for_token(tok)
+            message = f"{message}\n{extra_context}"
+        self.errors.append(message)
+
+    def _get_context_for_token(self, tok, span=40):
+        pos = tok.pos_in_stream
+        start = max(pos - span, 0)
+        end = pos + span
+        before = self.text[start:pos].rsplit('\n', 1)[-1]
+        after = self.text[pos:end].split('\n', 1)[0]
+        return before + after + '\n' + ' ' * len(before) + '^\n'
+
     def _error_math(self, tree, verb):
         tok1 = tree.children[0].children[0]
         tok2 = tree.children[1].children[0]
-        self.errors.append(f"{tok1.data} and {tok2.data} can not be {verb}")
+        self._add_error(f"{tok1.data} and {tok2.data} can not be {verb}", tree)
 
     def error_add(self, tree):
         self._error_math(tree, "added together")
@@ -153,8 +178,11 @@ class ErrorVisitor(Visitor):
     def unknown_col(self, tree):
         """Column name doesn't exist in the data """
         tok1 = tree.children[0]
-        # print(f"{tok1.data} and {tok2.data} can not be added together")
-        self.errors.append(f"{tok1} is not a valid column name")
+        self._add_error(f"{tok1} is not a valid column name", tree)
+
+    def mixedarray(self, tree):
+        """An array containing a mix of strings and numbers """
+        self._add_error(f"An array may not contain both strings and numbers", tree)
 
     def bool_expr(self, tree):
         left, _, right = tree.children
@@ -162,8 +190,7 @@ class ErrorVisitor(Visitor):
             tok1 = left.children[0]
             tok2 = right.children[0]
             if tok1.data != tok2.data:
-                self.errors.append(f"Can't compare {tok1.data} to {tok2.data}")
-
+                self._add_error(f"Can't compare {tok1.data} to {tok2.data}", tree)
 
 @v_args(inline=True)  # Affects the signatures of the methods
 class TransformToSQLAlchemyExpression(Transformer):
@@ -315,10 +342,10 @@ class Builder(object):
         error_visitor = ErrorVisitor(text)
         error_visitor.visit(tree)
         if error_visitor.errors:
-            print(", ".join(error_visitor.errors))
+            print("".join(error_visitor.errors))
             if debug:
                 print("Tree:\n" + tree.pretty())
-            raise Exception(", ".join(error_visitor.errors))
+            raise Exception("".join(error_visitor.errors))
         else:
             if debug:
                 print("Tree:\n" + tree.pretty())
