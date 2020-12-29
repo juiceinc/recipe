@@ -72,9 +72,9 @@ def make_grammar_for_table(selectable):
     boolean.1: {type_defn(columns, "bool", ["TRUE", "FALSE", "bool_expr"])}
     bool_expr: col comparator col
     vector_expr: string vector_comparator stringarray | num vector_comparator numarray
-    string_add: string "+" string
+    string_add: string "+" string                -> add
     string.1: {type_defn(columns, "str", ["ESCAPED_STRING", "string_add"])}
-    num_add.1: num "+" num
+    num_add.1: num "+" num                       -> add
     num_sub.1: num "-" num
     num_mul.1: num "*" num
     num_div.1: num "/" num
@@ -239,7 +239,8 @@ class TransformToSQLAlchemyExpression(Transformer):
         # right = convert_value(left, right)
         return getattr(left, comparators[comp])(right)
 
-    def num_add(self, a, b):
+    def add(self, a, b):
+        """ Add numbers or strings """
         return a + b
 
     def num_sub(self, a, b):
@@ -248,7 +249,7 @@ class TransformToSQLAlchemyExpression(Transformer):
     def num_mul(self, a, b):
         return a * b
 
-    def string_add(self, a, b):
+    def add(self, a, b):
         return a + b
 
     def col(self, v):

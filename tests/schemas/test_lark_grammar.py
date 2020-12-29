@@ -2,12 +2,23 @@ from tests.test_base import Scores2
 from recipe.schemas.lark_grammar import Builder
 from unittest import TestCase
 
+
 def to_sql(expr):
     """Utility to print sql for a expression """
     return str(expr.compile(compile_kwargs={"literal_binds": True}))
 
 
 class TestScores2(TestCase):
+    def examples(self, input_rows):
+        for row in input_rows.split("\n"):
+            row = row.strip()
+            if row == "" or row.startswith("#"):
+                continue
+
+            field, expected = row.split("->")
+            expected = expected.strip()
+            yield field, expected
+
     def test_success(self):
         """These examples should all succeed"""
 
@@ -28,18 +39,14 @@ class TestScores2(TestCase):
 
         b = Builder(Scores2)
 
-        for row in good_examples.split("\n"):
-            if row.strip():
-                row, expected = row.split("->")
-                expected = expected.strip()
-
-                print(f"\nInput: {row}")
-                expr = b.parse(row)
-                self.assertEqual(to_sql(expr), expected)
+        for field, expected in self.examples(good_examples):
+            print(f"\nInput: {field}")
+            expr = b.parse(field)
+            self.assertEqual(to_sql(expr), expected)
 
     def test_failure(self):
         """These examples should all fail"""
-        
+
         bad_examples = """
         [scores] + -1.0             -> scores is not a valid column name, unknown_col and num can not be added together
         2.0 + [scores]              -> scores is not a valid column name, num and unknown_col can not be added together
@@ -50,14 +57,9 @@ class TestScores2(TestCase):
         """
         b = Builder(Scores2)
 
-        for row in bad_examples.split("\n"):
-            if row.strip():
-                row, expected_msg = row.split("->")
-                print(row)
-                expected_msg = expected_msg.strip()
-                print(expected_msg)
-                with self.assertRaises(Exception) as e:                    
-                    expr = b.parse(row)
-                self.assertEqual(str(e.exception), expected_msg)
-                print("except:", e.exception)
+        for field, expected in self.examples(bad_examples):
+            with self.assertRaises(Exception) as e:
+                b.parse(field)
+            self.assertEqual(str(e.exception), expected)
+            print("except:", e.exception)
 
