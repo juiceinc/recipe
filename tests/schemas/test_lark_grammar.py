@@ -41,7 +41,7 @@ class TestScores2(TestCase):
 
         for field, expected in self.examples(good_examples):
             print(f"\nInput: {field}")
-            expr = b.parse(field)
+            expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected)
 
     def test_failure(self):

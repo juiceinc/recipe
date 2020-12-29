@@ -35,7 +35,8 @@ def make_columns(columns):
     return "\n".join(items).lstrip()
 
 
-def type_defn(columns, prefix, additions=None):
+def gather_columns(columns, prefix, additions=None):
+    """Build a list of all columns matching a prefix allong with potential addition """
     if additions is None:
         additions = []
     matching_keys = [k for k in sorted(columns.keys()) if k.startswith(prefix + "_")]
@@ -69,17 +70,18 @@ def make_grammar_for_table(selectable):
     // These are the raw columns in the selectable
     {make_columns(columns)}
 
-    boolean.1: {type_defn(columns, "bool", ["TRUE", "FALSE", "bool_expr"])}
+    boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr"])}
     bool_expr: col comparator col
     vector_expr: string vector_comparator stringarray | num vector_comparator numarray
     string_add: string "+" string                -> add
-    string.1: {type_defn(columns, "str", ["ESCAPED_STRING", "string_add"])}
+    string.1: {gather_columns(columns, "str", ["ESCAPED_STRING", "string_add"])}
     num_add.1: num "+" num                       -> add
     num_sub.1: num "-" num
     num_mul.1: num "*" num
     num_div.1: num "/" num
-    num.1: {type_defn(columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul"])}
+    num.1: {gather_columns(columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul"])}
 
+    // Various error conditions (fields we don't recognize, bad math)
     // Low priority matching of any [columnname] values
     unknown_col.0: "[" + NAME + "]"
     error_math.0: error_add | error_sub | error_mul | error_div
@@ -90,7 +92,7 @@ def make_grammar_for_table(selectable):
 
     comparator: EQ | NE | LT | LTE | GT | GTE
     EQ: "="
-    NE: "!="
+    NE: "!=" | "<>"
     LT: "<"
     LTE: "<="
     GT: ">"
