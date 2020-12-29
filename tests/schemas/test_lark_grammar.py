@@ -26,7 +26,7 @@ class TestScores2(TestCase):
 
     def bad_examples(self, input_rows):
         """Take input where each input is separated by two newlines
-        
+
         field
         expected_error
 
@@ -148,7 +148,7 @@ An array may not contain both strings and numbers
             with self.assertRaises(Exception) as e:
                 b.parse(field, debug=True)
             if str(e.exception) != expected_error:
-                print("==="*10)
+                print("===" * 10)
                 print(str(e.exception))
-                print("==="*10)
+                print("===" * 10)
             self.assertEqual(str(e.exception), expected_error)
