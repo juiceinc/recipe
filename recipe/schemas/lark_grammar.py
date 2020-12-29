@@ -71,6 +71,7 @@ def make_grammar_for_table(selectable):
 
     boolean.1: {type_defn(columns, "bool", ["TRUE", "FALSE", "bool_expr"])}
     bool_expr: col comparator col
+    vector_expr: string vector_comparator stringarray | num vector_comparator numarray
     string_add: string "+" string
     string.1: {type_defn(columns, "str", ["ESCAPED_STRING", "string_add"])}
     num_add.1: num "+" num
@@ -88,7 +89,16 @@ def make_grammar_for_table(selectable):
     error_div.0: col "/" col
 
     comparator: EQ | NE | LT | LTE | GT | GTE
+    EQ: "="
+    NE: "!="
+    LT: "<"
+    LTE: "<="
+    GT: ">"
+    GTE: ">="
+
     vector_comparator.1: IN | NOTIN
+    stringarray.1: "(" [ESCAPED_STRING ("," ESCAPED_STRING)*] ")"
+    numarray.1: "(" [NUMBER ("," NUMBER)*] ")"
     
     TRUE: /TRUE/i
     FALSE: /FALSE/i
@@ -96,12 +106,6 @@ def make_grammar_for_table(selectable):
     OR: /OR/i
     AND: /AND/i
     NOT: /NOT/i
-    EQ: "="
-    NE: "!="
-    LT: "<"
-    LTE: "<="
-    GT: ">"
-    GTE: ">="
     IN: /IN/i
     IS: /IS/i
     BETWEEN: /BETWEEN/i
@@ -280,72 +284,18 @@ class Builder(object):
         """Utility to print sql for a expression """
         return str(c.compile(compile_kwargs={"literal_binds": True}))
 
-    def parse(self, text, expected=None, show_tree=False):
+    def parse(self, text, debug=False):
         """Return a parse tree for text"""
         tree = self.parser.parse(text)
         error_visitor = ErrorVisitor(text)
         error_visitor.visit(tree)
         if error_visitor.errors:
-            print("\n".join(error_visitor.errors))
-            if show_tree:
-                print(tree.pretty())
+            print(", ".join(error_visitor.errors))
+            if debug:
+                print("Tree:\n" + tree.pretty())
+            raise Exception(", ".join(error_visitor.errors))
         else:
-            if show_tree:
+            if debug:
                 print("Tree:\n" + tree.pretty())
             t = self.transformer.transform(tree)
-            raw_sql = self.raw_sql(t)
-            print("Raw sql: " + raw_sql)
-            if expected is not None:
-                assert raw_sql.strip() == expected.strip()
-
-
-b = Builder(Scores2)
-
-good_examples = """
-[score]                         -> scores.score
-[ScORE]                         -> scores.score
-[ScORE] + [ScORE]               -> scores.score + scores.score
-[score] + 2.0                   -> scores.score + 2.0
-[username] + [department]       -> scores.username || scores.department
-"foo" + [department]            -> 'foo' || scores.department
-1.0 + [score]                   -> 1.0 + scores.score
-1.0 + [score] + [score]         -> 1.0 + scores.score + scores.score
--0.1 * [score] + 600            -> -0.1 * scores.score + 600.0
-[score] = [score]               -> scores.score = scores.score
-[score] >= 2.0                  -> scores.score >= 2.0
-2.0 <= [score]                  -> scores.score >= 2.0
-"""
-
-
-bad_examples = """
-[scores] + -1.0
-2.0 + [scores]
-[foo_b]
-[username] + [score]
-[score]   + [department]
-"""
-
-
-good_examples = """
-[score] = [score]               -> scores.score = scores.score
-[score] >= 2.0                  -> scores.score >= 2.0
-2.0 <= [score]                  -> scores.score >= 2.0
-"""
-
-bad_examples = """
-[score] = [department]
-"""
-
-# field_parser = Lark(grammar, parser="earley", ambiguity="resolve", start="col")
-for row in good_examples.split("\n"):
-    if row:
-        row, expected = row.split("->")
-        print(f"\nInput: {row}")
-        tree = b.parse(row, expected)
-
-print("\n\n" + "THESE ARE BAD\n")
-
-for row in bad_examples.split("\n"):
-    if row:
-        print(f"\nInput: {row}")
-        tree = b.parse(row)
+            return t
