@@ -70,7 +70,7 @@ def make_grammar_for_table(selectable):
     // These are the raw columns in the selectable
     {make_columns(columns)}
 
-    boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr"])}
+    boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr"])}
     bool_expr: col comparator col
     vector_expr: string vector_comparator stringarray | num vector_comparator numarray
     string_add: string "+" string                -> add
@@ -211,10 +211,6 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def comparator(self, comp):
         """A comparator like =, !=, >, >= """
-        return str(comp)
-
-    def bool_expr(self, left, comp, right):
-        """ A boolean expression like score > 20 """
         comparators = {
             "=": "__eq__",
             ">": "__gt__",
@@ -224,22 +220,36 @@ class TransformToSQLAlchemyExpression(Transformer):
             "<": "__lt__",
             "<=": "__le__",
         }
+        return comparators.get(str(comp))
+
+    def vector_expr(self, left, comp, right):
+        print(left, comp, right)
+        return None
+
+    def numarray(self, *args):
+        print("numarray args", *args)
+        return args
+    
+    def bool_expr(self, left, comparator, right):
+        """A boolean expression like score > 20 
+        
+        If left is a primitive, swap the order:
+        20 > score => score < 20
+        """
         # If the left is a primitive, try to swap the sides
         if isinstance(left, (str, int, float, bool)):
             swap_comp = {
-                ">": "<",
-                "<": ">",
-                ">=": "<=",
-                "<=": ">=",
+                "__gt__": "__lt__",
+                "__lt__": "__gt__",
+                "__ge__": "__le__",
+                "__le__": "__ge__",
             }
-            comp = swap_comp.get(comp, comp)
+            comparator = swap_comp.get(comparator, comparator)
             left, right = right, left
 
-        if right is None:
-            return
         # TODO: Convert the right into a type compatible with the left
         # right = convert_value(left, right)
-        return getattr(left, comparators[comp])(right)
+        return getattr(left, comparator)(right)
 
     def add(self, a, b):
         """ Add numbers or strings """

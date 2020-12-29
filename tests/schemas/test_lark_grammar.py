@@ -1,6 +1,6 @@
 from tests.test_base import Scores2
 from recipe.schemas.lark_grammar import Builder
-from unittest import TestCase
+from unittest import TestCase, skip
 
 
 def to_sql(expr):
@@ -19,7 +19,8 @@ class TestScores2(TestCase):
             expected = expected.strip()
             yield field, expected
 
-    def test_success(self):
+    @skip
+    def test_fields_and_addition(self):
         """These examples should all succeed"""
 
         good_examples = """
@@ -44,6 +45,20 @@ class TestScores2(TestCase):
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected)
 
+    def test_arrays(self):
+        good_examples = """
+        2.0 <= [score]                  -> scores.score >= 2.0
+        [score] in (1,2,3)              -> scores.score
+        """
+
+        b = Builder(Scores2)
+
+        for field, expected in self.examples(good_examples):
+            print(f"\nInput: {field}")
+            expr = b.parse(field, debug=True)
+            self.assertEqual(to_sql(expr), expected)
+
+    @skip
     def test_failure(self):
         """These examples should all fail"""
 
@@ -62,4 +77,3 @@ class TestScores2(TestCase):
                 b.parse(field)
             self.assertEqual(str(e.exception), expected)
             print("except:", e.exception)
-
