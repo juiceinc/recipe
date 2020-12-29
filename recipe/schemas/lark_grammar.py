@@ -231,13 +231,13 @@ class TransformToSQLAlchemyExpression(Transformer):
             raise UnexpectedInput(left)
 
     def consistent_array(self, *args):
-        """A comma separated, variable length array of all numbers 
+        """A comma separated, variable length array of all numbers
         or all strings"""
         return args
-            
+
     def bool_expr(self, left, comparator, right):
-        """A boolean expression like score > 20 
-        
+        """A boolean expression like score > 20
+
         If left is a primitive, swap the order:
         20 > score => score < 20
         """
