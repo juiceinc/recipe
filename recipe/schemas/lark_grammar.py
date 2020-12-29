@@ -309,6 +309,12 @@ class TransformToSQLAlchemyExpression(Transformer):
     def TRUE(self, v):
         return True
 
+    def FALSE(self, v):
+        return False
+
+    def NULL(self, v):
+        return None
+
 
 class Builder(object):
     def __init__(self, selectable, require_aggregation=False):

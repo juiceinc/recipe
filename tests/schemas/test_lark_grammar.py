@@ -90,18 +90,6 @@ class TestScores2(TestCase):
         """These examples should all fail"""
 
         bad_examples = """
-        [scores] + -1.0             -> scores is not a valid column name, unknown_col and num can not be added together
-        2.0 + [scores]              -> scores is not a valid column name, num and unknown_col can not be added together
-        [foo_b]                     -> foo_b is not a valid column name
-        [username] + [score]        -> string and num can not be added together
-        [score]   + [department]    -> num and string can not be added together
-        [score] = [department]      -> Can't compare num to string
-        [department] In ("A", 2)    -> An array may not contain both strings and numbers
-        [username] NOT IN (2, "B")  -> An array may not contain both strings and numbers
-        [username NOT IN (2, "B")  -> An array may not contain both strings and numbers
-        """
-
-        bad_examples = """
 [scores]
 scores is not a valid column name
 [scores]
@@ -152,14 +140,13 @@ An array may not contain both strings and numbers
 An array may not contain both strings and numbers
 [username] NOT IN (2, "B")
                    ^
-
-        """
+"""
 
         b = Builder(Scores2)
 
         for field, expected_error in self.bad_examples(bad_examples):
             with self.assertRaises(Exception) as e:
-                b.parse(field)
+                b.parse(field, debug=True)
             if str(e.exception) != expected_error:
                 print("==="*10)
                 print(str(e.exception))
