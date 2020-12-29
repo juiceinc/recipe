@@ -128,6 +128,7 @@ def make_grammar_for_table(selectable):
     print(grammar)
     return columns, grammar
 
+
 class ErrorVisitor(Visitor):
     """Raise descriptive exceptions for any errors found """
 
@@ -144,7 +145,7 @@ class ErrorVisitor(Visitor):
             if isinstance(tree, Token):
                 tok = tree
                 break
-        
+
         if tok:
             extra_context = self._get_context_for_token(tok)
             message = f"{message}\n{extra_context}"
@@ -154,9 +155,9 @@ class ErrorVisitor(Visitor):
         pos = tok.pos_in_stream
         start = max(pos - span, 0)
         end = pos + span
-        before = self.text[start:pos].rsplit('\n', 1)[-1]
-        after = self.text[pos:end].split('\n', 1)[0]
-        return before + after + '\n' + ' ' * len(before) + '^\n'
+        before = self.text[start:pos].rsplit("\n", 1)[-1]
+        after = self.text[pos:end].split("\n", 1)[0]
+        return before + after + "\n" + " " * len(before) + "^\n"
 
     def _error_math(self, tree, verb):
         tok1 = tree.children[0].children[0]
@@ -191,6 +192,7 @@ class ErrorVisitor(Visitor):
             tok2 = right.children[0]
             if tok1.data != tok2.data:
                 self._add_error(f"Can't compare {tok1.data} to {tok2.data}", tree)
+
 
 @v_args(inline=True)  # Affects the signatures of the methods
 class TransformToSQLAlchemyExpression(Transformer):
