@@ -2,6 +2,7 @@ from tests.test_base import Scores2
 from recipe.schemas.lark_grammar import Builder
 from unittest import TestCase
 
+
 def to_sql(expr):
     """Utility to print sql for a expression """
     return str(expr.compile(compile_kwargs={"literal_binds": True}))
@@ -39,7 +40,7 @@ class TestScores2(TestCase):
 
     def test_failure(self):
         """These examples should all fail"""
-        
+
         bad_examples = """
         [scores] + -1.0             -> scores is not a valid column name, unknown_col and num can not be added together
         2.0 + [scores]              -> scores is not a valid column name, num and unknown_col can not be added together
@@ -56,8 +57,7 @@ class TestScores2(TestCase):
                 print(row)
                 expected_msg = expected_msg.strip()
                 print(expected_msg)
-                with self.assertRaises(Exception) as e:                    
+                with self.assertRaises(Exception) as e:
                     expr = b.parse(row)
                 self.assertEqual(str(e.exception), expected_msg)
                 print("except:", e.exception)
-
