@@ -71,8 +71,6 @@ def make_grammar_for_table(selectable):
     {make_columns(columns)}
 
     boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr"])}
-    bool_expr: col comparator col
-    vector_expr: string vector_comparator stringarray | num vector_comparator numarray
     string_add: string "+" string                -> add
     string.1: {gather_columns(columns, "str", ["ESCAPED_STRING", "string_add"])}
     num_add.1: num "+" num                       -> add
@@ -90,6 +88,8 @@ def make_grammar_for_table(selectable):
     error_mul.0: col "*" col
     error_div.0: col "/" col
 
+    // Boolean scalar expressions a > b
+    bool_expr: col comparator col
     comparator: EQ | NE | LT | LTE | GT | GTE
     EQ: "="
     NE: "!=" | "<>"
@@ -98,13 +98,14 @@ def make_grammar_for_table(selectable):
     GT: ">"
     GTE: ">="
 
-    vector_comparator.1: IN | NOTIN
-    stringarray.1: "(" [ESCAPED_STRING ("," ESCAPED_STRING)*] ")"
-    numarray.1: "(" [NUMBER ("," NUMBER)*] ")"
+    // Boolean vector expressions a in (array)
+    vector_expr: string vector_comparator stringarray | num vector_comparator numarray
+    vector_comparator.1: NOT? IN
+    stringarray.1: "(" [ESCAPED_STRING ("," ESCAPED_STRING)*] ")"  -> consistent_array
+    numarray.1: "(" [NUMBER ("," NUMBER)*] ")"                     -> consistent_array
     
     TRUE: /TRUE/i
     FALSE: /FALSE/i
-    NOTIN: NOT IN
     OR: /OR/i
     AND: /AND/i
     NOT: /NOT/i
@@ -186,18 +187,12 @@ class TransformToSQLAlchemyExpression(Transformer):
     def string(self, v):
         if isinstance(v, Tree):
             return self.columns[v.data]
-        elif isinstance(v, Token):
-            v = str(v)
-            if v.startswith('"') and v.endswith('"'):
-                return v[1:-1]
         else:
             return v
 
     def num(self, v):
         if isinstance(v, Tree):
             return self.columns[v.data]
-        elif isinstance(v, Token):
-            return float(v)
         else:
             return v
 
@@ -208,6 +203,13 @@ class TransformToSQLAlchemyExpression(Transformer):
             return bool(v)
         else:
             return v
+
+    def vector_comparator(self, *args):
+        """Can be one token "IN" or two "NOT IN" """
+        if len(args) == 1:
+            return "in_"
+        else:
+            return "notin_"
 
     def comparator(self, comp):
         """A comparator like =, !=, >, >= """
@@ -222,14 +224,17 @@ class TransformToSQLAlchemyExpression(Transformer):
         }
         return comparators.get(str(comp))
 
-    def vector_expr(self, left, comp, right):
-        print(left, comp, right)
-        return None
+    def vector_expr(self, left, vector_comparator, num_or_str_array):
+        if hasattr(left, vector_comparator):
+            return getattr(left, vector_comparator)(num_or_str_array)
+        else:
+            raise UnexpectedInput(left)
 
-    def numarray(self, *args):
-        print("numarray args", *args)
+    def consistent_array(self, *args):
+        """A comma separated, variable length array of all numbers 
+        or all strings"""
         return args
-    
+            
     def bool_expr(self, left, comparator, right):
         """A boolean expression like score > 20 
         
@@ -261,11 +266,23 @@ class TransformToSQLAlchemyExpression(Transformer):
     def num_mul(self, a, b):
         return a * b
 
-    def add(self, a, b):
-        return a + b
-
     def col(self, v):
         return v
+
+    def ESCAPED_STRING(self, v):
+        v = str(v)
+        if v.startswith('"') and v.endswith('"'):
+            return v[1:-1]
+        return v
+
+    # Constants
+
+    def NUMBER(self, v):
+        try:
+            n = int(v)
+        except ValueError:
+            n = float(v)
+        return n
 
     def TRUE(self, v):
         return True

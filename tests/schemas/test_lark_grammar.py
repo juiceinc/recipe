@@ -19,7 +19,7 @@ class TestScores2(TestCase):
             expected = expected.strip()
             yield field, expected
 
-    @skip
+    # @skip
     def test_fields_and_addition(self):
         """These examples should all succeed"""
 
@@ -32,7 +32,8 @@ class TestScores2(TestCase):
         "foo" + [department]            -> 'foo' || scores.department
         1.0 + [score]                   -> 1.0 + scores.score
         1.0 + [score] + [score]         -> 1.0 + scores.score + scores.score
-        -0.1 * [score] + 600            -> -0.1 * scores.score + 600.0
+        -0.1 * [score] + 600            -> -0.1 * scores.score + 600
+        -0.1 * [score] + 600.0          -> -0.1 * scores.score + 600.0
         [score] = [score]               -> scores.score = scores.score
         [score] >= 2.0                  -> scores.score >= 2.0
         2.0 <= [score]                  -> scores.score >= 2.0
@@ -45,10 +46,13 @@ class TestScores2(TestCase):
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected)
 
+    # @skip
     def test_arrays(self):
         good_examples = """
-        2.0 <= [score]                  -> scores.score >= 2.0
-        [score] in (1,2,3)              -> scores.score
+        [score] NOT in (1,2,3)            -> scores.score NOT IN (1, 2, 3)
+        [score] In (1,2,   3.0)           -> scores.score IN (1, 2, 3.0)
+        [score] In (1)                    -> scores.score IN (1)
+        [department] In ("A", "B")        -> scores.department IN ('A', 'B')
         """
 
         b = Builder(Scores2)
@@ -58,7 +62,7 @@ class TestScores2(TestCase):
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected)
 
-    @skip
+    # @skip
     def test_failure(self):
         """These examples should all fail"""
 
