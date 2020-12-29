@@ -3,6 +3,7 @@ from recipe.schemas.lark_grammar import Builder
 from unittest import TestCase, skip
 
 
+
 def to_sql(expr):
     """Utility to print sql for a expression """
     return str(expr.compile(compile_kwargs={"literal_binds": True}))

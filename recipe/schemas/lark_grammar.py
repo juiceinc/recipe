@@ -21,12 +21,12 @@ from tests.test_base import Scores2
 
 
 def make_columns(columns):
-    """Return a lark string that looks like 
+    """Return a lark string that looks like
 
     // These are my raw columns
     str_0: "[" + /username/i + "]"
     str_1: "[" + /department/i + "]"
-    str_2: "[" + /testid/i + "]"    
+    str_2: "[" + /testid/i + "]"
     """
     items = []
     for k in sorted(columns.keys()):
