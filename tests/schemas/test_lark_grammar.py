@@ -54,6 +54,8 @@ class TestScores2(TestCase):
         [score] In (1,2,   3.0)           -> scores.score IN (1, 2, 3.0)
         [score] In (1)                    -> scores.score IN (1)
         [department] In ("A", "B")        -> scores.department IN ('A', 'B')
+        [department] In ("A",)            -> scores.department IN ('A')
+        [department] + [username] In ("A", "B")        -> scores.department || scores.username IN ('A', 'B')
         """
 
         b = Builder(Scores2)

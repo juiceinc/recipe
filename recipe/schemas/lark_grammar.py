@@ -101,8 +101,8 @@ def make_grammar_for_table(selectable):
     // Boolean vector expressions a in (array)
     vector_expr: string vector_comparator stringarray | num vector_comparator numarray
     vector_comparator.1: NOT? IN
-    stringarray.1: "(" [ESCAPED_STRING ("," ESCAPED_STRING)*] ")"  -> consistent_array
-    numarray.1: "(" [NUMBER ("," NUMBER)*] ")"                     -> consistent_array
+    stringarray.1: "(" [ESCAPED_STRING ("," ESCAPED_STRING)*] ","? ")"  -> consistent_array
+    numarray.1: "(" [NUMBER ("," NUMBER)*] ","?  ")"                    -> consistent_array
     
     TRUE: /TRUE/i
     FALSE: /FALSE/i
@@ -124,7 +124,6 @@ def make_grammar_for_table(selectable):
 """
     print(grammar)
     return columns, grammar
-
 
 class ErrorVisitor(Visitor):
     """Raise descriptive exceptions for any errors found """
@@ -169,10 +168,6 @@ class ErrorVisitor(Visitor):
 @v_args(inline=True)  # Affects the signatures of the methods
 class TransformToSQLAlchemyExpression(Transformer):
     """Converts a field to a SQLAlchemy expression """
-
-    # We have rules named "add", "sub", "mul", and "neg" in our grammar; Transformer
-    # dispatches to these.
-    from operator import add, sub, mul, neg
 
     def __init__(self, selectable, columns, require_aggregation=False):
         self.selectable = selectable
@@ -269,13 +264,13 @@ class TransformToSQLAlchemyExpression(Transformer):
     def col(self, v):
         return v
 
+    # Constants
+
     def ESCAPED_STRING(self, v):
         v = str(v)
         if v.startswith('"') and v.endswith('"'):
             return v[1:-1]
         return v
-
-    # Constants
 
     def NUMBER(self, v):
         try:
