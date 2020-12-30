@@ -92,6 +92,7 @@ class TestScores2(TestCase):
             print(f"\nInput: {field}")
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
+
     # @skip
     def test_boolean(self):
         good_examples = """
