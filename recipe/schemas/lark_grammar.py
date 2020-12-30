@@ -211,9 +211,11 @@ class ErrorVisitor(Visitor):
     def vector_expr(self, tree):
         val, comp, arr = tree.children
         # If the left hand side is a number or string primitive
-        if isinstance(val.children[0], Token) and val.children[0].type in ("NUMBER", "ESCAPED_STRING"):
+        if isinstance(val.children[0], Token) and val.children[0].type in (
+            "NUMBER",
+            "ESCAPED_STRING",
+        ):
             self._add_error(f"Must be a column or expression", val)
-
 
     def bool_expr(self, tree):
         """ a > b where the types of a and b don't match """
@@ -347,7 +349,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def between_expr(self, col, between, left, AND, right):
         return col.between(left, right)
-        print("BETWEEEN\n"*20)
+        print("BETWEEEN\n" * 20)
         print(len(args))
         print(args)
 
