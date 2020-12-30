@@ -40,7 +40,6 @@ class TestBase(TestCase):
             yield field, expected_error
 
 
-@skip
 class TestDataTypesTable(TestBase):
     maxDiff = None
 
@@ -160,7 +159,15 @@ class TestDataTypesTable(TestBase):
 
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")
-            expr = b.parse(field, debug=False)
+            expr = b.parse(field, debug=True)
+
+            if to_sql(expr) != expected_sql:
+                print("===" * 10)
+                print(to_sql(expr))
+                print("vs")
+                print(expected_sql)
+                print("===" * 10)
+
             self.assertEqual(to_sql(expr), expected_sql)
 
     # @skip
@@ -264,6 +271,7 @@ class TestDataTypesTableNew(TestBase):
         date("today") < [test_date]          -> datatypes.test_date > '{date.today()}'
         [test_date] > date("1 day ago")      -> datatypes.test_date > '{date.today()-relativedelta(days=1)}'
         [test_date] > date("1 days ago")      -> datatypes.test_date > '{date.today()-relativedelta(days=1)}'
+        [score] between 1 and 3                               -> datatypes.score BETWEEN 1 AND 3
         #[test_date] > date("1 day from now")      -> datatypes.test_date > '{date.today()-relativedelta(days=1)}'
         """
 
@@ -273,8 +281,6 @@ class TestDataTypesTableNew(TestBase):
             print(f"\nInput: {field}")
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
-
-
 
     # @skip
     def test_failure(self):

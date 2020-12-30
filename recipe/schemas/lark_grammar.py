@@ -1,3 +1,4 @@
+from io import RawIOBase
 from sqlalchemy.sql.sqltypes import Numeric
 from tests.test_base import DataTypesTable
 import dateparser
@@ -14,6 +15,7 @@ from sqlalchemy import (
     DateTime,
     Boolean,
     Integer,
+    between,
     case,
     inspection,
     not_,
@@ -52,16 +54,11 @@ def gather_columns(columns, prefix, additions=None):
 
 def make_grammar_for_table(selectable):
     """Build a dict of usable columns and a grammar for this selectable """
-
-    print("Making grammar\n"*20)
-    # selectable = DataTypesTable
-    print(list(selectable.columns))
     columns = {}
-
     type_counter = defaultdict(int)
 
     for c in selectable.columns:
-        print(c.type, type(c.type))
+        # Check supported column types
         if isinstance(c.type, String):
             prefix = "str"
         elif isinstance(c.type, Date):
@@ -79,8 +76,6 @@ def make_grammar_for_table(selectable):
         cnt = type_counter[prefix]
         type_counter[prefix] += 1
         columns[f"{prefix}_{cnt}"] = c
-
-    print("columns is ", columns)
 
     grammar = f"""
     col: boolean | string | num | date | datetime | unknown_col | error_math | error_vector_expr | error_not_nonboolean
@@ -391,11 +386,8 @@ class TransformToSQLAlchemyExpression(Transformer):
             comp = "ISNOT"
         return self.comparator(comp)
 
-    def between_expr(self, col, between, left, AND, right):
-        if hasattr(left, "between"):
-            return col.between(left, right)
-        else:
-            self._raise_error("This value must be a column or column expression")
+    def between_expr(self, col, BETWEEN, left, AND, right):
+        return between(col, left, right)
 
     def vector_expr(self, left, vector_comparator, num_or_str_array):
         if hasattr(left, vector_comparator):
