@@ -70,7 +70,7 @@ def make_grammar_for_table(selectable):
     // These are the raw columns in the selectable
     {make_columns(columns)}
 
-    boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "not_boolean"])}
+    boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean"])}
     string_add: string "+" string                -> add
     string.1: {gather_columns(columns, "str", ["ESCAPED_STRING", "string_add"])}
     num_add.1: num "+" num                       -> add
@@ -93,7 +93,10 @@ def make_grammar_for_table(selectable):
     CONSTANT: ESCAPED_STRING | NUMBER
 
     // Boolean scalar expressions like 'a > b'
-    not_boolean.0: NOT boolean
+    paren_boolean.5: "(" boolean ")"
+    not_boolean.4: NOT boolean
+    and_boolean.3: boolean AND boolean
+    or_boolean.2: boolean OR boolean
     bool_expr: col comparator col
     comparator: EQ | NE | LT | LTE | GT | GTE
     EQ: "="
@@ -246,13 +249,18 @@ class TransformToSQLAlchemyExpression(Transformer):
         return v
 
     # Booleans
+    def and_boolean(self, left_boolean, AND, right_boolean):
+        return and_(left_boolean, right_boolean)
+
+    def paren_boolean(self, paren_boolean):
+        return and_(paren_boolean)
+
+    def or_boolean(self, left_boolean, OR, right_boolean):
+        return or_(left_boolean, right_boolean)
 
     def not_boolean(self, NOT, boolean_expr):
-
-        if boolean_expr is True:
-            return False
-        elif boolean_expr is False:
-            return True
+        if boolean_expr in (True, False):
+            return not boolean_expr
         else:
             return not_(boolean_expr)
 

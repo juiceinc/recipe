@@ -89,6 +89,32 @@ class TestScores2(TestCase):
             print(f"\nInput: {field}")
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
+    # @skip
+    def test_boolean(self):
+        good_examples = """
+        [score] > 3                                           -> scores.score > 3
+        [score] > 3 AND [score] < 5                           -> scores.score > 3 AND scores.score < 5
+        [score] > 3 AND [score] < 5 AND [score] = 4           -> scores.score > 3 AND scores.score < 5 AND scores.score = 4
+        [score] > 3 AND True                                  -> scores.score > 3
+        [score] > 3 AND False                                 -> false
+        NOT [score] > 3 AND [score] < 5                       -> NOT (scores.score > 3 AND scores.score < 5)
+        NOT ([score] > 3 AND [score] < 5)                     -> NOT (scores.score > 3 AND scores.score < 5)
+        (NOT [score] > 3) AND [score] < 5                     -> scores.score <= 3 AND scores.score < 5
+        # The following is a unexpected result but not sure how to fix it
+        NOT [score] > 3 AND NOT [score] < 5                   ->  NOT (scores.score > 3 AND scores.score >= 5)
+        [score] > 3 OR [score] < 5                            -> scores.score > 3 OR scores.score < 5
+        [score] > 3 AND [score] < 5 OR [score] = 4            -> scores.score > 3 AND scores.score < 5 OR scores.score = 4
+        [score] > 3 AND ([score] < 5 OR [score] = 4)          -> scores.score > 3 AND (scores.score < 5 OR scores.score = 4)
+        [score] > 3 AND [score] < 5 OR [score] = 4 AND [score] = 3 -> scores.score > 3 AND scores.score < 5 OR scores.score = 4 AND scores.score = 3
+        [score] > 3 AND ([score] < 5 OR [score] = 4) AND [score] = 3 -> scores.score > 3 AND (scores.score < 5 OR scores.score = 4) AND scores.score = 3
+        """
+
+        b = Builder(Scores2)
+
+        for field, expected_sql in self.examples(good_examples):
+            print(f"\nInput: {field}")
+            expr = b.parse(field, debug=False)
+            self.assertEqual(to_sql(expr), expected_sql)
 
     # @skip
     def test_failure(self):
