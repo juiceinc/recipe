@@ -1,5 +1,4 @@
-import enum
-from lark import Lark, Transformer, Visitor, v_args, UnexpectedInput, Tree
+from lark import Lark, Transformer, Visitor, v_args, GrammarError, Tree
 from lark.lexer import Token
 from lark.visitors import inline_args
 from sqlalchemy import (
@@ -82,14 +81,15 @@ def make_grammar_for_table(selectable):
     // These are the raw columns in the selectable
     {make_columns(columns)}
 
-    boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean"])}
+    boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean"])}
     string_add: string "+" string                -> add
     string.1: {gather_columns(columns, "str", ["ESCAPED_STRING", "string_add"])}
     num_add.1: num "+" num                       -> add
     num_sub.1: num "-" num
     num_mul.1: num "*" num
     num_div.1: num "/" num
-    num.1: {gather_columns(columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul"])}
+    num.1: {gather_columns(columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div"])}
+    add: col "+" col
 
     // Various error conditions (fields we don't recognize, bad math)
     // Low priority matching of any [columnname] values
@@ -120,8 +120,9 @@ def make_grammar_for_table(selectable):
     GTE: ">="
 
     // Boolean vector expressions like 'a in (array of constants)'
+    between_expr: string BETWEEN string AND string | num BETWEEN num AND num
     vector_expr: string vector_comparator stringarray | num vector_comparator numarray
-    vector_comparator.1: NOT? IN
+    vector_comparator.1: NOT? IN    
     stringarray.1: "(" [ESCAPED_STRING ("," ESCAPED_STRING)*] ","? ")"  -> consistent_array
     numarray.1: "(" [NUMBER ("," NUMBER)*] ","?  ")"                    -> consistent_array
     
@@ -207,7 +208,15 @@ class ErrorVisitor(Visitor):
         """An array containing a mix of strings and numbers """
         self._add_error(f"An array may not contain both strings and numbers", tree)
 
+    def vector_expr(self, tree):
+        val, comp, arr = tree.children
+        # If the left hand side is a number or string primitive
+        if isinstance(val.children[0], Token) and val.children[0].type in ("NUMBER", "ESCAPED_STRING"):
+            self._add_error(f"Must be a column or expression", val)
+
+
     def bool_expr(self, tree):
+        """ a > b where the types of a and b don't match """
         left, _, right = tree.children
         if isinstance(left, Tree) and isinstance(right, Tree):
             tok1 = left.children[0]
@@ -221,6 +230,7 @@ class TransformToSQLAlchemyExpression(Transformer):
     """Converts a field to a SQLAlchemy expression """
 
     def __init__(self, selectable, columns, require_aggregation=False):
+        self.text = None
         self.selectable = selectable
         self.columns = columns
         self.require_aggregation = require_aggregation
@@ -229,6 +239,32 @@ class TransformToSQLAlchemyExpression(Transformer):
             self.drivername = selectable.metadata.bind.url.drivername
         except Exception:
             self.drivername = "unknown"
+
+    def _raise_error(self, message):
+        tree = None
+        tok = None
+        # Find the first token
+        while tree and tree.children:
+            tree = tree.children[0]
+            if isinstance(tree, Token):
+                tok = tree
+                break
+
+        if tok:
+            extra_context = self._get_context_for_token(tok)
+            message = f"{message}\n{extra_context}"
+        raise GrammarError(message)
+
+    def _get_context_for_token(self, tok, span=40):
+        pos = tok.pos_in_stream
+        start = max(pos - span, 0)
+        end = pos + span
+        before = self.text[start:pos].rsplit("\n", 1)[-1]
+        after = self.text[pos:end].split("\n", 1)[0]
+        return before + after + "\n" + " " * len(before) + "^\n"
+
+    def col(self, v):
+        return v
 
     def string(self, v):
         if isinstance(v, Tree):
@@ -257,9 +293,6 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def num_mul(self, a, b):
         return a * b
-
-    def col(self, v):
-        return v
 
     # Booleans
 
@@ -312,11 +345,17 @@ class TransformToSQLAlchemyExpression(Transformer):
             comp = "ISNOT"
         return self.comparator(comp)
 
+    def between_expr(self, col, between, left, AND, right):
+        return col.between(left, right)
+        print("BETWEEEN\n"*20)
+        print(len(args))
+        print(args)
+
     def vector_expr(self, left, vector_comparator, num_or_str_array):
         if hasattr(left, vector_comparator):
             return getattr(left, vector_comparator)(num_or_str_array)
         else:
-            raise UnexpectedInput(left)
+            self._raise_error("This value must be a column or column expression")
 
     def bool_expr(self, left, comparator, right):
         """A boolean expression like score > 20
@@ -410,5 +449,6 @@ class Builder(object):
         else:
             if debug:
                 print("Tree:\n" + tree.pretty())
+            self.transformer.text = text
             t = self.transformer.transform(tree)
             return t

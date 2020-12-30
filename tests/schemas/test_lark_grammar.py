@@ -102,6 +102,7 @@ class TestScores2(TestCase):
     def test_boolean(self):
         good_examples = """
         [score] > 3                                           -> scores.score > 3
+        [department] > "b"                                    -> scores.department > 'b'
         [score] > 3 AND [score] < 5                           -> scores.score > 3 AND scores.score < 5
         [score] > 3 AND [score] < 5 AND [score] = 4           -> scores.score > 3 AND scores.score < 5 AND scores.score = 4
         [score] > 3 AND True                                  -> scores.score > 3
@@ -116,6 +117,7 @@ class TestScores2(TestCase):
         [score] > 3 AND ([score] < 5 OR [score] = 4)          -> scores.score > 3 AND (scores.score < 5 OR scores.score = 4)
         [score] > 3 AND [score] < 5 OR [score] = 4 AND [score] = 3 -> scores.score > 3 AND scores.score < 5 OR scores.score = 4 AND scores.score = 3
         [score] > 3 AND ([score] < 5 OR [score] = 4) AND [score] = 3 -> scores.score > 3 AND (scores.score < 5 OR scores.score = 4) AND scores.score = 3
+        [score] between 1 and 3                               -> scores.score BETWEEN 1 AND 3
         """
 
         b = Builder(Scores2)
@@ -171,6 +173,16 @@ Can't compare num to string
 [score] = [department]
  ^
 
+[score] = "5"
+Can't compare num to string
+[score] = "5"
+ ^
+
+[department] = 3.24
+Can't compare string to num
+[department] = 3.24
+ ^
+
 [department] In ("A", 2)
 An array may not contain both strings and numbers
 [department] In ("A", 2)
@@ -180,6 +192,11 @@ An array may not contain both strings and numbers
 An array may not contain both strings and numbers
 [username] NOT IN (2, "B")
                    ^
+
+1 in (1,2,3)
+Must be a column or expression
+1 in (1,2,3)
+^
 
 NOT [department]
 NOT requires a boolean value
