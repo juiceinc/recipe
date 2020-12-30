@@ -79,6 +79,32 @@ oven.engine.execute(
 )
 
 
+# Create a table for testing all data types
+TABLEDEF = """
+        CREATE TABLE IF NOT EXISTS datatypes
+        (username text,
+         department text,
+         testid text,
+         score float,
+         test_date date,
+         test_datetime datetime,
+         valid_Score bool
+         );
+"""
+
+oven.engine.execute(TABLEDEF)
+oven.engine.execute(
+    """insert into datatypes values
+('chris', 'sales', '1', 80, '2005-01-02', '2005-01-02 12:15:00', 0),
+('chip', 'ops', '2', 80, '2005-01-03', '2005-01-03 12:20:00', 1),
+('chip', 'ops', '3', 90, '2005-01-04', '2005-01-04 1:00:05', 0),
+('chip', 'ops', '4', 100, '2005-02-05', '2005-02-05 16:20:33', 1),
+('annika', 'ops', '5', 80, '2005-02-06', '2005-02-06 12:20:00', 0),
+('annika', 'ops', '6', 90, '2005-02-07', '2005-02-07 6:44:12', 1)
+"""
+)
+
+
 # Create a table for testing missing values
 TABLEDEF = """
         CREATE TABLE IF NOT EXISTS scores_with_nulls
@@ -348,7 +374,7 @@ class Scores(Base):
     __table_args__ = {"extend_existing": True}
 
 
-Scores2 = Table("scores", Base.metadata, autoload=True, autoload_with=oven.engine)
+DataTypesTable = Table("datatypes", Base.metadata, autoload=True, autoload_with=oven.engine)
 
 
 class ScoresWithNulls(Base):

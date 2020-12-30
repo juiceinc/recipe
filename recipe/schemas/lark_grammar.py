@@ -1,3 +1,5 @@
+from sqlalchemy.sql.sqltypes import Numeric
+from tests.test_base import DataTypesTable
 import dateparser
 import dateparser
 from dateutil.relativedelta import relativedelta
@@ -51,31 +53,43 @@ def gather_columns(columns, prefix, additions=None):
 def make_grammar_for_table(selectable):
     """Build a dict of usable columns and a grammar for this selectable """
 
+    print("Making grammar\n"*20)
+    # selectable = DataTypesTable
+    print(list(selectable.columns))
     columns = {}
 
     type_counter = defaultdict(int)
-    sqlalchemy_type_lookup = {
-        String: "str",
-        Boolean: "bool",
-        Date: "date",
-        DateTime: "datetime",
-        Integer: "num",
-        Float: "num",
-    }
 
     for c in selectable.columns:
-        prefix = sqlalchemy_type_lookup.get(type(c.type), "unusable")
+        print(c.type, type(c.type))
+        if isinstance(c.type, String):
+            prefix = "str"
+        elif isinstance(c.type, Date):
+            prefix = "date"
+        elif isinstance(c.type, DateTime):
+            prefix = "datetime"
+        elif isinstance(c.type, Integer):
+            prefix = "num"
+        elif isinstance(c.type, Numeric):
+            prefix = "num"
+        elif isinstance(c.type, Boolean):
+            prefix = "bool"
+        else:
+            prefix = "unusable"
         cnt = type_counter[prefix]
         type_counter[prefix] += 1
         columns[f"{prefix}_{cnt}"] = c
 
+    print("columns is ", columns)
+
     grammar = f"""
-    col: boolean | string | num | date | unknown_col | error_math | error_vector_expr | error_not_nonboolean
+    col: boolean | string | num | date | datetime | unknown_col | error_math | error_vector_expr | error_not_nonboolean
 
     // These are the raw columns in the selectable
     {make_columns(columns)}
 
     date.1: {gather_columns(columns, "date", ["date_conv"])}
+    datetime.1: {gather_columns(columns, "datetime", ["datetime_conv"])}
     boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean"])}
     string_add: string "+" string                -> add
     string.1: {gather_columns(columns, "str", ["ESCAPED_STRING", "string_add"])}
@@ -123,6 +137,7 @@ def make_grammar_for_table(selectable):
     
     // Date
     date_conv: /date/i "(" ESCAPED_STRING ")"
+    datetime_conv: /date/i "(" ESCAPED_STRING ")"
 
     TRUE: /TRUE/i
     FALSE: /FALSE/i
@@ -212,9 +227,11 @@ class ErrorVisitor(Visitor):
     def vector_expr(self, tree):
         val, comp, arr = tree.children
         # If the left hand side is a number or string primitive
-        if isinstance(val.children[0], Token) and val.children[0].type in ("NUMBER", "ESCAPED_STRING"):
+        if isinstance(val.children[0], Token) and val.children[0].type in (
+            "NUMBER",
+            "ESCAPED_STRING",
+        ):
             self._add_error(f"Must be a column or expression", val)
-
 
     def bool_expr(self, tree):
         """ a > b where the types of a and b don't match """
@@ -295,7 +312,7 @@ class TransformToSQLAlchemyExpression(Transformer):
     def num_mul(self, a, b):
         return a * b
 
-    # Booleans
+    # Dates and datetimes
 
     def date(self, v):
         if isinstance(v, Tree):
@@ -303,12 +320,23 @@ class TransformToSQLAlchemyExpression(Transformer):
         else:
             return v
 
+    def datetime(self, v):
+        if isinstance(v, Tree):
+            return self.columns[v.data]
+        else:
+            return v
+
     def date_conv(self, _, datestr):
-        print(datestr, type(datestr))
         dt = dateparser.parse(datestr)
         if dt:
             dt = dt.date()
         else:
+            raise GrammarError(f"Can't convert '{datestr}' to a date.")
+        return dt
+
+    def datetime_conv(self, _, datestr):
+        dt = dateparser.parse(datestr)
+        if dt is None:
             raise GrammarError(f"Can't convert '{datestr}' to a date.")
         return dt
 
