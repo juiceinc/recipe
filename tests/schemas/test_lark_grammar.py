@@ -65,7 +65,7 @@ class TestScores2(TestCase):
         [score] IS NULL                 -> scores.score IS NULL
         [score] != Null                 -> scores.score IS NOT NULL
         [score] <> Null                 -> scores.score IS NOT NULL
-        [score] IS NOT nULL                 -> scores.score IS NOT NULL
+        [score] IS NOT nULL             -> scores.score IS NOT NULL
         """
 
         b = Builder(Scores2)
