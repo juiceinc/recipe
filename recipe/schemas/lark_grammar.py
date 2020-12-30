@@ -1,3 +1,7 @@
+import dateparser
+import dateparser
+from dateutil.relativedelta import relativedelta
+from datetime import datetime, date
 from lark import Lark, Transformer, Visitor, v_args, GrammarError, Tree
 from lark.lexer import Token
 from lark.visitors import inline_args
@@ -14,21 +18,11 @@ from sqlalchemy import (
     and_,
     or_,
 )
-from tests.test_base import Scores2
 from collections import defaultdict
-
-boolean_columns = "bool_a bool_b".split()
-string_columns = "str_a str_b".split()
-number_columns = "num_a num_b".split()
-data_columns = "date_a"
-columns = boolean_columns + string_columns + number_columns
 
 
 def convert(lst):
     return ["\[" + v + "\]" for v in lst]
-
-
-from tests.test_base import Scores2
 
 
 def make_columns(columns):
@@ -76,11 +70,12 @@ def make_grammar_for_table(selectable):
         columns[f"{prefix}_{cnt}"] = c
 
     grammar = f"""
-    col: boolean | string | num | unknown_col | error_math | error_vector_expr | error_not_nonboolean
+    col: boolean | string | num | date | unknown_col | error_math | error_vector_expr | error_not_nonboolean
 
     // These are the raw columns in the selectable
     {make_columns(columns)}
 
+    date.1: {gather_columns(columns, "date", ["date_conv"])}
     boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean"])}
     string_add: string "+" string                -> add
     string.1: {gather_columns(columns, "str", ["ESCAPED_STRING", "string_add"])}
@@ -126,6 +121,9 @@ def make_grammar_for_table(selectable):
     stringarray.1: "(" [ESCAPED_STRING ("," ESCAPED_STRING)*] ","? ")"  -> consistent_array
     numarray.1: "(" [NUMBER ("," NUMBER)*] ","?  ")"                    -> consistent_array
     
+    // Date
+    date_conv: /date/i "(" ESCAPED_STRING ")"
+
     TRUE: /TRUE/i
     FALSE: /FALSE/i
     OR: /OR/i
@@ -135,6 +133,8 @@ def make_grammar_for_table(selectable):
     IS: /IS/i
     BETWEEN: /BETWEEN/i
     NULL: /NULL/i
+    INTELLIGENT_DATE_OFFSET: /prior/i | /last/i | /previous/i | /current/i | /this/i | /next/i
+    INTELLIGENT_DATE_UNITS: /ytd/i | /year/i | /qtr/i | /month/i | /mtd/i | /day/i
     COMMENT: /#.*/
 
     %import common.CNAME                       -> NAME
@@ -144,6 +144,7 @@ def make_grammar_for_table(selectable):
     %ignore COMMENT
     %ignore WS_INLINE
 """
+
     print(grammar)
     return columns, grammar
 
@@ -296,6 +297,23 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     # Booleans
 
+    def date(self, v):
+        if isinstance(v, Tree):
+            return self.columns[v.data]
+        else:
+            return v
+
+    def date_conv(self, _, datestr):
+        print(datestr, type(datestr))
+        dt = dateparser.parse(datestr)
+        if dt:
+            dt = dt.date()
+        else:
+            raise GrammarError(f"Can't convert '{datestr}' to a date.")
+        return dt
+
+    # Booleans
+
     def and_boolean(self, left_boolean, AND, right_boolean):
         return and_(left_boolean, right_boolean)
 
@@ -346,10 +364,10 @@ class TransformToSQLAlchemyExpression(Transformer):
         return self.comparator(comp)
 
     def between_expr(self, col, between, left, AND, right):
-        return col.between(left, right)
-        print("BETWEEEN\n"*20)
-        print(len(args))
-        print(args)
+        if hasattr(left, "between"):
+            return col.between(left, right)
+        else:
+            self._raise_error("This value must be a column or column expression")
 
     def vector_expr(self, left, vector_comparator, num_or_str_array):
         if hasattr(left, vector_comparator):
@@ -364,7 +382,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         20 > score => score < 20
         """
         # If the left is a primitive, try to swap the sides
-        if isinstance(left, (str, int, float, bool)):
+        if isinstance(left, (str, int, float, bool, date, datetime)):
             swap_comp = {
                 "__gt__": "__lt__",
                 "__lt__": "__gt__",

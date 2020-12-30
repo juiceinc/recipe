@@ -209,7 +209,7 @@ def calc_date_range(offset, units, dt):
     Args:
 
         offset: An offset
-            current|this options for the current period
+            current|this are options for the current period
             prior|previous|last options for the previous period
             next options the next period
         units: The kind of date range to create
