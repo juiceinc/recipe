@@ -2,7 +2,19 @@ import enum
 from lark import Lark, Transformer, Visitor, v_args, UnexpectedInput, Tree
 from lark.lexer import Token
 from lark.visitors import inline_args
-from sqlalchemy import String, Float, Date, DateTime, Boolean, Integer, case, inspection, not_, and_, or_
+from sqlalchemy import (
+    String,
+    Float,
+    Date,
+    DateTime,
+    Boolean,
+    Integer,
+    case,
+    inspection,
+    not_,
+    and_,
+    or_,
+)
 from tests.test_base import Scores2
 from collections import defaultdict
 
