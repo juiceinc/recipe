@@ -97,8 +97,9 @@ def make_grammar_for_table(selectable):
     not_boolean.4: NOT boolean
     and_boolean.3: boolean AND boolean
     or_boolean.2: boolean OR boolean
-    bool_expr: col comparator col
+    bool_expr: col comparator col | col null_comparator NULL
     comparator: EQ | NE | LT | LTE | GT | GTE
+    null_comparator: EQ | NE
     EQ: "="
     NE: "!=" | "<>"
     LT: "<"
@@ -289,6 +290,9 @@ class TransformToSQLAlchemyExpression(Transformer):
         }
         return comparators.get(str(comp))
 
+    def null_comparator(self, comp):
+        return self.comparator(comp)
+
     def vector_expr(self, left, vector_comparator, num_or_str_array):
         if hasattr(left, vector_comparator):
             return getattr(left, vector_comparator)(num_or_str_array)
@@ -301,6 +305,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         If left is a primitive, swap the order:
         20 > score => score < 20
         """
+        print(left, comparator, right)
         # If the left is a primitive, try to swap the sides
         if isinstance(left, (str, int, float, bool)):
             swap_comp = {
@@ -311,6 +316,13 @@ class TransformToSQLAlchemyExpression(Transformer):
             }
             comparator = swap_comp.get(comparator, comparator)
             left, right = right, left
+
+        if right is None and comparator in ("__eq__", "__ne__"):
+            is_comp = {
+                "__eq__": "is_",
+                "__ne__": "isnot",
+            }
+            comparator = is_comp.get(comparator, comparator)
 
         # TODO: Convert the right into a type compatible with the left
         # right = convert_value(left, right)

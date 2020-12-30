@@ -60,6 +60,9 @@ class TestScores2(TestCase):
         2.0 <= [score]                  -> scores.score >= 2.0
         NOT [score] >= 2.0              -> scores.score < 2.0
         NOT 2.0 <= [score]              -> scores.score < 2.0
+        [score] > 3 AND true                                  -> scores.score > 3
+        [score] = Null                  -> scores.score IS NULL
+        [score] != Null                 -> scores.score IS NOT NULL
         """
 
         b = Builder(Scores2)
