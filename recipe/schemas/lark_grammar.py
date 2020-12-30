@@ -111,7 +111,7 @@ def make_grammar_for_table(selectable):
     or_boolean.2: boolean OR boolean
     bool_expr: col comparator col | col null_comparator NULL
     comparator: EQ | NE | LT | LTE | GT | GTE
-    null_comparator: EQ | NE
+    null_comparator: EQ | NE | IS | IS NOT
     EQ: "="
     NE: "!=" | "<>"
     LT: "<"
@@ -262,6 +262,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return v
 
     # Booleans
+
     def and_boolean(self, left_boolean, AND, right_boolean):
         return and_(left_boolean, right_boolean)
 
@@ -299,10 +300,16 @@ class TransformToSQLAlchemyExpression(Transformer):
             "<>": "__ne__",
             "<": "__lt__",
             "<=": "__le__",
+            "IS": "__eq__",
+            "ISNOT": "__ne__",
         }
-        return comparators.get(str(comp))
+        return comparators.get(str(comp).upper())
 
-    def null_comparator(self, comp):
+    def null_comparator(self, *args):
+        if len(args) == 1:
+            comp = args[0]
+        elif len(args) == 2:
+            comp = "ISNOT"
         return self.comparator(comp)
 
     def vector_expr(self, left, vector_comparator, num_or_str_array):
@@ -317,7 +324,6 @@ class TransformToSQLAlchemyExpression(Transformer):
         If left is a primitive, swap the order:
         20 > score => score < 20
         """
-        print(left, comparator, right)
         # If the left is a primitive, try to swap the sides
         if isinstance(left, (str, int, float, bool)):
             swap_comp = {

@@ -62,7 +62,10 @@ class TestScores2(TestCase):
         NOT 2.0 <= [score]              -> scores.score < 2.0
         [score] > 3 AND true                                  -> scores.score > 3
         [score] = Null                  -> scores.score IS NULL
+        [score] IS NULL                 -> scores.score IS NULL
         [score] != Null                 -> scores.score IS NOT NULL
+        [score] <> Null                 -> scores.score IS NOT NULL
+        [score] IS NOT nULL                 -> scores.score IS NOT NULL
         """
 
         b = Builder(Scores2)
@@ -79,8 +82,10 @@ class TestScores2(TestCase):
         [score] In (1,2,   3.0)           -> scores.score IN (1, 2, 3.0)
         [score] In (1)                    -> scores.score IN (1)
         NOT [score] In (1)                -> scores.score NOT IN (1)
-        NOT NOT [score] In (1)                -> scores.score IN (1)
+        NOT NOT [score] In (1)            -> scores.score IN (1)
         [department] In ("A", "B")        -> scores.department IN ('A', 'B')
+        [department] In ("A", "B",)       -> scores.department IN ('A', 'B')
+        [department] iN  (  "A",    "B" ) -> scores.department IN ('A', 'B')
         [department] In ("A",)            -> scores.department IN ('A')
         [department] In ("A")             -> scores.department IN ('A')
         [department] + [username] In ("A", "B")        -> scores.department || scores.username IN ('A', 'B')
