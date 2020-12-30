@@ -118,6 +118,9 @@ class TestScores2(TestCase):
         [score] > 3 AND [score] < 5 OR [score] = 4 AND [score] = 3 -> scores.score > 3 AND scores.score < 5 OR scores.score = 4 AND scores.score = 3
         [score] > 3 AND ([score] < 5 OR [score] = 4) AND [score] = 3 -> scores.score > 3 AND (scores.score < 5 OR scores.score = 4) AND scores.score = 3
         [score] between 1 and 3                               -> scores.score BETWEEN 1 AND 3
+        [score] between [score] and [score]                   -> scores.score BETWEEN scores.score AND scores.score
+        [username] between "a" and "z"                        -> scores.username BETWEEN 'a' AND 'z'
+        [username] between [department] and "z"               -> scores.username BETWEEN scores.department AND 'z'
         """
 
         b = Builder(Scores2)
