@@ -12,6 +12,7 @@ def to_sql(expr):
     """Utility to print sql for a expression """
     return str(expr.compile(compile_kwargs={"literal_binds": True}))
 
+
 class TestBase(TestCase):
     maxDiff = None
 
@@ -263,11 +264,13 @@ NOT [department]
                 print("===" * 10)
             self.assertEqual(str(e.exception), expected_error)
 
+
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from dateparser import parse
-class TestDataTypesTableNew(TestBase):
 
+
+class TestDataTypesTableNew(TestBase):
     @freeze_time("2020-01-14 09:21:34", tz_offset=utc_offset)
     def test_dates(self):
         good_examples = f"""

@@ -374,7 +374,9 @@ class Scores(Base):
     __table_args__ = {"extend_existing": True}
 
 
-DataTypesTable = Table("datatypes", Base.metadata, autoload=True, autoload_with=oven.engine)
+DataTypesTable = Table(
+    "datatypes", Base.metadata, autoload=True, autoload_with=oven.engine
+)
 
 
 class ScoresWithNulls(Base):

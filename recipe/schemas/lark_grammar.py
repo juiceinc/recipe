@@ -21,9 +21,9 @@ from sqlalchemy import (
     or_,
 )
 from .utils import (
-    calc_date_range, 
-    convert_to_eod_datetime, 
-    convert_to_end_datetime, 
+    calc_date_range,
+    convert_to_eod_datetime,
+    convert_to_end_datetime,
     convert_to_start_datetime,
 )
 

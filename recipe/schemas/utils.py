@@ -202,6 +202,7 @@ def date_offset(dt, offset, **offset_params):
     else:
         raise ValueError("Unknown intelligent date offset")
 
+
 def convert_to_start_datetime(dt):
     """Convert a date or datetime to the first moment of the day """
     # Convert a date or datetime to the first moment of the day
@@ -224,7 +225,7 @@ def convert_to_eod_datetime(dt):
     only convert datetimes if they are the first moment of the day,"""
     if isinstance(dt, datetime):
         if dt.hour == 0 and dt.minute == 0 and dt.second == 0:
-            dt += relativedelta(days=1, microseconds=-1)    
+            dt += relativedelta(days=1, microseconds=-1)
     elif isinstance(dt, date):
         dt = datetime(dt.year, dt.month, dt.day)
         dt += relativedelta(days=1, microseconds=-1)
