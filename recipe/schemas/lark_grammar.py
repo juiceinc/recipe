@@ -78,13 +78,15 @@ def make_grammar_for_table(selectable):
         columns[f"{prefix}_{cnt}"] = c
 
     grammar = f"""
-    col: boolean | string | num | date | datetime | unknown_col | error_math | error_vector_expr | error_not_nonboolean
+    col: boolean | string | num | date | datetime_end | datetime | unknown_col | error_math | error_vector_expr | error_not_nonboolean
 
     // These are the raw columns in the selectable
     {make_columns(columns)}
 
     date.1: {gather_columns(columns, "date", ["date_conv"])}
-    datetime.1: {gather_columns(columns, "datetime", ["datetime_conv"])}
+    datetime.2: {gather_columns(columns, "datetime", ["datetime_conv"])}
+    // Datetimes that are converted to the end of day
+    datetime_end.1: {gather_columns(columns, "datetime", ["datetime_end_conv"])}
     boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean"])}
     string_add: string "+" string                -> add
     string.1: {gather_columns(columns, "str", ["ESCAPED_STRING", "string_add"])}
@@ -113,7 +115,7 @@ def make_grammar_for_table(selectable):
     not_boolean.4: NOT boolean
     and_boolean.3: boolean AND boolean
     or_boolean.2: boolean OR boolean
-    bool_expr: col comparator col | col null_comparator NULL
+    bool_expr: date comparator date | datetime comparator datetime | col comparator col | col null_comparator NULL
     comparator: EQ | NE | LT | LTE | GT | GTE
     null_comparator: EQ | NE | IS | IS NOT
     EQ: "="
@@ -124,15 +126,16 @@ def make_grammar_for_table(selectable):
     GTE: ">="
 
     // Boolean vector expressions like 'a in (array of constants)'
-    between_expr: string BETWEEN string AND string | num BETWEEN num AND num
+    between_expr: string BETWEEN string AND string | num BETWEEN num AND num | date BETWEEN date AND date | datetime BETWEEN datetime AND datetime_end
     vector_expr: string vector_comparator stringarray | num vector_comparator numarray
     vector_comparator.1: NOT? IN    
     stringarray.1: "(" [ESCAPED_STRING ("," ESCAPED_STRING)*] ","? ")"  -> consistent_array
     numarray.1: "(" [NUMBER ("," NUMBER)*] ","?  ")"                    -> consistent_array
     
     // Date
-    date_conv: /date/i "(" ESCAPED_STRING ")"
-    datetime_conv: /date/i "(" ESCAPED_STRING ")"
+    date_conv.3: /date/i "(" ESCAPED_STRING ")"
+    datetime_conv.2: /date/i "(" ESCAPED_STRING ")"
+    datetime_end_conv.1: /date/i "(" ESCAPED_STRING ")"
 
     TRUE: /TRUE/i
     FALSE: /FALSE/i
@@ -234,6 +237,10 @@ class ErrorVisitor(Visitor):
         if isinstance(left, Tree) and isinstance(right, Tree):
             tok1 = left.children[0]
             tok2 = right.children[0]
+            if right.data == left.data == "date":
+                return
+            if right.data == left.data == "datetime":
+                return
             if tok1.data != tok2.data:
                 self._add_error(f"Can't compare {tok1.data} to {tok2.data}", tree)
 
@@ -321,6 +328,12 @@ class TransformToSQLAlchemyExpression(Transformer):
         else:
             return v
 
+    def datetime_end(self, v):
+        if isinstance(v, Tree):
+            return self.columns[v.data]
+        else:
+            return v
+
     def date_conv(self, _, datestr):
         dt = dateparser.parse(datestr)
         if dt:
@@ -332,8 +345,22 @@ class TransformToSQLAlchemyExpression(Transformer):
     def datetime_conv(self, _, datestr):
         dt = dateparser.parse(datestr)
         if dt is None:
-            raise GrammarError(f"Can't convert '{datestr}' to a date.")
+            raise GrammarError(f"Can't convert '{datestr}' to a datetime.")
         return dt
+
+    def datetime_end_conv(self, _, datestr):
+        # Parse a datetime as the last moment of the given day
+        # if the date
+        dt = dateparser.parse(datestr)
+        if dt is None:
+            raise GrammarError(f"Can't convert '{datestr}' to a datetime.")
+        elif dt.hour == 0 and dt.minute == 0:
+            # Convert to the last moment of the day
+            dt += relativedelta(days=1, microseconds=-1)
+        return dt
+
+    def timedelta(self):
+        pass
 
     # Booleans
 
@@ -380,6 +407,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return comparators.get(str(comp).upper())
 
     def null_comparator(self, *args):
+        comp = "="
         if len(args) == 1:
             comp = args[0]
         elif len(args) == 2:

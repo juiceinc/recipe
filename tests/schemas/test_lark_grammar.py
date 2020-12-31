@@ -1,3 +1,4 @@
+from lark.parse_tree_builder import ExpandSingleChild
 from tests.test_base import DataTypesTable
 from recipe.schemas.lark_grammar import Builder
 from unittest import TestCase, skip
@@ -270,9 +271,12 @@ class TestDataTypesTableNew(TestBase):
         [test_date] > date("today")          -> datatypes.test_date > '{date.today()}'
         date("today") < [test_date]          -> datatypes.test_date > '{date.today()}'
         [test_date] > date("1 day ago")      -> datatypes.test_date > '{date.today()-relativedelta(days=1)}'
+        [test_date] > date("1 day")          -> datatypes.test_date > '{date.today()-relativedelta(days=1)}'
         [test_date] > date("1 days ago")      -> datatypes.test_date > '{date.today()-relativedelta(days=1)}'
-        [score] between 1 and 3                               -> datatypes.score BETWEEN 1 AND 3
-        #[test_date] > date("1 day from now")      -> datatypes.test_date > '{date.today()-relativedelta(days=1)}'
+        # This works but tests can fail due to milliseconds
+        [test_datetime] > date("1 days ago")      ->startswith datatypes.test_datetime > '{str(datetime.now()-relativedelta(days=1)).split(":")[0]}
+        [test_date] between date("2020-01-01") and date("2020-01-30")      -> datatypes.test_date BETWEEN '2020-01-01' AND '2020-01-30'
+        [test_datetime] between date("2020-01-01") and date("2020-01-30")      -> datatypes.test_datetime BETWEEN '2020-01-01 00:00:00' AND '2020-01-30 23:59:59.999999'
         """
 
         b = Builder(DataTypesTable)
@@ -280,7 +284,12 @@ class TestDataTypesTableNew(TestBase):
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")
             expr = b.parse(field, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            if expected_sql.startswith('startswith'):
+                _, expected_sql = expected_sql.split(" ", 1)
+                print(to_sql(expr).startswith(expected_sql))
+                self.assertTrue(to_sql(expr).startswith(expected_sql))
+            else:
+                self.assertEqual(to_sql(expr), expected_sql)
 
     # @skip
     def test_failure(self):
