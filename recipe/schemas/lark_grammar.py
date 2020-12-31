@@ -19,6 +19,8 @@ from sqlalchemy import (
     not_,
     and_,
     or_,
+    func,
+    text,
 )
 from .utils import (
     calc_date_range,
@@ -92,7 +94,7 @@ def make_grammar_for_table(selectable):
     {make_columns(columns)}
 
     {gather_columns("unusable_col", columns, "unusable", [])}
-    {gather_columns("date.1", columns, "date", ["date_conv"])}
+    {gather_columns("date.1", columns, "date", ["date_conv", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "datetime_to_date_conv"])}
     {gather_columns("datetime.2", columns, "datetime", ["datetime_conv"])}
     // Datetimes that are converted to the end of day
     {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv"])}
@@ -146,8 +148,23 @@ def make_grammar_for_table(selectable):
     
     // Date
     date_conv.3: /date/i "(" ESCAPED_STRING ")"
+    datetime_to_date_conv.3: /date/i "(" datetime ")"  -> day_conv
     datetime_conv.2: /date/i "(" ESCAPED_STRING ")"
     datetime_end_conv.1: /date/i "(" ESCAPED_STRING ")"
+
+    // Conversions
+    // date->date
+    day_conv: /day/i "(" (date | datetime) ")"
+    week_conv: /week/i "(" (date | datetime) ")"
+    month_conv: /month/i "(" (date | datetime) ")"
+    quarter_conv: /quarter/i "(" (date | datetime) ")"
+    year_conv: /year/i "(" (date | datetime) ")"
+    // col->string
+    string_conv: /string/i "(" col ")"
+    // col->int
+    int_conv: /int/i "(" col ")"
+    // date->int
+    age_conv: /age/i "(" (date | datetime) ")"
 
     TRUE: /TRUE/i
     FALSE: /FALSE/i
@@ -344,6 +361,7 @@ class TransformToSQLAlchemyExpression(Transformer):
             return v
 
     def boolean(self, v):
+        print("a bool", v, type(v))
         if isinstance(v, Tree):
             return self.columns[v.data]
         else:
@@ -392,6 +410,43 @@ class TransformToSQLAlchemyExpression(Transformer):
         if dt is None:
             raise GrammarError(f"Can't convert '{datestr}' to a datetime.")
         return dt
+
+    def day_conv(self, _, fld):
+        """Truncate to mondays """
+        if self.drivername == "bigquery":
+            return func.date_trunc(fld, text("day"))
+        else:
+            # Postgres + redshift
+            return func.date_trunc("day", fld)
+
+    def week_conv(self, _, fld):
+        """Truncate to mondays """
+        if self.drivername == "bigquery":
+            return func.date_trunc(fld, text("week(monday)"))
+        else:
+            # Postgres + redshift
+            return func.date_trunc("week", fld)
+
+    def month_conv(self, _, fld):
+        if self.drivername == "bigquery":
+            return func.date_trunc(fld, text("month"))
+        else:
+            # Postgres + redshift
+            return func.date_trunc("month", fld)
+
+    def quarter_conv(self, _, fld):
+        if self.drivername == "bigquery":
+            return func.date_trunc(fld, text("quarter"))
+        else:
+            # Postgres + redshift
+            return func.date_trunc("quarter", fld)
+
+    def year_conv(self, _, fld):
+        if self.drivername == "bigquery":
+            return func.date_trunc(fld, text("year"))
+        else:
+            # Postgres + redshift
+            return func.date_trunc("year", fld)
 
     def datetime_end_conv(self, _, datestr):
         # Parse a datetime as the last moment of the given day
@@ -499,8 +554,6 @@ class TransformToSQLAlchemyExpression(Transformer):
             }
             comparator = is_comp.get(comparator, comparator)
 
-        # TODO: Convert the right into a type compatible with the left
-        # right = convert_value(left, right)
         return getattr(left, comparator)(right)
 
     # Constants

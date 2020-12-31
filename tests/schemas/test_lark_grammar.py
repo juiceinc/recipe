@@ -113,6 +113,40 @@ class TestDataTypesTable(TestBase):
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
+    def test_no_brackets(self):
+        """Brackets are optional around field names"""
+
+        good_examples = """
+        score                         -> datatypes.score
+        ScORE                         -> datatypes.score
+        ScORE + ScORE                 -> datatypes.score + datatypes.score
+        score + 2.0                   -> datatypes.score + 2.0
+        username + department         -> datatypes.username || datatypes.department
+        "foo" + department            -> 'foo' || datatypes.department
+        1.0 + score                   -> 1.0 + datatypes.score
+        1.0 + score + score           -> 1.0 + datatypes.score + datatypes.score
+        -0.1 * score + 600            -> -0.1 * datatypes.score + 600
+        -0.1 * score + 600.0          -> -0.1 * datatypes.score + 600.0
+        score = score                 -> datatypes.score = datatypes.score
+        score >= 2.0                  -> datatypes.score >= 2.0
+        2.0 <= score                  -> datatypes.score >= 2.0
+        NOT score >= 2.0              -> datatypes.score < 2.0
+        NOT 2.0 <= score              -> datatypes.score < 2.0
+        score > 3 AND true            -> datatypes.score > 3
+        score = Null                  -> datatypes.score IS NULL
+        score IS NULL                 -> datatypes.score IS NULL
+        score != Null                 -> datatypes.score IS NOT NULL
+        score <> Null                 -> datatypes.score IS NOT NULL
+        score IS NOT nULL             -> datatypes.score IS NOT NULL
+        """
+
+        b = Builder(DataTypesTable)
+
+        for field, expected_sql in self.examples(good_examples):
+            print(f"\nInput: {field}")
+            expr = b.parse(field, debug=True)
+            self.assertEqual(to_sql(expr), expected_sql)
+
     # @skip
     def test_arrays(self):
         good_examples = """
@@ -291,6 +325,26 @@ class TestDataTypesTableDates(TestBase):
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
+    def test_dates_without_freetime(self):
+        # Can't tests with date conversions and freeze time :/
+        good_examples = f"""
+        month([test_date]) > date("2020-12-30")          -> date_trunc('month', datatypes.test_date) > '2020-12-30'
+        month([test_datetime]) > date("2020-12-30")      -> date_trunc('month', datatypes.test_datetime) > '2020-12-30'
+        date("2020-12-30") < month([test_datetime])      -> date_trunc('month', datatypes.test_datetime) > '2020-12-30'
+        day([test_date]) > date("2020-12-30")            -> date_trunc('day', datatypes.test_date) > '2020-12-30'
+        week([test_date]) > date("2020-12-30")           -> date_trunc('week', datatypes.test_date) > '2020-12-30'
+        quarter([test_date]) > date("2020-12-30")        -> date_trunc('quarter', datatypes.test_date) > '2020-12-30'
+        year([test_date]) > date("2020-12-30")           -> date_trunc('year', datatypes.test_date) > '2020-12-30'
+        date([test_datetime])                            -> date_trunc('day', datatypes.test_datetime)
+        """
+
+        b = Builder(DataTypesTable)
+
+        for field, expected_sql in self.examples(good_examples):
+            print(f"\nInput: {field}")
+            expr = b.parse(field, debug=True)
+            self.assertEqual(to_sql(expr), expected_sql)
+
     # @skip
     def test_failure(self):
         """These examples should all fail"""
@@ -302,6 +356,11 @@ Can't convert '1 day from now' to a date.
 [test_date] between date("2020-01-01") and 7
 When using between, the column (date) and between values (date, num) must be the same data type.
 [test_date] between date("2020-01-01") an
+ ^
+
+[test_date] between "potato" and date("2020-01-01")
+When using between, the column (date) and between values (string, date) must be the same data type.
+[test_date] between "potato" and date("20
  ^
 """
 
