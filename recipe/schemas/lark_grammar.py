@@ -1,6 +1,4 @@
-from io import RawIOBase
 from sqlalchemy.sql.sqltypes import Numeric
-from tests.test_base import DataTypesTable
 import dateparser
 import dateparser
 from dateutil.relativedelta import relativedelta
@@ -22,6 +20,13 @@ from sqlalchemy import (
     and_,
     or_,
 )
+from .utils import (
+    calc_date_range, 
+    convert_to_eod_datetime, 
+    convert_to_end_datetime, 
+    convert_to_start_datetime,
+)
+
 from collections import defaultdict
 
 
@@ -52,7 +57,7 @@ def gather_columns(rule_name, columns, prefix, additions=None):
     if matching_keys + additions:
         return f"{rule_name}: " + " | ".join(matching_keys + additions)
     else:
-        return f"{rule_name}: \"DUMMYVALUNUSABLECOL\""
+        return f'{rule_name}: "DUMMYVALUNUSABLECOL"'
 
 
 def make_grammar_for_table(selectable):
@@ -91,7 +96,7 @@ def make_grammar_for_table(selectable):
     {gather_columns("datetime.2", columns, "datetime", ["datetime_conv"])}
     // Datetimes that are converted to the end of day
     {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv"])}
-    {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean"])}
+    {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
     {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add"])}
     {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div"])}
     string_add: string "+" string                -> add
@@ -130,6 +135,8 @@ def make_grammar_for_table(selectable):
     GTE: ">="
 
     // Boolean vector expressions like 'a in (array of constants)'
+    intelligent_date_expr: date IS INTELLIGENT_DATE_OFFSET INTELLIGENT_DATE_UNITS
+    intelligent_datetime_expr: datetime IS INTELLIGENT_DATE_OFFSET INTELLIGENT_DATE_UNITS
     between_expr: string BETWEEN string AND string | num BETWEEN num AND num | date BETWEEN date AND date | datetime BETWEEN datetime AND datetime_end
     vector_expr: string vector_comparator stringarray | num vector_comparator numarray
     vector_comparator.1: NOT? IN    
@@ -222,7 +229,10 @@ class ErrorVisitor(Visitor):
     def unusable_col(self, tree):
         """Column name isn't a data type we can handle """
         tok1 = tree.children[0]
-        self._add_error(f"{tok1} is a data type that can't be used. Usable data types are strings, numbers, boolean, dates, and datetimes", tree)
+        self._add_error(
+            f"{tok1} is a data type that can't be used. Usable data types are strings, numbers, boolean, dates, and datetimes",
+            tree,
+        )
 
     def error_not_nonboolean(self, tree):
         """NOT string or NOT num """
@@ -364,10 +374,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         dt = dateparser.parse(datestr)
         if dt is None:
             raise GrammarError(f"Can't convert '{datestr}' to a datetime.")
-        elif dt.hour == 0 and dt.minute == 0:
-            # Convert to the last moment of the day
-            dt += relativedelta(days=1, microseconds=-1)
-        return dt
+        return convert_to_eod_datetime(dt)
 
     def timedelta(self):
         pass
@@ -426,6 +433,16 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def between_expr(self, col, BETWEEN, left, AND, right):
         return between(col, left, right)
+
+    def intelligent_date_expr(self, datecol, IS, offset, units):
+        start, end = calc_date_range(offset, units, date.today())
+        return between(datecol, start, end)
+
+    def intelligent_datetime_expr(self, datetimecol, IS, offset, units):
+        start, end = calc_date_range(offset, units, date.today())
+        start = convert_to_start_datetime(start)
+        end = convert_to_end_datetime(end)
+        return between(datetimecol, start, end)
 
     def vector_expr(self, left, vector_comparator, num_or_str_array):
         if hasattr(left, vector_comparator):

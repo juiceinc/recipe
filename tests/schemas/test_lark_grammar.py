@@ -41,6 +41,7 @@ class TestBase(TestCase):
             yield field, expected_error
 
 
+@skip
 class TestDataTypesTable(TestBase):
     maxDiff = None
 
@@ -250,7 +251,7 @@ NOT [department]
 
         b = Builder(DataTypesTable)
 
-        for field, expected_error in self.bad_examples(bad_examples):
+        for field, expected_error in self.bad_aexamples(bad_examples):
             with self.assertRaises(Exception) as e:
                 b.parse(field, debug=True)
             if str(e.exception) != expected_error:
@@ -277,6 +278,8 @@ class TestDataTypesTableNew(TestBase):
         [test_datetime] > date("1 days ago")      ->startswith datatypes.test_datetime > '{str(datetime.now()-relativedelta(days=1)).split(":")[0]}
         [test_date] between date("2020-01-01") and date("2020-01-30")      -> datatypes.test_date BETWEEN '2020-01-01' AND '2020-01-30'
         [test_datetime] between date("2020-01-01") and date("2020-01-30")      -> datatypes.test_datetime BETWEEN '2020-01-01 00:00:00' AND '2020-01-30 23:59:59.999999'
+        [test_date] IS last year              -> datatypes.test_date BETWEEN '2019-01-01' AND '2019-12-31'
+        [test_datetime] IS last year          -> datatypes.test_datetime BETWEEN '2019-01-01 00:00:00' AND '2019-12-31 23:59:59.999999'
         """
 
         b = Builder(DataTypesTable)
