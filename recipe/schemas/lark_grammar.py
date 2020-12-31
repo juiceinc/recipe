@@ -199,10 +199,10 @@ class ErrorVisitor(Visitor):
         self.text = text
         self.allow_aggregations = True
         self.errors = []
-        
+
     def data_type(self, tree):
         # Find the data type for a tree
-        if tree.data == 'col':
+        if tree.data == "col":
             dt = self.data_type(tree.children[0])
         else:
             dt = tree.data
@@ -291,7 +291,10 @@ class ErrorVisitor(Visitor):
             if right_type == "date":
                 right_type = "datetime"
         if not (col_type == left_type == right_type):
-            self._add_error(f"When using between, the column ({col_type}) and between values ({left_type}, {right_type}) must be the same data type.", tree)
+            self._add_error(
+                f"When using between, the column ({col_type}) and between values ({left_type}, {right_type}) must be the same data type.",
+                tree,
+            )
 
     def bool_expr(self, tree):
         """ a > b where the types of a and b don't match """
