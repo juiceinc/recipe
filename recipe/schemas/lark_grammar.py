@@ -33,23 +33,26 @@ def make_columns(columns):
     """Return a lark string that looks like
 
     // These are my raw columns
-    str_0: "[" + /username/i + "]"
-    str_1: "[" + /department/i + "]"
-    str_2: "[" + /testid/i + "]"
+    str_0: "[" + /username/i + "]" | /username/i
+    str_1: "[" + /department/i + "]" | /department/i
+    str_2: "[" + /testid/i + "]" | /testid/i
     """
     items = []
     for k in sorted(columns.keys()):
         c = columns[k]
-        items.append(f'    {k}: "[" + /{c.name}/i + "]"')
+        items.append(f'    {k}: "[" + /{c.name}/i + "]" | /{c.name}/i')
     return "\n".join(items).lstrip()
 
 
-def gather_columns(columns, prefix, additions=None):
+def gather_columns(rule_name, columns, prefix, additions=None):
     """Build a list of all columns matching a prefix allong with potential addition """
     if additions is None:
         additions = []
     matching_keys = [k for k in sorted(columns.keys()) if k.startswith(prefix + "_")]
-    return " | ".join(matching_keys + additions)
+    if matching_keys + additions:
+        return f"{rule_name}: " + " | ".join(matching_keys + additions)
+    else:
+        return f"{rule_name}: \"DUMMYVALUNUSABLECOL\""
 
 
 def make_grammar_for_table(selectable):
@@ -78,23 +81,24 @@ def make_grammar_for_table(selectable):
         columns[f"{prefix}_{cnt}"] = c
 
     grammar = f"""
-    col: boolean | string | num | date | datetime_end | datetime | unknown_col | error_math | error_vector_expr | error_not_nonboolean
+    col: boolean | string | num | date | datetime_end | datetime | unusable_col | unknown_col | error_math | error_vector_expr | error_not_nonboolean
 
     // These are the raw columns in the selectable
     {make_columns(columns)}
 
-    date.1: {gather_columns(columns, "date", ["date_conv"])}
-    datetime.2: {gather_columns(columns, "datetime", ["datetime_conv"])}
+    {gather_columns("unusable_col", columns, "unusable", [])}
+    {gather_columns("date.1", columns, "date", ["date_conv"])}
+    {gather_columns("datetime.2", columns, "datetime", ["datetime_conv"])}
     // Datetimes that are converted to the end of day
-    datetime_end.1: {gather_columns(columns, "datetime", ["datetime_end_conv"])}
-    boolean.1: {gather_columns(columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean"])}
+    {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv"])}
+    {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean"])}
+    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add"])}
+    {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div"])}
     string_add: string "+" string                -> add
-    string.1: {gather_columns(columns, "str", ["ESCAPED_STRING", "string_add"])}
     num_add.1: num "+" num                       -> add
     num_sub.1: num "-" num
     num_mul.1: num "*" num
     num_div.1: num "/" num
-    num.1: {gather_columns(columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div"])}
     add: col "+" col
 
     // Various error conditions (fields we don't recognize, bad math)
@@ -168,6 +172,7 @@ class ErrorVisitor(Visitor):
     def __init__(self, text):
         super().__init__()
         self.text = text
+        self.allow_aggregations = True
         self.errors = []
 
     def _add_error(self, message, tree):
@@ -213,6 +218,11 @@ class ErrorVisitor(Visitor):
         """Column name doesn't exist in the data """
         tok1 = tree.children[0]
         self._add_error(f"{tok1} is not a valid column name", tree)
+
+    def unusable_col(self, tree):
+        """Column name isn't a data type we can handle """
+        tok1 = tree.children[0]
+        self._add_error(f"{tok1} is a data type that can't be used. Usable data types are strings, numbers, boolean, dates, and datetimes", tree)
 
     def error_not_nonboolean(self, tree):
         """NOT string or NOT num """
