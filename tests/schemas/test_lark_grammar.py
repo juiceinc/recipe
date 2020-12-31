@@ -1,7 +1,11 @@
 from lark.parse_tree_builder import ExpandSingleChild
 from tests.test_base import DataTypesTable
 from recipe.schemas.lark_grammar import Builder
+from freezegun import freeze_time
 from unittest import TestCase, skip
+import time
+
+utc_offset = -1 * time.localtime().tm_gmtoff / 3600.0
 
 
 def to_sql(expr):
@@ -41,7 +45,6 @@ class TestBase(TestCase):
             yield field, expected_error
 
 
-@skip
 class TestDataTypesTable(TestBase):
     maxDiff = None
 
@@ -94,7 +97,7 @@ class TestDataTypesTable(TestBase):
         2.0 <= [score]                  -> datatypes.score >= 2.0
         NOT [score] >= 2.0              -> datatypes.score < 2.0
         NOT 2.0 <= [score]              -> datatypes.score < 2.0
-        [score] > 3 AND true                                  -> datatypes.score > 3
+        [score] > 3 AND true            -> datatypes.score > 3
         [score] = Null                  -> datatypes.score IS NULL
         [score] IS NULL                 -> datatypes.score IS NULL
         [score] != Null                 -> datatypes.score IS NOT NULL
@@ -265,21 +268,23 @@ from dateutil.relativedelta import relativedelta
 from dateparser import parse
 class TestDataTypesTableNew(TestBase):
 
+    @freeze_time("2020-01-14 09:21:34", tz_offset=utc_offset)
     def test_dates(self):
         good_examples = f"""
         [test_date]           -> datatypes.test_date
         [test_date] > date("2020-01-01")     -> datatypes.test_date > '2020-01-01'
-        [test_date] > date("today")          -> datatypes.test_date > '{date.today()}'
-        date("today") < [test_date]          -> datatypes.test_date > '{date.today()}'
-        [test_date] > date("1 day ago")      -> datatypes.test_date > '{date.today()-relativedelta(days=1)}'
-        [test_date] > date("1 day")          -> datatypes.test_date > '{date.today()-relativedelta(days=1)}'
-        [test_date] > date("1 days ago")      -> datatypes.test_date > '{date.today()-relativedelta(days=1)}'
+        [test_date] > date("today")          -> datatypes.test_date > '2020-01-14'
+        date("today") < [test_date]          -> datatypes.test_date > '2020-01-14'
+        [test_date] > date("1 day ago")      -> datatypes.test_date > '2020-01-13'
+        [test_date] > date("1 day")          -> datatypes.test_date > '2020-01-13'
+        [test_date] > date("1 days ago")     -> datatypes.test_date > '2020-01-13'
         # This works but tests can fail due to milliseconds
-        [test_datetime] > date("1 days ago")      ->startswith datatypes.test_datetime > '{str(datetime.now()-relativedelta(days=1)).split(":")[0]}
+        [test_datetime] > date("1 days ago")  -> datatypes.test_datetime > '2020-01-13 09:21:34'
         [test_date] between date("2020-01-01") and date("2020-01-30")      -> datatypes.test_date BETWEEN '2020-01-01' AND '2020-01-30'
         [test_datetime] between date("2020-01-01") and date("2020-01-30")      -> datatypes.test_datetime BETWEEN '2020-01-01 00:00:00' AND '2020-01-30 23:59:59.999999'
         [test_date] IS last year              -> datatypes.test_date BETWEEN '2019-01-01' AND '2019-12-31'
         [test_datetime] IS last year          -> datatypes.test_datetime BETWEEN '2019-01-01 00:00:00' AND '2019-12-31 23:59:59.999999'
+        [test_datetime] IS next year          -> datatypes.test_datetime BETWEEN '2021-01-01 00:00:00' AND '2021-12-31 23:59:59.999999'
         """
 
         b = Builder(DataTypesTable)
@@ -287,12 +292,7 @@ class TestDataTypesTableNew(TestBase):
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")
             expr = b.parse(field, debug=True)
-            if expected_sql.startswith('startswith'):
-                _, expected_sql = expected_sql.split(" ", 1)
-                print(to_sql(expr).startswith(expected_sql))
-                self.assertTrue(to_sql(expr).startswith(expected_sql))
-            else:
-                self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(to_sql(expr), expected_sql)
 
     # @skip
     def test_failure(self):
