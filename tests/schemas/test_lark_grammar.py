@@ -255,7 +255,7 @@ NOT [department]
 
         b = Builder(DataTypesTable)
 
-        for field, expected_error in self.bad_aexamples(bad_examples):
+        for field, expected_error in self.bad_examples(bad_examples):
             with self.assertRaises(Exception) as e:
                 b.parse(field, debug=True)
             if str(e.exception) != expected_error:
@@ -265,12 +265,7 @@ NOT [department]
             self.assertEqual(str(e.exception), expected_error)
 
 
-from datetime import date, datetime
-from dateutil.relativedelta import relativedelta
-from dateparser import parse
-
-
-class TestDataTypesTableNew(TestBase):
+class TestDataTypesTableDates(TestBase):
     @freeze_time("2020-01-14 09:21:34", tz_offset=utc_offset)
     def test_dates(self):
         good_examples = f"""
@@ -281,11 +276,10 @@ class TestDataTypesTableNew(TestBase):
         [test_date] > date("1 day ago")      -> datatypes.test_date > '2020-01-13'
         [test_date] > date("1 day")          -> datatypes.test_date > '2020-01-13'
         [test_date] > date("1 days ago")     -> datatypes.test_date > '2020-01-13'
-        # This works but tests can fail due to milliseconds
-        [test_datetime] > date("1 days ago")  -> datatypes.test_datetime > '2020-01-13 09:21:34'
         [test_date] between date("2020-01-01") and date("2020-01-30")      -> datatypes.test_date BETWEEN '2020-01-01' AND '2020-01-30'
-        [test_datetime] between date("2020-01-01") and date("2020-01-30")      -> datatypes.test_datetime BETWEEN '2020-01-01 00:00:00' AND '2020-01-30 23:59:59.999999'
         [test_date] IS last year              -> datatypes.test_date BETWEEN '2019-01-01' AND '2019-12-31'
+        [test_datetime] > date("1 days ago")  -> datatypes.test_datetime > '2020-01-13 09:21:34'
+        [test_datetime] between date("2020-01-01") and date("2020-01-30")      -> datatypes.test_datetime BETWEEN '2020-01-01 00:00:00' AND '2020-01-30 23:59:59.999999'
         [test_datetime] IS last year          -> datatypes.test_datetime BETWEEN '2019-01-01 00:00:00' AND '2019-12-31 23:59:59.999999'
         [test_datetime] IS next year          -> datatypes.test_datetime BETWEEN '2021-01-01 00:00:00' AND '2021-12-31 23:59:59.999999'
         """
@@ -304,6 +298,11 @@ class TestDataTypesTableNew(TestBase):
         bad_examples = """
 [test_date] > date("1 day from now")
 Can't convert '1 day from now' to a date.
+
+[test_date] between date("2020-01-01") and 7
+When using between, the column (date) and between values (date, num) must be the same data type.
+[test_date] between date("2020-01-01") an
+ ^
 """
 
         b = Builder(DataTypesTable)

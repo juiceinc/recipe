@@ -86,7 +86,7 @@ def make_grammar_for_table(selectable):
         columns[f"{prefix}_{cnt}"] = c
 
     grammar = f"""
-    col: boolean | string | num | date | datetime_end | datetime | unusable_col | unknown_col | error_math | error_vector_expr | error_not_nonboolean
+    col: boolean | string | num | date | datetime_end | datetime | unusable_col | unknown_col | error_math | error_vector_expr | error_not_nonboolean | error_between_expr
 
     // These are the raw columns in the selectable
     {make_columns(columns)}
@@ -114,6 +114,7 @@ def make_grammar_for_table(selectable):
     error_sub.0: col "-" col
     error_mul.0: col "*" col
     error_div.0: col "/" col
+    error_between_expr.0: col BETWEEN col AND col
     error_vector_expr.0: col vector_comparator mixedarray
     error_not_nonboolean: NOT string | NOT num
     mixedarray.0: "(" [CONSTANT ("," CONSTANT)*] ","? ")"
@@ -135,10 +136,10 @@ def make_grammar_for_table(selectable):
     GTE: ">="
 
     // Boolean vector expressions like 'a in (array of constants)'
-    intelligent_date_expr: date IS INTELLIGENT_DATE_OFFSET INTELLIGENT_DATE_UNITS
-    intelligent_datetime_expr: datetime IS INTELLIGENT_DATE_OFFSET INTELLIGENT_DATE_UNITS
-    between_expr: string BETWEEN string AND string | num BETWEEN num AND num | date BETWEEN date AND date | datetime BETWEEN datetime AND datetime_end
-    vector_expr: string vector_comparator stringarray | num vector_comparator numarray
+    intelligent_date_expr.1: date IS INTELLIGENT_DATE_OFFSET INTELLIGENT_DATE_UNITS
+    intelligent_datetime_expr.1: datetime IS INTELLIGENT_DATE_OFFSET INTELLIGENT_DATE_UNITS
+    between_expr.1: string BETWEEN string AND string | num BETWEEN num AND num | date BETWEEN date AND date | datetime BETWEEN datetime AND datetime_end
+    vector_expr.1: string vector_comparator stringarray | num vector_comparator numarray
     vector_comparator.1: NOT? IN    
     stringarray.1: "(" [ESCAPED_STRING ("," ESCAPED_STRING)*] ","? ")"  -> consistent_array
     numarray.1: "(" [NUMBER ("," NUMBER)*] ","?  ")"                    -> consistent_array
@@ -181,6 +182,16 @@ class ErrorVisitor(Visitor):
         self.text = text
         self.allow_aggregations = True
         self.errors = []
+        
+    def data_type(self, tree):
+        # Find the data type for a tree
+        if tree.data == 'col':
+            dt = self.data_type(tree.children[0])
+        else:
+            dt = tree.data
+        if dt == "datetime_end":
+            dt = "datetime"
+        return dt
 
     def _add_error(self, message, tree):
         tok = None
@@ -250,6 +261,20 @@ class ErrorVisitor(Visitor):
             "ESCAPED_STRING",
         ):
             self._add_error(f"Must be a column or expression", val)
+
+    def error_between_expr(self, tree):
+        col, BETWEEN, left, AND, right = tree.children
+        col_type = self.data_type(col)
+        left_type = self.data_type(left)
+        right_type = self.data_type(right)
+        if col_type == "datetime":
+            print("in here")
+            if left_type == "date":
+                left_type = "datetime"
+            if right_type == "date":
+                right_type = "datetime"
+        if not (col_type == left_type == right_type):
+            self._add_error(f"When using between, the column ({col_type}) and between values ({left_type}, {right_type}) must be the same data type.", tree)
 
     def bool_expr(self, tree):
         """ a > b where the types of a and b don't match """
