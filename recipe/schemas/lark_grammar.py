@@ -99,8 +99,8 @@ def make_grammar_for_table(selectable):
     // Datetimes that are converted to the end of day
     {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv"])}
     {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
-    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add"])}
-    {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div"])}
+    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast"])}
+    {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast"])}
     string_add: string "+" string                -> add
     num_add.1: num "+" num                       -> add
     num_sub.1: num "-" num
@@ -160,11 +160,22 @@ def make_grammar_for_table(selectable):
     quarter_conv: /quarter/i "(" (date | datetime) ")"
     year_conv: /year/i "(" (date | datetime) ")"
     // col->string
-    string_conv: /string/i "(" col ")"
+    string_cast: /string/i "(" col ")"
     // col->int
-    int_conv: /int/i "(" col ")"
+    int_cast: /int/i "(" col ")"
     // date->int
-    age_conv: /age/i "(" (date | datetime) ")"
+    // TODO: age_conv: /age/i "(" (date | datetime) ")"    
+    // TODO: date - date => int
+
+    // Aggregations
+    sum_aggr: /sum/i "(" num ")"
+    min_aggr: /min/i "(" num ")"
+    max_aggr: /max/i "(" num ")"
+    avg_aggr: /avg/i "(" num ")" | /average/i "(" num ")"
+    count_aggr: /count/i "(" num ")"
+    count_distinct_aggr: /count_distinct/i "(" num ")"
+    median_aggr: /median/i "(" num ")"
+    percentile_aggr: /percentile\d\d?/i "(" num ")"
 
     TRUE: /TRUE/i
     FALSE: /FALSE/i
@@ -354,11 +365,19 @@ class TransformToSQLAlchemyExpression(Transformer):
         else:
             return v
 
+    def string_cast(self, _, fld):
+        """Cast a field to a string """
+        return func.cast(fld, String())
+
     def num(self, v):
         if isinstance(v, Tree):
             return self.columns[v.data]
         else:
             return v
+
+    def int_cast(self, _, fld):
+        """Cast a field to a string """
+        return func.cast(fld, Integer())
 
     def boolean(self, v):
         print("a bool", v, type(v))
