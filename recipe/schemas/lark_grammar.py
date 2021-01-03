@@ -320,8 +320,7 @@ class ErrorVisitor(Visitor):
         fn = tree.children[0].children[0]
         dt = self.data_type(tree.children[0].children[1])
         self._add_error(
-            f"A {dt} can not be aggregated using {fn}.",
-            tree,
+            f"A {dt} can not be aggregated using {fn}.", tree,
         )
 
     def error_between_expr(self, tree):
