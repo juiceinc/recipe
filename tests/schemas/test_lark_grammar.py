@@ -396,6 +396,9 @@ class TestAggregations(TestBase):
         sum([score])                 -> sum(datatypes.score)
         sum(score)                   -> sum(datatypes.score)
         sum(score*2.0)               -> sum(datatypes.score * 2.0)
+        avg(score)                   -> avg(datatypes.score)
+        min(test_date)               -> min(datatypes.test_date)
+        max(test_datetime)           -> max(datatypes.test_datetime)
         max(score) - min(score)      -> max(datatypes.score) - min(datatypes.score)
         count_distinct([score])      -> count(DISTINCT datatypes.score)
         count_distinct([department]) -> count(DISTINCT datatypes.department)
@@ -425,12 +428,12 @@ sum(score)
 ^
 
 sum(department)
-string can not be aggregated using sum.
+A string can not be aggregated using sum.
 sum(department)
 ^
 
 2.1235 + sum(department)
-string can not be aggregated using sum.
+A string can not be aggregated using sum.
 2.1235 + sum(department)
          ^
 
@@ -438,7 +441,15 @@ sum(score) + sum(department)
 Aggregations are not allowed in this ingredient.
 sum(score) + sum(department)
 ^
-string can not be aggregated using sum.
+A string can not be aggregated using sum.
+sum(score) + sum(department)
+             ^
+
+sum(score) + sum(department)
+Aggregations are not allowed in this ingredient.
+sum(score) + sum(department)
+^
+A string can not be aggregated using sum.
 sum(score) + sum(department)
              ^
 """
@@ -461,17 +472,17 @@ sum(score) + sum(department)
 
         bad_examples = """
 sum(department)
-string can not be aggregated using sum.
+A string can not be aggregated using sum.
 sum(department)
 ^
 
 2.1235 + sum(department)
-string can not be aggregated using sum.
+A string can not be aggregated using sum.
 2.1235 + sum(department)
          ^
 
 sum(score) + sum(department)
-string can not be aggregated using sum.
+A string can not be aggregated using sum.
 sum(score) + sum(department)
              ^
 """

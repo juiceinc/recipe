@@ -96,10 +96,10 @@ def make_grammar_for_table(selectable):
     {make_columns(columns)}
 
     {gather_columns("unusable_col", columns, "unusable", [])}
-    {gather_columns("date.1", columns, "date", ["date_conv", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "datetime_to_date_conv"])}
+    {gather_columns("date.1", columns, "date", ["date_conv", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "datetime_to_date_conv", "date_aggr"])}
     {gather_columns("datetime.2", columns, "datetime", ["datetime_conv"])}
     // Datetimes that are converted to the end of day
-    {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv"])}
+    {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
     {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
     {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast"])}
     {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "aggr", "error_aggr"])}
@@ -169,7 +169,7 @@ def make_grammar_for_table(selectable):
     // TODO: age_conv: /age/i "(" (date | datetime) ")"    
     // TODO: date - date => int
 
-    // Aggregations
+    // Aggregations that are errors
     error_aggr.0: error_sum_aggr | error_min_aggr | error_max_aggr | error_avg_aggr | error_median_aggr | error_percentile_aggr
     error_sum_aggr.0: /sum/i "(" col ")"
     error_min_aggr.0: /min/i "(" col ")"
@@ -177,6 +177,7 @@ def make_grammar_for_table(selectable):
     error_avg_aggr.0: /avg/i "(" col ")" | /average/i "(" col ")"
     error_median_aggr.0: /median/i "(" col ")"
     error_percentile_aggr.0: /percentile\d\d?/i "(" col ")"
+    // Aggregations that return numbers
     aggr.1: sum_aggr | min_aggr | max_aggr | avg_aggr | count_aggr | count_distinct_aggr | median_aggr | percentile_aggr
     sum_aggr.1: /sum/i "(" num ")"
     min_aggr.1: /min/i "(" num ")"
@@ -186,6 +187,14 @@ def make_grammar_for_table(selectable):
     count_distinct_aggr.1: /count_distinct/i "(" (num | string | date | datetime | boolean) ")"
     median_aggr.1: /median/i "(" num ")"
     percentile_aggr.1: /percentile\d\d?/i "(" num ")"
+    // Aggregations that return dates
+    date_aggr.1: min_date_aggr | max_date_aggr
+    min_date_aggr.1: /min/i "(" date ")"            -> min_aggr
+    max_date_aggr.1: /max/i "(" date ")"            -> max_aggr
+    // Aggregations that return datetimes
+    datetime_aggr.1: min_datetime_aggr | max_datetime_aggr
+    min_datetime_aggr.1: /min/i "(" datetime ")"    -> min_aggr
+    max_datetime_aggr.1: /max/i "(" datetime ")"    -> max_aggr
 
     TRUE: /TRUE/i
     FALSE: /FALSE/i
@@ -274,8 +283,6 @@ class ErrorVisitor(Visitor):
     def aggr(self, tree):
         self.aggregation = True
         if self.forbid_aggregation:
-            print(tree.children[0])
-            aggr_rule = tree.children[0].data
             self._add_error(f"Aggregations are not allowed in this ingredient.", tree)
 
     def unknown_col(self, tree):
@@ -313,10 +320,9 @@ class ErrorVisitor(Visitor):
         fn = tree.children[0].children[0]
         dt = self.data_type(tree.children[0].children[1])
         self._add_error(
-            f"{dt} can not be aggregated using {fn}.",
+            f"A {dt} can not be aggregated using {fn}.",
             tree,
         )
-
 
     def error_between_expr(self, tree):
         col, BETWEEN, left, AND, right = tree.children
@@ -410,7 +416,6 @@ class TransformToSQLAlchemyExpression(Transformer):
         return func.cast(fld, Integer())
 
     def boolean(self, v):
-        print("a bool", v, type(v))
         if isinstance(v, Tree):
             return self.columns[v.data]
         else:
@@ -610,6 +615,12 @@ class TransformToSQLAlchemyExpression(Transformer):
     def aggr(self, v):
         return v
 
+    def date_aggr(self, v):
+        return v
+
+    def datetime_aggr(self, v):
+        return v
+
     def sum_aggr(self, _, fld):
         """Sum up the things """
         return func.sum(fld)
@@ -691,8 +702,8 @@ class Builder(object):
         error_visitor = ErrorVisitor(text, self.forbid_aggregation)
         error_visitor.visit(tree)
         if error_visitor.errors:
-            print("".join(error_visitor.errors))
             if debug:
+                print("".join(error_visitor.errors))
                 print("Tree:\n" + tree.pretty())
             raise Exception("".join(error_visitor.errors))
         else:
