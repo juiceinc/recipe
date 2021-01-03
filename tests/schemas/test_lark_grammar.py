@@ -376,3 +376,115 @@ When using between, the column (date) and between values (string, date) must be 
                 print(expected_error)
                 print("===" * 10)
             self.assertEqual(str(e.exception).strip(), expected_error.strip())
+
+
+class TestAggregations(TestBase):
+    def test_aggregation(self):
+        good_examples = f"""
+        """
+
+        b = Builder(DataTypesTable)
+
+        for field, expected_sql in self.examples(good_examples):
+            print(f"\nInput: {field}")
+            expr = b.parse(field, debug=True)
+            self.assertEqual(to_sql(expr), expected_sql)
+
+    def test_allow_aggregation(self):
+        # Can't tests with date conversions and freeze time :/
+        good_examples = f"""
+        sum([score])                 -> sum(datatypes.score)
+        sum(score)                   -> sum(datatypes.score)
+        sum(score*2.0)               -> sum(datatypes.score * 2.0)
+        max(score) - min(score)      -> max(datatypes.score) - min(datatypes.score)
+        count_distinct([score])      -> count(DISTINCT datatypes.score)
+        count_distinct([department]) -> count(DISTINCT datatypes.department)
+        count_distinct(department)   -> count(DISTINCT datatypes.department)
+        """
+
+        b = Builder(DataTypesTable, forbid_aggregation=False)
+
+        for field, expected_sql in self.examples(good_examples):
+            print(f"\nInput: {field}")
+            expr = b.parse(field, debug=True)
+            self.assertEqual(to_sql(expr), expected_sql)
+
+    # @skip
+    def test_forbid_aggregation(self):
+        """These examples should all fail"""
+
+        bad_examples = """
+sum([score])
+Aggregations are not allowed in this ingredient.
+sum([score])
+^
+
+sum(score)
+Aggregations are not allowed in this ingredient.
+sum(score)
+^
+
+sum(department)
+string can not be aggregated using sum.
+sum(department)
+^
+
+2.1235 + sum(department)
+string can not be aggregated using sum.
+2.1235 + sum(department)
+         ^
+
+sum(score) + sum(department)
+Aggregations are not allowed in this ingredient.
+sum(score) + sum(department)
+^
+string can not be aggregated using sum.
+sum(score) + sum(department)
+             ^
+"""
+
+        b = Builder(DataTypesTable, forbid_aggregation=True)
+
+        for field, expected_error in self.bad_examples(bad_examples):
+            with self.assertRaises(Exception) as e:
+                b.parse(field, debug=True)
+            if str(e.exception).strip() != expected_error.strip():
+                print("===" * 10)
+                print(str(e.exception))
+                print("vs")
+                print(expected_error)
+                print("===" * 10)
+            self.assertEqual(str(e.exception).strip(), expected_error.strip())
+
+    def test_bad_aggregations(self):
+        """These examples should all fail"""
+
+        bad_examples = """
+sum(department)
+string can not be aggregated using sum.
+sum(department)
+^
+
+2.1235 + sum(department)
+string can not be aggregated using sum.
+2.1235 + sum(department)
+         ^
+
+sum(score) + sum(department)
+string can not be aggregated using sum.
+sum(score) + sum(department)
+             ^
+"""
+
+        b = Builder(DataTypesTable, forbid_aggregation=False)
+
+        for field, expected_error in self.bad_examples(bad_examples):
+            with self.assertRaises(Exception) as e:
+                b.parse(field, debug=True)
+            if str(e.exception).strip() != expected_error.strip():
+                print("===" * 10)
+                print(str(e.exception))
+                print("vs")
+                print(expected_error)
+                print("===" * 10)
+            self.assertEqual(str(e.exception).strip(), expected_error.strip())

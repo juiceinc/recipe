@@ -1,3 +1,4 @@
+from operator import truediv
 from sqlalchemy.sql.sqltypes import Numeric
 import dateparser
 import dateparser
@@ -15,6 +16,7 @@ from sqlalchemy import (
     Integer,
     between,
     case,
+    distinct,
     inspection,
     not_,
     and_,
@@ -88,7 +90,7 @@ def make_grammar_for_table(selectable):
         columns[f"{prefix}_{cnt}"] = c
 
     grammar = f"""
-    col: boolean | string | num | date | datetime_end | datetime | unusable_col | unknown_col | error_math | error_vector_expr | error_not_nonboolean | error_between_expr
+    col: boolean | string | num | date | datetime_end | datetime | unusable_col | unknown_col | error_math | error_vector_expr | error_not_nonboolean | error_between_expr | error_aggr
 
     // These are the raw columns in the selectable
     {make_columns(columns)}
@@ -100,7 +102,7 @@ def make_grammar_for_table(selectable):
     {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv"])}
     {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
     {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast"])}
-    {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast"])}
+    {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "aggr", "error_aggr"])}
     string_add: string "+" string                -> add
     num_add.1: num "+" num                       -> add
     num_sub.1: num "-" num
@@ -168,14 +170,22 @@ def make_grammar_for_table(selectable):
     // TODO: date - date => int
 
     // Aggregations
-    sum_aggr: /sum/i "(" num ")"
-    min_aggr: /min/i "(" num ")"
-    max_aggr: /max/i "(" num ")"
-    avg_aggr: /avg/i "(" num ")" | /average/i "(" num ")"
-    count_aggr: /count/i "(" num ")"
-    count_distinct_aggr: /count_distinct/i "(" num ")"
-    median_aggr: /median/i "(" num ")"
-    percentile_aggr: /percentile\d\d?/i "(" num ")"
+    error_aggr.0: error_sum_aggr | error_min_aggr | error_max_aggr | error_avg_aggr | error_median_aggr | error_percentile_aggr
+    error_sum_aggr.0: /sum/i "(" col ")"
+    error_min_aggr.0: /min/i "(" col ")"
+    error_max_aggr.0: /max/i "(" col ")"
+    error_avg_aggr.0: /avg/i "(" col ")" | /average/i "(" col ")"
+    error_median_aggr.0: /median/i "(" col ")"
+    error_percentile_aggr.0: /percentile\d\d?/i "(" col ")"
+    aggr.1: sum_aggr | min_aggr | max_aggr | avg_aggr | count_aggr | count_distinct_aggr | median_aggr | percentile_aggr
+    sum_aggr.1: /sum/i "(" num ")"
+    min_aggr.1: /min/i "(" num ")"
+    max_aggr.1: /max/i "(" num ")"
+    avg_aggr.1: /avg/i "(" num ")" | /average/i "(" num ")"
+    count_aggr.1: /count/i "(" (num | string | date | datetime) ")"
+    count_distinct_aggr.1: /count_distinct/i "(" (num | string | date | datetime | boolean) ")"
+    median_aggr.1: /median/i "(" num ")"
+    percentile_aggr.1: /percentile\d\d?/i "(" num ")"
 
     TRUE: /TRUE/i
     FALSE: /FALSE/i
@@ -205,10 +215,11 @@ def make_grammar_for_table(selectable):
 class ErrorVisitor(Visitor):
     """Raise descriptive exceptions for any errors found """
 
-    def __init__(self, text):
+    def __init__(self, text, forbid_aggregation):
         super().__init__()
         self.text = text
-        self.allow_aggregations = True
+        self.forbid_aggregation = forbid_aggregation
+        self.aggregation = False
         self.errors = []
 
     def data_type(self, tree):
@@ -260,6 +271,13 @@ class ErrorVisitor(Visitor):
     def error_div(self, tree):
         self._error_math(tree, "divided")
 
+    def aggr(self, tree):
+        self.aggregation = True
+        if self.forbid_aggregation:
+            print(tree.children[0])
+            aggr_rule = tree.children[0].data
+            self._add_error(f"Aggregations are not allowed in this ingredient.", tree)
+
     def unknown_col(self, tree):
         """Column name doesn't exist in the data """
         tok1 = tree.children[0]
@@ -290,13 +308,22 @@ class ErrorVisitor(Visitor):
         ):
             self._add_error(f"Must be a column or expression", val)
 
+    def error_aggr(self, tree):
+        """Aggregating a bad data type """
+        fn = tree.children[0].children[0]
+        dt = self.data_type(tree.children[0].children[1])
+        self._add_error(
+            f"{dt} can not be aggregated using {fn}.",
+            tree,
+        )
+
+
     def error_between_expr(self, tree):
         col, BETWEEN, left, AND, right = tree.children
         col_type = self.data_type(col)
         left_type = self.data_type(left)
         right_type = self.data_type(right)
         if col_type == "datetime":
-            print("in here")
             if left_type == "date":
                 left_type = "datetime"
             if right_type == "date":
@@ -325,11 +352,11 @@ class ErrorVisitor(Visitor):
 class TransformToSQLAlchemyExpression(Transformer):
     """Converts a field to a SQLAlchemy expression """
 
-    def __init__(self, selectable, columns, require_aggregation=False):
+    def __init__(self, selectable, columns, forbid_aggregation=True):
         self.text = None
         self.selectable = selectable
         self.columns = columns
-        self.require_aggregation = require_aggregation
+        self.forbid_aggregation = forbid_aggregation
         # Database driver
         try:
             self.drivername = selectable.metadata.bind.url.drivername
@@ -578,6 +605,35 @@ class TransformToSQLAlchemyExpression(Transformer):
 
         return getattr(left, comparator)(right)
 
+    # Aggregations
+
+    def aggr(self, v):
+        return v
+
+    def sum_aggr(self, _, fld):
+        """Sum up the things """
+        return func.sum(fld)
+
+    def min_aggr(self, _, fld):
+        """Sum up the things """
+        return func.min(fld)
+
+    def max_aggr(self, _, fld):
+        """Sum up the things """
+        return func.max(fld)
+
+    def avg_aggr(self, _, fld):
+        """Sum up the things """
+        return func.avg(fld)
+
+    def count_aggr(self, _, fld):
+        """Sum up the things """
+        return func.count(fld)
+
+    def count_distinct_aggr(self, _, fld):
+        """Sum up the things """
+        return func.count(distinct(fld))
+
     # Constants
 
     def ESCAPED_STRING(self, v):
@@ -604,9 +660,9 @@ class TransformToSQLAlchemyExpression(Transformer):
 
 
 class Builder(object):
-    def __init__(self, selectable, require_aggregation=False):
+    def __init__(self, selectable, forbid_aggregation=False):
         self.selectable = selectable
-        self.require_aggregation = require_aggregation
+        self.forbid_aggregation = forbid_aggregation
         self.columns, self.grammar = make_grammar_for_table(selectable)
         self.parser = Lark(
             self.grammar,
@@ -632,7 +688,7 @@ class Builder(object):
     def parse(self, text, debug=False):
         """Return a parse tree for text"""
         tree = self.parser.parse(text)
-        error_visitor = ErrorVisitor(text)
+        error_visitor = ErrorVisitor(text, self.forbid_aggregation)
         error_visitor.visit(tree)
         if error_visitor.errors:
             print("".join(error_visitor.errors))
