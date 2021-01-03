@@ -317,7 +317,6 @@ class ErrorVisitor(Visitor):
             tree,
         )
 
-
     def error_between_expr(self, tree):
         col, BETWEEN, left, AND, right = tree.children
         col_type = self.data_type(col)
