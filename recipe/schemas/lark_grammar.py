@@ -16,6 +16,7 @@ from sqlalchemy import (
     Integer,
     between,
     case,
+    cast,
     distinct,
     inspection,
     not_,
@@ -104,6 +105,10 @@ def make_grammar_for_table(selectable):
     {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast"])}
     {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "aggr", "error_aggr"])}
     string_add: string "+" string                -> add
+    //num_add.1: num "+" num                      -> add
+    //num_sub.1: num "-" num | "(" num "-" num ")"
+    //num_mul.1: num "*" num | "(" num "*" num ")"
+    //num_div.1: num "/" num | "(" num "/" num ")"
     num_add.1: num "+" num                       -> add
     num_sub.1: num "-" num
     num_mul.1: num "*" num
@@ -183,7 +188,7 @@ def make_grammar_for_table(selectable):
     min_aggr.1: /min/i "(" num ")"
     max_aggr.1: /max/i "(" num ")"
     avg_aggr.1: /avg/i "(" num ")" | /average/i "(" num ")"
-    count_aggr.1: /count/i "(" (num | string | date | datetime) ")"
+    count_aggr.1: /count/i "(" (num | string | date | datetime | star) ")"
     count_distinct_aggr.1: /count_distinct/i "(" (num | string | date | datetime | boolean) ")"
     median_aggr.1: /median/i "(" num ")"
     percentile_aggr.1: /percentile\d\d?/i "(" num ")"
@@ -196,6 +201,7 @@ def make_grammar_for_table(selectable):
     min_datetime_aggr.1: /min/i "(" datetime ")"    -> min_aggr
     max_datetime_aggr.1: /max/i "(" datetime ")"    -> max_aggr
 
+    star: "*"
     TRUE: /TRUE/i
     FALSE: /FALSE/i
     OR: /OR/i
@@ -412,7 +418,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def string_cast(self, _, fld):
         """Cast a field to a string """
-        return func.cast(fld, String())
+        return cast(fld, String())
 
     def num(self, v):
         if isinstance(v, Tree):
@@ -422,7 +428,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def int_cast(self, _, fld):
         """Cast a field to a string """
-        return func.cast(fld, Integer())
+        return cast(fld, Integer())
 
     def boolean(self, v):
         if isinstance(v, Tree):
@@ -433,6 +439,27 @@ class TransformToSQLAlchemyExpression(Transformer):
     def add(self, a, b):
         """ Add numbers or strings """
         return a + b
+
+    def num_div(self, num, denom):
+        """SQL safe division"""
+        print("here numdiv", num, denom)
+        if isinstance(denom, (int, float)):
+            if denom == 0:
+                raise GrammarError("When dividing, the denominator can not be zero")
+            elif denom == 1:
+                return num
+            elif isinstance(num, (int, float)):
+                print("DVIDING", num, denom)
+                return num / denom
+            else:
+                return cast(num, Float) / denom
+        else:
+            if isinstance(num, (int, float)):
+                return case([(denom == 0, None)], else_=num / cast(denom, Float))
+            else:
+                return case(
+                    [(denom == 0, None)], else_=cast(num, Float) / cast(denom, Float)
+                )
 
     def num_sub(self, a, b):
         return a - b
@@ -648,7 +675,10 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def count_aggr(self, _, fld):
         """Sum up the things """
-        return func.count(fld)
+        if fld.data == "star":
+            return func.count()
+        else:
+            return func.count(fld)
 
     def percentile_aggr(self, percentile, fld):
         """Sum up the things """

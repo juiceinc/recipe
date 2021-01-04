@@ -87,6 +87,7 @@ class TestDataTypesTable(TestBase):
         [ScORE]                         -> datatypes.score
         [ScORE] + [ScORE]               -> datatypes.score + datatypes.score
         [score] + 2.0                   -> datatypes.score + 2.0
+        #([score] + 2.0) / [score]                   -> datatypes.score + 2.0
         [username] + [department]       -> datatypes.username || datatypes.department
         "foo" + [department]            -> 'foo' || datatypes.department
         1.0 + [score]                   -> 1.0 + datatypes.score
@@ -104,6 +105,29 @@ class TestDataTypesTable(TestBase):
         [score] != Null                 -> datatypes.score IS NOT NULL
         [score] <> Null                 -> datatypes.score IS NOT NULL
         [score] IS NOT nULL             -> datatypes.score IS NOT NULL
+        """
+
+        b = Builder(DataTypesTable)
+
+        for field, expected_sql in self.examples(good_examples):
+            print(f"\nInput: {field}")
+            expr = b.parse(field, debug=True)
+            self.assertEqual(to_sql(expr), expected_sql)
+
+    def test_division(self):
+        """These examples should all succeed"""
+
+        good_examples = """
+        [score] / 2                      -> CAST(datatypes.score AS FLOAT) / 2
+        [score] / 2.0                    -> CAST(datatypes.score AS FLOAT) / 2.0
+        sum(score) / count(*)            -> CASE WHEN (count(*) = 0) THEN NULL ELSE CAST(sum(datatypes.score) AS FLOAT) / CAST(count(*) AS FLOAT) END
+        [score] / 1                      -> datatypes.score
+        sum([score] / 1)                 -> sum(datatypes.score)
+        sum([score] / [score])           -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / CAST(datatypes.score AS FLOAT) END)
+        score / 2                        -> CAST(datatypes.score AS FLOAT) / 2
+        sum(score / score)               -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / CAST(datatypes.score AS FLOAT) END)
+        #[score] / (2/1)                  -> CAST(datatypes.score AS FLOAT) / 2
+        #[score] / (0.5/0.25)             -> CAST(datatypes.score AS FLOAT) / 2.0
         """
 
         b = Builder(DataTypesTable)
@@ -285,6 +309,9 @@ NOT [department]
 NOT requires a boolean value
 NOT [department]
 ^
+
+[score] / 0
+When dividing, the denominator can not be zero
 """
 
         b = Builder(DataTypesTable)
@@ -293,10 +320,12 @@ NOT [department]
             with self.assertRaises(Exception) as e:
                 b.parse(field, debug=True)
             if str(e.exception) != expected_error:
-                print("===" * 10)
+                print("===" * 10)                
                 print(str(e.exception))
+                print("vs")
+                print(expected_error)
                 print("===" * 10)
-            self.assertEqual(str(e.exception), expected_error)
+            self.assertEqual(str(e.exception).strip(), expected_error.strip())
 
 
 class TestDataTypesTableDates(TestBase):
@@ -403,6 +432,7 @@ class TestAggregations(TestBase):
         count_distinct([score])      -> count(DISTINCT datatypes.score)
         count_distinct([department]) -> count(DISTINCT datatypes.department)
         count_distinct(department)   -> count(DISTINCT datatypes.department)
+        count(*)                     -> count(*)
         """
 
         b = Builder(DataTypesTable, forbid_aggregation=False)
