@@ -224,12 +224,13 @@ def make_grammar_for_table(selectable):
 class ErrorVisitor(Visitor):
     """Raise descriptive exceptions for any errors found """
 
-    def __init__(self, text, forbid_aggregation):
+    def __init__(self, text, forbid_aggregation, drivername):
         super().__init__()
         self.text = text
         self.forbid_aggregation = forbid_aggregation
         self.aggregation = False
         self.errors = []
+        self.drivername = drivername
 
     def data_type(self, tree):
         # Find the data type for a tree
@@ -351,6 +352,15 @@ class ErrorVisitor(Visitor):
                 return
             if tok1.data != tok2.data:
                 self._add_error(f"Can't compare {tok1.data} to {tok2.data}", tree)
+
+    def percentile_aggr(self, tree):
+        """Sum up the things """
+        percentile, fld = tree.children
+        percentile_val = int(percentile[len("percentile"):])
+        if percentile_val not in (1,5,10,25,50,75,90,95,99):
+            self._add_error(f"Percentile values of {percentile_val} are not supported.", tree)
+        if self.drivername == "sqlite":
+            self._add_error("Percentile is not supported on sqlite", tree)
 
 
 @v_args(inline=True)  # Affects the signatures of the methods
@@ -640,6 +650,23 @@ class TransformToSQLAlchemyExpression(Transformer):
         """Sum up the things """
         return func.count(fld)
 
+    def percentile_aggr(self, percentile, fld):
+        """Sum up the things """
+        percentile_val = int(percentile[len("percentile"):])
+        print(percentile_val)
+        if percentile_val not in (1,5,10,25,50,75,90,95,99):
+            raise GrammarError(f"percentile values of {percentile_val} is not supported.")
+        if self.drivername == "bigquery":
+            # FIXME: This doesn't work
+            return func.percentile_cont(0.01).within_group(fld),
+            # return func.date_trunc(fld, text("day"))
+        elif self.drivername == "sqlite":
+            raise GrammarError("Percentile is not supported on sqlite")
+        else:
+            # Postgres + redshift
+            return func.percentile_cont(0.01).within_group(fld),
+            # return func.date_trunc("day", fld)
+
     def count_distinct_aggr(self, _, fld):
         """Sum up the things """
         return func.count(distinct(fld))
@@ -698,7 +725,7 @@ class Builder(object):
     def parse(self, text, debug=False):
         """Return a parse tree for text"""
         tree = self.parser.parse(text)
-        error_visitor = ErrorVisitor(text, self.forbid_aggregation)
+        error_visitor = ErrorVisitor(text, self.forbid_aggregation, self.drivername)
         error_visitor.visit(tree)
         if error_visitor.errors:
             if debug:

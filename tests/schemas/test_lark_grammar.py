@@ -485,11 +485,25 @@ sum(score) + sum(department)
 A string can not be aggregated using sum.
 sum(score) + sum(department)
              ^
+
+percentile1([score])
+Percentile is not supported on sqlite
+percentile1([score])
+^
+
+percentile13([score])
+Percentile values of 13 are not supported.
+percentile13([score])
+^
+Percentile is not supported on sqlite
+percentile13([score])
+^
 """
 
         b = Builder(DataTypesTable, forbid_aggregation=False)
 
         for field, expected_error in self.bad_examples(bad_examples):
+            print("Field", field)
             with self.assertRaises(Exception) as e:
                 b.parse(field, debug=True)
             if str(e.exception).strip() != expected_error.strip():
@@ -499,3 +513,16 @@ sum(score) + sum(department)
                 print(expected_error)
                 print("===" * 10)
             self.assertEqual(str(e.exception).strip(), expected_error.strip())
+
+    def test_percentiles(self):
+        # Can't tests with date conversions and freeze time :/
+        good_examples = f"""
+        #percentile1([score])                 -> sum(datatypes.score)
+        """
+
+        b = Builder(DataTypesTable, forbid_aggregation=False)
+
+        for field, expected_sql in self.examples(good_examples):
+            print(f"\nInput: {field}")
+            expr = b.parse(field, debug=True)
+            self.assertEqual(to_sql(expr), expected_sql)
