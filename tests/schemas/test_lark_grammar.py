@@ -55,7 +55,6 @@ class TestBase(TestCase):
             yield field, expected_error
 
 
-
 class TestBuilder(TestBase):
     maxDiff = None
 
