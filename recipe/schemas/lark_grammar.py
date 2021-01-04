@@ -1,7 +1,8 @@
 from collections import defaultdict
 from datetime import date, datetime
 from operator import truediv
-from attr import validate
+from os import isatty
+from attr import has, validate
 
 import dateparser
 from dateutil.relativedelta import relativedelta
@@ -25,6 +26,8 @@ from sqlalchemy import (
     or_,
     text,
 )
+from sqlalchemy.ext.declarative.api import DeclarativeMeta
+from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.sql.sqltypes import Numeric
 from recipe import Recipe
 
@@ -78,14 +81,21 @@ def make_columns_for_table(selectable):
 
     The values are the selectable column reference
     """
-    columns = {}
-    type_counter = defaultdict(int)
-
     if isinstance(selectable, Recipe):
         selectable = selectable.subquery()
+
+    if isinstance(selectable, DeclarativeMeta):
+        column_iterable = selectable.__table__.columns
+    # Selectable is a sqlalchemy subquery
+    elif hasattr(selectable, "c") and isinstance(
+        selectable.c, ImmutableColumnCollection
+    ):
         column_iterable = selectable.c
     else:
-        column_iterable = selectable.columns
+        raise Exception("Selectable does not have columns")
+
+    columns = {}
+    type_counter = defaultdict(int)
 
     for c in column_iterable:
         # Check supported column types

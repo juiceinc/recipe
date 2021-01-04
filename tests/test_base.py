@@ -10,6 +10,7 @@ from sqlalchemy import (
     Table,
 )
 from sqlalchemy.ext.declarative import declarative_base
+from sureberus.schema import Boolean
 
 from recipe import IdValueDimension, Dimension, Metric, Filter, Shelf, get_oven
 from datetime import date
@@ -377,6 +378,17 @@ class Scores(Base):
 DataTypesTable = Table(
     "datatypes", Base.metadata, autoload=True, autoload_with=oven.engine
 )
+
+class DataTypeser(Base):
+    username = Column("username", String(), primary_key=True)
+    department = Column("department", String())
+    testid = Column("testid", String())
+    score = Column("score", Float())
+    test_date = Column("test_date", Date())
+    test_datetime = Column("test_datetime", DateTime())
+
+    __tablename__ = "datatypes"
+    __table_args__ = {"extend_existing": True}
 
 
 class ScoresWithNulls(Base):

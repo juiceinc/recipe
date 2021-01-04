@@ -2,6 +2,7 @@ import time
 from unittest import TestCase, skip
 
 from freezegun import freeze_time
+from yaml import scan
 
 from recipe import Recipe
 from recipe.schemas.lark_grammar import SQLAlchemyBuilder
@@ -120,6 +121,64 @@ class TestSQLAlchemyBuilder(TestBase):
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
+    def test_selectable_orm(self):
+        """Test a selectable that is a orm class"""
+        from tests.test_base import DataTypeser
+        b = SQLAlchemyBuilder(selectable=DataTypeser)
+        type_examples = """
+        [score]                         -> num
+        score                           -> num
+        [testid]                        -> string
+        [username] > "foo"              -> boolean
+        score * 2                       -> num
+        test_date                       -> date
+        """
+
+        for field, expected_data_type in self.examples(type_examples):
+            print(f"\nInput: {field}")
+            b.parse(field)
+            data_type = b.last_datatype
+            self.assertEqual(data_type, expected_data_type)
+
+        sql_examples = """
+        [score]                         -> datatypes.score
+        [testid]                        -> datatypes.testid
+        [username] > "foo"              -> datatypes.username > 'foo'
+        score * 2                       -> datatypes.score * 2
+        test_date                       -> datatypes.test_date
+        """
+        for field, expected_sql in self.examples(sql_examples):
+            print(f"\nInput: {field}")
+            expr = b.parse(field, debug=True)
+            self.assertEqual(to_sql(expr), expected_sql)
+
+    def test_selectable_census(self):
+        """Test a selectable that is a orm class"""
+        from tests.test_base import Census
+        b = SQLAlchemyBuilder(selectable=Census)
+        type_examples = """
+        age                             -> num
+        state                           -> string
+        [pop2000] + pop2008             -> num
+        state + sex                     -> string
+        """
+
+        for field, expected_data_type in self.examples(type_examples):
+            print(f"\nInput: {field}")
+            b.parse(field)
+            data_type = b.last_datatype
+            self.assertEqual(data_type, expected_data_type)
+
+        sql_examples = """
+        age                             -> census.age
+        state                           -> census.state
+        min([pop2000] + pop2008)        -> min(census.pop2000 + census.pop2008)
+        state + sex                     -> census.state || census.sex
+        """
+        for field, expected_sql in self.examples(sql_examples):
+            print(f"\nInput: {field}")
+            expr = b.parse(field, debug=True)
+            self.assertEqual(to_sql(expr), expected_sql)
 
     
 class TestDataTypesTable(TestBase):
