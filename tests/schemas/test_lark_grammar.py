@@ -60,12 +60,14 @@ class TestBuilder(TestBase):
     maxDiff = None
 
     def test_enforce_aggregation(self):
-        """These examples should all succeed"""
+        """Enforce aggregation will wrap the function in a sum if no aggregation was seen"""
 
         good_examples = """
         [score]                         -> sum(datatypes.score)
         [ScORE]                         -> sum(datatypes.score)
         [ScORE] + [ScORE]               -> sum(datatypes.score + datatypes.score)
+        max([ScORE] + [ScORE])          -> max(datatypes.score + datatypes.score)
+        max(score) - min(score)         -> max(datatypes.score) - min(datatypes.score)
         """
 
         for field, expected_sql in self.examples(good_examples):

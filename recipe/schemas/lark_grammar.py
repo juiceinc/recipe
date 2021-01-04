@@ -8,14 +8,29 @@ from lark import GrammarError, Lark, Transformer, Tree, Visitor, v_args
 from lark.lexer import Token
 from lark.visitors import inline_args
 from sqlalchemy import (
-    Boolean, Date, DateTime, Float, Integer, String, and_, between, case, cast,
-    distinct, func, not_, or_, text
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    and_,
+    between,
+    case,
+    cast,
+    distinct,
+    func,
+    not_,
+    or_,
+    text,
 )
 from sqlalchemy.sql.sqltypes import Numeric
 
 from .utils import (
-    calc_date_range, convert_to_end_datetime, convert_to_eod_datetime,
-    convert_to_start_datetime
+    calc_date_range,
+    convert_to_end_datetime,
+    convert_to_eod_datetime,
+    convert_to_start_datetime,
 )
 
 
@@ -225,7 +240,7 @@ class ErrorVisitor(Visitor):
         self.forbid_aggregation = forbid_aggregation
         # Was an aggregation encountered in the tree?
         self.found_aggregation = False
-        # 
+        #
         self.last_datatype = None
         self.errors = []
         self.drivername = drivername
@@ -359,8 +374,7 @@ class ErrorVisitor(Visitor):
         fn = tree.children[0].children[0]
         dt = self.data_type(tree.children[0].children[1])
         self._add_error(
-            f"A {dt} can not be aggregated using {fn}.",
-            tree,
+            f"A {dt} can not be aggregated using {fn}.", tree,
         )
 
     def error_between_expr(self, tree):
@@ -809,12 +823,26 @@ class Builder(object):
         except Exception:
             self.drivername = "unknown"
 
-    def raw_sql(self, c):
-        """Utility to print sql for a expression """
-        return str(c.compile(compile_kwargs={"literal_binds": True}))
+    def parse(
+        self, text, forbid_aggregation=False, enforce_aggregation=False, debug=False
+    ):
+        """Return a parse tree for text
 
-    def parse(self, text, forbid_aggregation=False, enforce_aggregation=False, debug=False):
-        """Return a parse tree for text"""
+        Args:
+            text (str): A field expression
+            forbid_aggregation (bool, optional): 
+              The expression may not contain aggregations. Defaults to False.
+            enforce_aggregation (bool, optional): 
+              Wrap the expression in an aggregation if one is not provided. Defaults to False.
+            debug (bool, optional): Show some debug info. Defaults to False.
+
+        Raises:
+            GrammarError: A description of any errors and where they occur
+
+        Returns:
+            ColumnElement: A SQLALchemy expression
+        """
+
         tree = self.parser.parse(text)
         error_visitor = ErrorVisitor(text, forbid_aggregation, self.drivername)
         error_visitor.visit(tree)
@@ -822,7 +850,7 @@ class Builder(object):
             if debug:
                 print("".join(error_visitor.errors))
                 print("Tree:\n" + tree.pretty())
-            raise Exception("".join(error_visitor.errors))
+            raise GrammarError("".join(error_visitor.errors))
         else:
             if debug:
                 print("Tree:\n" + tree.pretty())
