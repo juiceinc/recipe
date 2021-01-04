@@ -374,7 +374,8 @@ class ErrorVisitor(Visitor):
         fn = tree.children[0].children[0]
         dt = self.data_type(tree.children[0].children[1])
         self._add_error(
-            f"A {dt} can not be aggregated using {fn}.", tree,
+            f"A {dt} can not be aggregated using {fn}.",
+            tree,
         )
 
     def error_between_expr(self, tree):
@@ -830,9 +831,9 @@ class SQLAlchemyBuilder(object):
 
         Args:
             text (str): A field expression
-            forbid_aggregation (bool, optional): 
+            forbid_aggregation (bool, optional):
               The expression may not contain aggregations. Defaults to False.
-            enforce_aggregation (bool, optional): 
+            enforce_aggregation (bool, optional):
               Wrap the expression in an aggregation if one is not provided. Defaults to False.
             debug (bool, optional): Show some debug info. Defaults to False.
 

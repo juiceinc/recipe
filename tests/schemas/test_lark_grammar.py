@@ -54,7 +54,6 @@ class TestBase(TestCase):
             yield field, expected_error
 
 
-
 class TestSQLAlchemyBuilder(TestBase):
     maxDiff = None
 
