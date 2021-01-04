@@ -114,7 +114,7 @@ class TestDataTypesTable(TestBase):
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
-    def test_division(self):
+    def test_division_and_math(self):
         """These examples should all succeed"""
 
         good_examples = """
@@ -132,6 +132,8 @@ class TestDataTypesTable(TestBase):
         [score] * (2*3)                  -> datatypes.score * 6
         [score] * (2*score)              -> datatypes.score * 2 * datatypes.score
         [score] * (2 / score)            -> datatypes.score * CASE WHEN (datatypes.score = 0) THEN NULL ELSE 2 / CAST(datatypes.score AS FLOAT) END
+        [score] / (10-7)                 -> CAST(datatypes.score AS FLOAT) / 3
+        [score] / (10-9)                 -> datatypes.score
         """
 
         b = Builder(DataTypesTable)
@@ -315,6 +317,9 @@ NOT [department]
 ^
 
 [score] / 0
+When dividing, the denominator can not be zero
+
+[score] / (10-10)
 When dividing, the denominator can not be zero
 """
 
