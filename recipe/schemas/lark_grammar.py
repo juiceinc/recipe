@@ -71,7 +71,7 @@ def make_columns_for_table(selectable):
     like num_0, num_1, string_0, etc.
 
     The values are the selectable column reference
-    """  
+    """
     columns = {}
     type_counter = defaultdict(int)
 
@@ -94,7 +94,8 @@ def make_columns_for_table(selectable):
         cnt = type_counter[prefix]
         type_counter[prefix] += 1
         columns[f"{prefix}_{cnt}"] = c
-    return columns    
+    return columns
+
 
 def make_lark_grammar(columns):
     """Build a grammar for this selectable using columns """
@@ -241,7 +242,7 @@ def make_lark_grammar(columns):
 class SQLALchemyValidator(Visitor):
     def __init__(self, text, forbid_aggregation, drivername):
         """Visit the tree and return descriptive information. Populate
-        a list of errors. 
+        a list of errors.
 
         Args:
             text (str): A copy of the parsed text for error descriptions
@@ -810,7 +811,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
 class SQLAlchemyBuilder(object):
     def __init__(self, selectable):
-        """Parse a recipe field by building a custom grammar that 
+        """Parse a recipe field by building a custom grammar that
         uses the colums in a selectable.
 
         Args:
@@ -876,9 +877,9 @@ class SQLAlchemyBuilder(object):
             self.transformer.text = text
             expr = self.transformer.transform(tree)
             if (
-                enforce_aggregation and 
-                not validator.found_aggregation and 
-                self.last_datatype == 'num'
+                enforce_aggregation
+                and not validator.found_aggregation
+                and self.last_datatype == "num"
             ):
                 return func.sum(expr)
             else:

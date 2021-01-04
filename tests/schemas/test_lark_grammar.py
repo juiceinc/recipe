@@ -90,10 +90,9 @@ class TestSQLAlchemyBuilder(TestBase):
             self.builder.parse(field)
             data_type = self.builder.last_datatype
             self.assertEqual(data_type, expected_data_type)
-    
+
 
 class TestDataTypesTable(TestBase):
-
     def test_fields_and_addition(self):
         """These examples should all succeed"""
 
