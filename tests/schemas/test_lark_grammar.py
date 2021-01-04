@@ -1,9 +1,11 @@
-from lark.parse_tree_builder import ExpandSingleChild
-from tests.test_base import DataTypesTable
-from recipe.schemas.lark_grammar import Builder
-from freezegun import freeze_time
-from unittest import TestCase, skip
 import time
+from unittest import TestCase, skip
+
+from freezegun import freeze_time
+from lark.parse_tree_builder import ExpandSingleChild
+
+from recipe.schemas.lark_grammar import Builder
+from tests.test_base import DataTypesTable
 
 utc_offset = -1 * time.localtime().tm_gmtoff / 3600.0
 
@@ -540,7 +542,6 @@ percentile13([score])
             print(f"\nInput: {field}")
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
-
 
 
 class TestIf(TestBase):

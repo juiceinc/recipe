@@ -1,37 +1,22 @@
+from collections import defaultdict
+from datetime import date, datetime
 from operator import truediv
-from sqlalchemy.sql.sqltypes import Numeric
-import dateparser
+
 import dateparser
 from dateutil.relativedelta import relativedelta
-from datetime import datetime, date
-from lark import Lark, Transformer, Visitor, v_args, GrammarError, Tree
+from lark import GrammarError, Lark, Transformer, Tree, Visitor, v_args
 from lark.lexer import Token
 from lark.visitors import inline_args
 from sqlalchemy import (
-    String,
-    Float,
-    Date,
-    DateTime,
-    Boolean,
-    Integer,
-    between,
-    case,
-    cast,
-    distinct,
-    not_,
-    and_,
-    or_,
-    func,
-    text,
+    Boolean, Date, DateTime, Float, Integer, String, and_, between, case, cast,
+    distinct, func, not_, or_, text
 )
-from .utils import (
-    calc_date_range,
-    convert_to_eod_datetime,
-    convert_to_end_datetime,
-    convert_to_start_datetime,
-)
+from sqlalchemy.sql.sqltypes import Numeric
 
-from collections import defaultdict
+from .utils import (
+    calc_date_range, convert_to_end_datetime, convert_to_eod_datetime,
+    convert_to_start_datetime
+)
 
 
 def convert(lst):
@@ -39,7 +24,7 @@ def convert(lst):
 
 
 def make_columns(columns):
-    """Return a lark string that looks like
+    """Return a lark rule that looks like
 
     // These are my raw columns
     str_0: "[" + /username/i + "]" | /username/i
