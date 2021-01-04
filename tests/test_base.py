@@ -88,7 +88,7 @@ TABLEDEF = """
          score float,
          test_date date,
          test_datetime datetime,
-         valid_Score bool
+         valid_score bool
          );
 """
 

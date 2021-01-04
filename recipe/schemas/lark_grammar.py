@@ -244,6 +244,8 @@ class ErrorVisitor(Visitor):
 
     def data_type(self, tree):
         # Find the data type for a tree
+        if tree is None:
+            return None
         if tree.data == "col":
             dt = self.data_type(tree.children[0])
         else:
@@ -292,11 +294,9 @@ class ErrorVisitor(Visitor):
         self._error_math(tree, "divided")
 
     def error_if_statement(self, tree):
-        print("an error yo")
         args = tree.children
         # Throw away the "if"
         args = args[1:]
-        print(args)
 
         # If there's an odd number of args, pop the last one to use as the else
         if len(args) % 2:
@@ -309,12 +309,21 @@ class ErrorVisitor(Visitor):
         # The "even" args should be values of the same type
         value_args = args[1::2]
 
-        print(bool_args)
+        # Check that the boolean args are boolean
         for arg in bool_args:
             dt = self.data_type(arg)
-            print(dt)
             if dt != "boolean":
                 self._add_error("This should be a boolean column or expression", arg)
+
+        # An array may not contain both strings and numbers
+        # value_type = None
+        # print(value_args)
+        # for arg in value_args + [else_expr]:
+        #     print(arg)
+        #     dt = self.data_type(arg)
+        #     print(dt)
+        #     if dt != "boolean":
+        #         self._add_error("This should be a boolean column or expression", arg)
 
     def aggr(self, tree):
         self.aggregation = True

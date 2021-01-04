@@ -547,6 +547,7 @@ class TestIf(TestBase):
     def test_if(self):
         good_examples = f"""
         # Number if statements
+        if([valid_score], [score], -1)                                  -> CASE WHEN datatypes.valid_score THEN datatypes.score ELSE -1 END
         if([score] > 2, [score], -1)                                    -> CASE WHEN (datatypes.score > 2) THEN datatypes.score ELSE -1 END
         if([score] > 2, [score])                                        -> CASE WHEN (datatypes.score > 2) THEN datatypes.score END
         if([score] > 2, [score]) + if([score] > 4, 1)                   -> CASE WHEN (datatypes.score > 2) THEN datatypes.score END + CASE WHEN (datatypes.score > 4) THEN 1 END
@@ -595,6 +596,26 @@ if(department, score)
 if(department = 2, score)
 Can't compare string to num
 if(department = 2, score)
+   ^
+
+if(department = "1", score, department, score*2)
+This should be a boolean column or expression
+if(department = "1", score, department, score*2)
+                            ^
+
+if(department = "1", score, department, score*2)
+This should be a boolean column or expression
+if(department = "1", score, department, score*2)
+                            ^
+
+if(department = "1", score, valid_score, score*2, department, 12.5)
+This should be a boolean column or expression
+ent = "1", score, valid_score, score*2, department, 12.5)
+                                        ^
+
+if(department, score, valid_score, score*2)
+This should be a boolean column or expression
+if(department, score, valid_score, score*2)
    ^
 """
 
