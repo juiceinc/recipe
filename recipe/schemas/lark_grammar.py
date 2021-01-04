@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import date, datetime
 from operator import truediv
+from attr import validate
 
 import dateparser
 from dateutil.relativedelta import relativedelta
@@ -231,26 +232,40 @@ def make_grammar_for_table(selectable):
     return columns, grammar
 
 
-class ErrorVisitor(Visitor):
-    """Raise descriptive exceptions for any errors found """
+class SQLALchemyValidator(Visitor):
+    """Visit the tree and return descriptive information. Populate
+    a list of errors 
+
+    Args:
+        Visitor ([type]): [description]
+    """
+
 
     def __init__(self, text, forbid_aggregation, drivername):
-        super().__init__()
+        """[summary]
+
+        Args:
+            text (str): A copy of the parsed text for error descriptions
+            forbid_aggregation (bool): Should aggregations be treated as an error
+            drivername (str): The database engine we are running against
+        """
         self.text = text
         self.forbid_aggregation = forbid_aggregation
-        # Was an aggregation encountered in the tree?
-        self.found_aggregation = False
-        #
-        self.last_datatype = None
-        self.errors = []
         self.drivername = drivername
 
-    def data_type(self, tree):
+        # Was an aggregation encountered in the tree?
+        self.found_aggregation = False
+        # What is the datatype of the returned expression
+        self.last_datatype = None
+        # Errors encountered while visiting the tree
+        self.errors = []
+
+    def _data_type(self, tree):
         # Find the data type for a tree
         if tree is None:
             return None
         if tree.data == "col":
-            dt = self.data_type(tree.children[0])
+            dt = self._data_type(tree.children[0])
         else:
             dt = tree.data
         if dt == "datetime_end":
@@ -258,6 +273,7 @@ class ErrorVisitor(Visitor):
         return dt
 
     def _add_error(self, message, tree):
+        """Add an error pointing to this location in the parsed string """
         tok = None
         # Find the first token
         while tree and tree.children:
@@ -285,7 +301,8 @@ class ErrorVisitor(Visitor):
         self._add_error(f"{tok1.data} and {tok2.data} can not be {verb}", tree)
 
     def col(self, tree):
-        self.last_datatype = self.data_type(tree)
+        print("Finding data type for col", self.last_datatype)
+        self.last_datatype = self._data_type(tree)
 
     def error_add(self, tree):
         self._error_math(tree, "added together")
@@ -317,14 +334,14 @@ class ErrorVisitor(Visitor):
 
         # Check that the boolean args are boolean
         for arg in bool_args:
-            dt = self.data_type(arg)
+            dt = self._data_type(arg)
             if dt != "boolean":
                 self._add_error("This should be a boolean column or expression", arg)
 
         # Data types of columns must match
         value_type = None
         for arg in value_args + [else_expr]:
-            dt = self.data_type(arg)
+            dt = self._data_type(arg)
             if dt is not None:
                 if value_type is None:
                     value_type = dt
@@ -372,7 +389,7 @@ class ErrorVisitor(Visitor):
     def error_aggr(self, tree):
         """Aggregating a bad data type """
         fn = tree.children[0].children[0]
-        dt = self.data_type(tree.children[0].children[1])
+        dt = self._data_type(tree.children[0].children[1])
         self._add_error(
             f"A {dt} can not be aggregated using {fn}.",
             tree,
@@ -380,9 +397,9 @@ class ErrorVisitor(Visitor):
 
     def error_between_expr(self, tree):
         col, BETWEEN, left, AND, right = tree.children
-        col_type = self.data_type(col)
-        left_type = self.data_type(left)
-        right_type = self.data_type(right)
+        col_type = self._data_type(col)
+        left_type = self._data_type(left)
+        right_type = self._data_type(right)
         if col_type == "datetime":
             if left_type == "date":
                 left_type = "datetime"
@@ -459,7 +476,6 @@ class TransformToSQLAlchemyExpression(Transformer):
         return before + after + "\n" + " " * len(before) + "^\n"
 
     def col(self, v):
-
         return v
 
     def string(self, v):
@@ -818,11 +834,22 @@ class SQLAlchemyBuilder(object):
             self.selectable, self.columns
         )
 
+        # The data type of the last parsed expression
+        self.last_datatype = None
+
         # Database driver
         try:
             self.drivername = selectable.metadata.bind.url.drivername
         except Exception:
             self.drivername = "unknown"
+
+    def data_type(
+        self, text, forbid_aggregation=False, enforce_aggregation=False, debug=False
+    ):
+        tree = self.parser.parse(text)
+        validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)
+        validator.visit(tree)
+        return validator.last_datatype
 
     def parse(
         self, text, forbid_aggregation=False, enforce_aggregation=False, debug=False
@@ -845,19 +872,21 @@ class SQLAlchemyBuilder(object):
         """
 
         tree = self.parser.parse(text)
-        error_visitor = ErrorVisitor(text, forbid_aggregation, self.drivername)
-        error_visitor.visit(tree)
-        if error_visitor.errors:
+        validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)
+        validator.visit(tree)
+        self.last_datatype = validator.last_datatype
+
+        if validator.errors:
             if debug:
-                print("".join(error_visitor.errors))
+                print("".join(validator.errors))
                 print("Tree:\n" + tree.pretty())
-            raise GrammarError("".join(error_visitor.errors))
+            raise GrammarError("".join(validator.errors))
         else:
             if debug:
                 print("Tree:\n" + tree.pretty())
             self.transformer.text = text
             expr = self.transformer.transform(tree)
-            if enforce_aggregation and not error_visitor.found_aggregation:
+            if enforce_aggregation and not validator.found_aggregation:
                 return func.sum(expr)
             else:
                 return expr

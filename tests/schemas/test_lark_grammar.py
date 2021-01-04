@@ -73,6 +73,26 @@ class TestSQLAlchemyBuilder(TestBase):
             expr = self.builder.parse(field, enforce_aggregation=True, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
+    def test_data_type(self):
+        good_examples = """
+        [score]                         -> num
+        [ScORE]                         -> num
+        [ScORE] + [ScORE]               -> num
+        max([ScORE] + [ScORE])          -> num
+        max(score) - min(score)         -> num
+        department                      -> string
+        department > "foo"              -> boolean
+        day(test_date)                  -> date
+        month(test_datetime)            -> date
+        department > "foo" anD [score] < 22    -> boolean
+        """
+
+        for field, expected_data_type in self.examples(good_examples):
+            print(f"\nInput: {field}")
+            self.builder.parse(field)
+            data_type = self.builder.last_datatype
+            self.assertEqual(data_type, expected_data_type)
+    
 
 class TestDataTypesTable(TestBase):
     maxDiff = None
