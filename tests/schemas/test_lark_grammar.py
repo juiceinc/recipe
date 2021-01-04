@@ -129,6 +129,9 @@ class TestDataTypesTable(TestBase):
         [score] / (2/1)                  -> CAST(datatypes.score AS FLOAT) / 2
         [score] / (0.5/0.25)             -> CAST(datatypes.score AS FLOAT) / 2.0
         [score] / (0.5 /    0.25)        -> CAST(datatypes.score AS FLOAT) / 2.0
+        [score] * (2*3)                  -> datatypes.score * 6
+        [score] * (2*score)              -> datatypes.score * 2 * datatypes.score
+        [score] * (2 / score)            -> datatypes.score * CASE WHEN (datatypes.score = 0) THEN NULL ELSE 2 / CAST(datatypes.score AS FLOAT) END
         """
 
         b = Builder(DataTypesTable)

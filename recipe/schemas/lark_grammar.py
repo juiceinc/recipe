@@ -111,7 +111,7 @@ def make_grammar_for_table(selectable):
     //num_div.1: num "/" num | "(" num "/" num ")"
     num_add.1: num "+" num                       -> add
     num_sub.1: num "-" num
-    num_mul.1: num "*" num
+    num_mul.1: num "*" num | "(" num "*" num ")"
     num_div.1: num "/" num | "(" num "/" num ")"
     add: col "+" col
 
