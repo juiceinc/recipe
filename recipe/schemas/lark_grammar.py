@@ -223,7 +223,10 @@ class ErrorVisitor(Visitor):
         super().__init__()
         self.text = text
         self.forbid_aggregation = forbid_aggregation
-        self.aggregation = False
+        # Was an aggregation encountered in the tree?
+        self.found_aggregation = False
+        # 
+        self.last_datatype = None
         self.errors = []
         self.drivername = drivername
 
@@ -265,6 +268,9 @@ class ErrorVisitor(Visitor):
         tok1 = tree.children[0].children[0]
         tok2 = tree.children[1].children[0]
         self._add_error(f"{tok1.data} and {tok2.data} can not be {verb}", tree)
+
+    def col(self, tree):
+        self.last_datatype = self.data_type(tree)
 
     def error_add(self, tree):
         self._error_math(tree, "added together")
@@ -314,9 +320,9 @@ class ErrorVisitor(Visitor):
                     )
 
     def aggr(self, tree):
-        self.aggregation = True
+        self.found_aggregation = True
         if self.forbid_aggregation:
-            self._add_error(f"Aggregations are not allowed in this ingredient.", tree)
+            self._add_error(f"Aggregations are not allowed in this field.", tree)
 
     def unknown_col(self, tree):
         """Column name doesn't exist in the data """
@@ -406,6 +412,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         self.text = None
         self.selectable = selectable
         self.columns = columns
+        self.last_datatype = None
         self.forbid_aggregation = forbid_aggregation
         # Database driver
         try:
@@ -437,6 +444,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return before + after + "\n" + " " * len(before) + "^\n"
 
     def col(self, v):
+
         return v
 
     def string(self, v):
@@ -775,9 +783,14 @@ class TransformToSQLAlchemyExpression(Transformer):
 
 
 class Builder(object):
-    def __init__(self, selectable, forbid_aggregation=False):
+    def __init__(self, selectable, forbid_aggregation=False, enforce_aggregation=False):
+        """Parse a recipe field
+
+        Args:
+            selectable (Table): A SQLAlchemy selectable
+        """
+
         self.selectable = selectable
-        self.forbid_aggregation = forbid_aggregation
         self.columns, self.grammar = make_grammar_for_table(selectable)
         self.parser = Lark(
             self.grammar,
@@ -800,10 +813,10 @@ class Builder(object):
         """Utility to print sql for a expression """
         return str(c.compile(compile_kwargs={"literal_binds": True}))
 
-    def parse(self, text, debug=False):
+    def parse(self, text, forbid_aggregation=False, enforce_aggregation=False, debug=False):
         """Return a parse tree for text"""
         tree = self.parser.parse(text)
-        error_visitor = ErrorVisitor(text, self.forbid_aggregation, self.drivername)
+        error_visitor = ErrorVisitor(text, forbid_aggregation, self.drivername)
         error_visitor.visit(tree)
         if error_visitor.errors:
             if debug:
@@ -814,5 +827,8 @@ class Builder(object):
             if debug:
                 print("Tree:\n" + tree.pretty())
             self.transformer.text = text
-            t = self.transformer.transform(tree)
-            return t
+            expr = self.transformer.transform(tree)
+            if enforce_aggregation and not error_visitor.found_aggregation:
+                return func.sum(expr)
+            else:
+                return expr

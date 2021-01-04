@@ -18,6 +18,9 @@ def to_sql(expr):
 class TestBase(TestCase):
     maxDiff = None
 
+    def setUp(self):
+        self.builder = Builder(DataTypesTable)
+
     def examples(self, input_rows):
         """Take input where each line looks like
         field     -> expected_sql
@@ -52,6 +55,25 @@ class TestBase(TestCase):
             yield field, expected_error
 
 
+
+class TestBuilder(TestBase):
+    maxDiff = None
+
+    def test_enforce_aggregation(self):
+        """These examples should all succeed"""
+
+        good_examples = """
+        [score]                         -> sum(datatypes.score)
+        [ScORE]                         -> sum(datatypes.score)
+        [ScORE] + [ScORE]               -> sum(datatypes.score + datatypes.score)
+        """
+
+        for field, expected_sql in self.examples(good_examples):
+            print(f"\nInput: {field}")
+            expr = self.builder.parse(field, enforce_aggregation=True, debug=True)
+            self.assertEqual(to_sql(expr), expected_sql)
+
+
 class TestDataTypesTable(TestBase):
     maxDiff = None
 
@@ -83,11 +105,9 @@ class TestDataTypesTable(TestBase):
         [score] IS NOT nULL             -> datatypes.score IS NOT NULL
         """
 
-        b = Builder(DataTypesTable)
-
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")
-            expr = b.parse(field, debug=True)
+            expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_division_and_math(self):
@@ -117,11 +137,9 @@ class TestDataTypesTable(TestBase):
         score + (3 + 5 / 10 - 5)         -> datatypes.score + -1.5
         """
 
-        b = Builder(DataTypesTable)
-
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")
-            expr = b.parse(field, debug=True)
+            expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_no_brackets(self):
@@ -151,11 +169,9 @@ class TestDataTypesTable(TestBase):
         score IS NOT nULL             -> datatypes.score IS NOT NULL
         """
 
-        b = Builder(DataTypesTable)
-
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")
-            expr = b.parse(field, debug=True)
+            expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_arrays(self):
@@ -173,11 +189,9 @@ class TestDataTypesTable(TestBase):
         [department] + [username] In ("A", "B")        -> datatypes.department || datatypes.username IN ('A', 'B')
         """
 
-        b = Builder(DataTypesTable)
-
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")
-            expr = b.parse(field, debug=False)
+            expr = self.builder.parse(field, debug=False)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_boolean(self):
@@ -204,11 +218,9 @@ class TestDataTypesTable(TestBase):
         [username] between [department] and "z"               -> datatypes.username BETWEEN datatypes.department AND 'z'
         """
 
-        b = Builder(DataTypesTable)
-
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")
-            expr = b.parse(field, debug=True)
+            expr = self.builder.parse(field, debug=True)
 
             if to_sql(expr) != expected_sql:
                 print("===" * 10)
@@ -301,11 +313,9 @@ When dividing, the denominator can not be zero
 When dividing, the denominator can not be zero
 """
 
-        b = Builder(DataTypesTable)
-
         for field, expected_error in self.bad_examples(bad_examples):
             with self.assertRaises(Exception) as e:
-                b.parse(field, debug=True)
+                self.builder.parse(field, debug=True)
             if str(e.exception) != expected_error:
                 print("===" * 10)
                 print(str(e.exception))
@@ -334,11 +344,9 @@ class TestDataTypesTableDates(TestBase):
         [test_datetime] IS next year          -> datatypes.test_datetime BETWEEN '2021-01-01 00:00:00' AND '2021-12-31 23:59:59.999999'
         """
 
-        b = Builder(DataTypesTable)
-
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")
-            expr = b.parse(field, debug=True)
+            expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_dates_without_freetime(self):
@@ -358,7 +366,7 @@ class TestDataTypesTableDates(TestBase):
 
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")
-            expr = b.parse(field, debug=True)
+            expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_failure(self):
@@ -379,11 +387,9 @@ When using between, the column (date) and between values (string, date) must be 
  ^
 """
 
-        b = Builder(DataTypesTable)
-
         for field, expected_error in self.bad_examples(bad_examples):
             with self.assertRaises(Exception) as e:
-                b.parse(field, debug=True)
+                self.builder.parse(field, debug=True)
             if str(e.exception).strip() != expected_error.strip():
                 print("===" * 10)
                 print(str(e.exception))
@@ -394,17 +400,6 @@ When using between, the column (date) and between values (string, date) must be 
 
 
 class TestAggregations(TestBase):
-    def test_aggregation(self):
-        good_examples = f"""
-        """
-
-        b = Builder(DataTypesTable)
-
-        for field, expected_sql in self.examples(good_examples):
-            print(f"\nInput: {field}")
-            expr = b.parse(field, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
-
     def test_allow_aggregation(self):
         # Can't tests with date conversions and freeze time :/
         good_examples = f"""
@@ -421,11 +416,9 @@ class TestAggregations(TestBase):
         count(*)                     -> count(*)
         """
 
-        b = Builder(DataTypesTable, forbid_aggregation=False)
-
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")
-            expr = b.parse(field, debug=True)
+            expr = self.builder.parse(field, forbid_aggregation=False, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_forbid_aggregation(self):
@@ -433,12 +426,12 @@ class TestAggregations(TestBase):
 
         bad_examples = """
 sum([score])
-Aggregations are not allowed in this ingredient.
+Aggregations are not allowed in this field.
 sum([score])
 ^
 
 sum(score)
-Aggregations are not allowed in this ingredient.
+Aggregations are not allowed in this field.
 sum(score)
 ^
 
@@ -453,7 +446,7 @@ A string can not be aggregated using sum.
          ^
 
 sum(score) + sum(department)
-Aggregations are not allowed in this ingredient.
+Aggregations are not allowed in this field.
 sum(score) + sum(department)
 ^
 A string can not be aggregated using sum.
@@ -461,7 +454,7 @@ sum(score) + sum(department)
              ^
 
 sum(score) + sum(department)
-Aggregations are not allowed in this ingredient.
+Aggregations are not allowed in this field.
 sum(score) + sum(department)
 ^
 A string can not be aggregated using sum.
@@ -469,11 +462,9 @@ sum(score) + sum(department)
              ^
 """
 
-        b = Builder(DataTypesTable, forbid_aggregation=True)
-
         for field, expected_error in self.bad_examples(bad_examples):
             with self.assertRaises(Exception) as e:
-                b.parse(field, debug=True)
+                self.builder.parse(field, forbid_aggregation=True, debug=True)
             if str(e.exception).strip() != expected_error.strip():
                 print("===" * 10)
                 print(str(e.exception))
@@ -515,12 +506,10 @@ percentile13([score])
 ^
 """
 
-        b = Builder(DataTypesTable, forbid_aggregation=False)
-
         for field, expected_error in self.bad_examples(bad_examples):
             print("Field", field)
             with self.assertRaises(Exception) as e:
-                b.parse(field, debug=True)
+                self.builder.parse(field, debug=True)
             if str(e.exception).strip() != expected_error.strip():
                 print("===" * 10)
                 print(str(e.exception))
@@ -536,11 +525,9 @@ percentile13([score])
         #percentile1([score])                 -> sum(datatypes.score)
         """
 
-        b = Builder(DataTypesTable, forbid_aggregation=False)
-
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")
-            expr = b.parse(field, debug=True)
+            expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
 
@@ -578,11 +565,9 @@ class TestIf(TestBase):
         month(if([score] > 2, test_datetime))                           -> date_trunc('month', CASE WHEN (datatypes.score > 2) THEN datatypes.test_datetime END)
         """
 
-        b = Builder(DataTypesTable, forbid_aggregation=False)
-
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")
-            expr = b.parse(field, debug=True)
+            expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_failing_if(self):
@@ -630,11 +615,9 @@ if(department = "foo", department, valid_score, score)
                                                 ^
 """
 
-        b = Builder(DataTypesTable, forbid_aggregation=True)
-
         for field, expected_error in self.bad_examples(bad_examples):
             with self.assertRaises(Exception) as e:
-                b.parse(field, debug=True)
+                self.builder.parse(field, forbid_aggregation=True, debug=True)
             if str(e.exception).strip() != expected_error.strip():
                 print("===" * 10)
                 print(str(e.exception))
