@@ -57,11 +57,16 @@ def make_columns_grammar(columns):
 
 def gather_columns(rule_name, columns, prefix, additions=None):
     """Build a list of all columns matching a prefix allong with potential additional rules."""
+    raw_rule_name = rule_name.split(".")[0]
     if additions is None:
         additions = []
+
+    # Reduce a pair of parens around a type back to itself.
+    paren_rule = f'"(" + {raw_rule_name} + ")"'
+
     matching_keys = [k for k in sorted(columns.keys()) if k.startswith(prefix + "_")]
     if matching_keys + additions:
-        return f"{rule_name}: " + " | ".join(matching_keys + additions)
+        return f"{rule_name}: " + " | ".join(matching_keys + additions + [paren_rule])
     else:
         return f'{rule_name}: "DUMMYVALUNUSABLECOL"'
 
@@ -72,7 +77,7 @@ def make_columns_for_table(selectable):
     like num_0, num_1, string_0, etc.
 
     The values are the selectable column reference
-    """  
+    """
     columns = {}
     type_counter = defaultdict(int)
 
@@ -103,12 +108,14 @@ def make_columns_for_table(selectable):
         columns[f"{prefix}_{cnt}"] = c
 
     print("\n\nColumns are", columns)
-    return columns    
+    return columns
+
 
 def make_lark_grammar(columns):
     """Build a grammar for this selectable using columns """
     grammar = f"""
     col: boolean | string | num | date | datetime_end | datetime | unusable_col | unknown_col | error_math | error_vector_expr | error_not_nonboolean | error_between_expr | error_aggr | error_if_statement
+    //paren_col: "(" col ")" -> col
 
     // These are the raw columns in the selectable
     {make_columns_grammar(columns)}
@@ -126,7 +133,7 @@ def make_lark_grammar(columns):
     num_sub.1: num "-" num | "(" num "-" num ")"
     num_mul.2: num "*" num | "(" num "*" num ")"
     num_div.2: num "/" num | "(" num "/" num ")"
-    add: col "+" col
+    add: col "+" col | "(" col "+" col ")"
 
     // Various error conditions (fields we don't recognize, bad math)
     // Low priority matching of any [columnname] values
@@ -400,8 +407,7 @@ class SQLALchemyValidator(Visitor):
         fn = tree.children[0].children[0]
         dt = self._data_type(tree.children[0].children[1])
         self._add_error(
-            f"A {dt} can not be aggregated using {fn}.",
-            tree,
+            f"A {dt} can not be aggregated using {fn}.", tree,
         )
 
     def error_between_expr(self, tree):
@@ -886,9 +892,9 @@ class SQLAlchemyBuilder(object):
             self.transformer.text = text
             expr = self.transformer.transform(tree)
             if (
-                enforce_aggregation and 
-                not validator.found_aggregation and 
-                self.last_datatype == 'num'
+                enforce_aggregation
+                and not validator.found_aggregation
+                and self.last_datatype == "num"
             ):
                 return func.sum(expr)
             else:
