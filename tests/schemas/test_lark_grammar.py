@@ -126,8 +126,9 @@ class TestDataTypesTable(TestBase):
         sum([score] / [score])           -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / CAST(datatypes.score AS FLOAT) END)
         score / 2                        -> CAST(datatypes.score AS FLOAT) / 2
         sum(score / score)               -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / CAST(datatypes.score AS FLOAT) END)
-        #[score] / (2/1)                  -> CAST(datatypes.score AS FLOAT) / 2
-        #[score] / (0.5/0.25)             -> CAST(datatypes.score AS FLOAT) / 2.0
+        [score] / (2/1)                  -> CAST(datatypes.score AS FLOAT) / 2
+        [score] / (0.5/0.25)             -> CAST(datatypes.score AS FLOAT) / 2.0
+        [score] / (0.5 /    0.25)        -> CAST(datatypes.score AS FLOAT) / 2.0
         """
 
         b = Builder(DataTypesTable)
