@@ -305,7 +305,7 @@ class ErrorVisitor(Visitor):
             else_expr = None
 
         # The "odd" args should be booleans
-        bool_args = args[::2] 
+        bool_args = args[::2]
         # The "even" args should be values of the same type
         value_args = args[1::2]
 
@@ -323,7 +323,10 @@ class ErrorVisitor(Visitor):
                 if value_type is None:
                     value_type = dt
                 elif value_type != dt:
-                    self._add_error(f"The values in this if statement must be the same type, not {value_type} and {dt}", arg)
+                    self._add_error(
+                        f"The values in this if statement must be the same type, not {value_type} and {dt}",
+                        arg,
+                    )
 
     def aggr(self, tree):
         self.aggregation = True
@@ -759,7 +762,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         # collect the other args into pairs
         # ['a','b','c','d'] --> [('a',b'), ('c','d')]
         pairs = zip(args[::2], args[1::2])
-        return case(pairs, else_=else_expr)        
+        return case(pairs, else_=else_expr)
 
     # Constants
 

@@ -542,7 +542,6 @@ percentile13([score])
             self.assertEqual(to_sql(expr), expected_sql)
 
 
-
 class TestIf(TestBase):
     def test_if(self):
         good_examples = f"""
