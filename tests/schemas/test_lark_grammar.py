@@ -25,7 +25,11 @@ class TestBase(TestCase):
             if row == "" or row.startswith("#"):
                 continue
 
-            field, expected_sql = row.split("->")
+            if "->" in row:
+                field, expected_sql = row.split("->")
+            else:
+                field = row
+                expected_sql = "None"
             expected_sql = expected_sql.strip()
             yield field, expected_sql
 
@@ -134,6 +138,7 @@ class TestDataTypesTable(TestBase):
         [score] * (2 / score)            -> datatypes.score * CASE WHEN (datatypes.score = 0) THEN NULL ELSE 2 / CAST(datatypes.score AS FLOAT) END
         [score] / (10-7)                 -> CAST(datatypes.score AS FLOAT) / 3
         [score] / (10-9)                 -> datatypes.score
+        ([score] + [score]) / ([score] - [score]) -> CASE WHEN (datatypes.score - datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score + datatypes.score AS FLOAT) / CAST(datatypes.score - datatypes.score AS FLOAT) END
         """
 
         b = Builder(DataTypesTable)

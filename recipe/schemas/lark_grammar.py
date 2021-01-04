@@ -104,12 +104,8 @@ def make_grammar_for_table(selectable):
     {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
     {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast"])}
     {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "aggr", "error_aggr"])}
-    string_add: string "+" string                -> add
-    //num_add.1: num "+" num                      -> add
-    //num_sub.1: num "-" num | "(" num "-" num ")"
-    //num_mul.1: num "*" num | "(" num "*" num ")"
-    //num_div.1: num "/" num | "(" num "/" num ")"
-    num_add.1: num "+" num                       -> add
+    string_add: string "+" string                
+    num_add.1: num "+" num | "(" num "+" num ")"                      
     num_sub.1: num "-" num | "(" num "-" num ")"
     num_mul.1: num "*" num | "(" num "*" num ")"
     num_div.1: num "/" num | "(" num "/" num ")"
@@ -439,7 +435,11 @@ class TransformToSQLAlchemyExpression(Transformer):
         else:
             return v
 
-    def add(self, a, b):
+    def num_add(self, a, b):
+        """ Add numbers or strings """
+        return a + b
+
+    def string_add(self, a, b):
         """ Add numbers or strings """
         return a + b
 
