@@ -2,9 +2,8 @@ import time
 from unittest import TestCase, skip
 
 from freezegun import freeze_time
-from lark.parse_tree_builder import ExpandSingleChild
 
-from recipe.schemas.lark_grammar import Builder
+from recipe.schemas.lark_grammar import SQLAlchemyBuilder
 from tests.test_base import DataTypesTable
 
 utc_offset = -1 * time.localtime().tm_gmtoff / 3600.0
@@ -19,7 +18,7 @@ class TestBase(TestCase):
     maxDiff = None
 
     def setUp(self):
-        self.builder = Builder(DataTypesTable)
+        self.builder = SQLAlchemyBuilder(DataTypesTable)
 
     def examples(self, input_rows):
         """Take input where each line looks like
@@ -56,7 +55,7 @@ class TestBase(TestCase):
 
 
 
-class TestBuilder(TestBase):
+class TestSQLAlchemyBuilder(TestBase):
     maxDiff = None
 
     def test_enforce_aggregation(self):
@@ -363,8 +362,6 @@ class TestDataTypesTableDates(TestBase):
         year([test_date]) > date("2020-12-30")           -> date_trunc('year', datatypes.test_date) > '2020-12-30'
         date([test_datetime])                            -> date_trunc('day', datatypes.test_datetime)
         """
-
-        b = Builder(DataTypesTable)
 
         for field, expected_sql in self.examples(good_examples):
             print(f"\nInput: {field}")

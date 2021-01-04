@@ -1,6 +1,6 @@
 from copy import copy
 
-from lark.exceptions import VisitError
+from lark.exceptions import VisitError, GrammarError
 from ordered_set import OrderedSet
 from sqlalchemy import Float, Integer, String, Table
 from sqlalchemy.util import lightweight_named_tuple

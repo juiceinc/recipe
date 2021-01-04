@@ -796,7 +796,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return None
 
 
-class Builder(object):
+class SQLAlchemyBuilder(object):
     def __init__(self, selectable, forbid_aggregation=False, enforce_aggregation=False):
         """Parse a recipe field
 
