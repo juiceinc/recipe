@@ -39,7 +39,7 @@ def convert(lst):
     return ["\[" + v + "\]" for v in lst]
 
 
-def make_columns(columns):
+def make_columns_grammar(columns):
     """Return a lark rule that looks like
 
     // These are my raw columns
@@ -55,7 +55,7 @@ def make_columns(columns):
 
 
 def gather_columns(rule_name, columns, prefix, additions=None):
-    """Build a list of all columns matching a prefix allong with potential addition """
+    """Build a list of all columns matching a prefix allong with potential additional rules."""
     if additions is None:
         additions = []
     matching_keys = [k for k in sorted(columns.keys()) if k.startswith(prefix + "_")]
@@ -65,8 +65,13 @@ def gather_columns(rule_name, columns, prefix, additions=None):
         return f'{rule_name}: "DUMMYVALUNUSABLECOL"'
 
 
-def make_grammar_for_table(selectable):
-    """Build a dict of usable columns and a grammar for this selectable """
+def make_columns_for_table(selectable):
+    """Return a dictionary of columns. The keys
+    are unique lark rules prefixed by the column type
+    like num_0, num_1, string_0, etc.
+
+    The values are the selectable column reference
+    """  
     columns = {}
     type_counter = defaultdict(int)
 
@@ -89,12 +94,15 @@ def make_grammar_for_table(selectable):
         cnt = type_counter[prefix]
         type_counter[prefix] += 1
         columns[f"{prefix}_{cnt}"] = c
+    return columns    
 
+def make_lark_grammar(columns):
+    """Build a grammar for this selectable using columns """
     grammar = f"""
     col: boolean | string | num | date | datetime_end | datetime | unusable_col | unknown_col | error_math | error_vector_expr | error_not_nonboolean | error_between_expr | error_aggr | error_if_statement
 
     // These are the raw columns in the selectable
-    {make_columns(columns)}
+    {make_columns_grammar(columns)}
 
     {gather_columns("unusable_col", columns, "unusable", [])}
     {gather_columns("date.1", columns, "date", ["date_conv", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "datetime_to_date_conv", "date_aggr", "date_if_statement"])}
@@ -227,22 +235,13 @@ def make_grammar_for_table(selectable):
     %ignore COMMENT
     %ignore WS_INLINE
 """
-
-    print(grammar)
-    return columns, grammar
+    return grammar
 
 
 class SQLALchemyValidator(Visitor):
-    """Visit the tree and return descriptive information. Populate
-    a list of errors 
-
-    Args:
-        Visitor ([type]): [description]
-    """
-
-
     def __init__(self, text, forbid_aggregation, drivername):
-        """[summary]
+        """Visit the tree and return descriptive information. Populate
+        a list of errors. 
 
         Args:
             text (str): A copy of the parsed text for error descriptions
@@ -440,17 +439,13 @@ class SQLALchemyValidator(Visitor):
 class TransformToSQLAlchemyExpression(Transformer):
     """Converts a field to a SQLAlchemy expression """
 
-    def __init__(self, selectable, columns, forbid_aggregation=True):
+    def __init__(self, selectable, columns, drivername, forbid_aggregation=True):
         self.text = None
         self.selectable = selectable
         self.columns = columns
         self.last_datatype = None
         self.forbid_aggregation = forbid_aggregation
-        # Database driver
-        try:
-            self.drivername = selectable.metadata.bind.url.drivername
-        except Exception:
-            self.drivername = "unknown"
+        self.drivername = drivername
 
     def _raise_error(self, message):
         tree = None
@@ -814,15 +809,23 @@ class TransformToSQLAlchemyExpression(Transformer):
 
 
 class SQLAlchemyBuilder(object):
-    def __init__(self, selectable, forbid_aggregation=False, enforce_aggregation=False):
-        """Parse a recipe field
+    def __init__(self, selectable):
+        """Parse a recipe field by building a custom grammar that 
+        uses the colums in a selectable.
 
         Args:
             selectable (Table): A SQLAlchemy selectable
         """
 
         self.selectable = selectable
-        self.columns, self.grammar = make_grammar_for_table(selectable)
+        # Database driver
+        try:
+            self.drivername = selectable.metadata.bind.url.drivername
+        except Exception:
+            self.drivername = "unknown"
+
+        self.columns = make_columns_for_table(selectable)
+        self.grammar = make_lark_grammar(self.columns)
         self.parser = Lark(
             self.grammar,
             parser="earley",
@@ -831,25 +834,11 @@ class SQLAlchemyBuilder(object):
             propagate_positions=True,
         )
         self.transformer = TransformToSQLAlchemyExpression(
-            self.selectable, self.columns
+            self.selectable, self.columns, self.drivername
         )
 
         # The data type of the last parsed expression
         self.last_datatype = None
-
-        # Database driver
-        try:
-            self.drivername = selectable.metadata.bind.url.drivername
-        except Exception:
-            self.drivername = "unknown"
-
-    def data_type(
-        self, text, forbid_aggregation=False, enforce_aggregation=False, debug=False
-    ):
-        tree = self.parser.parse(text)
-        validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)
-        validator.visit(tree)
-        return validator.last_datatype
 
     def parse(
         self, text, forbid_aggregation=False, enforce_aggregation=False, debug=False
@@ -886,7 +875,11 @@ class SQLAlchemyBuilder(object):
                 print("Tree:\n" + tree.pretty())
             self.transformer.text = text
             expr = self.transformer.transform(tree)
-            if enforce_aggregation and not validator.found_aggregation:
+            if (
+                enforce_aggregation and 
+                not validator.found_aggregation and 
+                self.last_datatype == 'num'
+            ):
                 return func.sum(expr)
             else:
                 return expr
