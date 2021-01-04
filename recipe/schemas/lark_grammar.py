@@ -327,7 +327,8 @@ class ErrorVisitor(Visitor):
         fn = tree.children[0].children[0]
         dt = self.data_type(tree.children[0].children[1])
         self._add_error(
-            f"A {dt} can not be aggregated using {fn}.", tree,
+            f"A {dt} can not be aggregated using {fn}.",
+            tree,
         )
 
     def error_between_expr(self, tree):
@@ -362,9 +363,11 @@ class ErrorVisitor(Visitor):
     def percentile_aggr(self, tree):
         """Sum up the things """
         percentile, fld = tree.children
-        percentile_val = int(percentile[len("percentile"):])
-        if percentile_val not in (1,5,10,25,50,75,90,95,99):
-            self._add_error(f"Percentile values of {percentile_val} are not supported.", tree)
+        percentile_val = int(percentile[len("percentile") :])
+        if percentile_val not in (1, 5, 10, 25, 50, 75, 90, 95, 99):
+            self._add_error(
+                f"Percentile values of {percentile_val} are not supported.", tree
+            )
         if self.drivername == "sqlite":
             self._add_error("Percentile is not supported on sqlite", tree)
 
@@ -682,19 +685,21 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def percentile_aggr(self, percentile, fld):
         """Sum up the things """
-        percentile_val = int(percentile[len("percentile"):])
+        percentile_val = int(percentile[len("percentile") :])
         print(percentile_val)
-        if percentile_val not in (1,5,10,25,50,75,90,95,99):
-            raise GrammarError(f"percentile values of {percentile_val} is not supported.")
+        if percentile_val not in (1, 5, 10, 25, 50, 75, 90, 95, 99):
+            raise GrammarError(
+                f"percentile values of {percentile_val} is not supported."
+            )
         if self.drivername == "bigquery":
             # FIXME: This doesn't work
-            return func.percentile_cont(0.01).within_group(fld),
+            return (func.percentile_cont(0.01).within_group(fld),)
             # return func.date_trunc(fld, text("day"))
         elif self.drivername == "sqlite":
             raise GrammarError("Percentile is not supported on sqlite")
         else:
             # Postgres + redshift
-            return func.percentile_cont(0.01).within_group(fld),
+            return (func.percentile_cont(0.01).within_group(fld),)
             # return func.date_trunc("day", fld)
 
     def count_distinct_aggr(self, _, fld):
