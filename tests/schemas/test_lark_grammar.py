@@ -53,35 +53,6 @@ class TestBase(TestCase):
 class TestDataTypesTable(TestBase):
     maxDiff = None
 
-    def examples(self, input_rows):
-        """Take input where each line looks like
-        field     -> expected_sql
-        """
-        for row in input_rows.split("\n"):
-            row = row.strip()
-            if row == "" or row.startswith("#"):
-                continue
-
-            field, expected_sql = row.split("->")
-            expected_sql = expected_sql.strip()
-            yield field, expected_sql
-
-    def bad_examples(self, input_rows):
-        """Take input where each input is separated by two newlines
-
-        field
-        expected_error
-
-        field
-        expected_error
-
-        """
-        for row in input_rows.split("\n\n"):
-            lines = row.strip().split("\n")
-            field = lines[0]
-            expected_error = "\n".join(lines[1:]) + "\n"
-            yield field, expected_error
-
     # @skip
     def test_fields_and_addition(self):
         """These examples should all succeed"""
@@ -139,6 +110,10 @@ class TestDataTypesTable(TestBase):
         [score] / (10-7)                 -> CAST(datatypes.score AS FLOAT) / 3
         [score] / (10-9)                 -> datatypes.score
         ([score] + [score]) / ([score] - [score]) -> CASE WHEN (datatypes.score - datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score + datatypes.score AS FLOAT) / CAST(datatypes.score - datatypes.score AS FLOAT) END
+        # Order of operations has: score + (3 + (5 / 5))
+        score + (3 + 5 / (10 - 5))       -> datatypes.score + 4.0
+        # Order of operations has: score + (3 + 0.5 - 5)
+        score + (3 + 5 / 10 - 5)         -> datatypes.score + -1.5
         """
 
         b = Builder(DataTypesTable)

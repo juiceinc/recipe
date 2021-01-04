@@ -107,8 +107,8 @@ def make_grammar_for_table(selectable):
     string_add: string "+" string                
     num_add.1: num "+" num | "(" num "+" num ")"                      
     num_sub.1: num "-" num | "(" num "-" num ")"
-    num_mul.1: num "*" num | "(" num "*" num ")"
-    num_div.1: num "/" num | "(" num "/" num ")"
+    num_mul.2: num "*" num | "(" num "*" num ")"
+    num_div.2: num "/" num | "(" num "/" num ")"
     add: col "+" col
 
     // Various error conditions (fields we don't recognize, bad math)
@@ -445,14 +445,12 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def num_div(self, num, denom):
         """SQL safe division"""
-        print("here numdiv", num, denom)
         if isinstance(denom, (int, float)):
             if denom == 0:
                 raise GrammarError("When dividing, the denominator can not be zero")
             elif denom == 1:
                 return num
             elif isinstance(num, (int, float)):
-                print("DVIDING", num, denom)
                 return num / denom
             else:
                 return cast(num, Float) / denom
@@ -686,7 +684,6 @@ class TransformToSQLAlchemyExpression(Transformer):
     def percentile_aggr(self, percentile, fld):
         """Sum up the things """
         percentile_val = int(percentile[len("percentile") :])
-        print(percentile_val)
         if percentile_val not in (1, 5, 10, 25, 50, 75, 90, 95, 99):
             raise GrammarError(
                 f"percentile values of {percentile_val} is not supported."
