@@ -622,6 +622,11 @@ if(department = "foo", score, valid_score, department)
 The values in this if statement must be the same type, not num and string
 if(department = "foo", score, valid_score, department)
                                            ^
+
+if(department = "foo", department, valid_score, score)
+The values in this if statement must be the same type, not string and num
+if(department = "foo", department, valid_score, score)
+                                                ^
 """
 
         b = Builder(DataTypesTable, forbid_aggregation=True)
