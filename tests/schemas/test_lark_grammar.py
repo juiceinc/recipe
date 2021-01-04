@@ -55,8 +55,6 @@ class TestBase(TestCase):
 
 
 class TestSQLAlchemyBuilder(TestBase):
-    maxDiff = None
-
     def test_enforce_aggregation(self):
         """Enforce aggregation will wrap the function in a sum if no aggregation was seen"""
 
@@ -95,7 +93,6 @@ class TestSQLAlchemyBuilder(TestBase):
     
 
 class TestDataTypesTable(TestBase):
-    maxDiff = None
 
     def test_fields_and_addition(self):
         """These examples should all succeed"""
