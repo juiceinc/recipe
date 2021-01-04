@@ -368,12 +368,12 @@ Can't convert '1 day from now' to a date.
 
 [test_date] between date("2020-01-01") and 7
 When using between, the column (date) and between values (date, num) must be the same data type.
-[test_date] between date("2020-01-01") an
+[test_date] between date("2020-01-01") and 7
  ^
 
 [test_date] between "potato" and date("2020-01-01")
 When using between, the column (date) and between values (string, date) must be the same data type.
-[test_date] between "potato" and date("20
+[test_date] between "potato" and date("2020-01-01")
  ^
 """
 
@@ -610,13 +610,18 @@ if(department = "1", score, department, score*2)
 
 if(department = "1", score, valid_score, score*2, department, 12.5)
 This should be a boolean column or expression
-ent = "1", score, valid_score, score*2, department, 12.5)
-                                        ^
+if(department = "1", score, valid_score, score*2, department, 12.5)
+                                                  ^
 
 if(department, score, valid_score, score*2)
 This should be a boolean column or expression
 if(department, score, valid_score, score*2)
    ^
+
+if(department = "foo", score, valid_score, department)
+The values in this if statement must be the same type, not num and string
+if(department = "foo", score, valid_score, department)
+                                           ^
 """
 
         b = Builder(DataTypesTable, forbid_aggregation=True)

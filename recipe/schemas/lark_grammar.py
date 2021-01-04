@@ -264,7 +264,7 @@ class ErrorVisitor(Visitor):
                 break
 
         if tok:
-            extra_context = self._get_context_for_token(tok)
+            extra_context = self._get_context_for_token(tok, span=200)
             message = f"{message}\n{extra_context}"
         self.errors.append(message)
 
@@ -315,15 +315,15 @@ class ErrorVisitor(Visitor):
             if dt != "boolean":
                 self._add_error("This should be a boolean column or expression", arg)
 
-        # An array may not contain both strings and numbers
-        # value_type = None
-        # print(value_args)
-        # for arg in value_args + [else_expr]:
-        #     print(arg)
-        #     dt = self.data_type(arg)
-        #     print(dt)
-        #     if dt != "boolean":
-        #         self._add_error("This should be a boolean column or expression", arg)
+        # Data types of columns must match
+        value_type = None
+        for arg in value_args + [else_expr]:
+            dt = self.data_type(arg)
+            if dt is not None:
+                if value_type is None:
+                    value_type = dt
+                elif value_type != dt:
+                    self._add_error(f"The values in this if statement must be the same type, not {value_type} and {dt}", arg)
 
     def aggr(self, tree):
         self.aggregation = True
