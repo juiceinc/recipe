@@ -18,7 +18,6 @@ from sqlalchemy import (
     case,
     cast,
     distinct,
-    inspection,
     not_,
     and_,
     or_,
@@ -91,19 +90,19 @@ def make_grammar_for_table(selectable):
         columns[f"{prefix}_{cnt}"] = c
 
     grammar = f"""
-    col: boolean | string | num | date | datetime_end | datetime | unusable_col | unknown_col | error_math | error_vector_expr | error_not_nonboolean | error_between_expr | error_aggr
+    col: boolean | string | num | date | datetime_end | datetime | unusable_col | unknown_col | error_math | error_vector_expr | error_not_nonboolean | error_between_expr | error_aggr | error_if_statement
 
     // These are the raw columns in the selectable
     {make_columns(columns)}
 
     {gather_columns("unusable_col", columns, "unusable", [])}
-    {gather_columns("date.1", columns, "date", ["date_conv", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "datetime_to_date_conv", "date_aggr"])}
-    {gather_columns("datetime.2", columns, "datetime", ["datetime_conv"])}
+    {gather_columns("date.1", columns, "date", ["date_conv", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "datetime_to_date_conv", "date_aggr", "date_if_statement"])}
+    {gather_columns("datetime.2", columns, "datetime", ["datetime_conv", "datetime_if_statement"])}
     // Datetimes that are converted to the end of day
     {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
     {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
-    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast"])}
-    {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "aggr", "error_aggr"])}
+    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast", "string_if_statement"])}
+    {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "aggr", "error_aggr", "num_if_statement"])}
     string_add: string "+" string                
     num_add.1: num "+" num | "(" num "+" num ")"                      
     num_sub.1: num "-" num | "(" num "-" num ")"
@@ -197,6 +196,14 @@ def make_grammar_for_table(selectable):
     min_datetime_aggr.1: /min/i "(" datetime ")"    -> min_aggr
     max_datetime_aggr.1: /max/i "(" datetime ")"    -> max_aggr
 
+    // functions
+    num_if_statement.4: IF "(" (boolean "," (num | NULL) ","?)+ (num | NULL)? ")"                    -> if_statement
+    string_if_statement.4: IF "(" (boolean "," (string | NULL) ","?)+ (string | NULL)? ")"           -> if_statement
+    date_if_statement.4: IF "(" (boolean "," (date | NULL) ","?)+ (date | NULL)? ")"                 -> if_statement
+    datetime_if_statement.4: IF "(" (boolean "," (datetime | NULL) ","?)+ (datetime | NULL)? ")"     -> if_statement
+    //error_if_statement.3: IF "(" (col "," (col | NULL) ","?)+ (col | NULL)? ")"
+    error_if_statement.3: IF "(" (col "," (col | NULL) ","?)+ (col | NULL)? ")"
+
     star: "*"
     TRUE: /TRUE/i
     FALSE: /FALSE/i
@@ -207,6 +214,7 @@ def make_grammar_for_table(selectable):
     IS: /IS/i
     BETWEEN: /BETWEEN/i
     NULL: /NULL/i
+    IF: /IF/i
     INTELLIGENT_DATE_OFFSET: /prior/i | /last/i | /previous/i | /current/i | /this/i | /next/i
     INTELLIGENT_DATE_UNITS: /ytd/i | /year/i | /qtr/i | /month/i | /mtd/i | /day/i
     COMMENT: /#.*/
@@ -282,6 +290,31 @@ class ErrorVisitor(Visitor):
 
     def error_div(self, tree):
         self._error_math(tree, "divided")
+
+    def error_if_statement(self, tree):
+        print("an error yo")
+        args = tree.children
+        # Throw away the "if"
+        args = args[1:]
+        print(args)
+
+        # If there's an odd number of args, pop the last one to use as the else
+        if len(args) % 2:
+            else_expr = args.pop()
+        else:
+            else_expr = None
+
+        # The "odd" args should be booleans
+        bool_args = args[::2] 
+        # The "even" args should be values of the same type
+        value_args = args[1::2]
+
+        print(bool_args)
+        for arg in bool_args:
+            dt = self.data_type(arg)
+            print(dt)
+            if dt != "boolean":
+                self._add_error("This should be a boolean column or expression", arg)
 
     def aggr(self, tree):
         self.aggregation = True
@@ -702,6 +735,22 @@ class TransformToSQLAlchemyExpression(Transformer):
     def count_distinct_aggr(self, _, fld):
         """Sum up the things """
         return func.count(distinct(fld))
+
+    # If functions
+
+    def if_statement(self, IF, *args):
+        args = list(args)
+
+        # If there's an odd number of args, pop the last one to use as the else
+        if len(args) % 2:
+            else_expr = args.pop()
+        else:
+            else_expr = None
+
+        # collect the other args into pairs
+        # ['a','b','c','d'] --> [('a',b'), ('c','d')]
+        pairs = zip(args[::2], args[1::2])
+        return case(pairs, else_=else_expr)        
 
     # Constants
 
