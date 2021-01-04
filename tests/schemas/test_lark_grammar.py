@@ -3,8 +3,9 @@ from unittest import TestCase, skip
 
 from freezegun import freeze_time
 
+from recipe import Recipe
 from recipe.schemas.lark_grammar import SQLAlchemyBuilder
-from tests.test_base import DataTypesTable
+from tests.test_base import DataTypesTable, mytable_shelf, oven
 
 utc_offset = -1 * time.localtime().tm_gmtoff / 3600.0
 
@@ -91,7 +92,36 @@ class TestSQLAlchemyBuilder(TestBase):
             data_type = self.builder.last_datatype
             self.assertEqual(data_type, expected_data_type)
     
+    def test_selectable_recipe(self):
+        """Test a selectable that is a recipe """
+        recipe = Recipe(shelf=mytable_shelf, session=oven.Session()).metrics("age").dimensions("first")
+        b = SQLAlchemyBuilder(selectable=recipe)
+        type_examples = """
+        [age]                         -> num
+        [first]                       -> string
+        [first] > "foo"               -> boolean
+        age * 2                       -> num
+        """
 
+        for field, expected_data_type in self.examples(type_examples):
+            print(f"\nInput: {field}")
+            b.parse(field)
+            data_type = b.last_datatype
+            self.assertEqual(data_type, expected_data_type)
+
+        sql_examples = """
+        [age]                         -> anon_1.age
+        [first]                       -> anon_1.first
+        [first] > "foo"               -> anon_1.first > 'foo'
+        age * 2                       -> anon_1.age * 2
+        """
+        for field, expected_sql in self.examples(sql_examples):
+            print(f"\nInput: {field}")
+            expr = b.parse(field, debug=True)
+            self.assertEqual(to_sql(expr), expected_sql)
+
+
+    
 class TestDataTypesTable(TestBase):
 
     def test_fields_and_addition(self):

@@ -26,6 +26,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.sql.sqltypes import Numeric
+from recipe import Recipe
 
 from .utils import (
     calc_date_range,
@@ -75,7 +76,13 @@ def make_columns_for_table(selectable):
     columns = {}
     type_counter = defaultdict(int)
 
-    for c in selectable.columns:
+    if isinstance(selectable, Recipe):
+        selectable = selectable.subquery()
+        column_iterable = selectable.c
+    else:
+        column_iterable = selectable.columns
+
+    for c in column_iterable:
         # Check supported column types
         if isinstance(c.type, String):
             prefix = "str"
@@ -94,6 +101,8 @@ def make_columns_for_table(selectable):
         cnt = type_counter[prefix]
         type_counter[prefix] += 1
         columns[f"{prefix}_{cnt}"] = c
+
+    print("\n\nColumns are", columns)
     return columns    
 
 def make_lark_grammar(columns):
@@ -235,6 +244,7 @@ def make_lark_grammar(columns):
     %ignore COMMENT
     %ignore WS_INLINE
 """
+    print(grammar)
     return grammar
 
 
