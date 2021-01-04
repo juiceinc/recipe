@@ -305,7 +305,7 @@ When dividing, the denominator can not be zero
             with self.assertRaises(Exception) as e:
                 b.parse(field, debug=True)
             if str(e.exception) != expected_error:
-                print("===" * 10)                
+                print("===" * 10)
                 print(str(e.exception))
                 print("vs")
                 print(expected_error)
