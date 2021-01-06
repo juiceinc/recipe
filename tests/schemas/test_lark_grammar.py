@@ -193,9 +193,8 @@ class TestSQLAlchemyBuilder(TestBase):
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
-    
-class TestDataTypesTable(TestBase):
 
+class TestDataTypesTable(TestBase):
     def test_fields_and_addition(self):
         """These examples should all succeed"""
 

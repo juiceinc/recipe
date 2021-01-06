@@ -113,7 +113,6 @@ def make_columns_for_table(selectable):
         cnt = type_counter[prefix]
         type_counter[prefix] += 1
         columns[f"{prefix}_{cnt}"] = c
-
     return columns
 
 
@@ -276,7 +275,7 @@ def make_lark_grammar(columns):
 class SQLALchemyValidator(Visitor):
     def __init__(self, text, forbid_aggregation, drivername):
         """Visit the tree and return descriptive information. Populate
-        a list of errors. 
+        a list of errors.
 
         Args:
             text (str): A copy of the parsed text for error descriptions
@@ -881,7 +880,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
 class SQLAlchemyBuilder(object):
     def __init__(self, selectable):
-        """Parse a recipe field by building a custom grammar that 
+        """Parse a recipe field by building a custom grammar that
         uses the colums in a selectable.
 
         Args:
