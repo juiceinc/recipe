@@ -127,13 +127,13 @@ def make_lark_grammar(columns):
     {make_columns_grammar(columns)}
 
     {gather_columns("unusable_col", columns, "unusable", [])}
-    {gather_columns("date.1", columns, "date", ["date_conv", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "datetime_to_date_conv", "date_aggr", "date_if_statement"])}
-    {gather_columns("datetime.2", columns, "datetime", ["datetime_conv", "datetime_if_statement"])}
+    {gather_columns("date.1", columns, "date", ["date_conv", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "datetime_to_date_conv", "date_aggr", "date_if_statement", "date_coalesce"])}
+    {gather_columns("datetime.2", columns, "datetime", ["datetime_conv", "datetime_if_statement", "datetime_coalesce"])}
     // Datetimes that are converted to the end of day
     {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
     {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "date_bool_expr", "datetime_bool_expr", "vector_expr", "between_expr", "date_between_expr", "datetime_between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
-    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast", "string_if_statement", "string_aggr"])}
-    {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "aggr", "error_aggr", "num_if_statement"])}
+    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast", "string_coalesce", "string_if_statement", "string_aggr"])}
+    {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "num_coalesce", "aggr", "error_aggr", "num_if_statement"])}
     string_add: string "+" string                
     num_add.1: num "+" num | "(" num "+" num ")"                      
     num_sub.1: num "-" num | "(" num "-" num ")"
@@ -143,7 +143,7 @@ def make_lark_grammar(columns):
 
     // Various error conditions (fields we don't recognize, bad math)
     // Low priority matching of any [columnname] values
-    unknown_col.0: "[" + NAME + "]"
+    unknown_col.0: "[" + NAME + "]" | NAME
     error_math.0: error_add | error_sub | error_mul | error_div
     error_add.0: col "+" col
     error_sub.0: col "-" col
@@ -204,6 +204,10 @@ def make_lark_grammar(columns):
     // date->int
     // TODO: age_conv: /age/i "(" (date | datetime) ")"    
     // TODO: date - date => int
+    num_coalesce: /coalesce/i "(" num "," num ")"                 -> coalesce
+    string_coalesce: /coalesce/i "(" string "," string ")"        -> coalesce
+    date_coalesce: /coalesce/i "(" date "," date ")"              -> coalesce
+    datetime_coalesce: /coalesce/i "(" datetime "," datetime ")"  -> coalesce
 
     // Aggregations that are errors
     error_aggr.0: error_sum_aggr | error_min_aggr | error_max_aggr | error_avg_aggr | error_median_aggr | error_percentile_aggr
@@ -525,6 +529,10 @@ class TransformToSQLAlchemyExpression(Transformer):
         """Cast a field to a string """
         return cast(fld, Integer())
 
+    def coalesce(self, coalesce, left, right):
+        """Coalesce a number, string, date or datetime """
+        return func.coalesce(left, right)
+
     def boolean(self, v):
         if isinstance(v, Tree):
             return self.columns[v.data]
@@ -803,7 +811,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def count_aggr(self, _, fld):
         """Sum up the things """
-        if fld.data == "star":
+        if getattr(fld, "data", None) == "star":
             return func.count()
         else:
             return func.count(fld)

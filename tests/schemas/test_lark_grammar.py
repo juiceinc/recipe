@@ -222,6 +222,11 @@ class TestDataTypesTable(TestBase):
         [score] != Null                 -> datatypes.score IS NOT NULL
         [score] <> Null                 -> datatypes.score IS NOT NULL
         [score] IS NOT nULL             -> datatypes.score IS NOT NULL
+        string([score])                 -> CAST(datatypes.score AS VARCHAR)
+        coalesce([score], 0.14)         -> coalesce(datatypes.score, 0.14)
+        int([department])               -> CAST(datatypes.department AS INTEGER)
+        coalesce([department], "moo")   -> coalesce(datatypes.department, 'moo')
+        coalesce([test_date], date("2020-01-01"))   -> coalesce(datatypes.test_date, '2020-01-01')
         """
 
         for field, expected_sql in self.examples(good_examples):
@@ -286,6 +291,10 @@ class TestDataTypesTable(TestBase):
         score != Null                 -> datatypes.score IS NOT NULL
         score <> Null                 -> datatypes.score IS NOT NULL
         score IS NOT nULL             -> datatypes.score IS NOT NULL
+        string(score)                 -> CAST(datatypes.score AS VARCHAR)
+        coalesce(score, 0.14)         -> coalesce(datatypes.score, 0.14)
+        int(department)               -> CAST(datatypes.department AS INTEGER)
+        coalesce(department, "moo")   -> coalesce(datatypes.department, 'moo')
         """
 
         for field, expected_sql in self.examples(good_examples):
@@ -354,6 +363,12 @@ class TestDataTypesTable(TestBase):
         """These examples should all fail"""
 
         bad_examples = """
+unknown ->
+unknown is not a valid column name
+
+unknown
+^
+===
 [scores] ->
 scores is not a valid column name
 
