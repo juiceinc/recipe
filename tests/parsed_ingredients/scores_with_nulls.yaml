@@ -21,7 +21,7 @@ department_lookup_with_null:
         null: 'can not find department'
 department_lookup_with_everything:
     kind: Dimension
-    field: "coalesce(department, 'N/A')"
+    field: "coalesce(department, \"N/A\")"
     lookup:
         sales: Sales
         ops: Operations
@@ -32,13 +32,13 @@ department_buckets:
     field: department
     buckets:
     - label: 'Sales'
-      condition: "='sales'"
+      condition: "=\"sales\""
     - label: 'Operations'
-      condition: "='ops'"
+      condition: "=\"ops\""
     buckets_default_label: 'Other'
 department_default:
     kind: Dimension
-    field: "coalesce(department, 'N/A')"
+    field: "coalesce(department, \"N/A\")"
 score:
     kind: Metric
     field: avg(score)

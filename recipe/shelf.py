@@ -14,6 +14,7 @@ from recipe.schemas import shelf_schema
 from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
 from recipe.schemas.config_constructors import create_ingredient_from_config
 
+from recipe.schemas.lark_grammar import SQLAlchemyBuilder
 
 _POP_DEFAULT = object()
 
@@ -25,7 +26,8 @@ def ingredient_from_validated_dict(ingr_dict, selectable):
         if version == "1":
             return create_ingredient_from_config(ingr_dict, selectable)
         else:
-            return create_ingredient_from_parsed(ingr_dict, selectable)
+            builder = SQLAlchemyBuilder(selectable=selectable)
+            return create_ingredient_from_parsed(ingr_dict, builder)
     except InvalidColumnError as e:
         error = {"type": "invalid_column", "extra": {"column_name": e.column_name}}
         return InvalidIngredient(error=error)

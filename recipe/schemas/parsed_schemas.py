@@ -118,138 +118,45 @@ def _save_raw_config(value):
     return value
 
 
-def _build_full_condition(field, itm):
-    """
-    Test if the itm["condition"] is a partial relation expression
-
-    If so, convert it in place into a full relation expression by including the field.
-    """
-    tree = noag_any_condition_parser.parse(itm["condition"])
-    if tree.data == "partial_relation_expr":
-        itm["condition"] = "(" + field + ")" + itm["condition"]
-
-
-def _convert_partial_conditions(value):
-    """Convert all partial conditions to full conditions in buckets and quickselects."""
-    field = value.get("field")
-
-    # Convert all bucket conditions to full conditions
-    for itm in value.get("buckets", []):
-        _build_full_condition(field, itm)
-
-    # Convert all quickselects conditions to full conditions
-    for itm in value.get("quickselects", []):
-        _build_full_condition(field, itm)
-
-    return value
-
-
-def create_buckets(value):
-    """If a validated bucket exists, convert it into a field and extra order by field."""
-    buckets = value.pop("buckets", None)
-    buckets_default_label = value.pop("buckets_default_label", None)
-    if buckets:
-        # Create a bucket
-        if "extra_fields" not in value:
-            value["extra_fields"] = []
-        bucket_field = _convert_bucket_to_field(buckets, buckets_default_label)
-        bucket_order_by_field = _convert_bucket_to_field(
-            buckets, buckets_default_label, use_indices=True
-        )
-        value["field"] = bucket_field
-        value["extra_fields"].append(
-            {"name": "order_by_expression", "field": bucket_order_by_field}
-        )
-        pass
-    return value
-
-
-def ensure_aggregation(fld):
-    """Ensure that a field has an aggregation by wrapping the entire field
-    in a sum if no aggregation is supplied."""
-    try:
-        tree = field_parser.parse(fld)
-        has_agex = list(tree.find_data("agex"))
-        if has_agex:
-            return fld
-        else:
-            return "sum(" + fld + ")"
-    except LarkError:
-        # If we can't parse we will handle this in the validator
-        return fld
-
-
 def add_version(v):
     # Add version to a parsed ingredient
     v["_version"] = "2"
     return v
 
 
-# Sureberus validators that check how a field parses
-
-
-def ParseValidator(parser):
-    def validate(field, value, error):
-        try:
-            parser.parse(value)
-        except LarkError as exc:
-            error(field, f"Error parsing field: {exc}")
-
-    return validate
-
-
-validate_parses_with_agex = ParseValidator(parser=field_parser)
-validate_parses_without_agex = ParseValidator(parser=noag_field_parser)
-validate_any_condition = ParseValidator(parser=noag_any_condition_parser)
-validate_condition = ParseValidator(parser=noag_full_condition_parser)
-validate_agex_condition = ParseValidator(parser=full_condition_parser)
-
 
 # A field that may OR MAY NOT contain an aggregation.
 # It will be the transformers responsibility to add an aggregation if one is missing
-agex_field_schema = S.String(
-    required=True, validator=validate_parses_with_agex, coerce=ensure_aggregation
-)
+field_schema = S.String(required=True)
 
-# A field that is guaranteed to not contain an aggregation
-noag_field_schema = S.String(required=True, validator=validate_parses_without_agex)
-
-# A full condition guaranteed to not contain an aggregation
-condition_schema = S.String(required=True, validator=validate_condition)
-
-# A full or partial contain guaranteed to not contain an aggregation
-any_condition_schema = S.String(required=True, validator=validate_any_condition)
-
-# A full condition guaranteed to not contain an aggregation
 labeled_condition_schema = S.Dict(
-    schema={"condition": condition_schema, "label": S.String(required=True)}
+    schema={"condition": field_schema, "label": S.String(required=True)}
 )
 
 # A full condition guaranteed to not contain an aggregation
 named_condition_schema = S.Dict(
-    schema={"condition": condition_schema, "name": S.String(required=True)}
+    schema={"condition": field_schema, "name": S.String(required=True)}
 )
 
 format_schema = S.String(coerce=coerce_format, required=False)
 
 metric_schema = S.Dict(
     schema={
-        "field": agex_field_schema,
+        "field": field_schema,
         "format": format_schema,
         "quickselects": S.List(required=False, schema=labeled_condition_schema),
     },
-    coerce=_convert_partial_conditions,
     coerce_post=add_version,
     allow_unknown=True,
 )
 
 dimension_schema = S.Dict(
     schema={
-        "field": noag_field_schema,
+        "field": field_schema,
         "extra_fields": S.List(
             required=False,
             schema=S.Dict(
-                schema={"field": noag_field_schema, "name": S.String(required=True)}
+                schema={"field": field_schema, "name": S.String(required=True)}
             ),
         ),
         "buckets": S.List(required=False, schema=labeled_condition_schema),
@@ -258,17 +165,17 @@ dimension_schema = S.Dict(
         "lookup": S.Dict(required=False),
         "quickselects": S.List(required=False, schema=named_condition_schema),
     },
-    coerce=_chain(move_extra_fields, _convert_partial_conditions),
-    coerce_post=_chain(create_buckets, add_version),
+    coerce=move_extra_fields,
+    coerce_post=add_version,
     allow_unknown=True,
 )
 
 filter_schema = S.Dict(
-    allow_unknown=True, coerce_post=add_version, schema={"condition": condition_schema}
+    allow_unknown=True, coerce_post=add_version, schema={"condition": field_schema}
 )
 
 having_schema = S.Dict(
-    allow_unknown=True, coerce_post=add_version, schema={"condition": condition_schema}
+    allow_unknown=True, coerce_post=add_version, schema={"condition": field_schema}
 )
 
 ingredient_schema = S.Dict(
