@@ -58,7 +58,7 @@ class TestBase(TestCase):
             if row == "" or row.startswith("#"):
                 continue
 
-            if "->" in row:               
+            if "->" in row:
                 field, expected_error = row.split("->")
             else:
                 field = row
@@ -105,10 +105,14 @@ class TestSQLAlchemyBuilder(TestBase):
             self.builder.parse(field)
             data_type = self.builder.last_datatype
             self.assertEqual(data_type, expected_data_type)
-    
+
     def test_selectable_recipe(self):
         """Test a selectable that is a recipe """
-        recipe = Recipe(shelf=mytable_shelf, session=oven.Session()).metrics("age").dimensions("first")
+        recipe = (
+            Recipe(shelf=mytable_shelf, session=oven.Session())
+            .metrics("age")
+            .dimensions("first")
+        )
         b = SQLAlchemyBuilder(selectable=recipe)
         type_examples = """
         [age]                         -> num
@@ -137,6 +141,7 @@ class TestSQLAlchemyBuilder(TestBase):
     def test_selectable_orm(self):
         """Test a selectable that is a orm class"""
         from tests.test_base import DataTypeser
+
         b = SQLAlchemyBuilder(selectable=DataTypeser)
         type_examples = """
         [score]                         -> num
@@ -168,6 +173,7 @@ class TestSQLAlchemyBuilder(TestBase):
     def test_selectable_census(self):
         """Test a selectable that is a orm class"""
         from tests.test_base import Census
+
         b = SQLAlchemyBuilder(selectable=Census)
         type_examples = """
         age                             -> num

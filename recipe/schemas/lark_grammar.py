@@ -423,7 +423,8 @@ class SQLALchemyValidator(Visitor):
         fn = tree.children[0].children[0]
         dt = self._data_type(tree.children[0].children[1])
         self._add_error(
-            f"A {dt} can not be aggregated using {fn}.", tree,
+            f"A {dt} can not be aggregated using {fn}.",
+            tree,
         )
 
     def error_between_expr(self, tree):
@@ -456,7 +457,9 @@ class SQLALchemyValidator(Visitor):
                 # Strings will be auto converted
                 return
             if left_data_type != right_data_type:
-                self._add_error(f"Can't compare {left_data_type} to {right_data_type}", tree)
+                self._add_error(
+                    f"Can't compare {left_data_type} to {right_data_type}", tree
+                )
 
     def percentile_aggr(self, tree):
         """Sum up the things """
@@ -767,13 +770,13 @@ class TransformToSQLAlchemyExpression(Transformer):
         return getattr(left, comparator)(right)
 
     def date_bool_expr(self, left, comparator, right):
-        """If right is still a string, convert to a date. """ 
+        """If right is still a string, convert to a date. """
         if isinstance(right, str):
             right = self.date_conv(None, right)
         return self.bool_expr(left, comparator, right)
-    
+
     def datetime_bool_expr(self, left, comparator, right):
-        """If right is still a string, convert to a date. """ 
+        """If right is still a string, convert to a date. """
         if isinstance(right, str):
             right = self.datetime_conv(None, right)
         return self.bool_expr(left, comparator, right)
