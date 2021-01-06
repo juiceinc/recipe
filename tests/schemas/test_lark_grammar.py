@@ -25,6 +25,7 @@ class TestBase(TestCase):
     def examples(self, input_rows):
         """Take input where each line looks like
         field     -> expected_sql
+        #field    -> expected_sql (commented out)
         """
         for row in input_rows.split("\n"):
             row = row.strip()
@@ -40,19 +41,31 @@ class TestBase(TestCase):
             yield field, expected_sql
 
     def bad_examples(self, input_rows):
-        """Take input where each input is separated by two newlines
+        """Take input where each input is separated by three equals
 
-        field
+        field ->
         expected_error
-
-        field
+        ===
+        field ->
         expected_error
+        ===
+        #field ->
+        expected_error  (commented out)
 
         """
-        for row in input_rows.split("\n\n"):
-            lines = row.strip().split("\n")
-            field = lines[0]
-            expected_error = "\n".join(lines[1:]) + "\n"
+        for row in input_rows.split("==="):
+            row = row.strip()
+            if row == "" or row.startswith("#"):
+                continue
+
+            if "->" in row:               
+                field, expected_error = row.split("->")
+            else:
+                field = row
+                expected_error = "None"
+
+            field = field.strip()
+            expected_error = expected_error.strip() + "\n"
             yield field, expected_error
 
 
@@ -341,81 +354,96 @@ class TestDataTypesTable(TestBase):
         """These examples should all fail"""
 
         bad_examples = """
-[scores]
+[scores] ->
 scores is not a valid column name
+
 [scores]
  ^
-
-[scores] + -1.0
+===
+[scores] + -1.0 ->
 scores is not a valid column name
+
 [scores] + -1.0
  ^
 unknown_col and num can not be added together
+
 [scores] + -1.0
  ^
-
-2.0 + [scores]
+===
+2.0 + [scores] ->
 scores is not a valid column name
+
 2.0 + [scores]
        ^
 num and unknown_col can not be added together
+
 2.0 + [scores]
 ^
-
-[foo_b]
+===
+[foo_b] ->
 foo_b is not a valid column name
+
 [foo_b]
  ^
-
-[username] + [score]
+===
+[username] + [score] ->
 string and num can not be added together
+
 [username] + [score]
  ^
-
-[score]   + [department]
+===
+[score]   + [department] ->
 num and string can not be added together
+
 [score]   + [department]
  ^
+===
+[score] = [department] ->
+Can't compare num to string
 
 [score] = [department]
-Can't compare num to string
-[score] = [department]
  ^
+===
+[score] = "5" ->
+Can't compare num to string
 
 [score] = "5"
-Can't compare num to string
-[score] = "5"
  ^
-
-[department] = 3.24
+===
+[department] = 3.24 ->
 Can't compare string to num
+
 [department] = 3.24
  ^
-
-[department] In ("A", 2)
+===
+[department] In ("A", 2) ->
 An array may not contain both strings and numbers
+
 [department] In ("A", 2)
                  ^
-
-[username] NOT IN (2, "B")
+===
+[username] NOT IN (2, "B") ->
 An array may not contain both strings and numbers
+
 [username] NOT IN (2, "B")
                    ^
-
-1 in (1,2,3)
+===
+1 in (1,2,3) ->
 Must be a column or expression
+
 1 in (1,2,3)
 ^
-
-NOT [department]
+===
+NOT [department] ->
 NOT requires a boolean value
+
 NOT [department]
 ^
-
-[score] / 0
+===
+[score] / 0 ->
 When dividing, the denominator can not be zero
-
-[score] / (10-10)
+===
+[score] / (10-10) ->
 When dividing, the denominator can not be zero
 """
 
@@ -483,15 +511,17 @@ class TestDataTypesTableDates(TestBase):
         """These examples should all fail"""
 
         bad_examples = """
-[test_date] > date("1 day from now")
-Can't convert '1 day from now' to a date.
+[test_date] > date("1 day from now") ->
 
-[test_date] between date("2020-01-01") and 7
+Can't convert '1 day from now' to a date.
+===
+[test_date] between date("2020-01-01") and 7 ->
 When using between, the column (date) and between values (date, num) must be the same data type.
+
 [test_date] between date("2020-01-01") and 7
  ^
-
-[test_date] between "potato" and date("2020-01-01")
+===
+[test_date] between "potato" and date("2020-01-01") ->
 Can't convert 'potato' to a date.
 """
 
@@ -533,39 +563,47 @@ class TestAggregations(TestBase):
         """These examples should all fail"""
 
         bad_examples = """
-sum([score])
+sum([score]) ->
 Aggregations are not allowed in this field.
+
 sum([score])
 ^
+===
+sum(score) ->
+Aggregations are not allowed in this field.
 
 sum(score)
-Aggregations are not allowed in this field.
-sum(score)
 ^
+===
+sum(department) ->
+A string can not be aggregated using sum.
 
 sum(department)
-A string can not be aggregated using sum.
-sum(department)
 ^
-
-2.1235 + sum(department)
+===
+2.1235 + sum(department) ->
 A string can not be aggregated using sum.
+
 2.1235 + sum(department)
          ^
-
-sum(score) + sum(department)
+===
+sum(score) + sum(department) ->
 Aggregations are not allowed in this field.
+
 sum(score) + sum(department)
 ^
 A string can not be aggregated using sum.
+
 sum(score) + sum(department)
              ^
-
-sum(score) + sum(department)
+===
+sum(score) + sum(department) ->
 Aggregations are not allowed in this field.
+
 sum(score) + sum(department)
 ^
 A string can not be aggregated using sum.
+
 sum(score) + sum(department)
              ^
 """
@@ -585,31 +623,37 @@ sum(score) + sum(department)
         """These examples should all fail"""
 
         bad_examples = """
-sum(department)
+sum(department) ->
 A string can not be aggregated using sum.
+
 sum(department)
 ^
-
-2.1235 + sum(department)
+===
+2.1235 + sum(department) ->
 A string can not be aggregated using sum.
+
 2.1235 + sum(department)
          ^
-
-sum(score) + sum(department)
+===
+sum(score) + sum(department) ->
 A string can not be aggregated using sum.
+
 sum(score) + sum(department)
              ^
-
-percentile1([score])
+===
+percentile1([score]) ->
 Percentile is not supported on sqlite
+
 percentile1([score])
 ^
-
-percentile13([score])
+===
+percentile13([score]) ->
 Percentile values of 13 are not supported.
+
 percentile13([score])
 ^
 Percentile is not supported on sqlite
+
 percentile13([score])
 ^
 """
@@ -684,43 +728,51 @@ class TestIf(TestBase):
         """These examples should all fail"""
 
         bad_examples = """
-if(department, score)
+if(department, score) ->
 This should be a boolean column or expression
+
 if(department, score)
    ^
-
-if(department = 2, score)
+===
+if(department = 2, score) ->
 Can't compare string to num
+
 if(department = 2, score)
    ^
-
-if(department = "1", score, department, score*2)
+===
+if(department = "1", score, department, score*2) ->
 This should be a boolean column or expression
+
 if(department = "1", score, department, score*2)
                             ^
-
-if(department = "1", score, department, score*2)
+===
+if(department = "1", score, department, score*2) ->
 This should be a boolean column or expression
+
 if(department = "1", score, department, score*2)
                             ^
-
-if(department = "1", score, valid_score, score*2, department, 12.5)
+===
+if(department = "1", score, valid_score, score*2, department, 12.5) ->
 This should be a boolean column or expression
+
 if(department = "1", score, valid_score, score*2, department, 12.5)
                                                   ^
-
-if(department, score, valid_score, score*2)
+===
+if(department, score, valid_score, score*2) ->
 This should be a boolean column or expression
+
 if(department, score, valid_score, score*2)
    ^
-
-if(department = "foo", score, valid_score, department)
+===
+if(department = "foo", score, valid_score, department) ->
 The values in this if statement must be the same type, not num and string
+
 if(department = "foo", score, valid_score, department)
                                            ^
-
-if(department = "foo", department, valid_score, score)
+===
+if(department = "foo", department, valid_score, score) ->
 The values in this if statement must be the same type, not string and num
+
 if(department = "foo", department, valid_score, score)
                                                 ^
 """

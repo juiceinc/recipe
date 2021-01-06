@@ -114,7 +114,6 @@ def make_columns_for_table(selectable):
         type_counter[prefix] += 1
         columns[f"{prefix}_{cnt}"] = c
 
-    print("\n\nColumns are", columns)
     return columns
 
 
@@ -315,7 +314,7 @@ class SQLALchemyValidator(Visitor):
 
         if tok:
             extra_context = self._get_context_for_token(tok, span=200)
-            message = f"{message}\n{extra_context}"
+            message = f"{message}\n\n{extra_context}"
         self.errors.append(message)
 
     def _get_context_for_token(self, tok, span=40):
