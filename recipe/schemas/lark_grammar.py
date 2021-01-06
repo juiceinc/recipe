@@ -29,7 +29,6 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative.api import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.sql.sqltypes import Numeric
-from recipe import Recipe
 
 from .utils import (
     calc_date_range,
@@ -37,10 +36,6 @@ from .utils import (
     convert_to_eod_datetime,
     convert_to_start_datetime,
 )
-
-
-def convert(lst):
-    return ["\[" + v + "\]" for v in lst]
 
 
 def make_columns_grammar(columns):
@@ -81,6 +76,8 @@ def make_columns_for_table(selectable):
 
     The values are the selectable column reference
     """
+    from recipe import Recipe
+
     if isinstance(selectable, Recipe):
         selectable = selectable.subquery()
 
@@ -135,8 +132,8 @@ def make_lark_grammar(columns):
     {gather_columns("datetime.2", columns, "datetime", ["datetime_conv", "datetime_if_statement"])}
     // Datetimes that are converted to the end of day
     {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
-    {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "vector_expr", "between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
-    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast", "string_if_statement"])}
+    {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "date_bool_expr", "datetime_bool_expr", "vector_expr", "between_expr", "date_between_expr", "datetime_between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
+    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast", "string_if_statement", "string_aggr"])}
     {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "aggr", "error_aggr", "num_if_statement"])}
     string_add: string "+" string                
     num_add.1: num "+" num | "(" num "+" num ")"                      
@@ -164,7 +161,9 @@ def make_lark_grammar(columns):
     not_boolean.4: NOT boolean
     and_boolean.3: boolean AND boolean
     or_boolean.2: boolean OR boolean
-    bool_expr: date comparator date | datetime comparator datetime | col comparator col | col null_comparator NULL
+    bool_expr: col comparator col | col null_comparator NULL    
+    date_bool_expr.1: date comparator (date | string)
+    datetime_bool_expr.2: datetime comparator (datetime | string)
     comparator: EQ | NE | LT | LTE | GT | GTE
     null_comparator: EQ | NE | IS | IS NOT
     EQ: "="
@@ -178,6 +177,9 @@ def make_lark_grammar(columns):
     intelligent_date_expr.1: date IS INTELLIGENT_DATE_OFFSET INTELLIGENT_DATE_UNITS
     intelligent_datetime_expr.1: datetime IS INTELLIGENT_DATE_OFFSET INTELLIGENT_DATE_UNITS
     between_expr.1: string BETWEEN string AND string | num BETWEEN num AND num | date BETWEEN date AND date | datetime BETWEEN datetime AND datetime_end
+    date_between_expr.2: date BETWEEN (date | string) AND (date | string)
+    datetime_between_expr.3: datetime BETWEEN (datetime | string) AND (datetime_end | string)
+
     vector_expr.1: string vector_comparator stringarray | num vector_comparator numarray
     vector_comparator.1: NOT? IN    
     stringarray.1: "(" [ESCAPED_STRING ("," ESCAPED_STRING)*] ","? ")"  -> consistent_array
@@ -222,12 +224,16 @@ def make_lark_grammar(columns):
     count_distinct_aggr.1: /count_distinct/i "(" (num | string | date | datetime | boolean) ")"
     median_aggr.1: /median/i "(" num ")"
     percentile_aggr.1: /percentile\d\d?/i "(" num ")"
+    // Aggregations that return strings
+    string_aggr.1: min_string_aggr | max_string_aggr    
+    min_string_aggr.1: /min/i "(" string ")"            -> min_aggr
+    max_string_aggr.1: /max/i "(" string ")"            -> max_aggr
     // Aggregations that return dates
-    date_aggr.1: min_date_aggr | max_date_aggr
+    date_aggr.1: min_date_aggr | max_date_aggr      
     min_date_aggr.1: /min/i "(" date ")"            -> min_aggr
     max_date_aggr.1: /max/i "(" date ")"            -> max_aggr
     // Aggregations that return datetimes
-    datetime_aggr.1: min_datetime_aggr | max_datetime_aggr
+    datetime_aggr.1: min_datetime_aggr | max_datetime_aggr  
     min_datetime_aggr.1: /min/i "(" datetime ")"    -> min_aggr
     max_datetime_aggr.1: /max/i "(" datetime ")"    -> max_aggr
 
@@ -261,7 +267,6 @@ def make_lark_grammar(columns):
     %ignore COMMENT
     %ignore WS_INLINE
 """
-    print(grammar)
     return grammar
 
 
@@ -327,7 +332,6 @@ class SQLALchemyValidator(Visitor):
         self._add_error(f"{tok1.data} and {tok2.data} can not be {verb}", tree)
 
     def col(self, tree):
-        print("Finding data type for col", self.last_datatype)
         self.last_datatype = self._data_type(tree)
 
     def error_add(self, tree):
@@ -440,14 +444,17 @@ class SQLALchemyValidator(Visitor):
         """ a > b where the types of a and b don't match """
         left, _, right = tree.children
         if isinstance(left, Tree) and isinstance(right, Tree):
-            tok1 = left.children[0]
-            tok2 = right.children[0]
-            if right.data == left.data == "date":
+            left_data_type = self._data_type(left)
+            right_data_type = self._data_type(right)
+            if left_data_type == right_data_type == "date":
                 return
-            if right.data == left.data == "datetime":
+            if left_data_type == right_data_type == "datetime":
                 return
-            if tok1.data != tok2.data:
-                self._add_error(f"Can't compare {tok1.data} to {tok2.data}", tree)
+            if left_data_type in ("date", "datetime") and right_data_type == "string":
+                # Strings will be auto converted
+                return
+            if left_data_type != right_data_type:
+                self._add_error(f"Can't compare {left_data_type} to {right_data_type}", tree)
 
     def percentile_aggr(self, tree):
         """Sum up the things """
@@ -695,6 +702,22 @@ class TransformToSQLAlchemyExpression(Transformer):
     def between_expr(self, col, BETWEEN, left, AND, right):
         return between(col, left, right)
 
+    def date_between_expr(self, col, BETWEEN, left, AND, right):
+        """Auto convert strings to dates."""
+        if isinstance(left, str):
+            left = self.date_conv(None, left)
+        if isinstance(right, str):
+            right = self.date_conv(None, right)
+        return self.between_expr(col, BETWEEN, left, AND, right)
+
+    def datetime_between_expr(self, col, BETWEEN, left, AND, right):
+        """Auto convert strings to datetimes."""
+        if isinstance(left, str):
+            left = self.datetime_conv(None, left)
+        if isinstance(right, str):
+            right = self.datetime_end_conv(None, right)
+        return self.between_expr(col, BETWEEN, left, AND, right)
+
     def intelligent_date_expr(self, datecol, IS, offset, units):
         start, end = calc_date_range(offset, units, date.today())
         return between(datecol, start, end)
@@ -737,6 +760,18 @@ class TransformToSQLAlchemyExpression(Transformer):
 
         return getattr(left, comparator)(right)
 
+    def date_bool_expr(self, left, comparator, right):
+        """If right is still a string, convert to a date. """ 
+        if isinstance(right, str):
+            right = self.date_conv(None, right)
+        return self.bool_expr(left, comparator, right)
+    
+    def datetime_bool_expr(self, left, comparator, right):
+        """If right is still a string, convert to a date. """ 
+        if isinstance(right, str):
+            right = self.datetime_conv(None, right)
+        return self.bool_expr(left, comparator, right)
+
     # Aggregations
 
     def aggr(self, v):
@@ -746,6 +781,9 @@ class TransformToSQLAlchemyExpression(Transformer):
         return v
 
     def datetime_aggr(self, v):
+        return v
+
+    def string_aggr(self, v):
         return v
 
     def sum_aggr(self, _, fld):

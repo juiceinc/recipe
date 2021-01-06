@@ -448,6 +448,12 @@ class TestDataTypesTableDates(TestBase):
         [test_datetime] between date("2020-01-01") and date("2020-01-30")      -> datatypes.test_datetime BETWEEN '2020-01-01 00:00:00' AND '2020-01-30 23:59:59.999999'
         [test_datetime] IS last year          -> datatypes.test_datetime BETWEEN '2019-01-01 00:00:00' AND '2019-12-31 23:59:59.999999'
         [test_datetime] IS next year          -> datatypes.test_datetime BETWEEN '2021-01-01 00:00:00' AND '2021-12-31 23:59:59.999999'
+        # The date() wrapper function is optional
+        [test_date] > "1 days ago"            -> datatypes.test_date > '2020-01-13'
+        [test_datetime] > "1 days ago"        -> datatypes.test_datetime > '2020-01-13 09:21:34'
+        [test_date] between "30 days ago" and "now" -> datatypes.test_date BETWEEN '2019-12-15' AND '2020-01-14'
+        [test_date] between date("30 days ago") and date("now") -> datatypes.test_date BETWEEN '2019-12-15' AND '2020-01-14'
+        [test_datetime] between date("30 days ago") and date("now") -> datatypes.test_datetime BETWEEN '2019-12-15 09:21:34' AND '2020-01-14 09:21:34'
         """
 
         for field, expected_sql in self.examples(good_examples):
@@ -486,9 +492,7 @@ When using between, the column (date) and between values (date, num) must be the
  ^
 
 [test_date] between "potato" and date("2020-01-01")
-When using between, the column (date) and between values (string, date) must be the same data type.
-[test_date] between "potato" and date("2020-01-01")
- ^
+Can't convert 'potato' to a date.
 """
 
         for field, expected_error in self.bad_examples(bad_examples):
