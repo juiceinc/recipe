@@ -221,8 +221,6 @@ class TransformToSQLAlchemyExpression(Transformer):
         return not_(expr)
 
 
-
-
 def _convert_bucket_to_field(field, bucket, buckets_default_label, builder):
     """Convert a bucket structure if statement
 
@@ -230,6 +228,7 @@ def _convert_bucket_to_field(field, bucket, buckets_default_label, builder):
     partial conditions like '<5' to full conditions like 'age<5'
     with _convert_partial_conditions
     """
+
     def stringify(value):
         """Convert a value into a string that will parse"""
         if value is None:
@@ -298,16 +297,21 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                 buckets = ingr_dict.pop("buckets", None)
                 buckets_default_label = ingr_dict.pop("buckets_default_label", None)
                 if buckets:
-                    fld_defn, order_by_fld = _convert_bucket_to_field(fld_defn, buckets, buckets_default_label, builder)
+                    fld_defn, order_by_fld = _convert_bucket_to_field(
+                        fld_defn, buckets, buckets_default_label, builder
+                    )
                     if "extra_fields" not in ingr_dict:
                         ingr_dict["extra_fields"] = []
-                    ingr_dict["extra_fields"].append({"name": "order_by_expression", "field": order_by_fld })
+                    ingr_dict["extra_fields"].append(
+                        {"name": "order_by_expression", "field": order_by_fld}
+                    )
                 args = [builder.parse(fld_defn, forbid_aggregation=True, debug=debug)]
                 # Convert extra fields to sqlalchemy expressions and add them directly to
                 # the kwargs
                 for extra in ingr_dict.pop("extra_fields", []):
-                    ingr_dict[extra.get("name")] = \
-                        builder.parse(extra.get("field"), forbid_aggregation=True, debug=debug)
+                    ingr_dict[extra.get("name")] = builder.parse(
+                        extra.get("field"), forbid_aggregation=True, debug=debug
+                    )
 
             # TODO: Restore quickselects
             # Convert quickselects to a kwarg with sqlalchemy expressions
@@ -322,7 +326,6 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
             #         }
             #     )
             # ingr_dict["quickselects"] = parsed_quickselects
-
 
         elif kind == "filter":
             pass
@@ -348,7 +351,7 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
         error_msg = str(e)
         if "Expecting:" in error_msg:
             error_msg = error_msg.split("Expecting:")[0]
-        
+
         error = {
             "type": "Can not parse field",
             "extra": {

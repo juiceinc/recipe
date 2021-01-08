@@ -117,7 +117,6 @@ def add_version(v):
     return v
 
 
-
 # A field that may OR MAY NOT contain an aggregation.
 # It will be the transformers responsibility to add an aggregation if one is missing
 field_schema = S.String(required=True)

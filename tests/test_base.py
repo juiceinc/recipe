@@ -379,6 +379,7 @@ DataTypesTable = Table(
     "datatypes", Base.metadata, autoload=True, autoload_with=oven.engine
 )
 
+
 class DataTypeser(Base):
     username = Column("username", String(), primary_key=True)
     department = Column("department", String())
