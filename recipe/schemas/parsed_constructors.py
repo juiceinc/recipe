@@ -4,12 +4,6 @@ from lark.exceptions import GrammarError, LarkError
 from sqlalchemy import func, case, and_, or_, not_, cast, Float
 from datetime import date
 
-from .field_grammar import (
-    field_parser,
-    noag_field_parser,
-    noag_full_condition_parser,
-    full_condition_parser,
-)
 from .utils import (
     generate_lookup_by_engine,
     find_column,
