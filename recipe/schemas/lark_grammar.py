@@ -1,40 +1,21 @@
 from collections import defaultdict
 from datetime import date, datetime
-from operator import truediv
-from os import isatty
-from attr import has, validate
 
 import dateparser
-from dateutil.relativedelta import relativedelta
 from lark import GrammarError, Lark, Transformer, Tree, Visitor, v_args
 from lark.lexer import Token
-from lark.visitors import inline_args
 from sqlalchemy import (
-    Boolean,
-    Date,
-    DateTime,
-    Float,
-    Integer,
-    String,
-    and_,
-    between,
-    case,
-    cast,
-    distinct,
-    func,
-    not_,
-    or_,
-    text,
+    Boolean, Date, DateTime, Float, Integer, String, and_, between, case, cast,
+    distinct, func, not_, or_, text
 )
 from sqlalchemy.ext.declarative.api import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.sql.sqltypes import Numeric
 
+from . import engine_support
 from .utils import (
-    calc_date_range,
-    convert_to_end_datetime,
-    convert_to_eod_datetime,
-    convert_to_start_datetime,
+    calc_date_range, convert_to_end_datetime, convert_to_eod_datetime,
+    convert_to_start_datetime
 )
 
 
@@ -132,7 +113,7 @@ def make_lark_grammar(columns):
     {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
     {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "date_bool_expr", "datetime_bool_expr", "vector_expr", "between_expr", "date_between_expr", "datetime_between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
     {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast", "string_coalesce", "string_if_statement", "string_aggr"])}
-    {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "num_coalesce", "aggr", "error_aggr", "num_if_statement"])}
+    {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "num_coalesce", "aggr", "error_aggr", "num_if_statement", "age_conv"])}
     string_add: string "+" string                
     num_add.1: num "+" num | "(" num "+" num ")"                      
     num_sub.1: num "-" num | "(" num "-" num ")"
@@ -200,6 +181,8 @@ def make_lark_grammar(columns):
     string_cast: /string/i "(" col ")"
     // col->int
     int_cast: /int/i "(" col ")"
+    // date->int
+    age_conv: /age/i "(" (date | datetime) ")"
     // date->int
     // TODO: age_conv: /age/i "(" (date | datetime) ")"    
     // TODO: date - date => int
@@ -570,7 +553,17 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def num_mul(self, a, b):
         return a * b
-
+        
+    def age_conv(self, _, fld):
+        """Convert a date to an age """
+        if self.drivername == "bigquery":
+            return engine_support.bq_age(fld)
+        elif self.drivername == "sqlite":
+            raise GrammarError("Age is not supported on sqlite")
+        else:
+            # Postgres + redshift
+            return engine_support.postgres_age(fld)
+ 
     # Dates and datetimes
 
     def date(self, v):
@@ -823,9 +816,8 @@ class TransformToSQLAlchemyExpression(Transformer):
                 f"percentile values of {percentile_val} is not supported."
             )
         if self.drivername == "bigquery":
-            # FIXME: This doesn't work
-            return (func.percentile_cont(0.01).within_group(fld),)
-            # return func.date_trunc(fld, text("day"))
+            percentile_fn = getattr(engine_support, f"bqpercentile{percentile_val}")
+            return percentile_fn(fld)
         elif self.drivername == "sqlite":
             raise GrammarError("Percentile is not supported on sqlite")
         else:
