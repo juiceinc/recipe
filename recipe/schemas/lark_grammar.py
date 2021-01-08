@@ -5,8 +5,21 @@ import dateparser
 from lark import GrammarError, Lark, Transformer, Tree, Visitor, v_args
 from lark.lexer import Token
 from sqlalchemy import (
-    Boolean, Date, DateTime, Float, Integer, String, and_, between, case, cast,
-    distinct, func, not_, or_, text
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    and_,
+    between,
+    case,
+    cast,
+    distinct,
+    func,
+    not_,
+    or_,
+    text,
 )
 from sqlalchemy.ext.declarative.api import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
@@ -14,8 +27,10 @@ from sqlalchemy.sql.sqltypes import Numeric
 
 from . import engine_support
 from .utils import (
-    calc_date_range, convert_to_end_datetime, convert_to_eod_datetime,
-    convert_to_start_datetime
+    calc_date_range,
+    convert_to_end_datetime,
+    convert_to_eod_datetime,
+    convert_to_start_datetime,
 )
 
 
@@ -556,7 +571,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def num_mul(self, a, b):
         return a * b
-        
+
     def age_conv(self, _, fld):
         """Convert a date to an age """
         if self.drivername == "bigquery":
@@ -566,7 +581,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         else:
             # Postgres + redshift
             return engine_support.postgres_age(fld)
- 
+
     # Dates and datetimes
 
     def date(self, v):
