@@ -841,7 +841,7 @@ class TransformToSQLAlchemyExpression(Transformer):
             raise GrammarError("Percentile is not supported on sqlite")
         else:
             # Postgres + redshift
-            return func.percentile_cont(percentile_val/100.0).within_group(fld)
+            return func.percentile_cont(percentile_val / 100.0).within_group(fld)
 
     def count_distinct_aggr(self, _, fld):
         """Sum up the things """
