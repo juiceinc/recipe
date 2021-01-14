@@ -273,7 +273,7 @@ class Shelf(object):
                     d[k] = ingredient_constructor(v, selectable)
                 else:
                     if builder is None:
-                        builder = SQLAlchemyBuilder(selectable=selectable)
+                        builder = SQLAlchemyBuilder.get_builder(selectable=selectable)
                     d[k] = ingredient_constructor(v, selectable, builder=builder)
             else:
                 d[k] = ingredient_constructor(v, selectable)
