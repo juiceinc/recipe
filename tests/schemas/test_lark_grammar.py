@@ -17,7 +17,6 @@ def to_sql(expr):
     return str(expr.compile(compile_kwargs={"literal_binds": True}))
 
 
-
 class TestBase(TestCase):
     maxDiff = None
 

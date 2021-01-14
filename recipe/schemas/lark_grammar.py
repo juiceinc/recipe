@@ -887,10 +887,11 @@ class TransformToSQLAlchemyExpression(Transformer):
     def NULL(self, v):
         return None
 
-BUILDER_CACHE = {}
-class SQLAlchemyBuilder(object):
-    
 
+BUILDER_CACHE = {}
+
+
+class SQLAlchemyBuilder(object):
     @classmethod
     def get_builder(cls, selectable):
         if selectable not in BUILDER_CACHE:
