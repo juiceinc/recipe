@@ -17,14 +17,12 @@ def to_sql(expr):
     return str(expr.compile(compile_kwargs={"literal_binds": True}))
 
 
-datatypes_builder = SQLAlchemyBuilder(DataTypesTable)
-
 
 class TestBase(TestCase):
     maxDiff = None
 
     def setUp(self):
-        self.builder = datatypes_builder
+        self.builder = SQLAlchemyBuilder.get_builder(DataTypesTable)
 
     def examples(self, input_rows):
         """Take input where each line looks like

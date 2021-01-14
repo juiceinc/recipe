@@ -887,11 +887,16 @@ class TransformToSQLAlchemyExpression(Transformer):
     def NULL(self, v):
         return None
 
-
-from sqlalchemy.ext.serializer import loads, dumps
-
-
+BUILDER_CACHE = {}
 class SQLAlchemyBuilder(object):
+    
+
+    @classmethod
+    def get_builder(cls, selectable):
+        if selectable not in BUILDER_CACHE:
+            BUILDER_CACHE[selectable] = cls(selectable)
+        return BUILDER_CACHE[selectable]
+
     def __init__(self, selectable):
         """Parse a recipe field by building a custom grammar that
         uses the colums in a selectable.
@@ -899,8 +904,6 @@ class SQLAlchemyBuilder(object):
         Args:
             selectable (Table): A SQLAlchemy selectable
         """
-        print("*" * 100)
-        print(f"Making a builder for {selectable}")
         self.selectable = selectable
         # Database driver
         try:
