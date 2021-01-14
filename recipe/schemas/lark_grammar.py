@@ -74,6 +74,7 @@ def make_columns_for_table(selectable):
     The values are the selectable column reference
     """
     from recipe import Recipe
+    print("Make columns for table", selectable, type(selectable))
 
     if isinstance(selectable, Recipe):
         selectable = selectable.subquery()
@@ -894,6 +895,7 @@ BUILDER_CACHE = {}
 class SQLAlchemyBuilder(object):
     @classmethod
     def get_builder(cls, selectable):
+        print("GETTING BUILDER", selectable, BUILDER_CACHE)
         if selectable not in BUILDER_CACHE:
             BUILDER_CACHE[selectable] = cls(selectable)
         return BUILDER_CACHE[selectable]
