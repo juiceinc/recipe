@@ -19,14 +19,13 @@ from recipe.schemas.lark_grammar import SQLAlchemyBuilder
 _POP_DEFAULT = object()
 
 
-def ingredient_from_validated_dict(ingr_dict, selectable):
+def ingredient_from_validated_dict(ingr_dict, selectable, builder=None):
     """Create an ingredient object from a validated ingredient schema"""
     try:
         version = ingr_dict.pop("_version", "1")
         if version == "1":
             return create_ingredient_from_config(ingr_dict, selectable)
         else:
-            builder = SQLAlchemyBuilder(selectable=selectable)
             return create_ingredient_from_parsed(ingr_dict, builder)
     except InvalidColumnError as e:
         error = {"type": "invalid_column", "extra": {"column_name": e.column_name}}
@@ -265,8 +264,21 @@ class Shelf(object):
         except E.SureError as e:
             raise BadIngredient(str(e))
         d = {}
+        builder = None
+        if ingredient_constructor == ingredient_from_validated_dict:
+            builder = SQLAlchemyBuilder(selectable=selectable)
+
         for k, v in validated_shelf.items():
-            d[k] = ingredient_constructor(v, selectable)
+
+            if ingredient_constructor == ingredient_from_validated_dict:
+                version = str(v.get("_version", "1"))
+                if version == "1":
+                    d[k] = ingredient_constructor(v, selectable)
+                else:
+                    d[k] = ingredient_constructor(v, builder)
+            else:
+                d[k] = ingredient_constructor(v, selectable)
+
             if isinstance(d[k], InvalidIngredient):
                 if not d[k].error.get("extra"):
                     d[k].error["extra"] = {}
