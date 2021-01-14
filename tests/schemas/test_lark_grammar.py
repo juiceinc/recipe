@@ -15,12 +15,14 @@ def to_sql(expr):
     """Utility to print sql for a expression """
     return str(expr.compile(compile_kwargs={"literal_binds": True}))
 
+datatypes_builder = SQLAlchemyBuilder(DataTypesTable)
+
 
 class TestBase(TestCase):
     maxDiff = None
 
     def setUp(self):
-        self.builder = SQLAlchemyBuilder(DataTypesTable)
+        self.builder = datatypes_builder
 
     def examples(self, input_rows):
         """Take input where each line looks like

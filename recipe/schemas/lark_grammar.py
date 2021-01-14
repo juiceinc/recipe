@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import date, datetime
 
 import dateparser
+import functools
 from lark import GrammarError, Lark, Transformer, Tree, Visitor, v_args
 from lark.lexer import Token
 from sqlalchemy import (
@@ -912,6 +913,7 @@ class SQLAlchemyBuilder(object):
             ambiguity="resolve",
             start="col",
             propagate_positions=True,
+            # predict_all=True,
         )
         self.transformer = TransformToSQLAlchemyExpression(
             self.selectable, self.columns, self.drivername
@@ -920,6 +922,7 @@ class SQLAlchemyBuilder(object):
         # The data type of the last parsed expression
         self.last_datatype = None
 
+    @functools.lru_cache(maxsize=None)
     def parse(
         self, text, forbid_aggregation=False, enforce_aggregation=False, debug=False
     ):
@@ -940,7 +943,7 @@ class SQLAlchemyBuilder(object):
             ColumnElement: A SQLALchemy expression
         """
 
-        tree = self.parser.parse(text)
+        tree = self.parser.parse(text, start='col')
         validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)
         validator.visit(tree)
         self.last_datatype = validator.last_datatype

@@ -28,11 +28,13 @@ from recipe import (
 )
 
 
+
 class ConfigTestBase(object):
     """A base class for testing shelves built from v1 or v2 config. """
 
     # The directory to look for yaml config files
     yaml_location = "ingredients"
+    shelf_cache = {}
 
     def setup(self):
         self.session = oven.Session()
@@ -49,7 +51,12 @@ class ConfigTestBase(object):
 
     def shelf_from_yaml(self, yaml_config, selectable):
         """Create a shelf directly from configuration """
-        return Shelf.from_validated_yaml(yaml_config, selectable)
+
+        # Don't reparse
+        if yaml_config not in self.shelf_cache:
+            shelf = Shelf.from_validated_yaml(yaml_config, selectable)
+            self.shelf_cache[yaml_config] = shelf
+        return self.shelf_cache[yaml_config]
 
 
 class TestRecipeIngredientsYaml(ConfigTestBase):
