@@ -913,6 +913,9 @@ class SQLAlchemyBuilder(object):
             self.drivername = "unknown"
 
         self.columns = make_columns_for_table(selectable)
+        from pprint import pprint
+        print(f"Columns for table {selectable} ({type(selectable)})")
+        pprint(self.columns)
         self.grammar = make_lark_grammar(self.columns)
         self.parser = Lark(
             self.grammar,
