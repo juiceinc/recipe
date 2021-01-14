@@ -19,6 +19,8 @@ from recipe.schemas.lark_grammar import SQLAlchemyBuilder
 _POP_DEFAULT = object()
 
 
+
+
 def ingredient_from_validated_dict(ingr_dict, selectable, builder=None):
     """Create an ingredient object from a validated ingredient schema"""
     try:
@@ -265,17 +267,16 @@ class Shelf(object):
             raise BadIngredient(str(e))
         d = {}
         builder = None
-        if ingredient_constructor == ingredient_from_validated_dict:
-            builder = SQLAlchemyBuilder(selectable=selectable)
 
         for k, v in validated_shelf.items():
-
             if ingredient_constructor == ingredient_from_validated_dict:
                 version = str(v.get("_version", "1"))
                 if version == "1":
                     d[k] = ingredient_constructor(v, selectable)
                 else:
-                    d[k] = ingredient_constructor(v, builder)
+                    if builder is None:
+                        builder = SQLAlchemyBuilder(selectable=selectable)
+                    d[k] = ingredient_constructor(v, selectable, builder=builder)
             else:
                 d[k] = ingredient_constructor(v, selectable)
 
