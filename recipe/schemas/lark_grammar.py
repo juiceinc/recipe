@@ -835,14 +835,13 @@ class TransformToSQLAlchemyExpression(Transformer):
                 f"percentile values of {percentile_val} is not supported."
             )
         if self.drivername == "bigquery":
-            percentile_fn = getattr(engine_support, f"bqpercentile{percentile_val}")
+            percentile_fn = getattr(engine_support, f"bq_percentile{percentile_val}")
             return percentile_fn(fld)
         elif self.drivername == "sqlite":
             raise GrammarError("Percentile is not supported on sqlite")
         else:
             # Postgres + redshift
-            return (func.percentile_cont(0.01).within_group(fld),)
-            # return func.date_trunc("day", fld)
+            return func.percentile_cont(percentile_val/100.0).within_group(fld)
 
     def count_distinct_aggr(self, _, fld):
         """Sum up the things """
