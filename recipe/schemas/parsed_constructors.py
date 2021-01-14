@@ -94,40 +94,28 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                         extra.get("field"), forbid_aggregation=True, debug=debug
                     )
 
-            # TODO: Restore quickselects
-            # Convert quickselects to a kwarg with sqlalchemy expressions
-            # parsed_quickselects = []
-            # for qf in ingr_dict.pop("quickselects", []):
-            #     parsed_quickselects.append(
-            #         {
-            #             "name": qf["name"],
-            #             "condition": TransformToSQLAlchemyExpression(
-            #                 selectable=selectable
-            #             ).transform(noag_full_condition_parser.parse(qf.get("condition"))),
-            #         }
-            #     )
-            # ingr_dict["quickselects"] = parsed_quickselects
+            parsed_quickselects = []
+            for qs in ingr_dict.pop("quickselects", []):
+                condition_defn = qs.get("condition")
+                parsed_quickselects.append(
+                    {
+                        "name": qs["name"],
+                        "condition": builder.parse(condition_defn, forbid_aggregation=True, debug=debug)
+                    }
+                )
+            ingr_dict["quickselects"] = parsed_quickselects
 
         elif kind == "filter":
-            pass
-            # TODO: restore this
-            # Create a sqlalchemy expression from 'condition' and pass it as the first arg
-            # args = [
-            #     TransformToSQLAlchemyExpression(selectable=selectable).transform(
-            #         noag_full_condition_parser.parse(ingr_dict.pop("condition", None))
-            #     )
-            # ]
-
+            condition_defn = ingr_dict.get("condition")
+            args = [
+                builder.parse(condition_defn, forbid_aggregation=True, debug=debug)
+            ]
         elif kind == "having":
-            pass
-            # TODO: restore this
-            # Create a sqlalchemy expression from 'condition' and pass it as the first arg
-            # TODO: Force this to be an aggregate
-            # args = [
-            #     TransformToSQLAlchemyExpression(selectable=selectable).transform(
-            #         full_condition_parser.parse(ingr_dict.pop("condition", None))
-            #     )
-            # ]
+            condition_defn = ingr_dict.get("condition")
+            args = [
+                builder.parse(condition_defn, forbid_aggregation=False, debug=debug)
+            ]
+
     except (GrammarError, LarkError) as e:
         error_msg = str(e)
         if "Expecting:" in error_msg:
