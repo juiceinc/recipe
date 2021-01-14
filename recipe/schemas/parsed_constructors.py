@@ -72,7 +72,10 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
             if kind == "metric":
                 fld_defn = ingr_dict.pop("field", None)
                 # SQLAlchemy ingredient with required aggregation
-                args = [builder.parse(fld_defn, enforce_aggregation=True, debug=debug)]
+                expr = builder.parse(fld_defn, enforce_aggregation=True, debug=debug)
+                # Save the data type in the ingredient
+                ingr_dict["_data_type"] = builder.last_datatype
+                args = [expr]
             else:
                 fld_defn = ingr_dict.pop("field", None)
                 buckets = ingr_dict.pop("buckets", None)
@@ -86,7 +89,10 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                     ingr_dict["extra_fields"].append(
                         {"name": "order_by_expression", "field": order_by_fld}
                     )
-                args = [builder.parse(fld_defn, forbid_aggregation=True, debug=debug)]
+                expr = builder.parse(fld_defn, forbid_aggregation=True, debug=debug)
+                # Save the data type in the ingredient
+                ingr_dict["_data_type"] = builder.last_datatype
+                args = [expr]
                 # Convert extra fields to sqlalchemy expressions and add them directly to
                 # the kwargs
                 for extra in ingr_dict.pop("extra_fields", []):
