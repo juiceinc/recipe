@@ -192,6 +192,9 @@ strict_metric_schema = S.Dict(
     schema={
         "_version": S.String(default="2"),
         "_shelf_meta": S.Dict(required=False),
+        "icon": S.String(),
+        "_meta": S.Dict(),
+        "_config": S.Dict(),
         "singular": S.String(required=False),
         "plural": S.String(required=False),
         "field": field_schema,
@@ -204,7 +207,10 @@ strict_dimension_schema = S.Dict(
     allow_unknown=False,
     schema={
         "_version": S.String(default="2"),
-        "_shelf_meta": S.Dict(required=False),
+        "_shelf_meta": S.Dict(),
+        "icon": S.String(),
+        "_meta": S.Dict(),
+        "_config": S.Dict(),
         "singular": S.String(required=False),
         "plural": S.String(required=False),
         "field": field_schema,
