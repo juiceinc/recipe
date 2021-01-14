@@ -19,8 +19,6 @@ from recipe.schemas.lark_grammar import SQLAlchemyBuilder
 _POP_DEFAULT = object()
 
 
-
-
 def ingredient_from_validated_dict(ingr_dict, selectable, builder=None):
     """Create an ingredient object from a validated ingredient schema"""
     try:
