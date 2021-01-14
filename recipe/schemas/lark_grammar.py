@@ -899,7 +899,7 @@ class SQLAlchemyBuilder(object):
         Args:
             selectable (Table): A SQLAlchemy selectable
         """
-        print("*"*100)
+        print("*" * 100)
         print(f"Making a builder for {selectable}")
         self.selectable = selectable
         # Database driver
