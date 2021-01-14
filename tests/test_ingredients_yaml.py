@@ -518,7 +518,6 @@ Vermont,660135.4074068918,The Green Mountain State,Vermont
 """,
         )
 
-    @pytest.mark.skip
     def test_complex_census_quickselect_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
         metrics and quickselects"""

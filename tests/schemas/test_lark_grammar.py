@@ -1,5 +1,6 @@
 import time
 from unittest import TestCase, skip
+from sqlalchemy.ext.serializer import loads, dumps
 
 from freezegun import freeze_time
 from yaml import scan
@@ -809,3 +810,29 @@ if(department = "foo", department, valid_score, score)
                 print(expected_error)
                 print("===" * 10)
             self.assertEqual(str(e.exception).strip(), expected_error.strip())
+
+
+class TestSQLAlchemySerialize(TestBase):
+    """Test we can serialize and deserialize parsed results using 
+    sqlalchemy.ext.serialize. This is important because parsing is
+    costly. """
+
+    def test_ser_deser(self):
+        # Can't tests with date conversions and freeze time :/
+        good_examples = f"""
+        sum([score])                 -> sum(datatypes.score)
+        sum(score)                   -> sum(datatypes.score)
+        month(if([score] > 2, test_datetime))                           -> date_trunc('month', CASE WHEN (datatypes.score > 2) THEN datatypes.test_datetime END)
+        if(test_datetime > date("2020-01-01"), test_datetime)           -> CASE WHEN (datatypes.test_datetime > '2020-01-01 00:00:00') THEN datatypes.test_datetime END
+        month(if([score] > 2, test_datetime))                           -> date_trunc('month', CASE WHEN (datatypes.score > 2) THEN datatypes.test_datetime END)
+        if(score<2,"babies",score<13,"children",score<20,"teens","oldsters")       -> CASE WHEN (datatypes.score < 2) THEN 'babies' WHEN (datatypes.score < 13) THEN 'children' WHEN (datatypes.score < 20) THEN 'teens' ELSE 'oldsters' END
+        if((score)<2,"babies",(score)<13,"children",(score)<20,"teens","oldsters") -> CASE WHEN (datatypes.score < 2) THEN 'babies' WHEN (datatypes.score < 13) THEN 'children' WHEN (datatypes.score < 20) THEN 'teens' ELSE 'oldsters' END
+        """
+
+        for field, expected_sql in self.examples(good_examples):
+            print(f"\nInput: {field}")
+            expr = self.builder.parse(field, forbid_aggregation=False, debug=True)
+            ser = dumps(expr)
+            expr = loads(ser, self.builder.selectable.metadata, oven.Session())
+            self.assertEqual(to_sql(expr), expected_sql)
+

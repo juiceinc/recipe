@@ -888,7 +888,7 @@ class TransformToSQLAlchemyExpression(Transformer):
     def NULL(self, v):
         return None
 
-
+from sqlalchemy.ext.serializer import loads, dumps
 class SQLAlchemyBuilder(object):
     def __init__(self, selectable):
         """Parse a recipe field by building a custom grammar that
