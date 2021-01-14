@@ -42,11 +42,13 @@ format_lookup = {
     "dollar": "$,.0f",
     "percent": ".0%",
     "comma1": ",.1f",
-    "dollar1": "$,.1f",
-    "percent1": ".1%",
     "comma2": ",.2f",
+    "comma3": ",.3f",
+    "dollar1": "$,.1f",
     "dollar2": "$,.2f",
+    "percent1": ".1%",
     "percent2": ".2%",
+    "percent3": ".3%",
 }
 
 
@@ -81,6 +83,16 @@ def convert_by_engine_keys_to_regex(lookup_by_engine):
 
 def coerce_pop_version(shelf):
     shelf.pop("_version", None)
+    return shelf
+
+
+def coerce_shelf_meta(shelf):
+    """Move shelf meta from the shelf to all ingredients """
+    shelf_meta = shelf.pop("_meta", None)
+    for k, v in shelf.items():
+        # Add shelf meta to all ingredient definitions
+        if shelf_meta and not k.startswith("_"):
+            v["_shelf_meta"] = copy(shelf_meta)
     return shelf
 
 
