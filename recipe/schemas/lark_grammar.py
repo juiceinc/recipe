@@ -943,7 +943,7 @@ class SQLAlchemyBuilder(object):
             ColumnElement: A SQLALchemy expression
         """
 
-        tree = self.parser.parse(text, start='col')
+        tree = self.parser.parse(text, start="col")
         validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)
         validator.visit(tree)
         self.last_datatype = validator.last_datatype

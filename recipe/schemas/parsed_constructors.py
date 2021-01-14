@@ -100,16 +100,16 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                 parsed_quickselects.append(
                     {
                         "name": qs["name"],
-                        "condition": builder.parse(condition_defn, forbid_aggregation=True, debug=debug)
+                        "condition": builder.parse(
+                            condition_defn, forbid_aggregation=True, debug=debug
+                        ),
                     }
                 )
             ingr_dict["quickselects"] = parsed_quickselects
 
         elif kind == "filter":
             condition_defn = ingr_dict.get("condition")
-            args = [
-                builder.parse(condition_defn, forbid_aggregation=True, debug=debug)
-            ]
+            args = [builder.parse(condition_defn, forbid_aggregation=True, debug=debug)]
         elif kind == "having":
             condition_defn = ingr_dict.get("condition")
             args = [
@@ -123,7 +123,9 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
 
         error = {
             "type": "Can not parse field",
-            "extra": {"details": error_msg,},
+            "extra": {
+                "details": error_msg,
+            },
         }
         return InvalidIngredient(error=error)
 
@@ -133,6 +135,8 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
         # Some internal error while running the Ingredient constructor
         error = {
             "type": "bad_ingredient",
-            "extra": {"details": str(e),},
+            "extra": {
+                "details": str(e),
+            },
         }
         return InvalidIngredient(error=error)
