@@ -814,9 +814,9 @@ if(department = "foo", department, valid_score, score)
 
 
 class TestSQLAlchemySerialize(TestBase):
-    """Test we can serialize and deserialize parsed results using 
+    """Test we can serialize and deserialize parsed results using
     sqlalchemy.ext.serialize. This is important because parsing is
-    costly. """
+    costly."""
 
     def test_ser_deser(self):
         # Can't tests with date conversions and freeze time :/
@@ -836,4 +836,3 @@ class TestSQLAlchemySerialize(TestBase):
             ser = dumps(expr)
             expr = loads(ser, self.builder.selectable.metadata, oven.Session())
             self.assertEqual(to_sql(expr), expected_sql)
-
