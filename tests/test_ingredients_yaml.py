@@ -28,7 +28,6 @@ from recipe import (
 )
 
 
-
 class ConfigTestBase(object):
     """A base class for testing shelves built from v1 or v2 config. """
 

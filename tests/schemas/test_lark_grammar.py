@@ -16,6 +16,7 @@ def to_sql(expr):
     """Utility to print sql for a expression """
     return str(expr.compile(compile_kwargs={"literal_binds": True}))
 
+
 datatypes_builder = SQLAlchemyBuilder(DataTypesTable)
 
 

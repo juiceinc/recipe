@@ -4,7 +4,13 @@ from lark.exceptions import LarkError
 import logging
 from sureberus import schema as S
 
-from .utils import coerce_format, coerce_pop_version, coerce_shelf_meta, _chain, SCALAR_TYPES
+from .utils import (
+    coerce_format,
+    coerce_pop_version,
+    coerce_shelf_meta,
+    _chain,
+    SCALAR_TYPES,
+)
 
 logging.captureWarnings(True)
 
@@ -160,13 +166,9 @@ dimension_schema = S.Dict(
     allow_unknown=True,
 )
 
-filter_schema = S.Dict(
-    allow_unknown=True, schema={"condition": field_schema}
-)
+filter_schema = S.Dict(allow_unknown=True, schema={"condition": field_schema})
 
-having_schema = S.Dict(
-    allow_unknown=True, schema={"condition": field_schema}
-)
+having_schema = S.Dict(allow_unknown=True, schema={"condition": field_schema})
 
 ingredient_schema = S.Dict(
     choose_schema=S.when_key_is(
@@ -218,21 +220,21 @@ strict_dimension_schema = S.Dict(
 )
 
 strict_filter_schema = S.Dict(
-    allow_unknown=False, 
+    allow_unknown=False,
     schema={
         "_version": S.String(default="2"),
         "_shelf_meta": S.Dict(required=False),
         "condition": field_schema,
-    }
+    },
 )
 
 strict_having_schema = S.Dict(
-    allow_unknown=False, 
+    allow_unknown=False,
     schema={
         "_version": S.String(default="2"),
         "_shelf_meta": S.Dict(required=False),
-        "condition": field_schema
-    }
+        "condition": field_schema,
+    },
 )
 
 
