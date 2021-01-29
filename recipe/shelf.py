@@ -246,6 +246,7 @@ class Shelf(object):
         :return: A shelf that contains the ingredients defined in obj.
         """
         from recipe import Recipe
+
         print("RECIPE: Shelf from config", selectable, ingredient_constructor)
 
         if isinstance(selectable, Recipe):
