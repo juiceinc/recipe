@@ -111,8 +111,11 @@ def _lowercase_kind(value):
 
 
 def _save_raw_config(value):
-    """Save the original config """
-    value["_config"] = deepcopy(value)
+    """Save the original config excluding _config and _meta """
+    config = deepcopy(value)
+    config.pop("_config", None)
+    config.pop("_neta", None)
+    value["_config"] = config
     return value
 
 
