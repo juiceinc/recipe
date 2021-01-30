@@ -74,6 +74,7 @@ def make_columns_for_table(selectable):
     The values are the selectable column reference
     """
     from recipe import Recipe
+
     print("Make columns for table", selectable, type(selectable))
 
     if isinstance(selectable, Recipe):
