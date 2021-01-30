@@ -131,8 +131,8 @@ def make_lark_grammar(columns):
     {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "date_bool_expr", "datetime_bool_expr", "vector_expr", "between_expr", "date_between_expr", "datetime_between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
     {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast", "string_coalesce", "string_if_statement", "string_aggr"])}
     {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "num_coalesce", "aggr", "error_aggr", "num_if_statement", "age_conv"])}
-    string_add: string "+" string                
-    num_add.1: num "+" num | "(" num "+" num ")"                      
+    string_add: string "+" string
+    num_add.1: num "+" num | "(" num "+" num ")"
     num_sub.1: num "-" num | "(" num "-" num ")"
     num_mul.2: num "*" num | "(" num "*" num ")"
     num_div.2: num "/" num | "(" num "/" num ")"
@@ -157,7 +157,7 @@ def make_lark_grammar(columns):
     not_boolean.4: NOT boolean
     and_boolean.3: boolean AND boolean
     or_boolean.2: boolean OR boolean
-    bool_expr: col comparator col | col null_comparator NULL    
+    bool_expr: col comparator col | col null_comparator NULL
     date_bool_expr.1: date comparator (date | string)
     datetime_bool_expr.2: datetime comparator (datetime | string)
     comparator: EQ | NE | LT | LTE | GT | GTE
@@ -177,10 +177,10 @@ def make_lark_grammar(columns):
     datetime_between_expr.3: datetime BETWEEN (datetime | string) AND (datetime_end | string)
 
     vector_expr.1: string vector_comparator stringarray | num vector_comparator numarray
-    vector_comparator.1: NOT? IN    
+    vector_comparator.1: NOT? IN
     stringarray.1: "(" [ESCAPED_STRING ("," ESCAPED_STRING)*] ","? ")"  -> consistent_array
     numarray.1: "(" [NUMBER ("," NUMBER)*] ","?  ")"                    -> consistent_array
-    
+
     // Date
     date_conv.3: /date/i "(" ESCAPED_STRING ")"
     datetime_to_date_conv.3: /date/i "(" datetime ")"  -> day_conv
@@ -201,7 +201,7 @@ def make_lark_grammar(columns):
     // date->int
     age_conv: /age/i "(" (date | datetime) ")"
     // date->int
-    // TODO: age_conv: /age/i "(" (date | datetime) ")"    
+    // TODO: age_conv: /age/i "(" (date | datetime) ")"
     // TODO: date - date => int
     num_coalesce: /coalesce/i "(" num "," num ")"                 -> coalesce
     string_coalesce: /coalesce/i "(" string "," string ")"        -> coalesce
@@ -227,15 +227,15 @@ def make_lark_grammar(columns):
     median_aggr.1: /median/i "(" num ")"
     percentile_aggr.1: /percentile\d\d?/i "(" num ")"
     // Aggregations that return strings
-    string_aggr.1: min_string_aggr | max_string_aggr    
+    string_aggr.1: min_string_aggr | max_string_aggr
     min_string_aggr.1: /min/i "(" string ")"            -> min_aggr
     max_string_aggr.1: /max/i "(" string ")"            -> max_aggr
     // Aggregations that return dates
-    date_aggr.1: min_date_aggr | max_date_aggr      
+    date_aggr.1: min_date_aggr | max_date_aggr
     min_date_aggr.1: /min/i "(" date ")"            -> min_aggr
     max_date_aggr.1: /max/i "(" date ")"            -> max_aggr
     // Aggregations that return datetimes
-    datetime_aggr.1: min_datetime_aggr | max_datetime_aggr  
+    datetime_aggr.1: min_datetime_aggr | max_datetime_aggr
     min_datetime_aggr.1: /min/i "(" datetime ")"    -> min_aggr
     max_datetime_aggr.1: /max/i "(" datetime ")"    -> max_aggr
 
@@ -895,7 +895,6 @@ BUILDER_CACHE = {}
 class SQLAlchemyBuilder(object):
     @classmethod
     def get_builder(cls, selectable):
-        print("GETTING BUILDER", selectable, BUILDER_CACHE)
         if selectable not in BUILDER_CACHE:
             BUILDER_CACHE[selectable] = cls(selectable)
         return BUILDER_CACHE[selectable]
