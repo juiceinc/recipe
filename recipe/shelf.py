@@ -247,8 +247,6 @@ class Shelf(object):
         """
         from recipe import Recipe
 
-        print("RECIPE: Shelf from config", selectable, ingredient_constructor)
-
         if isinstance(selectable, Recipe):
             selectable = selectable.subquery()
         elif isinstance(selectable, str):

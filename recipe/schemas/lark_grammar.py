@@ -75,8 +75,6 @@ def make_columns_for_table(selectable):
     """
     from recipe import Recipe
 
-    print("Make columns for table", selectable, type(selectable))
-
     if isinstance(selectable, Recipe):
         selectable = selectable.subquery()
 
@@ -915,10 +913,6 @@ class SQLAlchemyBuilder(object):
             self.drivername = "unknown"
 
         self.columns = make_columns_for_table(selectable)
-        from pprint import pprint
-
-        print(f"Columns for table {selectable} ({type(selectable)})")
-        pprint(self.columns)
         self.grammar = make_lark_grammar(self.columns)
         self.parser = Lark(
             self.grammar,

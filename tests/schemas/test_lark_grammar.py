@@ -83,7 +83,6 @@ class TestSQLAlchemyBuilder(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            print(f"\nInput: {field}")
             expr = self.builder.parse(field, enforce_aggregation=True, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
@@ -102,7 +101,6 @@ class TestSQLAlchemyBuilder(TestBase):
         """
 
         for field, expected_data_type in self.examples(good_examples):
-            print(f"\nInput: {field}")
             self.builder.parse(field)
             data_type = self.builder.last_datatype
             self.assertEqual(data_type, expected_data_type)
@@ -123,7 +121,6 @@ class TestSQLAlchemyBuilder(TestBase):
         """
 
         for field, expected_data_type in self.examples(type_examples):
-            print(f"\nInput: {field}")
             b.parse(field)
             data_type = b.last_datatype
             self.assertEqual(data_type, expected_data_type)
@@ -135,7 +132,6 @@ class TestSQLAlchemyBuilder(TestBase):
         age * 2                       -> anon_1.age * 2
         """
         for field, expected_sql in self.examples(sql_examples):
-            print(f"\nInput: {field}")
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
@@ -154,7 +150,6 @@ class TestSQLAlchemyBuilder(TestBase):
         """
 
         for field, expected_data_type in self.examples(type_examples):
-            print(f"\nInput: {field}")
             b.parse(field)
             data_type = b.last_datatype
             self.assertEqual(data_type, expected_data_type)
@@ -167,7 +162,6 @@ class TestSQLAlchemyBuilder(TestBase):
         test_date                       -> datatypes.test_date
         """
         for field, expected_sql in self.examples(sql_examples):
-            print(f"\nInput: {field}")
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
@@ -184,7 +178,6 @@ class TestSQLAlchemyBuilder(TestBase):
         """
 
         for field, expected_data_type in self.examples(type_examples):
-            print(f"\nInput: {field}")
             b.parse(field)
             data_type = b.last_datatype
             self.assertEqual(data_type, expected_data_type)
@@ -196,7 +189,6 @@ class TestSQLAlchemyBuilder(TestBase):
         state + sex                     -> census.state || census.sex
         """
         for field, expected_sql in self.examples(sql_examples):
-            print(f"\nInput: {field}")
             expr = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
@@ -236,7 +228,6 @@ class TestDataTypesTable(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            print(f"\nInput: {field}")
             expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
@@ -268,7 +259,6 @@ class TestDataTypesTable(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            print(f"\nInput: {field}")
             expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
@@ -304,7 +294,6 @@ class TestDataTypesTable(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            print(f"\nInput: {field}")
             expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
@@ -324,7 +313,6 @@ class TestDataTypesTable(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            print(f"\nInput: {field}")
             expr = self.builder.parse(field, debug=False)
             self.assertEqual(to_sql(expr), expected_sql)
 
@@ -353,7 +341,6 @@ class TestDataTypesTable(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            print(f"\nInput: {field}")
             expr = self.builder.parse(field, debug=True)
 
             if to_sql(expr) != expected_sql:
@@ -506,7 +493,6 @@ class TestDataTypesTableDates(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            print(f"\nInput: {field}")
             expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
@@ -524,7 +510,6 @@ class TestDataTypesTableDates(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            print(f"\nInput: {field}")
             expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
@@ -576,7 +561,6 @@ class TestAggregations(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            print(f"\nInput: {field}")
             expr = self.builder.parse(field, forbid_aggregation=False, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
@@ -680,7 +664,6 @@ percentile13([score])
 """
 
         for field, expected_error in self.bad_examples(bad_examples):
-            print("Field", field)
             with self.assertRaises(Exception) as e:
                 self.builder.parse(field, debug=True)
             if str(e.exception).strip() != expected_error.strip():
@@ -699,7 +682,6 @@ percentile13([score])
         """
 
         for field, expected_sql in self.examples(good_examples):
-            print(f"\nInput: {field}")
             expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
@@ -741,7 +723,6 @@ class TestIf(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            print(f"\nInput: {field}")
             expr = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
@@ -828,7 +809,6 @@ class TestSQLAlchemySerialize(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            print(f"\nInput: {field}")
             expr = self.builder.parse(field, forbid_aggregation=False, debug=True)
             ser = dumps(expr)
             expr = loads(ser, self.builder.selectable.metadata, oven.Session())
