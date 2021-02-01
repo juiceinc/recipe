@@ -42,11 +42,13 @@ format_lookup = {
     "dollar": "$,.0f",
     "percent": ".0%",
     "comma1": ",.1f",
-    "dollar1": "$,.1f",
-    "percent1": ".1%",
     "comma2": ",.2f",
+    "comma3": ",.3f",
+    "dollar1": "$,.1f",
     "dollar2": "$,.2f",
+    "percent1": ".1%",
     "percent2": ".2%",
+    "percent3": ".3%",
 }
 
 
@@ -81,6 +83,16 @@ def convert_by_engine_keys_to_regex(lookup_by_engine):
 
 def coerce_pop_version(shelf):
     shelf.pop("_version", None)
+    return shelf
+
+
+def coerce_shelf_meta(shelf):
+    """Move shelf meta from the shelf to all ingredients """
+    shelf_meta = shelf.pop("_meta", None)
+    for k, v in shelf.items():
+        # Add shelf meta to all ingredient definitions
+        if shelf_meta and not k.startswith("_"):
+            v["_shelf_meta"] = copy(shelf_meta)
     return shelf
 
 
@@ -203,6 +215,35 @@ def date_offset(dt, offset, **offset_params):
         raise ValueError("Unknown intelligent date offset")
 
 
+def convert_to_start_datetime(dt):
+    """Convert a date or datetime to the first moment of the day """
+    # Convert a date or datetime to the first moment of the day
+    # only if the datetime is the first moment of the day
+    if isinstance(dt, (date, datetime)):
+        dt = datetime(dt.year, dt.month, dt.day)
+    return dt
+
+
+def convert_to_end_datetime(dt):
+    """Convert a date or datetime to the last moment of the day """
+    if isinstance(dt, (date, datetime)):
+        dt = datetime(dt.year, dt.month, dt.day)
+        dt += relativedelta(days=1, microseconds=-1)
+    return dt
+
+
+def convert_to_eod_datetime(dt):
+    """Convert a date or datetime to the last moment of the day,
+    only convert datetimes if they are the first moment of the day,"""
+    if isinstance(dt, datetime):
+        if dt.hour == 0 and dt.minute == 0 and dt.second == 0:
+            dt += relativedelta(days=1, microseconds=-1)
+    elif isinstance(dt, date):
+        dt = datetime(dt.year, dt.month, dt.day)
+        dt += relativedelta(days=1, microseconds=-1)
+    return dt
+
+
 def calc_date_range(offset, units, dt):
     """Create an intelligent date range using offsets, units and a starting date
 
@@ -226,6 +267,9 @@ def calc_date_range(offset, units, dt):
 
         A tuple of dates constructed using the offsets and units
     """
+    offset = str(offset).lower()
+    units = str(units).lower()
+
     # TODO: Add a week unit
     if units == "year":
         dt = date_offset(dt, offset, years=1)

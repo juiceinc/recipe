@@ -8,4 +8,4 @@ pyyaml>=5
 sureberus==0.14.0
 dateparser==0.7.2
 attrs==19.3.0
-lark-parser==0.7.8
+lark-parser==0.11.1
