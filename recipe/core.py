@@ -267,18 +267,35 @@ class Recipe(object):
     @recipe_arg()
     def metrics(self, *metrics):
         """Add a list of Metric ingredients to the query. These can either be
-        Metric objects or strings representing metrics on the shelf.
+        Metric objects, strings representing metrics on the shelf, or Dimension
+        objects, or strings representing dimensions on the shelf. Dimensions
+        may include an optional suffix `__count` or `__count_distinct` which
+        controls how they are converted to metrics.
 
         The Metric expression will be added to the query's select statement.
         The metric value is a property of each row of the result.
 
         :param metrics: Metrics to add to the recipe. Metrics can
-                         either be keys on the ``shelf`` or
-                         Metric objects
+           either be keys on the ``shelf``, Metric objects
+           or dimension keys on the ``shelf`` or Dimension
+           objects. If dimensions are used; they will be wrapped
+           in a count() or if the dimension id is suffixed with a
+           `__count_distinct` it will be wrapped in a count(distinct())
         :type metrics: list
         """
         for m in metrics:
-            self._cauldron.use(self._shelf.find(m, Metric))
+            aggr = "count"
+            if m.endswith("__count"):
+                aggr = "count"
+                m = m[:-1*len("__count")]
+            elif m.endswith("__count_distinct"):
+                aggr = "count_distinct"
+                m = m[:-1*len("__count_distinct")]
+
+            ingr = self._shelf.find(m, (Metric, Dimension))
+            if isinstance(ingr, Dimension):
+                ingr = ingr.to_metric(aggregation=aggr)
+            self._cauldron.use(ingr)
 
     @recipe_arg()
     def dimensions(self, *dimensions):

@@ -1,7 +1,8 @@
+from copy import deepcopy
 import dateparser
 from functools import total_ordering
 from uuid import uuid4
-from sqlalchemy import Float, String, and_, between, case, cast, func, or_, text
+from sqlalchemy import Float, String, and_, between, case, cast, func, or_, text, distinct
 from sqlalchemy.sql.sqltypes import Date, DateTime, TIMESTAMP
 from sqlalchemy.exc import CompileError
 from datetime import date, datetime
@@ -677,6 +678,34 @@ class Dimension(Ingredient):
                 return self.id + "_raw"
             else:
                 return self.id
+
+    def to_metric(self, aggregation="count"):
+        """Allow this dimension to be used as a metric """
+        aggregation_lookup = {
+            "count": func.count,
+            "count_distinct": lambda v: func.count(distinct(v)),
+        }
+        if aggregation not in aggregation_lookup:
+            raise BadIngredient(
+                f"Unknown aggregation when converting dimension to metric {aggregation}"
+            )
+        else:
+            aggr = aggregation_lookup[aggregation]
+        meta = deepcopy(self.meta)
+        if "format" not in meta:
+            meta["format"] = ",.0f"
+        if "singular" in meta:
+            meta["singular"] = f"Count of {meta['singular']}"
+        if "plural" in meta:
+            meta["plural"] = f"Count of {meta['plural']}"
+        return Metric(
+            aggr(self.columns[0]),
+            id=f"{self.id}__{aggregation}",
+            anonymize=self.anonymize,
+            cache_context=self.cache_context,
+            ordering=self.ordering,
+            **meta
+        )
 
 
 class IdValueDimension(Dimension):
