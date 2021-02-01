@@ -383,6 +383,50 @@ GROUP BY first,
          last"""
         )
 
+    def test_from_config_dims_as_metrics(self):
+        """We can use dimensions in the metric context """
+        shelf = copy(mytable_shelf)
+        shelf["ageover4"] = Filter(MyTable.age > 4)
+        config = {
+            "dimensions": ["first", "last"],
+            "metrics": ["first"],
+            "filters": ["ageover4"],
+        }
+        recipe = Recipe.from_config(shelf, config).session(self.session)
+        assert (
+            recipe.to_sql()
+            == """\
+SELECT foo.first AS first,
+       foo.last AS last,
+       count(foo.first) AS first__count
+FROM foo
+WHERE foo.age > 4
+GROUP BY first,
+         last"""
+        )
+
+    def test_from_config_dims_as_metrics_with_count_distinct(self):
+        """We can use dimensions in the metric context """
+        shelf = copy(mytable_shelf)
+        shelf["ageover4"] = Filter(MyTable.age > 4)
+        config = {
+            "dimensions": ["first", "last"],
+            "metrics": ["first__count_distinct"],
+            "filters": ["ageover4"],
+        }
+        recipe = Recipe.from_config(shelf, config).session(self.session)
+        assert (
+            recipe.to_sql()
+            == """\
+SELECT foo.first AS first,
+       foo.last AS last,
+       count(DISTINCT foo.first) AS first__count_distinct
+FROM foo
+WHERE foo.age > 4
+GROUP BY first,
+         last"""
+        )
+
     def test_order_bys_not_matching_ingredients(self):
         """If an order_by is not found in dimensions+metrics, we ignore it"""
         recipe = self.recipe().metrics("age").dimensions("first").order_by("last")
