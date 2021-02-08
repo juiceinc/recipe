@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.23.1 (2021-02-08)
+-----------------------------------------
+* Fix sql generation of timestamp truncated columns in bigquery
+
 v0.23.0 (2021-02-01)
 -----------------------------------------
 * Improve the lark parser to validate explicitly using the database columns and
