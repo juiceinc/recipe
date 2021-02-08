@@ -123,7 +123,7 @@ def make_lark_grammar(columns):
     {make_columns_grammar(columns)}
 
     {gather_columns("unusable_col", columns, "unusable", [])}
-    {gather_columns("date.1", columns, "date", ["date_conv", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "datetime_to_date_conv", "date_aggr", "date_if_statement", "date_coalesce"])}
+    {gather_columns("date.1", columns, "date", ["date_conv", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "dt_day_conv", "dt_week_conv", "dt_month_conv", "dt_quarter_conv", "dt_year_conv", "datetime_to_date_conv", "date_aggr", "date_if_statement", "date_coalesce"])}
     {gather_columns("datetime.2", columns, "datetime", ["datetime_conv", "datetime_if_statement", "datetime_coalesce"])}
     // Datetimes that are converted to the end of day
     {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
@@ -182,17 +182,23 @@ def make_lark_grammar(columns):
 
     // Date
     date_conv.3: /date/i "(" ESCAPED_STRING ")"
-    datetime_to_date_conv.3: /date/i "(" datetime ")"  -> day_conv
+    datetime_to_date_conv.3: /date/i "(" datetime ")"  -> dt_day_conv
     datetime_conv.2: /date/i "(" ESCAPED_STRING ")"
     datetime_end_conv.1: /date/i "(" ESCAPED_STRING ")"
 
     // Conversions
     // date->date
-    day_conv: /day/i "(" (date | datetime) ")"
-    week_conv: /week/i "(" (date | datetime) ")"
-    month_conv: /month/i "(" (date | datetime) ")"
-    quarter_conv: /quarter/i "(" (date | datetime) ")"
-    year_conv: /year/i "(" (date | datetime) ")"
+    day_conv: /day/i "(" date ")"
+    week_conv: /week/i "(" date ")"
+    month_conv: /month/i "(" date ")"
+    quarter_conv: /quarter/i "(" date ")"
+    year_conv: /year/i "(" date ")"
+    // datetime->date
+    dt_day_conv: /day/i "(" datetime ")"
+    dt_week_conv: /week/i "(" datetime ")"
+    dt_month_conv: /month/i "(" datetime ")"
+    dt_quarter_conv: /quarter/i "(" datetime ")"
+    dt_year_conv: /year/i "(" datetime ")"
     // col->string
     string_cast: /string/i "(" col ")"
     // col->int
@@ -654,6 +660,43 @@ class TransformToSQLAlchemyExpression(Transformer):
             # Postgres + redshift
             return func.date_trunc("year", fld)
 
+    def dt_day_conv(self, _, fld):
+        """Truncate to mondays """
+        if self.drivername == "bigquery":
+            return func.timestamp_trunc(fld, text("day"))
+        else:
+            # Postgres + redshift
+            return func.date_trunc("day", fld)
+
+    def dt_week_conv(self, _, fld):
+        """Truncate to mondays """
+        if self.drivername == "bigquery":
+            return func.timestamp_trunc(fld, text("week(monday)"))
+        else:
+            # Postgres + redshift
+            return func.date_trunc("week", fld)
+
+    def dt_month_conv(self, _, fld):
+        if self.drivername == "bigquery":
+            return func.timestamp_trunc(fld, text("month"))
+        else:
+            # Postgres + redshift
+            return func.date_trunc("month", fld)
+
+    def dt_quarter_conv(self, _, fld):
+        if self.drivername == "bigquery":
+            return func.timestamp_trunc(fld, text("quarter"))
+        else:
+            # Postgres + redshift
+            return func.date_trunc("quarter", fld)
+
+    def dt_year_conv(self, _, fld):
+        if self.drivername == "bigquery":
+            return func.timestamp_trunc(fld, text("year"))
+        else:
+            # Postgres + redshift
+            return func.date_trunc("year", fld)
+
     def datetime_end_conv(self, _, datestr):
         # Parse a datetime as the last moment of the given day
         # if the date
@@ -898,6 +941,11 @@ class SQLAlchemyBuilder(object):
             BUILDER_CACHE[selectable] = cls(selectable)
         return BUILDER_CACHE[selectable]
 
+    @classmethod
+    def clear_builder_cache(cls):
+        global BUILDER_CACHE
+        BUILDER_CACHE = {}
+
     def __init__(self, selectable):
         """Parse a recipe field by building a custom grammar that
         uses the colums in a selectable.
@@ -949,7 +997,6 @@ class SQLAlchemyBuilder(object):
         Returns:
             ColumnElement: A SQLALchemy expression
         """
-
         tree = self.parser.parse(text, start="col")
         validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)
         validator.visit(tree)

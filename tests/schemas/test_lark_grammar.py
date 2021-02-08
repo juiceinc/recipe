@@ -1,9 +1,8 @@
 import time
-from unittest import TestCase, skip
+from unittest import TestCase
 from sqlalchemy.ext.serializer import loads, dumps
-
+from copy import deepcopy
 from freezegun import freeze_time
-from yaml import scan
 
 from recipe import Recipe
 from recipe.schemas.lark_grammar import SQLAlchemyBuilder
@@ -71,6 +70,9 @@ class TestBase(TestCase):
 
 
 class TestSQLAlchemyBuilder(TestBase):
+    def test_drivername(self):
+        self.assertEqual(self.builder.drivername, "sqlite")
+
     def test_enforce_aggregation(self):
         """Enforce aggregation will wrap the function in a sum if no aggregation was seen"""
 
@@ -541,6 +543,38 @@ Can't convert 'potato' to a date.
                 print(expected_error)
                 print("===" * 10)
             self.assertEqual(str(e.exception).strip(), expected_error.strip())
+
+
+class TestDataTypesTableDatesInBigquery(TestDataTypesTableDates):
+    """Test date code generated against a bigquery backend """
+
+    def setUp(self):
+        SQLAlchemyBuilder.clear_builder_cache()
+        self.builder = SQLAlchemyBuilder.get_builder(DataTypesTable)
+        self.builder.drivername = "bigquery"
+        self.builder.transformer.drivername = "bigquery"
+
+    def tearDown(self) -> None:
+        SQLAlchemyBuilder.clear_builder_cache()
+        return super().tearDown()
+
+    def test_dates_without_freetime(self):
+        """bigquery generates different sql for date conversions"""
+        good_examples = f"""
+        month([test_date]) > date("2020-12-30")          -> date_trunc(datatypes.test_date, month) > '2020-12-30'
+        month([test_datetime]) > date("2020-12-30")      -> timestamp_trunc(datatypes.test_datetime, month) > '2020-12-30'
+        date("2020-12-30") < month([test_datetime])      -> timestamp_trunc(datatypes.test_datetime, month) > '2020-12-30'
+        day([test_date]) > date("2020-12-30")            -> date_trunc(datatypes.test_date, day) > '2020-12-30'
+        week([test_date]) > date("2020-12-30")           -> date_trunc(datatypes.test_date, week(monday)) > '2020-12-30'
+        quarter([test_date]) > date("2020-12-30")        -> date_trunc(datatypes.test_date, quarter) > '2020-12-30'
+        year([test_date]) > date("2020-12-30")           -> date_trunc(datatypes.test_date, year) > '2020-12-30'
+        date([test_datetime])                            -> timestamp_trunc(datatypes.test_datetime, day)
+        """
+
+        for field, expected_sql in self.examples(good_examples):
+            print("Parsing field", field, self.builder.drivername)
+            expr = self.builder.parse(field, debug=True)
+            self.assertEqual(to_sql(expr), expected_sql)
 
 
 class TestAggregations(TestBase):
