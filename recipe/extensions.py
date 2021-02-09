@@ -668,7 +668,9 @@ class Paginate(RecipeExtension):
                 "apply_pagination": lambda v: self.apply_pagination(v),
                 "apply_pagination_filters": lambda v: self.apply_pagination_filters(v),
                 "pagination_order_by": lambda v: self.pagination_order_by(*v),
-                "pagination_default_order_by": lambda v: self.pagination_default_order_by(*v),
+                "pagination_default_order_by": lambda v: self.pagination_default_order_by(
+                    *v
+                ),
                 "pagination_q": lambda v: self.pagination_q(v),
                 "pagination_search_keys": lambda v: self.pagination_search_keys(*v),
                 "pagination_page_size": lambda v: self.pagination_page_size(v),
@@ -784,6 +786,7 @@ class Paginate(RecipeExtension):
         # Inject the paginator ordering ahead of the existing ordering and filter
         # out sort items that aren't in the cauldron
         if self._apply_pagination and self._pagination_page_size > 0:
+
             def make_ordering_key(ingr):
                 if isinstance(ingr, Ingredient):
                     if ingr.ordering == "desc":
