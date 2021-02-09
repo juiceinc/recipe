@@ -9,7 +9,7 @@ state:
         - name: younger
           condition: "age<40"
         - name: vermontier
-          condition: '="Vermont"'
+          condition: 'state="Vermont"'
 pop2000:
     kind: Metric
     field: "if(age > 40, pop2000)"

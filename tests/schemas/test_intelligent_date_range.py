@@ -1,8 +1,42 @@
 """ Test how intelligent date ranges are constructed """
 
 import pytest
-from datetime import date
-from recipe.schemas.utils import calc_date_range
+from datetime import date, datetime
+from recipe.schemas.utils import (
+    calc_date_range,
+    convert_to_start_datetime,
+    convert_to_end_datetime,
+    convert_to_eod_datetime,
+)
+
+
+class TestDateUtils(object):
+    def test_convert_to_start_datetime(self):
+        assert convert_to_start_datetime(date(2020, 1, 1)) == datetime(2020, 1, 1)
+        assert convert_to_start_datetime(datetime(2020, 1, 1)) == datetime(2020, 1, 1)
+        assert convert_to_start_datetime("foo") == "foo"
+
+    def test_convert_to_end_datetime(self):
+        assert convert_to_end_datetime(date(2020, 1, 1)) == datetime(
+            2020, 1, 1, 23, 59, 59, 999999
+        )
+        assert convert_to_end_datetime(datetime(2020, 1, 1)) == datetime(
+            2020, 1, 1, 23, 59, 59, 999999
+        )
+        assert convert_to_end_datetime("foo") == "foo"
+
+    def test_convert_to_eod_datetime(self):
+        """Only onvert datetimes that are first moment of day """
+        assert convert_to_eod_datetime(date(2020, 1, 1)) == datetime(
+            2020, 1, 1, 23, 59, 59, 999999
+        )
+        assert convert_to_eod_datetime(datetime(2020, 1, 1)) == datetime(
+            2020, 1, 1, 23, 59, 59, 999999
+        )
+        assert convert_to_eod_datetime(datetime(2020, 1, 1, 2, 30)) == datetime(
+            2020, 1, 1, 2, 30
+        )
+        assert convert_to_eod_datetime("foo") == "foo"
 
 
 class TestIntelligentDateRanges(object):
@@ -179,7 +213,7 @@ class TestIntelligentDateRanges(object):
 
     def test_bad_inputs(self):
         with pytest.raises(ValueError):
-            calc_date_range("THIS", "day", date(2020, 12, 31))
+            calc_date_range("THISs", "day", date(2020, 12, 31))
 
         with pytest.raises(ValueError):
             calc_date_range("flugelhorn", "day", date(2020, 12, 31))

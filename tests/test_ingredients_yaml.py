@@ -8,7 +8,6 @@ import os
 from datetime import date
 from dateutil.relativedelta import relativedelta
 import pytest
-from six import text_type
 from tests.test_base import (
     Census,
     MyTable,
@@ -34,6 +33,7 @@ class ConfigTestBase(object):
 
     # The directory to look for yaml config files
     yaml_location = "ingredients"
+    shelf_cache = {}
 
     def setup(self):
         self.session = oven.Session()
@@ -50,7 +50,12 @@ class ConfigTestBase(object):
 
     def shelf_from_yaml(self, yaml_config, selectable):
         """Create a shelf directly from configuration """
-        return Shelf.from_validated_yaml(yaml_config, selectable)
+
+        # Don't reparse
+        if yaml_config not in self.shelf_cache:
+            shelf = Shelf.from_validated_yaml(yaml_config, selectable)
+            self.shelf_cache[yaml_config] = shelf
+        return self.shelf_cache[yaml_config]
 
 
 class TestRecipeIngredientsYaml(ConfigTestBase):
@@ -632,24 +637,14 @@ Vermont,311842,The Green Mountain State,Vermont
 """,
         )
 
-    def test_bad_census_from_validated_yaml(self):
+    def test_bad_census(self):
         """ Test a bad yaml file """
         with pytest.raises(Exception):
             self.shelf_from_filename("census_bad.yaml", Census)
 
-    def test_bad_census_from_yaml(self):
-        """ Test a bad yaml file """
-        with pytest.raises(BadIngredient):
-            self.shelf_from_filename("census_bad.yaml", Census)
-
-    def test_bad_census_in_from_validated_yaml(self):
+    def test_bad_census_in(self):
         """ Test a bad yaml file """
         with pytest.raises(Exception):
-            self.shelf_from_filename("census_bad_in.yaml", Census)
-
-    def test_bad_census_in_from_yaml(self):
-        """ Test a bad yaml file """
-        with pytest.raises(BadIngredient):
             self.shelf_from_filename("census_bad_in.yaml", Census)
 
     def test_deprecated_ingredients_dividemetric(self):
@@ -799,7 +794,9 @@ OFFSET 0"""
         )
 
 
-class TestNullHandling(TestRecipeIngredientsYaml):
+class TestNullHandling(ConfigTestBase):
+    yaml_location = "parsed_ingredients"
+
     def test_dimension_null_handling(self):
         """ Test different ways of handling nulls in dimensions """
         shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
@@ -838,7 +835,7 @@ sales,,sales
         #     lookup:
         #         sales: Sales
         #         ops: Operations
-        #     lookup_default: Unknown
+        #     lookup_default: c
 
         shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
         recipe = (
@@ -1040,7 +1037,7 @@ N/A,80.0,Unknown,N/A
         assert (
             recipe.to_sql()
             == """SELECT scores_with_nulls.department AS department,
-       coalesce(avg(scores_with_nulls.score), -1.0) AS score_with_default
+       avg(coalesce(scores_with_nulls.score, -1.0)) AS score_with_default
 FROM scores_with_nulls
 GROUP BY department
 ORDER BY department"""
@@ -1049,8 +1046,8 @@ ORDER BY department"""
         self.assert_recipe_csv(
             recipe,
             """department,score_with_default,department_id
-,80.0,
-ops,90.0,ops
+,39.5,
+ops,59.666666666666664,ops
 sales,-1.0,sales
 """,
         )
@@ -1058,6 +1055,35 @@ sales,-1.0,sales
 
 class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
     yaml_location = "parsed_ingredients"
+
+    def test_bad_census(self):
+        """ Test a bad yaml file """
+        shelf = self.shelf_from_filename("census_bad.yaml", Census)
+        assert isinstance(shelf["pop2000"], InvalidIngredient)
+        assert (
+            "No terminal defined for '>'" in shelf["pop2000"].error["extra"]["details"]
+        )
+
+    def test_bad_census_in(self):
+        """ Test a bad yaml file """
+        shelf = self.shelf_from_filename("census_bad_in.yaml", Census)
+        assert isinstance(shelf["pop2000"], InvalidIngredient)
+        assert (
+            "No terminal defined for 'c'" in shelf["pop2000"].error["extra"]["details"]
+        )
+
+    def test_shelf_with_invalidcolumn(self):
+        """Build a recipe using a shelf that uses field references """
+        shelf = self.shelf_from_filename("census_references.yaml", Census)
+        assert isinstance(shelf["badfield"], InvalidIngredient)
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("state")
+            .metrics("badfield")
+            .order_by("state")
+        )
+        with pytest.raises(BadIngredient):
+            recipe.to_sql()
 
     def test_census_buckets(self):
         shelf = self.shelf_from_filename("census.yaml", Census)
@@ -1098,19 +1124,19 @@ oldsters,9999,4567879,oldsters
         )
 
     def test_deprecated_ingredients_dividemetric(self):
-        """Skip this Deprecated ingredient kinds are not supperted in versino 2"""
+        """Skip this Deprecated ingredient kinds are not supperted in version 2"""
         pass
 
     def test_deprecated_ingredients_lookupdimension(self):
-        """Skip this Deprecated ingredient kinds are not supperted in versino 2"""
+        """Skip this Deprecated ingredient kinds are not supperted in version 2"""
         pass
 
     def test_deprecated_ingredients_idvaluedimension(self):
-        """Skip this Deprecated ingredient kinds are not supperted in versino 2"""
+        """Skip this Deprecated ingredient kinds are not supperted in version 2"""
         pass
 
     def test_deprecated_ingredients_wtdavgmetric(self):
-        """Skip this Deprecated ingredient kinds are not supperted in versino 2"""
+        """Skip this Deprecated ingredient kinds are not supperted in version 2"""
         pass
 
     def test_shelf_with_references(self):
@@ -1168,10 +1194,10 @@ Vermont,0.4374284968466102,The Green Mountain State,Vermont
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state_raw,
-       sum((census.pop2000 + census.pop2008) - CASE
-                                                   WHEN (census.pop2000 = 0) THEN NULL
-                                                   ELSE CAST(census.pop2000 * census.pop2008 AS FLOAT) / CAST(census.pop2000 AS FLOAT)
-                                               END) AS allthemath
+       sum(census.pop2000 + (census.pop2008 - census.pop2000 * CASE
+                                                                   WHEN (census.pop2000 = 0) THEN NULL
+                                                                   ELSE CAST(census.pop2008 AS FLOAT) / CAST(census.pop2000 AS FLOAT)
+                                                               END)) AS allthemath
 FROM census
 GROUP BY state_raw"""
         )  # noqa: E501

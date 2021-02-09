@@ -1,6 +1,6 @@
 from copy import copy
 
-from lark.exceptions import VisitError
+from lark.exceptions import VisitError, GrammarError
 from ordered_set import OrderedSet
 from sqlalchemy import Float, Integer, String, Table
 from sqlalchemy.util import lightweight_named_tuple
@@ -14,18 +14,19 @@ from recipe.schemas import shelf_schema
 from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
 from recipe.schemas.config_constructors import create_ingredient_from_config
 
+from recipe.schemas.lark_grammar import SQLAlchemyBuilder
 
 _POP_DEFAULT = object()
 
 
-def ingredient_from_validated_dict(ingr_dict, selectable):
+def ingredient_from_validated_dict(ingr_dict, selectable, builder=None):
     """Create an ingredient object from a validated ingredient schema"""
     try:
         version = ingr_dict.pop("_version", "1")
         if version == "1":
             return create_ingredient_from_config(ingr_dict, selectable)
         else:
-            return create_ingredient_from_parsed(ingr_dict, selectable)
+            return create_ingredient_from_parsed(ingr_dict, builder)
     except InvalidColumnError as e:
         error = {"type": "invalid_column", "extra": {"column_name": e.column_name}}
         return InvalidIngredient(error=error)
@@ -263,8 +264,20 @@ class Shelf(object):
         except E.SureError as e:
             raise BadIngredient(str(e))
         d = {}
+        builder = None
+
         for k, v in validated_shelf.items():
-            d[k] = ingredient_constructor(v, selectable)
+            if ingredient_constructor == ingredient_from_validated_dict:
+                version = str(v.get("_version", "1"))
+                if version == "1":
+                    d[k] = ingredient_constructor(v, selectable)
+                else:
+                    if builder is None:
+                        builder = SQLAlchemyBuilder.get_builder(selectable=selectable)
+                    d[k] = ingredient_constructor(v, selectable, builder=builder)
+            else:
+                d[k] = ingredient_constructor(v, selectable)
+
             if isinstance(d[k], InvalidIngredient):
                 if not d[k].error.get("extra"):
                     d[k].error["extra"] = {}
