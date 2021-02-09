@@ -644,6 +644,7 @@ GROUP BY state"""
        sum(census.pop2000) AS pop2000
 FROM census
 GROUP BY age
+ORDER BY age
 LIMIT 10
 OFFSET 0"""
         )
@@ -667,6 +668,7 @@ OFFSET 0"""
        sum(census.pop2000) AS pop2000
 FROM census
 GROUP BY state
+ORDER BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -684,6 +686,7 @@ OFFSET 0"""
        sum(census.pop2000) AS pop2000
 FROM census
 GROUP BY state
+ORDER BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -708,6 +711,7 @@ OFFSET 0"""
        sum(census.pop2000) AS pop2000
 FROM census
 GROUP BY state
+ORDER BY state
 LIMIT 1
 OFFSET 1"""
         )
@@ -734,6 +738,7 @@ OFFSET 1"""
 FROM census
 WHERE 0 = 1
 GROUP BY age
+ORDER BY age
 LIMIT 10
 OFFSET 0"""
         )
@@ -809,6 +814,110 @@ LIMIT 10
 OFFSET 0"""
         )
 
+    def test_pagination_default_order_by(self):
+        # Default order by applies a pagination
+
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .pagination_page_size(10)
+            .pagination_default_order_by("-pop2000")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY state
+ORDER BY pop2000 DESC
+LIMIT 10
+OFFSET 0"""
+        )
+
+        # Default ordering is not used when the recipe already
+        # has an ordering
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .order_by("state")
+            .pagination_page_size(10)
+            .pagination_default_order_by("-pop2000")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY state
+ORDER BY state
+LIMIT 10
+OFFSET 0"""
+        )
+
+        # Default ordering is not used when the recipe
+        # has a explicit pagination_order_by
+        # has an ordering
+        recipe = (
+            self.recipe()
+            .metrics("pop2000")
+            .pagination_order_by("state")
+            .pagination_page_size(10)
+            .dimensions("state")
+            .pagination_default_order_by("-pop2000")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY state
+ORDER BY state
+LIMIT 10
+OFFSET 0"""
+        )
+
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+                "pagination_default_order_by": ["-pop2000"],
+            }
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY state
+ORDER BY pop2000 DESC
+LIMIT 10
+OFFSET 0"""
+        )
+
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "order_by": ["state"],
+                "pagination_page_size": 10,
+                "pagination_default_order_by": ["-pop2000"],
+            }
+        )
+        print(recipe.to_sql())
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY state
+ORDER BY state
+LIMIT 10
+OFFSET 0"""
+        )
+
     def test_pagination_q(self):
         recipe = (
             self.recipe()
@@ -824,6 +933,7 @@ OFFSET 0"""
 FROM census
 WHERE lower(census.state) LIKE lower('T%')
 GROUP BY state
+ORDER BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -849,6 +959,7 @@ Tennessee,5685230,Tennessee
 FROM census
 WHERE lower(census.state) LIKE lower('T%')
 GROUP BY state
+ORDER BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -871,6 +982,8 @@ FROM census
 WHERE lower('State:' || census.state) LIKE lower('T%')
 GROUP BY idvalue_state_id,
          idvalue_state
+ORDER BY idvalue_state,
+         idvalue_state_id
 LIMIT 10
 OFFSET 0"""
         )
@@ -893,6 +1006,8 @@ FROM census
 WHERE lower('State:' || census.state) LIKE lower('State:T%')
 GROUP BY idvalue_state_id,
          idvalue_state
+ORDER BY idvalue_state,
+         idvalue_state_id
 LIMIT 10
 OFFSET 0"""
         )
@@ -919,6 +1034,7 @@ Tennessee,State:Tennessee,5685230,Tennessee
        sum(census.pop2000) AS pop2000
 FROM census
 GROUP BY state
+ORDER BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -938,6 +1054,7 @@ OFFSET 0"""
        sum(census.pop2000) AS pop2000
 FROM census
 GROUP BY state
+ORDER BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -958,6 +1075,7 @@ OFFSET 0"""
 FROM census
 WHERE lower(census.sex) LIKE lower('M')
 GROUP BY state
+ORDER BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -979,6 +1097,7 @@ FROM census
 WHERE lower(census.sex) LIKE lower('M')
   OR lower(census.state) LIKE lower('M')
 GROUP BY state
+ORDER BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -1007,6 +1126,7 @@ FROM census
 WHERE lower(census.sex) LIKE lower('M')
   OR lower(census.state) LIKE lower('M')
 GROUP BY state
+ORDER BY state
 LIMIT 10
 OFFSET 0"""
         )
@@ -1022,7 +1142,6 @@ OFFSET 0"""
             .pagination_q("T%")
             .pagination_search_keys("state", "sex")
         )
-
         assert (
             recipe.to_sql()
             == """SELECT census.age AS age,
@@ -1035,22 +1154,25 @@ WHERE lower(census.state) LIKE lower('T%')
 GROUP BY age,
          sex,
          state
+ORDER BY state,
+         sex,
+         age
 LIMIT 10
 OFFSET 40"""
         )
         assert (
             recipe.dataset.csv.replace("\r\n", "\n")
             == """age,sex,state,pop2000,age_id,sex_id,state_id
-20,F,Tennessee,40966,20,F,Tennessee
-20,M,Tennessee,40512,20,M,Tennessee
-21,F,Tennessee,39776,21,F,Tennessee
-21,M,Tennessee,38980,21,M,Tennessee
-22,F,Tennessee,38057,22,F,Tennessee
-22,M,Tennessee,37950,22,M,Tennessee
-23,F,Tennessee,37569,23,F,Tennessee
-23,M,Tennessee,37456,23,M,Tennessee
-24,F,Tennessee,36220,24,F,Tennessee
-24,M,Tennessee,36332,24,M,Tennessee
+40,F,Tennessee,47199,40,F,Tennessee
+41,F,Tennessee,45660,41,F,Tennessee
+42,F,Tennessee,45959,42,F,Tennessee
+43,F,Tennessee,46308,43,F,Tennessee
+44,F,Tennessee,44914,44,F,Tennessee
+45,F,Tennessee,45282,45,F,Tennessee
+46,F,Tennessee,43943,46,F,Tennessee
+47,F,Tennessee,42004,47,F,Tennessee
+48,F,Tennessee,41435,48,F,Tennessee
+49,F,Tennessee,39967,49,F,Tennessee
 """
         )
 
@@ -1086,6 +1208,9 @@ WHERE lower(census.state) LIKE lower('T%')
 GROUP BY age,
          sex,
          state
+ORDER BY state,
+         sex,
+         age
 LIMIT 10
 OFFSET 40"""
         )

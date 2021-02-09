@@ -641,6 +641,7 @@ class Paginate(RecipeExtension):
         "apply_pagination": {"type": "boolean"},
         "apply_pagination_filters": {"type": "boolean"},
         "pagination_order_by": {"type": "list", "elements": {"type": "string"}},
+        "pagination_default_order_by": {"type": "list", "elements": {"type": "string"}},
         "pagination_q": {"type": "string"},
         "pagination_search_keys": {"type": "list", "elements": {"type": "string"}},
         "pagination_page_size": {"type": "integer"},
@@ -654,6 +655,7 @@ class Paginate(RecipeExtension):
         self._pagination_q = ""
         self._paginate_search_keys = []
         self._pagination_order_by = []
+        self._pagination_default_order_by = None
         self._pagination_page_size = 0
         self._pagination_page = 1
         self._validated_pagination = None
@@ -666,6 +668,9 @@ class Paginate(RecipeExtension):
                 "apply_pagination": lambda v: self.apply_pagination(v),
                 "apply_pagination_filters": lambda v: self.apply_pagination_filters(v),
                 "pagination_order_by": lambda v: self.pagination_order_by(*v),
+                "pagination_default_order_by": lambda v: self.pagination_default_order_by(
+                    *v
+                ),
                 "pagination_q": lambda v: self.pagination_q(v),
                 "pagination_search_keys": lambda v: self.pagination_search_keys(*v),
                 "pagination_page_size": lambda v: self.pagination_page_size(v),
@@ -708,6 +713,18 @@ class Paginate(RecipeExtension):
         self._pagination_order_by = value
 
     @recipe_arg()
+    def pagination_default_order_by(self, *value):
+        """Paginated queries must be ordered. This ordering is applied if
+        the recipe has no order_by and no pagination_order_by has been set.
+
+        :param value: A list of keys to order the paginated recipe by
+          if not other ordering is applied.
+        :type value: list(str)
+        """
+        assert isinstance(value, (list, tuple))
+        self._pagination_default_order_by = value
+
+    @recipe_arg()
     def pagination_q(self, value):
         """Search this recipe for this string. The search is an case
         insensitive like that ORs all dimensions in the recipe by default.
@@ -742,7 +759,7 @@ class Paginate(RecipeExtension):
     def pagination_page_size(self, value):
         """Paginate recipe responses into pages of this size.
 
-        A page size of zero disasbles pagination.
+        A page size of zero disables pagination.
 
         :param value: A page size (zero or a positive integer)
         :type value: integer
@@ -768,7 +785,7 @@ class Paginate(RecipeExtension):
 
         # Inject the paginator ordering ahead of the existing ordering and filter
         # out sort items that aren't in the cauldron
-        if self._apply_pagination and self._pagination_order_by:
+        if self._apply_pagination and self._pagination_page_size > 0:
 
             def make_ordering_key(ingr):
                 if isinstance(ingr, Ingredient):
@@ -793,7 +810,13 @@ class Paginate(RecipeExtension):
                 and ("-" + key) not in self._pagination_order_by
             ]
             new_order_by = list(self._pagination_order_by) + existing_order_bys
-            self.recipe.order_by(*new_order_by)
+
+            if self._pagination_default_order_by is None:
+                self._pagination_default_order_by = self.recipe._cauldron.dimension_ids
+            if not new_order_by:
+                self.recipe.order_by(*self._pagination_default_order_by)
+            else:
+                self.recipe.order_by(*new_order_by)
 
     def _apply_pagination_q(self):
         """ Apply pagination querying to all paginate search keys"""
