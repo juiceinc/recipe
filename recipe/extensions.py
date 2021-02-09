@@ -811,7 +811,6 @@ class Paginate(RecipeExtension):
             if self._pagination_default_order_by is None:
                 self._pagination_default_order_by = self.recipe._cauldron.dimension_ids
             if not new_order_by:
-                print("applying default order by")
                 self.recipe.order_by(*self._pagination_default_order_by)
             else:
                 self.recipe.order_by(*new_order_by)
