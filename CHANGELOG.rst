@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.23.2 (2021-02-09)
+-----------------------------------------
+* Apply a default ordering when paginating
+
 v0.23.1 (2021-02-08)
 -----------------------------------------
 * Fix sql generation of timestamp truncated columns in bigquery

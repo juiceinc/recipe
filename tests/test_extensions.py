@@ -886,7 +886,6 @@ OFFSET 0"""
                 "pagination_default_order_by": ["-pop2000"],
             }
         )
-        print(recipe.to_sql())
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
@@ -894,6 +893,27 @@ OFFSET 0"""
 FROM census
 GROUP BY state
 ORDER BY pop2000 DESC
+LIMIT 10
+OFFSET 0"""
+        )
+
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "order_by": ["state"],
+                "pagination_page_size": 10,
+                "pagination_default_order_by": ["-pop2000"],
+            }
+        )
+        print(recipe.to_sql())
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY state
+ORDER BY state
 LIMIT 10
 OFFSET 0"""
         )
