@@ -217,6 +217,12 @@ class TestDataTypesTable(TestBase):
         NOT [score] >= 2.0              -> datatypes.score < 2.0
         NOT 2.0 <= [score]              -> datatypes.score < 2.0
         [score] > 3 AND true            -> datatypes.score > 3
+        valid_score AND [score] > 3     -> datatypes.valid_score AND datatypes.score > 3
+        # This is a bad case
+        # what happens is TRUE AND score > 3 gets simplified to score > 3
+        valid_score = TRUE AND score > 3 -> datatypes.valid_score = (datatypes.score > 3)
+        # Parentheses make this work
+        (valid_score = TRUE) AND score > 3 -> datatypes.valid_score = true AND datatypes.score > 3
         [score] = Null                  -> datatypes.score IS NULL
         [score] IS NULL                 -> datatypes.score IS NULL
         [score] != Null                 -> datatypes.score IS NOT NULL
@@ -591,6 +597,8 @@ class TestAggregations(TestBase):
         count_distinct([score])      -> count(DISTINCT datatypes.score)
         count_distinct([department]) -> count(DISTINCT datatypes.department)
         count_distinct(department)   -> count(DISTINCT datatypes.department)
+        count_distinct(department = "MO" AND score > 20) -> count(DISTINCT (datatypes.department = 'MO' AND datatypes.score > 20))
+        count_distinct(if(department = "MO" AND score > 20, department)) -> count(DISTINCT CASE WHEN (datatypes.department = 'MO' AND datatypes.score > 20) THEN datatypes.department END)
         count(*)                     -> count(*)
         """
 
