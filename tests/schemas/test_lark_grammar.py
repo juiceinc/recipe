@@ -8,7 +8,7 @@ from recipe import Recipe
 from recipe.schemas.lark_grammar import SQLAlchemyBuilder
 from tests.test_base import DataTypesTable, mytable_shelf, oven
 
-utc_offset = -1 * time.localtime().tm_gmtoff / 3600 + time.localtime().tm_isdst
+utc_offset = -1 * time.localtime().tm_gmtoff / 3600.0 + time.localtime().tm_isdst
 
 
 def to_sql(expr):
