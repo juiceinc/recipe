@@ -8,11 +8,11 @@ from recipe import Recipe
 from recipe.schemas.lark_grammar import SQLAlchemyBuilder
 from tests.test_base import DataTypesTable, mytable_shelf, oven
 
-utc_offset = -1 * time.localtime().tm_gmtoff / 3600.0
+utc_offset = -1 * time.localtime().tm_gmtoff / 3600.0 + time.localtime().tm_isdst
 
 
 def to_sql(expr):
-    """Utility to print sql for a expression """
+    """Utility to print sql for a expression"""
     return str(expr.compile(compile_kwargs={"literal_binds": True}))
 
 
@@ -108,7 +108,7 @@ class TestSQLAlchemyBuilder(TestBase):
             self.assertEqual(data_type, expected_data_type)
 
     def test_selectable_recipe(self):
-        """Test a selectable that is a recipe """
+        """Test a selectable that is a recipe"""
         recipe = (
             Recipe(shelf=mytable_shelf, session=oven.Session())
             .metrics("age")
@@ -552,7 +552,7 @@ Can't convert 'potato' to a date.
 
 
 class TestDataTypesTableDatesInBigquery(TestDataTypesTableDates):
-    """Test date code generated against a bigquery backend """
+    """Test date code generated against a bigquery backend"""
 
     def setUp(self):
         SQLAlchemyBuilder.clear_builder_cache()

@@ -11,7 +11,7 @@ from recipe.utils import AttrDict
 
 
 def convert_date(v):
-    """Convert a passed parameter to a date if possible """
+    """Convert a passed parameter to a date if possible"""
     if v is None:
         return v
     elif isinstance(v, str):
@@ -32,7 +32,7 @@ def convert_date(v):
 
 
 def convert_datetime(v):
-    """Convert a passed parameter to a datetime if possible """
+    """Convert a passed parameter to a datetime if possible"""
     if v is None:
         return v
     elif isinstance(v, str):
@@ -52,7 +52,11 @@ def convert_datetime(v):
 
 
 def column_type(c):
-    """Determine the datatype of a SQLAlchemy column expression """
+    """Determine the datatype of a SQLAlchemy column expression.
+
+    Developers note: This is very naive. This can be improved by
+    using data types discovered during lark expression parsing.
+    """
     try:
         if hasattr(c, "type"):
             col_type = str(c.type).upper()
@@ -60,8 +64,11 @@ def column_type(c):
             col_type = None
     except CompileError:
         # Some SQLAlchemy expressions don't have a defined type
-        if str(c).lower().startswith("date_trunc"):
+        col_expr = str(c).lower()
+        if col_expr.startswith("date_trunc"):
             col_type = "DATE"
+        elif col_expr.startswith("timestamp_trunc"):
+            col_type = "TIMESTAMP"
         else:
             col_type = "STRING"
 
@@ -182,7 +189,7 @@ class Ingredient(object):
         return u"({}){} {}".format(self.__class__.__name__, self.id, self._stringify())
 
     def _format_value(self, value):
-        """Formats value using any stored formatters. """
+        """Formats value using any stored formatters."""
         for f in self.formatters:
             value = f(value)
         return value
@@ -668,7 +675,7 @@ class Dimension(Ingredient):
 
     @property
     def id_prop(self):
-        """ The label of this dimensions id in the query columns """
+        """The label of this dimensions id in the query columns"""
         if "id" in self.role_keys:
             return self.id + "_id"
         else:
@@ -743,7 +750,7 @@ class Metric(Ingredient):
         self.roles = {"value": expression}
 
     def build_filter(self, value, operator=None):
-        """Building filters with Metric returns Having objects. """
+        """Building filters with Metric returns Having objects."""
         f = super().build_filter(value, operator=operator)
         return Having(f.filters[0])
 
