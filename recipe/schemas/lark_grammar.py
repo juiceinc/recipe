@@ -995,7 +995,9 @@ class SQLAlchemyBuilder(object):
             GrammarError: A description of any errors and where they occur
 
         Returns:
-            ColumnElement: A SQLALchemy expression
+            A tuple of
+                ColumnElement: A SQLALchemy expression
+                Data Type: The dtype of the expression (bool, date, datetime, num, str)
         """
         tree = self.parser.parse(text, start="col")
         validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)
@@ -1017,6 +1019,6 @@ class SQLAlchemyBuilder(object):
                 and not validator.found_aggregation
                 and self.last_datatype == "num"
             ):
-                return func.sum(expr)
+                return (func.sum(expr), self.last_datatype)
             else:
-                return expr
+                return (expr, self.last_datatype)

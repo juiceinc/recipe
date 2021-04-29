@@ -51,12 +51,15 @@ def convert_datetime(v):
         return v
 
 
-def column_type(c):
-    """Determine the datatype of a SQLAlchemy column expression.
+def determine_dtype(ingr, c, role):
+    """Determine the datatype of a SQLAlchemy column expression
 
-    Developers note: This is very naive. This can be improved by
-    using data types discovered during lark expression parsing.
+    Developers note: This only works in the simplest of cases. Better
+    type identification should be available for lark parsed ingredients.
     """
+    if ingr.dtype is not None:
+        return ingr.dtype
+
     try:
         if hasattr(c, "type"):
             col_type = str(c.type).upper()
@@ -66,11 +69,11 @@ def column_type(c):
         # Some SQLAlchemy expressions don't have a defined type
         col_expr = str(c).lower()
         if col_expr.startswith("date_trunc"):
-            col_type = "DATE"
+            col_type = "date"
         elif col_expr.startswith("timestamp_trunc"):
-            col_type = "TIMESTAMP"
+            col_type = "datetime"
         else:
-            col_type = "STRING"
+            col_type = "string"
 
     return col_type
 
@@ -80,7 +83,7 @@ class Ingredient(object):
     """Ingredients combine to make a SQLAlchemy query.
 
     Any unknown keyword arguments provided to an Ingredient
-    during initializatino are stored in a meta object.
+    during initialization are stored in a meta object.
 
     .. code:: python
 
@@ -134,6 +137,9 @@ class Ingredient(object):
             ``build_filter``. Named filters are dictionaries with
             a ``name`` (:obj:str) property and a ``condition`` property
             (:obj:`BinaryExpression`)
+        dtype (:obj:`str`):
+            The identified dtype (num, string, date, bool, datetime) of
+            the parsed expression
 
     Returns:
         An Ingredient object.
@@ -150,6 +156,7 @@ class Ingredient(object):
         self.quickselects = kwargs.pop("quickselects", [])
         self.column_suffixes = kwargs.pop("column_suffixes", None)
         self.cache_context = kwargs.pop("cache_context", "")
+        self.dtype = kwargs.pop("dtype", None)
         self.anonymize = False
         self.roles = {}
         self._labels = []
@@ -304,9 +311,9 @@ class Ingredient(object):
             filter_column = self.columns[0]
 
         # Support passing ILIKE in Paginate extensions
-        if column_type(filter_column) == "DATE":
+        if self.dtype == "date" or column_type(filter_column) == "DATE":
             value = convert_date(value)
-        elif column_type(filter_column) in ("DATETIME", "TIMESTAMP"):
+        elif self.dtype == "datetime" or column_type(filter_column) in ("DATETIME", "TIMESTAMP"):
             value = convert_datetime(value)
 
         if isinstance(value, str) and not column_type(filter_column) in (
@@ -374,9 +381,9 @@ class Ingredient(object):
         else:
             filter_column = self.columns[0]
 
-        if column_type(filter_column) == "DATE":
+        if self.dtype == "date" or column_type(filter_column) == "DATE":
             value = list(map(convert_date, value))
-        elif column_type(filter_column) in ("DATETIME", "TIMESTAMP"):
+        elif self.dtype == "datetime" or column_type(filter_column) in ("DATETIME", "TIMESTAMP"):
             value = list(map(convert_datetime, value))
 
         if operator is None or operator == "in":
