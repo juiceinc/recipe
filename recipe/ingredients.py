@@ -52,7 +52,11 @@ def convert_datetime(v):
 
 
 def column_type(c):
-    """Determine the datatype of a SQLAlchemy column expression """
+    """Determine the datatype of a SQLAlchemy column expression.
+
+    Developers note: This is very naive. This can be improved by
+    using data types discovered during lark expression parsing.
+    """
     try:
         if hasattr(c, "type"):
             col_type = str(c.type).upper()
@@ -60,8 +64,11 @@ def column_type(c):
             col_type = None
     except CompileError:
         # Some SQLAlchemy expressions don't have a defined type
-        if str(c).lower().startswith("date_trunc"):
+        col_expr = str(c).lower()
+        if col_expr.startswith("date_trunc"):
             col_type = "DATE"
+        elif col_expr.startswith("timestamp_trunc"):
+            col_type = "TIMESTAMP"
         else:
             col_type = "STRING"
 
