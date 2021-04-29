@@ -2,6 +2,11 @@
 Changelog
 =========
 
+
+v0.23.3 (2021-04-29)
+-----------------------------------------
+* Fix column_type for timestamps
+
 v0.23.2 (2021-02-09)
 -----------------------------------------
 * Apply a default ordering when paginating
