@@ -5,6 +5,7 @@ import string
 import unicodedata
 from functools import wraps
 from inspect import isclass, getfullargspec
+from uuid import uuid4
 
 import attr
 import sqlalchemy.orm
@@ -16,6 +17,7 @@ from faker.providers import BaseProvider
 from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
+from sqlalchemy.exc import UnsupportedCompilationError
 
 # only expose the printing sql function
 __all__ = [
@@ -30,15 +32,17 @@ __all__ = [
 
 def filter_to_string(filt):
     """Compile a filter object to a literal string"""
-    if hasattr(filt, "filters") and filt.filters:
-        return str(filt.filters[0].compile(compile_kwargs={"literal_binds": True}))
-    elif hasattr(filt, "havings") and filt.havings:
-        return str(filt.havings[0].compile(compile_kwargs={"literal_binds": True}))
-    elif isinstance(filt, bool):
-        return str(filt)
-    else:
-        return str(filt.compile(compile_kwargs={"literal_binds": True}))
-
+    try:
+        if hasattr(filt, "filters") and filt.filters:
+            return str(filt.filters[0].compile(compile_kwargs={"literal_binds": True}))
+        elif hasattr(filt, "havings") and filt.havings:
+            return str(filt.havings[0].compile(compile_kwargs={"literal_binds": True}))
+        elif isinstance(filt, bool):
+            return str(filt)
+        else:
+            return str(filt.compile(compile_kwargs={"literal_binds": True}))
+    except UnsupportedCompilationError:
+        return uuid4()
 
 def generate_faker_seed(value):
     """Generate a seed value for faker. """
