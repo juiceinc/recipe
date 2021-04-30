@@ -442,7 +442,7 @@ class TestFilter(object):
         filters.add(f2)
         assert len(filters) == 2
 
-        assert str(f1) == "(Filter)f1 foo.first = :first_1"
+        assert str(f1) == "(Filter)f1 foo.first = 'moo'"
 
     def test_expression(self):
         f = Filter(MyTable.first == "foo")
@@ -455,7 +455,7 @@ class TestFilter(object):
 
     def test_filter_describe(self):
         f1 = Filter(MyTable.first == "moo", id="moo")
-        assert f1.describe() == "(Filter)moo foo.first = :first_1"
+        assert f1.describe() == "(Filter)moo foo.first = 'moo'"
 
 
 class TestHaving(object):
