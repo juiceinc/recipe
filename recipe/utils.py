@@ -44,8 +44,9 @@ def filter_to_string(filt):
     except UnsupportedCompilationError:
         return uuid4()
 
+
 def generate_faker_seed(value):
-    """Generate a seed value for faker. """
+    """Generate a seed value for faker."""
     if not isinstance(value, str):
         value = str(value)
 
@@ -94,7 +95,7 @@ class TestProvider(BaseProvider):
 
 
 class StringLiteral(String):
-    """ Teach SA how to literalize various things. """
+    """Teach SA how to literalize various things."""
 
     def literal_processor(self, dialect):
         super_processor = super(StringLiteral, self).literal_processor(dialect)
@@ -153,7 +154,7 @@ WHITESPACE_RE = re.compile(r"\s+", flags=re.DOTALL | re.MULTILINE)
 
 
 def replace_whitespace_with_space(s):
-    """ Replace multiple whitespaces with a single space. """
+    """Replace multiple whitespaces with a single space."""
     return WHITESPACE_RE.sub(" ", s)
 
 
