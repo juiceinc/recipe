@@ -72,7 +72,7 @@ class TestIngredients(object):
         )
 
     def test_comparisons(self):
-        """ Items sort in a fixed order"""
+        """Items sort in a fixed order"""
         ingr = Ingredient(columns=[MyTable.first], id=1)
         ingr2 = Ingredient(columns=[MyTable.first], id=2)
         dim = Dimension(MyTable.first, id=3)
@@ -126,7 +126,7 @@ class TestIngredients(object):
         assert len(extras) == 1
 
     def test_ingredient_cmp(self):
-        """ Ingredients are sorted by id """
+        """Ingredients are sorted by id"""
         ingra = Ingredient(id="b", columns=[MyTable.first])
         ingrb = Ingredient(id="a", columns=[MyTable.last])
         assert ingrb < ingra
@@ -134,7 +134,7 @@ class TestIngredients(object):
 
 class TestIngredientBuildFilter(object):
     def test_scalar_filter(self):
-        """Test scalar filters on a string dimension """
+        """Test scalar filters on a string dimension"""
         d = Dimension(MyTable.first)
 
         # Test building scalar filters
@@ -182,7 +182,7 @@ class TestIngredientBuildFilter(object):
             filt = d.build_filter(["moo"], "cows")
 
     def test_scalar_filter_on_int(self):
-        """Test scalar filters on an integer dimension """
+        """Test scalar filters on an integer dimension"""
         d = Dimension(MyTable.age)
 
         # Test building scalar filters
@@ -433,7 +433,7 @@ class TestIngredientBuildFilter(object):
 
 class TestFilter(object):
     def test_filter_cmp(self):
-        """ Filters are compared on their filter expression """
+        """Filters are compared on their filter expression"""
         filters = set()
         f1 = Filter(MyTable.first == "moo", id="f1")
         f2 = Filter(MyTable.first == "foo", id="f2")
@@ -460,7 +460,7 @@ class TestFilter(object):
 
 class TestHaving(object):
     def test_having_cmp(self):
-        """ Filters are compared on their filter expression """
+        """Filters are compared on their filter expression"""
         havings = set()
         f1 = Having(func.sum(MyTable.age) > 2, id="h1")
         f2 = Having(func.sum(MyTable.age) > 3, id="h2")
