@@ -7,7 +7,7 @@ from sqlalchemy.exc import CompileError
 from datetime import date, datetime
 from time import gmtime
 from recipe.exceptions import BadIngredient
-from recipe.utils import AttrDict
+from recipe.utils import AttrDict, filter_to_string
 
 
 def convert_date(v):
@@ -491,7 +491,7 @@ class Filter(Ingredient):
         self.filters = [expression]
 
     def _stringify(self):
-        return " ".join(str(expr) for expr in self.filters)
+        return filter_to_string(self)
 
     @property
     def expression(self):
