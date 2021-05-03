@@ -76,8 +76,13 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                 # Save the data type in the ingredient
                 ingr_dict["dtype"] = dtype
                 if dtype != "num":
-                    print("THIS SUCKS", fld_defn, builder.last_datatype)
-                    raise Exception("This sucks")
+                    error = {
+                        "type": "Can not parse field",
+                        "extra": {
+                            "details": "A string can not be aggregated",
+                        },
+                    }
+                    return InvalidIngredient(error=error)
                 args = [expr]
             else:
                 fld_defn = ingr_dict.pop("field", None)

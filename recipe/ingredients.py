@@ -1,7 +1,9 @@
 import dateparser
 from functools import total_ordering
 from uuid import uuid4
-from sqlalchemy import Float, String, and_, between, case, cast, func, or_, text
+from sqlalchemy import (
+    Float, String, Integer, Numeric, Boolean, and_, between, case, cast, func, or_, text
+)
 from sqlalchemy.sql.sqltypes import Date, DateTime, TIMESTAMP
 from sqlalchemy.exc import CompileError
 from datetime import date, datetime
@@ -49,6 +51,32 @@ def convert_datetime(v):
         return datetime.utcfromtimestamp(v)
     else:
         return v
+
+
+def dtype_from_column(c):
+    """[summary]
+
+    Args:
+        c ([type]): [description]
+    """
+    if hasattr(c, "type"):
+        # Check supported column types
+        if isinstance(c.type, String):
+            prefix = "str"
+        elif isinstance(c.type, Date):
+            prefix = "date"
+        elif isinstance(c.type, DateTime):
+            prefix = "datetime"
+        elif isinstance(c.type, Integer):
+            prefix = "num"
+        elif isinstance(c.type, Numeric):
+            prefix = "num"
+        elif isinstance(c.type, Boolean):
+            prefix = "bool"
+        else:
+            prefix = "unusable"
+    else:
+        return "unknown"
 
 
 def determine_dtype(ingr, c, role):
@@ -311,15 +339,12 @@ class Ingredient(object):
             filter_column = self.columns[0]
 
         # Support passing ILIKE in Paginate extensions
-        if self.dtype == "date" or column_type(filter_column) == "DATE":
+        if self.dtype == "date":
             value = convert_date(value)
-        elif self.dtype == "datetime" or column_type(filter_column) in ("DATETIME", "TIMESTAMP"):
+        elif self.dtype == "datetime":
             value = convert_datetime(value)
 
-        if isinstance(value, str) and not column_type(filter_column) in (
-            "STRING",
-            "VARCHAR",
-        ):
+        if isinstance(value, str) and self.dtype == "string":
             filter_column = cast(filter_column, String)
 
         if operator is None or operator == "eq":
@@ -381,9 +406,9 @@ class Ingredient(object):
         else:
             filter_column = self.columns[0]
 
-        if self.dtype == "date" or column_type(filter_column) == "DATE":
+        if self.dtype == "date":
             value = list(map(convert_date, value))
-        elif self.dtype == "datetime" or column_type(filter_column) in ("DATETIME", "TIMESTAMP"):
+        elif self.dtype == "datetime":
             value = list(map(convert_datetime, value))
 
         if operator is None or operator == "in":

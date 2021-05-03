@@ -1567,26 +1567,26 @@ _version: 2
 count_star:
     kind: Metric
     field: "count(*)"
-max_username:
+count_username:
     kind: Metric
-    field: "max(username)"
+    field: "count(username)"
 """,
             recipe,
         )
         recipe2 = Recipe(shelf=shelf2, session=self.session).metrics(
-            "count_star", "max_username"
+            "count_star", "count_username"
         )
         assert (
             recipe2.to_sql()
             == """SELECT count(*) AS count_star,
-       max(anon_1.username) AS max_username
+       count(anon_1.username) AS count_username
 FROM
   (SELECT scores_with_nulls.username AS username,
           count(*) AS count_star
    FROM scores_with_nulls
    GROUP BY username) AS anon_1"""
         )
-        self.assert_recipe_csv(recipe2, "count_star,max_username\n3,chris\n")
+        self.assert_recipe_csv(recipe2, "count_star,count_username\n3,3\n")
 
 
 class TestParsedIntellligentDates(ConfigTestBase):
