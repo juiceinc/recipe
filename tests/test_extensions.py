@@ -1013,8 +1013,8 @@ OFFSET 0"""
         )
         assert (
             recipe.dataset.csv.replace("\r\n", "\n")
-            == """idvalue_state_id,idvalue_state,pop2000,idvalue_state_id
-Tennessee,State:Tennessee,5685230,Tennessee
+            == """idvalue_state_id,idvalue_state,pop2000
+Tennessee,State:Tennessee,5685230
 """
         )
 

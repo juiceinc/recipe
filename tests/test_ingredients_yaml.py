@@ -727,12 +727,12 @@ OFFSET 0"""
         )
         self.assert_recipe_csv(
             recipe,
-            """state_idval_id,state_idval,pop2000,state_idval_id
-5033,Tennessee,5033,5033
-5562,Tennessee,5562,5562
-6452,Tennessee,6452,6452
-7322,Tennessee,7322,7322
-8598,Tennessee,8598,8598
+            """state_idval_id,state_idval,pop2000
+5033,Tennessee,5033
+5562,Tennessee,5562
+6452,Tennessee,6452
+7322,Tennessee,7322
+8598,Tennessee,8598
 """,
         )
 
@@ -779,17 +779,17 @@ OFFSET 0"""
 
         self.assert_recipe_csv(
             recipe,
-            """state_idval_id,state_idval,avgage,state_idval_id
-5033,Tennessee,83.9999999999833,5033
-5562,Tennessee,82.99999999998506,5562
-6452,Tennessee,81.99999999998728,6452
-7322,Tennessee,80.99999999998893,7322
-8598,Tennessee,79.99999999999069,8598
-9583,Tennessee,78.99999999999176,9583
-10501,Tennessee,83.999999999992,10501
-10672,Tennessee,77.99999999999268,10672
-11141,Tennessee,82.99999999999255,11141
-11168,Tennessee,76.99999999999311,11168
+            """state_idval_id,state_idval,avgage
+5033,Tennessee,83.9999999999833
+5562,Tennessee,82.99999999998506
+6452,Tennessee,81.99999999998728
+7322,Tennessee,80.99999999998893
+8598,Tennessee,79.99999999999069
+9583,Tennessee,78.99999999999176
+10501,Tennessee,83.999999999992
+10672,Tennessee,77.99999999999268
+11141,Tennessee,82.99999999999255
+11168,Tennessee,76.99999999999311
 """,
         )
 
@@ -1241,17 +1241,17 @@ OFFSET 0"""
         # Parsed shelves provide better division
         self.assert_recipe_csv(
             recipe,
-            """state_idval_id,state_idval,avgage,state_idval_id
-5033,Tennessee,84.0,5033
-5562,Tennessee,83.0,5562
-6452,Tennessee,82.0,6452
-7322,Tennessee,81.0,7322
-8598,Tennessee,80.0,8598
-9583,Tennessee,79.0,9583
-10501,Tennessee,84.0,10501
-10672,Tennessee,78.0,10672
-11141,Tennessee,83.0,11141
-11168,Tennessee,77.0,11168
+            """state_idval_id,state_idval,avgage
+5033,Tennessee,84.0
+5562,Tennessee,83.0
+6452,Tennessee,82.0
+7322,Tennessee,81.0
+8598,Tennessee,80.0
+9583,Tennessee,79.0
+10501,Tennessee,84.0
+10672,Tennessee,78.0
+11141,Tennessee,83.0
+11168,Tennessee,77.0
 """,
         )
 
