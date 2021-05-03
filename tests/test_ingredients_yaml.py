@@ -46,6 +46,7 @@ class ConfigTestBase(object):
         d = os.path.dirname(os.path.realpath(__file__))
         fn = os.path.join(d, self.yaml_location, shelf_name)
         contents = open(fn).read()
+        print(fn, contents)
         return self.shelf_from_yaml(contents, selectable)
 
     def shelf_from_yaml(self, yaml_config, selectable):
@@ -1568,7 +1569,7 @@ count_star:
     field: "count(*)"
 max_username:
     kind: Metric
-    field: "max(username)"        
+    field: "max(username)"
 """,
             recipe,
         )

@@ -100,6 +100,9 @@ class TestSQLAlchemyBuilder(TestBase):
         day(test_date)                  -> date
         month(test_datetime)            -> date
         department > "foo" anD [score] < 22    -> boolean
+        min(department)                 -> string
+        min(test_date)                  -> date
+        count(*)                        -> num
         """
 
         for field, expected_data_type in self.examples(good_examples):
@@ -460,6 +463,18 @@ When dividing, the denominator can not be zero
 ===
 [score] / (10-10) ->
 When dividing, the denominator can not be zero
+===
+avg(department) ->
+A string can not be aggregated using avg.
+
+avg(department)
+^
+===
+avg(test_date) ->
+A date can not be aggregated using avg.
+
+avg(test_date)
+^
 """
 
         for field, expected_error in self.bad_examples(bad_examples):
