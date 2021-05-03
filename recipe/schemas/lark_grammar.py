@@ -22,7 +22,12 @@ from sqlalchemy import (
     or_,
     text,
 )
-from sqlalchemy.ext.declarative.api import DeclarativeMeta
+try:
+    # SQLAlchemy 1.4+
+    from sqlalchemy.orm import DeclarativeMeta
+except:
+    # SQLAlchemy < 1.4
+    from sqlalchemy.ext.declarative.api import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
 from sqlalchemy.sql.sqltypes import Numeric
 
