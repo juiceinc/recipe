@@ -9,10 +9,55 @@ from tests.test_base import (
     StateFact,
     census_shelf,
     mytable_shelf,
+    mytable_shelf_with_formatter,
     oven,
 )
 
 from recipe import BadRecipe, Dimension, Filter, Having, Metric, Recipe, Shelf
+
+
+
+class TestRecipeEnchant(object):
+    def setup(self):
+        self.session = oven.Session()
+        self.shelf = mytable_shelf_with_formatter
+
+    def recipe(self, **kwargs):
+        return Recipe(shelf=self.shelf, session=self.session, **kwargs)
+
+    def test_dimension(self):
+        recipe = self.recipe().metrics("age").dimensions("first")
+        print(recipe.to_sql())
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY first"""
+        )
+        assert recipe.all()[0].first == "hi"
+        assert recipe.all()[0].age == 15
+        assert recipe.stats.rows == 1
+
+    def test_idvaluedimension(self):
+        recipe = self.recipe().metrics("age").dimensions("firstlast")
+        print(recipe.to_sql())
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS firstlast_id,
+       foo.last AS firstlast_raw,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY firstlast_id,
+         firstlast_raw"""
+        )
+        assert recipe.all()[0].firstlast == "fredfoo"
+        assert recipe.all()[0].firstlast_id == "hi"
+        assert recipe.all()[0].age == 10
+        assert recipe.all()[1].firstlast == "therefoo"
+        assert recipe.all()[1].firstlast_id == "hi"
+        assert recipe.all()[1].age == 5
+        assert recipe.stats.rows == 2
 
 
 class TestRecipeIngredients(object):
