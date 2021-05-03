@@ -69,7 +69,7 @@ class TestExtensions(object):
 
 
 class AddFilter(RecipeExtension):
-    """ A simple extension that adds a filter """
+    """A simple extension that adds a filter"""
 
     def add_ingredients(self):
         self.recipe.filters(MyTable.first > 2)
@@ -186,7 +186,7 @@ GROUP BY first"""
         )
 
     def test_automatic_filters(self):
-        """ Automatic filters """
+        """Automatic filters"""
         recipe = self.recipe().metrics("age").dimensions("first")
         recipe = recipe.automatic_filters({"first": ["foo"]})
 
@@ -436,7 +436,7 @@ class TestAnonymizeRecipeExtension(object):
             recipe.anonymize("pig")
 
     def test_anonymize_with_anonymizer(self):
-        """ Anonymize requires ingredients to have an anonymizer """
+        """Anonymize requires ingredients to have an anonymizer"""
         recipe = (
             self.recipe()
             .metrics("age")
@@ -479,7 +479,7 @@ ORDER BY last_raw"""
         assert recipe.stats.rows == 2
 
     def test_anonymize_with_faker_anonymizer(self):
-        """ Anonymize requires ingredients to have an anonymizer """
+        """Anonymize requires ingredients to have an anonymizer"""
         recipe = (
             self.recipe()
             .metrics("age")
@@ -548,7 +548,7 @@ ORDER BY firstanon_raw"""
         assert recipe.stats.rows == 1
 
     def test_anonymize_without_anonymizer(self):
-        """ If the dimension doesn't have an anonymizer, there is no change """
+        """If the dimension doesn't have an anonymizer, there is no change"""
         recipe = (
             self.recipe()
             .metrics("age")
@@ -634,7 +634,7 @@ GROUP BY state"""
         )
 
     def test_pagination(self):
-        """ If pagination page size is configured, pagination is applied to results"""
+        """If pagination page size is configured, pagination is applied to results"""
         recipe = (
             self.recipe().metrics("pop2000").dimensions("age").pagination_page_size(10)
         )
@@ -965,7 +965,7 @@ OFFSET 0"""
         )
 
     def test_pagination_q_idvalue(self):
-        """ Pagination queries use the value of an id value dimension """
+        """Pagination queries use the value of an id value dimension"""
         recipe = (
             self.recipe()
             .metrics("pop2000")
@@ -1263,7 +1263,7 @@ GROUP BY summarize.first"""
         )
 
     def test_summarize_over(self):
-        """ Anonymize requires ingredients to have an anonymizer """
+        """Anonymize requires ingredients to have an anonymizer"""
         self.shelf = self.anonymized_foo_shelf
         recipe = (
             self.recipe()
@@ -1289,7 +1289,7 @@ GROUP BY summarize.first"""
         assert recipe.one().age == 15
 
     def test_summarize_over_anonymize(self):
-        """ Anonymize requires ingredients to have an anonymizer """
+        """Anonymize requires ingredients to have an anonymizer"""
         self.shelf = self.anonymized_foo_shelf
         recipe = (
             self.recipe()
@@ -1321,7 +1321,7 @@ GROUP BY summarize.first_raw"""
     ####
 
     def test_summarize_over_scores(self):
-        """ Test a dataset that has multiple rows per user """
+        """Test a dataset that has multiple rows per user"""
         self.shelf = scores_shelf
         recipe = (
             self.recipe()
@@ -1349,7 +1349,7 @@ GROUP BY summarize.department"""
         assert sales_row.score == 80.0
 
     def test_summarize_over_scores_limit(self):
-        """ Test that limits and offsets work """
+        """Test that limits and offsets work"""
         self.shelf = scores_shelf
 
         recipe = (
@@ -1392,7 +1392,7 @@ OFFSET 0""",
         assert sales_row.score == 80.0
 
     def test_summarize_over_scores_order(self):
-        """ Order bys are hoisted to the outer query """
+        """Order bys are hoisted to the outer query"""
         self.shelf = scores_shelf
 
         recipe = (
@@ -1425,7 +1425,7 @@ ORDER BY summarize.department"""
         assert sales_row.score == 80.0
 
     def test_summarize_over_scores_order_anonymize(self):
-        """ Order bys are hoisted to the outer query """
+        """Order bys are hoisted to the outer query"""
         self.shelf = scores_shelf
 
         recipe = (
@@ -1459,7 +1459,7 @@ ORDER BY summarize.department_raw"""
         assert sales_row.score == 80.0
 
     def test_summarize_over_scores_automatic_filters(self):
-        """ Test that automatic filters take place in the subquery """
+        """Test that automatic filters take place in the subquery"""
         self.shelf = scores_shelf
 
         recipe = (
@@ -1496,7 +1496,7 @@ GROUP BY summarize.department"""
     ####
 
     def test_summarize_over_tagscores(self):
-        """ Test a dataset that has multiple rows per user """
+        """Test a dataset that has multiple rows per user"""
         self.shelf = tagscores_shelf
         recipe = (
             self.recipe()
@@ -1525,7 +1525,7 @@ GROUP BY summarize.department"""
         assert sales_row.score == 80.0
 
     def test_summarize_over_tagscores_automatic_filters(self):
-        """ Test a dataset that has multiple rows per user """
+        """Test a dataset that has multiple rows per user"""
         self.shelf = tagscores_shelf
         recipe = (
             self.recipe()
@@ -1554,7 +1554,7 @@ GROUP BY summarize.department"""
         assert row.score == 90
 
     def test_summarize_over_tagscores_test_cnt(self):
-        """ Test a dataset that has multiple rows per user """
+        """Test a dataset that has multiple rows per user"""
         self.shelf = tagscores_shelf
         recipe = (
             self.recipe()

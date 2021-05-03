@@ -462,12 +462,13 @@ class StateFact(Base):
     __table_args__ = {"extend_existing": True}
 
 
-
 mytable_shelf_with_formatter = Shelf(
     {
         "first": Dimension(MyTable.first),
         "last": Dimension(MyTable.last),
-        "firstlast": Dimension(MyTable.last, id_expression=MyTable.first, formatters=[lambda x: x + "foo"]),
+        "firstlast": Dimension(
+            MyTable.last, id_expression=MyTable.first, formatters=[lambda x: x + "foo"]
+        ),
         "age": Metric(func.sum(MyTable.age)),
     }
 )

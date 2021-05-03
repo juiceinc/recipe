@@ -171,7 +171,7 @@ class Shelf(object):
     # End dict interface
 
     def ingredients(self):
-        """ Return the ingredients in this shelf in a deterministic order """
+        """Return the ingredients in this shelf in a deterministic order"""
         return sorted(list(self.values()))
 
     @property
