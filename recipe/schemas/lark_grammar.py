@@ -114,7 +114,7 @@ def make_columns_for_table(selectable):
 
 
 def make_lark_grammar(columns):
-    """Build a grammar for this selectable using columns """
+    """Build a grammar for this selectable using columns"""
     grammar = f"""
     col: boolean | string | num | date | datetime_end | datetime | unusable_col | unknown_col | error_math | error_vector_expr | error_not_nonboolean | error_between_expr | error_aggr | error_if_statement
     //paren_col: "(" col ")" -> col
@@ -315,7 +315,7 @@ class SQLALchemyValidator(Visitor):
         return dt
 
     def _add_error(self, message, tree):
-        """Add an error pointing to this location in the parsed string """
+        """Add an error pointing to this location in the parsed string"""
         tok = None
         # Find the first token
         while tree and tree.children:
@@ -398,12 +398,12 @@ class SQLALchemyValidator(Visitor):
             self._add_error(f"Aggregations are not allowed in this field.", tree)
 
     def unknown_col(self, tree):
-        """Column name doesn't exist in the data """
+        """Column name doesn't exist in the data"""
         tok1 = tree.children[0]
         self._add_error(f"{tok1} is not a valid column name", tree)
 
     def unusable_col(self, tree):
-        """Column name isn't a data type we can handle """
+        """Column name isn't a data type we can handle"""
         tok1 = tree.children[0]
         self._add_error(
             f"{tok1} is a data type that can't be used. Usable data types are strings, numbers, boolean, dates, and datetimes",
@@ -411,11 +411,11 @@ class SQLALchemyValidator(Visitor):
         )
 
     def error_not_nonboolean(self, tree):
-        """NOT string or NOT num """
+        """NOT string or NOT num"""
         self._add_error(f"NOT requires a boolean value", tree)
 
     def mixedarray(self, tree):
-        """An array containing a mix of strings and numbers """
+        """An array containing a mix of strings and numbers"""
         self._add_error(f"An array may not contain both strings and numbers", tree)
 
     def vector_expr(self, tree):
@@ -428,7 +428,7 @@ class SQLALchemyValidator(Visitor):
             self._add_error(f"Must be a column or expression", val)
 
     def error_aggr(self, tree):
-        """Aggregating a bad data type """
+        """Aggregating a bad data type"""
         fn = tree.children[0].children[0]
         dt = self._data_type(tree.children[0].children[1])
         self._add_error(
@@ -453,7 +453,7 @@ class SQLALchemyValidator(Visitor):
             )
 
     def bool_expr(self, tree):
-        """ a > b where the types of a and b don't match """
+        """a > b where the types of a and b don't match"""
         left, _, right = tree.children
         if isinstance(left, Tree) and isinstance(right, Tree):
             left_data_type = self._data_type(left)
@@ -471,7 +471,7 @@ class SQLALchemyValidator(Visitor):
                 )
 
     def percentile_aggr(self, tree):
-        """Sum up the things """
+        """Sum up the things"""
         percentile, fld = tree.children
         percentile_val = int(percentile[len("percentile") :])
         if percentile_val not in (1, 5, 10, 25, 50, 75, 90, 95, 99):
@@ -484,7 +484,7 @@ class SQLALchemyValidator(Visitor):
 
 @v_args(inline=True)  # Affects the signatures of the methods
 class TransformToSQLAlchemyExpression(Transformer):
-    """Converts a field to a SQLAlchemy expression """
+    """Converts a field to a SQLAlchemy expression"""
 
     def __init__(self, selectable, columns, drivername, forbid_aggregation=True):
         self.text = None
@@ -527,7 +527,7 @@ class TransformToSQLAlchemyExpression(Transformer):
             return v
 
     def string_cast(self, _, fld):
-        """Cast a field to a string """
+        """Cast a field to a string"""
         return cast(fld, String())
 
     def num(self, v):
@@ -537,11 +537,11 @@ class TransformToSQLAlchemyExpression(Transformer):
             return v
 
     def int_cast(self, _, fld):
-        """Cast a field to a string """
+        """Cast a field to a string"""
         return cast(fld, Integer())
 
     def coalesce(self, coalesce, left, right):
-        """Coalesce a number, string, date or datetime """
+        """Coalesce a number, string, date or datetime"""
         return func.coalesce(left, right)
 
     def boolean(self, v):
@@ -551,11 +551,11 @@ class TransformToSQLAlchemyExpression(Transformer):
             return v
 
     def num_add(self, a, b):
-        """ Add numbers or strings """
+        """Add numbers or strings"""
         return a + b
 
     def string_add(self, a, b):
-        """ Add numbers or strings """
+        """Add numbers or strings"""
         return a + b
 
     def num_div(self, num, denom):
@@ -584,7 +584,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return a * b
 
     def age_conv(self, _, fld):
-        """Convert a date to an age """
+        """Convert a date to an age"""
         if self.drivername == "bigquery":
             return engine_support.bq_age(fld)
         elif self.drivername == "sqlite":
@@ -628,7 +628,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return dt
 
     def day_conv(self, _, fld):
-        """Truncate to mondays """
+        """Truncate to mondays"""
         if self.drivername == "bigquery":
             return func.date_trunc(fld, text("day"))
         else:
@@ -636,7 +636,7 @@ class TransformToSQLAlchemyExpression(Transformer):
             return func.date_trunc("day", fld)
 
     def week_conv(self, _, fld):
-        """Truncate to mondays """
+        """Truncate to mondays"""
         if self.drivername == "bigquery":
             return func.date_trunc(fld, text("week(monday)"))
         else:
@@ -665,7 +665,7 @@ class TransformToSQLAlchemyExpression(Transformer):
             return func.date_trunc("year", fld)
 
     def dt_day_conv(self, _, fld):
-        """Truncate to mondays """
+        """Truncate to mondays"""
         if self.drivername == "bigquery":
             return func.timestamp_trunc(fld, text("day"))
         else:
@@ -673,7 +673,7 @@ class TransformToSQLAlchemyExpression(Transformer):
             return func.date_trunc("day", fld)
 
     def dt_week_conv(self, _, fld):
-        """Truncate to mondays """
+        """Truncate to mondays"""
         if self.drivername == "bigquery":
             return func.timestamp_trunc(fld, text("week(monday)"))
         else:
@@ -742,7 +742,7 @@ class TransformToSQLAlchemyExpression(Transformer):
             return "notin_"
 
     def comparator(self, comp):
-        """A comparator like =, !=, >, >= """
+        """A comparator like =, !=, >, >="""
         comparators = {
             "=": "__eq__",
             ">": "__gt__",
@@ -826,13 +826,13 @@ class TransformToSQLAlchemyExpression(Transformer):
         return getattr(left, comparator)(right)
 
     def date_bool_expr(self, left, comparator, right):
-        """If right is still a string, convert to a date. """
+        """If right is still a string, convert to a date."""
         if isinstance(right, str):
             right = self.date_conv(None, right)
         return self.bool_expr(left, comparator, right)
 
     def datetime_bool_expr(self, left, comparator, right):
-        """If right is still a string, convert to a date. """
+        """If right is still a string, convert to a date."""
         if isinstance(right, str):
             right = self.datetime_conv(None, right)
         return self.bool_expr(left, comparator, right)
@@ -852,30 +852,30 @@ class TransformToSQLAlchemyExpression(Transformer):
         return v
 
     def sum_aggr(self, _, fld):
-        """Sum up the things """
+        """Sum up the things"""
         return func.sum(fld)
 
     def min_aggr(self, _, fld):
-        """Sum up the things """
+        """Sum up the things"""
         return func.min(fld)
 
     def max_aggr(self, _, fld):
-        """Sum up the things """
+        """Sum up the things"""
         return func.max(fld)
 
     def avg_aggr(self, _, fld):
-        """Sum up the things """
+        """Sum up the things"""
         return func.avg(fld)
 
     def count_aggr(self, _, fld):
-        """Sum up the things """
+        """Sum up the things"""
         if getattr(fld, "data", None) == "star":
             return func.count()
         else:
             return func.count(fld)
 
     def percentile_aggr(self, percentile, fld):
-        """Sum up the things """
+        """Sum up the things"""
         percentile_val = int(percentile[len("percentile") :])
         if percentile_val not in (1, 5, 10, 25, 50, 75, 90, 95, 99):
             raise GrammarError(
@@ -891,7 +891,7 @@ class TransformToSQLAlchemyExpression(Transformer):
             return func.percentile_cont(percentile_val / 100.0).within_group(fld)
 
     def count_distinct_aggr(self, _, fld):
-        """Sum up the things """
+        """Sum up the things"""
         return func.count(distinct(fld))
 
     # If functions
