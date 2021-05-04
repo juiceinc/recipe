@@ -906,7 +906,6 @@ OFFSET 0"""
                 "pagination_default_order_by": ["-pop2000"],
             }
         )
-        print(recipe.to_sql())
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,

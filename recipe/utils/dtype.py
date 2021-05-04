@@ -47,55 +47,45 @@ def convert_datetime(v):
         return v
 
 
-def dtype_from_column(c):
-    """[summary]
-
-    Args:
-        c ([type]): [description]
-    """
-    if hasattr(c, "type"):
-        # Check supported column types
-        if isinstance(c.type, String):
-            prefix = "str"
-        elif isinstance(c.type, Date):
-            prefix = "date"
-        elif isinstance(c.type, DateTime):
-            prefix = "datetime"
-        elif isinstance(c.type, Integer):
-            prefix = "num"
-        elif isinstance(c.type, Numeric):
-            prefix = "num"
-        elif isinstance(c.type, Boolean):
-            prefix = "bool"
-        else:
-            prefix = "unusable"
-    else:
-        return "unknown"
-
-
-def determine_dtype(ingr, c, role):
-    """Determine the datatype of a SQLAlchemy column expression
-
-    Developers note: This only works in the simplest of cases. Better
-    type identification should be available for lark parsed ingredients.
-    """
-    if ingr.dtype is not None:
-        return ingr.dtype
-
+def dtype_from_column_expression(c):
+    """Determine a dtype from a column or column expression """
+    dtype = "unknown"
     try:
-        if hasattr(c, "type"):
-            col_type = str(c.type).upper()
-        else:
-            col_type = None
+        if hasattr(c, "type") and c.type:
+            # Check supported column types
+            if isinstance(c.type, String):
+                dtype = "str"
+            elif isinstance(c.type, Date):
+                dtype = "date"
+            elif isinstance(c.type, DateTime):
+                dtype = "datetime"
+            elif isinstance(c.type, (Integer, Numeric)):
+                dtype = "num"
+            elif isinstance(c.type, Boolean):
+                dtype = "bool"
     except CompileError:
-        # Some SQLAlchemy expressions don't have a defined type
         col_expr = str(c).lower()
         if col_expr.startswith("date_trunc"):
-            col_type = "date"
+            dtype = "date"
         elif col_expr.startswith("timestamp_trunc"):
-            col_type = "datetime"
-        else:
-            col_type = "string"
+            dtype = "datetime"
+    return dtype
 
-    return col_type
 
+def determine_dtype(ingr, role="value"):
+    """Determine the datatype of an ingredients role
+
+    Developers note: For ingredients constructed from parsed expressions
+    this will use the dtype determined by the parser. This will be accurate.
+    The fallback for ingredients constructed from raw SQLAlchemy will
+    be to examine the column.type or compile the expression and try to
+    make inference. This is less accurate.
+    """
+    from recipe.ingredients import Dimension, Filter, Having, Metric
+
+    if isinstance(ingr, Dimension) and ingr.dtype_by_role:
+        return ingr.dtype_by_role.get(role, None)
+    elif isinstance(ingr, (Filter, Having)):
+        return "bool"
+    elif isinstance(ingr, (Metric)):
+        return ingr.dtype

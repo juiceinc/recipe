@@ -101,13 +101,24 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                 # Save the data type in the ingredient
                 ingr_dict["dtype"] = dtype
                 args = [expr]
+
                 # Convert extra fields to sqlalchemy expressions and add them directly to
-                # the kwargs
+                # the kwargs, saving dtypes
+                dtype_by_role = {"value": dtype}
                 for extra in ingr_dict.pop("extra_fields", []):
-                    expr, _ = builder.parse(
+                    raw_role = extra.get("name")
+                    if raw_role.endswith("_expression"):
+                        # Remove _expression to get the role
+                        role = raw_role[:-11]
+                    else:
+                        role = raw_role
+
+                    expr, dtype = builder.parse(
                         extra.get("field"), forbid_aggregation=True, debug=debug
                     )
-                    ingr_dict[extra.get("name")] = expr
+                    dtype_by_role[role] = dtype
+                    ingr_dict[raw_role] = expr
+                ingr_dict["dtype_by_role"] = dtype_by_role
 
             parsed_quickselects = []
             for qs in ingr_dict.pop("quickselects", []):
@@ -144,7 +155,6 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
         return InvalidIngredient(error=error)
 
     try:
-        print("Creating ingredient", IngredientClass, fld_defn, ingr_dict["dtype"])
         return IngredientClass(*args, **ingr_dict)
     except BadIngredient as e:
         # Some internal error while running the Ingredient constructor

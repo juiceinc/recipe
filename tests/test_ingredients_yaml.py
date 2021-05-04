@@ -46,17 +46,11 @@ class ConfigTestBase(object):
         d = os.path.dirname(os.path.realpath(__file__))
         fn = os.path.join(d, self.yaml_location, shelf_name)
         contents = open(fn).read()
-        print(fn, contents)
         return self.shelf_from_yaml(contents, selectable)
 
     def shelf_from_yaml(self, yaml_config, selectable):
         """Create a shelf directly from configuration """
-
-        # Don't reparse
-        if yaml_config not in self.shelf_cache:
-            shelf = Shelf.from_validated_yaml(yaml_config, selectable)
-            self.shelf_cache[yaml_config] = shelf
-        return self.shelf_cache[yaml_config]
+        return Shelf.from_validated_yaml(yaml_config, selectable)
 
 
 class TestRecipeIngredientsYaml(ConfigTestBase):
