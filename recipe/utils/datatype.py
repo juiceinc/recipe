@@ -5,8 +5,6 @@ import dateparser
 from sqlalchemy import Boolean, Date, DateTime, Integer, Numeric, String
 from sqlalchemy.exc import CompileError
 
-from enum import Enum
-
 
 def convert_date(v):
     """Convert a passed parameter to a date if possible"""
