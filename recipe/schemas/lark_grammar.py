@@ -308,6 +308,10 @@ class SQLALchemyValidator(Visitor):
             dt = tree.data
         if dt == "datetime_end":
             dt = "datetime"
+        elif dt == "string":
+            dt = "str"
+        elif dt == "boolean":
+            dt = "bool"
         return dt
 
     def _add_error(self, message, tree):
@@ -997,7 +1001,7 @@ class SQLAlchemyBuilder(object):
         Returns:
             A tuple of
                 ColumnElement: A SQLALchemy expression
-                Data Type: The dtype of the expression (bool, date, datetime, num, str)
+                DataType: The datatype of the expression (bool, date, datetime, num, str)
         """
         tree = self.parser.parse(text, start="col")
         validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)

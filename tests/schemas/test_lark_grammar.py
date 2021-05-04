@@ -95,12 +95,12 @@ class TestSQLAlchemyBuilder(TestBase):
         [ScORE] + [ScORE]               -> num
         max([ScORE] + [ScORE])          -> num
         max(score) - min(score)         -> num
-        department                      -> string
-        department > "foo"              -> boolean
+        department                      -> str
+        department > "foo"              -> bool
         day(test_date)                  -> date
         month(test_datetime)            -> date
-        department > "foo" anD [score] < 22    -> boolean
-        min(department)                 -> string
+        department > "foo" anD [score] < 22    -> bool
+        min(department)                 -> str
         min(test_date)                  -> date
         count(*)                        -> num
         """
@@ -119,14 +119,13 @@ class TestSQLAlchemyBuilder(TestBase):
         b = SQLAlchemyBuilder(selectable=recipe)
         type_examples = """
         [age]                         -> num
-        [first]                       -> string
-        [first] > "foo"               -> boolean
+        [first]                       -> str
+        [first] > "foo"               -> bool
         age * 2                       -> num
         """
 
         for field, expected_data_type in self.examples(type_examples):
-            b.parse(field)
-            data_type = b.last_datatype
+            _, data_type = b.parse(field)
             self.assertEqual(data_type, expected_data_type)
 
         sql_examples = """
@@ -147,15 +146,14 @@ class TestSQLAlchemyBuilder(TestBase):
         type_examples = """
         [score]                         -> num
         score                           -> num
-        [testid]                        -> string
-        [username] > "foo"              -> boolean
+        [testid]                        -> str
+        [username] > "foo"              -> bool
         score * 2                       -> num
         test_date                       -> date
         """
 
         for field, expected_data_type in self.examples(type_examples):
-            b.parse(field)
-            data_type = b.last_datatype
+            _, data_type = b.parse(field)
             self.assertEqual(data_type, expected_data_type)
 
         sql_examples = """
@@ -176,14 +174,13 @@ class TestSQLAlchemyBuilder(TestBase):
         b = SQLAlchemyBuilder(selectable=Census)
         type_examples = """
         age                             -> num
-        state                           -> string
+        state                           -> str
         [pop2000] + pop2008             -> num
-        state + sex                     -> string
+        state + sex                     -> str
         """
 
         for field, expected_data_type in self.examples(type_examples):
-            b.parse(field)
-            data_type = b.last_datatype
+            _, data_type = b.parse(field)
             self.assertEqual(data_type, expected_data_type)
 
         sql_examples = """

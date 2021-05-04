@@ -6,7 +6,7 @@ from sqlalchemy import (
 )
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict, filter_to_string
-from recipe.utils.dtype import convert_date, convert_datetime, determine_dtype, dtype_from_column_expression
+from recipe.utils.datatype import convert_date, convert_datetime, determine_datatype, datatype_from_column_expression
 
 
 @total_ordering
@@ -68,9 +68,12 @@ class Ingredient(object):
             ``build_filter``. Named filters are dictionaries with
             a ``name`` (:obj:str) property and a ``condition`` property
             (:obj:`BinaryExpression`)
-        dtype (:obj:`str`):
-            The identified dtype (num, string, date, bool, datetime) of
+        datatype (:obj:`str`):
+            The identified datatype (num, str, date, bool, datetime) of
             the parsed expression
+        datatype_by_role (:obj:`dict`):
+            The identified datatype (num, str, date, bool, datetime) for each
+            role.
 
     Returns:
         An Ingredient object.
@@ -87,8 +90,8 @@ class Ingredient(object):
         self.quickselects = kwargs.pop("quickselects", [])
         self.column_suffixes = kwargs.pop("column_suffixes", None)
         self.cache_context = kwargs.pop("cache_context", "")
-        self.dtype = kwargs.pop("dtype", None)
-        self.dtype_by_role = kwargs.pop("dtype_by_role", dict())
+        self.datatype = kwargs.pop("datatype", None)
+        self.datatype_by_role = kwargs.pop("datatype_by_role", dict())
         self.anonymize = False
         self.roles = {}
         self._labels = []
@@ -242,20 +245,20 @@ class Ingredient(object):
             operator = "eq"
         if target_role and target_role in self.roles:
             filter_column = self.roles.get(target_role)
-            dtype = determine_dtype(self, target_role)
+            datatype = determine_datatype(self, target_role)
         else:
             filter_column = self.columns[0]
-            dtype = determine_dtype(self)
+            datatype = determine_datatype(self)
 
-        print("buidling scalar filter")
-        print(filter_column, dtype)
+        # Ensure that the filter_column and value have compatible data types
+
         # Support passing ILIKE in Paginate extensions
-        if dtype == "date":
+        if datatype == "date":
             value = convert_date(value)
-        elif dtype == "datetime":
+        elif datatype == "datetime":
             value = convert_datetime(value)
 
-        if isinstance(value, str) and dtype != "str":
+        if isinstance(value, str) and datatype != "str":
             filter_column = cast(filter_column, String)
 
         if operator == "eq":
@@ -301,7 +304,7 @@ class Ingredient(object):
 
         Args:
 
-            value (a string, number, boolean or None):
+            value (a list of string, number, boolean or None):
             operator (:obj:`str`)
                 A valid vector operator. The default operator is
                 `in`.
@@ -316,14 +319,14 @@ class Ingredient(object):
             operator = "in"
         if target_role and target_role in self.roles:
             filter_column = self.roles.get(target_role)
-            dtype = determine_dtype(self, target_role)
+            datatype = determine_datatype(self, target_role)
         else:
             filter_column = self.columns[0]
-            dtype = determine_dtype(self)
+            datatype = determine_datatype(self)
 
-        if dtype == "date":
+        if datatype == "date":
             value = list(map(convert_date, value))
-        elif dtype == "datetime":
+        elif datatype == "datetime":
             value = list(map(convert_datetime, value))
 
         if operator == "in":
@@ -437,7 +440,7 @@ class Filter(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Filter, self).__init__(**kwargs)
         self.filters = [expression]
-        self.dtype = "bool"
+        self.datatype = "bool"
 
     def _stringify(self):
         return filter_to_string(self)
@@ -458,7 +461,7 @@ class Having(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Having, self).__init__(**kwargs)
         self.havings = [expression]
-        self.dtype = "bool"
+        self.datatype = "bool"
 
     def _stringify(self):
         return " ".join(str(expr) for expr in self.havings)
@@ -529,8 +532,8 @@ class Dimension(Ingredient):
 
     def __init__(self, expression, **kwargs):
         super(Dimension, self).__init__(**kwargs)
-        if self.dtype is None:
-            self.dtype = dtype_from_column_expression(expression)
+        if self.datatype is None:
+            self.datatype = datatype_from_column_expression(expression)
 
         # We must always have a value role
         self.roles = {"value": expression}
@@ -545,9 +548,9 @@ class Dimension(Ingredient):
                     raise BadIngredient("raw is a reserved role in dimensions")
                 self.roles[role] = v
 
-        if not self.dtype_by_role:
+        if not self.datatype_by_role:
             for k, expr in self.roles.items():
-                self.dtype_by_role[k] = dtype_from_column_expression(expr)
+                self.datatype_by_role[k] = datatype_from_column_expression(expr)
 
         self.columns = []
         self._group_by = []
@@ -704,8 +707,8 @@ class Metric(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Metric, self).__init__(**kwargs)
         self.columns = [expression]
-        if self.dtype is None:
-            self.dtype = dtype_from_column_expression(expression)
+        if self.datatype is None:
+            self.datatype = datatype_from_column_expression(expression)
 
         # We must always have a value role
         self.roles = {"value": expression}

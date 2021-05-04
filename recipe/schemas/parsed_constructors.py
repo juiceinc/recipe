@@ -72,10 +72,10 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
             if kind == "metric":
                 fld_defn = ingr_dict.pop("field", None)
                 # SQLAlchemy ingredient with required aggregation
-                expr, dtype = builder.parse(fld_defn, enforce_aggregation=True, debug=debug)
+                expr, datatype = builder.parse(fld_defn, enforce_aggregation=True, debug=debug)
                 # Save the data type in the ingredient
-                ingr_dict["dtype"] = dtype
-                if dtype != "num":
+                ingr_dict["datatype"] = datatype
+                if datatype != "num":
                     error = {
                         "type": "Can not parse field",
                         "extra": {
@@ -97,14 +97,14 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                     ingr_dict["extra_fields"].append(
                         {"name": "order_by_expression", "field": order_by_fld}
                     )
-                expr, dtype = builder.parse(fld_defn, forbid_aggregation=True, debug=debug)
+                expr, datatype = builder.parse(fld_defn, forbid_aggregation=True, debug=debug)
                 # Save the data type in the ingredient
-                ingr_dict["dtype"] = dtype
+                ingr_dict["datatype"] = datatype
                 args = [expr]
 
                 # Convert extra fields to sqlalchemy expressions and add them directly to
-                # the kwargs, saving dtypes
-                dtype_by_role = {"value": dtype}
+                # the kwargs, saving datatypes
+                datatype_by_role = {"value": datatype}
                 for extra in ingr_dict.pop("extra_fields", []):
                     raw_role = extra.get("name")
                     if raw_role.endswith("_expression"):
@@ -113,12 +113,12 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                     else:
                         role = raw_role
 
-                    expr, dtype = builder.parse(
+                    expr, datatype = builder.parse(
                         extra.get("field"), forbid_aggregation=True, debug=debug
                     )
-                    dtype_by_role[role] = dtype
+                    datatype_by_role[role] = datatype
                     ingr_dict[raw_role] = expr
-                ingr_dict["dtype_by_role"] = dtype_by_role
+                ingr_dict["datatype_by_role"] = datatype_by_role
 
             parsed_quickselects = []
             for qs in ingr_dict.pop("quickselects", []):
