@@ -177,6 +177,8 @@ class TestSQLAlchemyBuilder(TestBase):
         state                           -> str
         [pop2000] + pop2008             -> num
         state + sex                     -> str
+        state = "2"                     -> bool
+        max(pop2000) > 100              -> bool
         """
 
         for field, expected_data_type in self.examples(type_examples):
@@ -414,19 +416,19 @@ num and string can not be added together
  ^
 ===
 [score] = [department] ->
-Can't compare num to string
+Can't compare num to str
 
 [score] = [department]
  ^
 ===
 [score] = "5" ->
-Can't compare num to string
+Can't compare num to str
 
 [score] = "5"
  ^
 ===
 [department] = 3.24 ->
-Can't compare string to num
+Can't compare str to num
 
 [department] = 3.24
  ^
@@ -462,7 +464,7 @@ When dividing, the denominator can not be zero
 When dividing, the denominator can not be zero
 ===
 avg(department) ->
-A string can not be aggregated using avg.
+A str can not be aggregated using avg.
 
 avg(department)
 ^
@@ -634,13 +636,13 @@ sum(score)
 ^
 ===
 sum(department) ->
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 sum(department)
 ^
 ===
 2.1235 + sum(department) ->
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 2.1235 + sum(department)
          ^
@@ -650,7 +652,7 @@ Aggregations are not allowed in this field.
 
 sum(score) + sum(department)
 ^
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 sum(score) + sum(department)
              ^
@@ -660,7 +662,7 @@ Aggregations are not allowed in this field.
 
 sum(score) + sum(department)
 ^
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 sum(score) + sum(department)
              ^
@@ -682,19 +684,19 @@ sum(score) + sum(department)
 
         bad_examples = """
 sum(department) ->
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 sum(department)
 ^
 ===
 2.1235 + sum(department) ->
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 2.1235 + sum(department)
          ^
 ===
 sum(score) + sum(department) ->
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 sum(score) + sum(department)
              ^
@@ -773,6 +775,7 @@ class TestIf(TestBase):
         month(if([score] > 2, test_datetime))                           -> date_trunc('month', CASE WHEN (datatypes.score > 2) THEN datatypes.test_datetime END)
         if(score<2,"babies",score<13,"children",score<20,"teens","oldsters")       -> CASE WHEN (datatypes.score < 2) THEN 'babies' WHEN (datatypes.score < 13) THEN 'children' WHEN (datatypes.score < 20) THEN 'teens' ELSE 'oldsters' END
         if((score)<2,"babies",(score)<13,"children",(score)<20,"teens","oldsters") -> CASE WHEN (datatypes.score < 2) THEN 'babies' WHEN (datatypes.score < 13) THEN 'children' WHEN (datatypes.score < 20) THEN 'teens' ELSE 'oldsters' END
+        if(department = "1", score, department="2", score*2)            -> CASE WHEN (datatypes.department = '1') THEN datatypes.score WHEN (datatypes.department = '2') THEN datatypes.score * 2 END
         """
 
         for field, expected_sql in self.examples(good_examples):
@@ -790,16 +793,10 @@ if(department, score)
    ^
 ===
 if(department = 2, score) ->
-Can't compare string to num
+Can't compare str to num
 
 if(department = 2, score)
    ^
-===
-if(department = "1", score, department, score*2) ->
-This should be a boolean column or expression
-
-if(department = "1", score, department, score*2)
-                            ^
 ===
 if(department = "1", score, department, score*2) ->
 This should be a boolean column or expression
@@ -820,13 +817,13 @@ if(department, score, valid_score, score*2)
    ^
 ===
 if(department = "foo", score, valid_score, department) ->
-The values in this if statement must be the same type, not num and string
+The values in this if statement must be the same type, not num and str
 
 if(department = "foo", score, valid_score, department)
                                            ^
 ===
 if(department = "foo", department, valid_score, score) ->
-The values in this if statement must be the same type, not string and num
+The values in this if statement must be the same type, not str and num
 
 if(department = "foo", department, valid_score, score)
                                                 ^
@@ -836,9 +833,9 @@ if(department = "foo", department, valid_score, score)
             with self.assertRaises(Exception) as e:
                 self.builder.parse(field, forbid_aggregation=True, debug=True)
             if str(e.exception).strip() != expected_error.strip():
-                print("===" * 10)
+                print("===actual===")
                 print(str(e.exception))
-                print("vs")
+                print("===expected===")
                 print(expected_error)
                 print("===" * 10)
             self.assertEqual(str(e.exception).strip(), expected_error.strip())

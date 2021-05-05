@@ -376,7 +376,7 @@ class SQLALchemyValidator(Visitor):
         # Check that the boolean args are boolean
         for arg in bool_args:
             dt = self._data_type(arg)
-            if dt != "boolean":
+            if dt != "bool":
                 self._add_error("This should be a boolean column or expression", arg)
 
         # Data types of columns must match
