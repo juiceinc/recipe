@@ -48,7 +48,7 @@ def convert_datetime(v):
 
 
 def datatype_from_column_expression(c):
-    """Determine a datatype from a column or column expression """
+    """Determine a datatype from a column or column expression"""
     datatype = "unknown"
     try:
         if hasattr(c, "type") and c.type:

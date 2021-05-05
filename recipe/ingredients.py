@@ -1,12 +1,15 @@
 import attr
 from functools import total_ordering
 from uuid import uuid4
-from sqlalchemy import (
-    Float, String, and_, between, case, cast, func, or_, text
-)
+from sqlalchemy import Float, String, and_, between, case, cast, func, or_, text
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict, filter_to_string
-from recipe.utils.datatype import convert_date, convert_datetime, determine_datatype, datatype_from_column_expression
+from recipe.utils.datatype import (
+    convert_date,
+    convert_datetime,
+    determine_datatype,
+    datatype_from_column_expression,
+)
 
 
 @total_ordering
@@ -474,9 +477,6 @@ class Having(Ingredient):
             return self.havings[0]
         else:
             return None
-
-
-
 
 
 class Dimension(Ingredient):

@@ -59,7 +59,7 @@ def _convert_bucket_to_field(field, bucket, buckets_default_label, builder):
 
 
 def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
-    """ Create an ingredient from config version 2 object . """
+    """Create an ingredient from config version 2 object ."""
     kind = ingr_dict.pop("kind", "metric")
     IngredientClass = ingredient_class_for_name(kind.title())
     if IngredientClass is None:
@@ -72,7 +72,9 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
             if kind == "metric":
                 fld_defn = ingr_dict.pop("field", None)
                 # SQLAlchemy ingredient with required aggregation
-                expr, datatype = builder.parse(fld_defn, enforce_aggregation=True, debug=debug)
+                expr, datatype = builder.parse(
+                    fld_defn, enforce_aggregation=True, debug=debug
+                )
                 # Save the data type in the ingredient
                 ingr_dict["datatype"] = datatype
                 if datatype != "num":
@@ -97,7 +99,9 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                     ingr_dict["extra_fields"].append(
                         {"name": "order_by_expression", "field": order_by_fld}
                     )
-                expr, datatype = builder.parse(fld_defn, forbid_aggregation=True, debug=debug)
+                expr, datatype = builder.parse(
+                    fld_defn, forbid_aggregation=True, debug=debug
+                )
                 # Save the data type in the ingredient
                 ingr_dict["datatype"] = datatype
                 args = [expr]
@@ -123,7 +127,9 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
             parsed_quickselects = []
             for qs in ingr_dict.pop("quickselects", []):
                 condition_defn = qs.get("condition")
-                expr, _ = builder.parse(condition_defn, forbid_aggregation=True, debug=debug)
+                expr, _ = builder.parse(
+                    condition_defn, forbid_aggregation=True, debug=debug
+                )
                 parsed_quickselects.append(
                     {
                         "name": qs["name"],
@@ -134,11 +140,15 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
 
         elif kind == "filter":
             condition_defn = ingr_dict.get("condition")
-            expr, _ = builder.parse(condition_defn, forbid_aggregation=True, debug=debug)
+            expr, _ = builder.parse(
+                condition_defn, forbid_aggregation=True, debug=debug
+            )
             args = [expr]
         elif kind == "having":
             condition_defn = ingr_dict.get("condition")
-            expr, _ = builder.parse(condition_defn, forbid_aggregation=False, debug=debug)
+            expr, _ = builder.parse(
+                condition_defn, forbid_aggregation=False, debug=debug
+            )
             args = [expr]
 
     except (GrammarError, LarkError) as e:

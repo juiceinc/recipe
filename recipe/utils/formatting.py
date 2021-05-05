@@ -76,4 +76,3 @@ def prettyprintable_sql(statement, dialect=None, reindent=True):
         dialect=LiteralDialect(), compile_kwargs={"literal_binds": True}
     )
     return sqlparse.format(str(compiled), reindent=reindent)
-
