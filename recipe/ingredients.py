@@ -12,6 +12,66 @@ from recipe.utils.datatype import (
 )
 
 
+@attr.s
+class OrderingStrategy:
+    order = attr.ib(default="asc")
+
+
+@total_ordering
+class RecipeColumn:
+    def __init__(self, label_prefix, expression, **kwargs):
+        self.label_prefix = label_prefix
+        self.expression = expression
+        self.role = kwargs.pop("role", "value").lower()
+        self.datatype = kwargs.pop("datatype", None)
+        if self.datatype is None:
+            self.datatype = datatype_from_column_expression(expression)
+
+    # Order by id, value, (other roles), order_by
+    def __lt__(self, other):
+        """Sort columns by role. Certain roles always sort first or last"""
+        indices = ("id", "value", "_", "order_by")
+        try:
+            selfidx = indices.index(self.role)
+        except:
+            selfidx = 2
+        try:
+            otheridx = indices.index(other.role)
+        except:
+            otheridx = 2
+        if self.idx != otheridx:
+            return selfidx < otheridx
+        else:
+            return self.role < other.role
+
+    def __eq__(self, other):
+        """Make ingredients sortable."""
+        return self.role == other.role
+
+    def __ne__(self, other):
+        """Make ingredients sortable."""
+        return not (self.role == other.role)
+
+    def label(self):
+        pass
+
+    def select(self, has_formatters=False):
+        """What this column contributes to a select """
+        pass
+
+    def group_by(self):
+        pass
+
+    def order_by(self):
+        pass
+
+    def filter(self):
+        pass
+
+    def having(self):
+        pass
+
+
 @total_ordering
 class Ingredient(object):
     """Ingredients combine to make a SQLAlchemy query.
@@ -355,8 +415,7 @@ class Ingredient(object):
                 non_none_value = sorted([v for v in value if v is not None])
                 if non_none_value:
                     return and_(
-                        filter_column.isnot(None),
-                        filter_column.notin_(non_none_value),
+                        filter_column.isnot(None), filter_column.notin_(non_none_value),
                     )
                 else:
                     return filter_column.isnot(None)
@@ -521,13 +580,6 @@ class Dimension(Ingredient):
         lookup_default (:obj:`object`)
             A default to show if the value can't be found in the
             lookup dictionary.
-
-    Returns:
-
-        A Filter object
-    :param lookup: dict A dictionary to translate values into
-    :param lookup_default: A default to show if the value can't be found in the
-      lookup dictionary.
     """
 
     def __init__(self, expression, **kwargs):
@@ -606,10 +658,6 @@ class Dimension(Ingredient):
             return [lbl for gb, lbl in zip(self._group_by, self._labels)]
         else:
             return self._group_by
-
-    @group_by.setter
-    def group_by(self, value):
-        self._group_by = value
 
     @property
     def cauldron_extras(self):
@@ -706,6 +754,14 @@ class Metric(Ingredient):
 
     def __init__(self, expression, **kwargs):
         super(Metric, self).__init__(**kwargs)
+        self.recipe_columns = RecipeColumn(
+            expression=expression,
+            datatype=self.datatype,
+            columns=True,
+            grouping=False,
+            filter=False,
+            having=False,
+        )
         self.columns = [expression]
         if self.datatype is None:
             self.datatype = datatype_from_column_expression(expression)
