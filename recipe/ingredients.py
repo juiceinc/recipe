@@ -1,78 +1,15 @@
-import dateparser
+import attr
 from functools import total_ordering
 from uuid import uuid4
 from sqlalchemy import Float, String, and_, between, case, cast, func, or_, text
-from sqlalchemy.sql.sqltypes import Date, DateTime, TIMESTAMP
-from sqlalchemy.exc import CompileError
-from datetime import date, datetime
-from time import gmtime
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict, filter_to_string
-
-
-def convert_date(v):
-    """Convert a passed parameter to a date if possible"""
-    if v is None:
-        return v
-    elif isinstance(v, str):
-        try:
-            dt = dateparser.parse(v)
-            if dt is not None:
-                return dt.date()
-            else:
-                return v
-        except ValueError:
-            return v
-    elif isinstance(v, (float, int)):
-        # Convert to a date
-        tm = gmtime(v)
-        return date(tm.tm_year, tm.tm_mon, tm.tm_mday)
-    else:
-        return v
-
-
-def convert_datetime(v):
-    """Convert a passed parameter to a datetime if possible"""
-    if v is None:
-        return v
-    elif isinstance(v, str):
-        try:
-            dt = dateparser.parse(v)
-            if dt is not None:
-                return dt
-            else:
-                return v
-        except ValueError:
-            return v
-    elif isinstance(v, (float, int)):
-        # Convert to a date
-        return datetime.utcfromtimestamp(v)
-    else:
-        return v
-
-
-def column_type(c):
-    """Determine the datatype of a SQLAlchemy column expression.
-
-    Developers note: This is very naive. This can be improved by
-    using data types discovered during lark expression parsing.
-    """
-    try:
-        if hasattr(c, "type"):
-            col_type = str(c.type).upper()
-        else:
-            col_type = None
-    except CompileError:
-        # Some SQLAlchemy expressions don't have a defined type
-        col_expr = str(c).lower()
-        if col_expr.startswith("date_trunc"):
-            col_type = "DATE"
-        elif col_expr.startswith("timestamp_trunc"):
-            col_type = "TIMESTAMP"
-        else:
-            col_type = "STRING"
-
-    return col_type
+from recipe.utils.datatype import (
+    convert_date,
+    convert_datetime,
+    determine_datatype,
+    datatype_from_column_expression,
+)
 
 
 @total_ordering
@@ -80,7 +17,7 @@ class Ingredient(object):
     """Ingredients combine to make a SQLAlchemy query.
 
     Any unknown keyword arguments provided to an Ingredient
-    during initializatino are stored in a meta object.
+    during initialization are stored in a meta object.
 
     .. code:: python
 
@@ -134,6 +71,12 @@ class Ingredient(object):
             ``build_filter``. Named filters are dictionaries with
             a ``name`` (:obj:str) property and a ``condition`` property
             (:obj:`BinaryExpression`)
+        datatype (:obj:`str`):
+            The identified datatype (num, str, date, bool, datetime) of
+            the parsed expression
+        datatype_by_role (:obj:`dict`):
+            The identified datatype (num, str, date, bool, datetime) for each
+            role.
 
     Returns:
         An Ingredient object.
@@ -150,6 +93,8 @@ class Ingredient(object):
         self.quickselects = kwargs.pop("quickselects", [])
         self.column_suffixes = kwargs.pop("column_suffixes", None)
         self.cache_context = kwargs.pop("cache_context", "")
+        self.datatype = kwargs.pop("datatype", None)
+        self.datatype_by_role = kwargs.pop("datatype_by_role", dict())
         self.anonymize = False
         self.roles = {}
         self._labels = []
@@ -298,24 +243,28 @@ class Ingredient(object):
 
             A Filter object
         """
+
+        if operator is None:
+            operator = "eq"
         if target_role and target_role in self.roles:
             filter_column = self.roles.get(target_role)
+            datatype = determine_datatype(self, target_role)
         else:
             filter_column = self.columns[0]
+            datatype = determine_datatype(self)
+
+        # Ensure that the filter_column and value have compatible data types
 
         # Support passing ILIKE in Paginate extensions
-        if column_type(filter_column) == "DATE":
+        if datatype == "date":
             value = convert_date(value)
-        elif column_type(filter_column) in ("DATETIME", "TIMESTAMP"):
+        elif datatype == "datetime":
             value = convert_datetime(value)
 
-        if isinstance(value, str) and not column_type(filter_column) in (
-            "STRING",
-            "VARCHAR",
-        ):
+        if isinstance(value, str) and datatype != "str":
             filter_column = cast(filter_column, String)
 
-        if operator is None or operator == "eq":
+        if operator == "eq":
             # Default operator is 'eq' so if no operator is provided, handle
             # like an 'eq'
             if value is None:
@@ -358,7 +307,7 @@ class Ingredient(object):
 
         Args:
 
-            value (a string, number, boolean or None):
+            value (a list of string, number, boolean or None):
             operator (:obj:`str`)
                 A valid vector operator. The default operator is
                 `in`.
@@ -369,17 +318,21 @@ class Ingredient(object):
 
             A Filter object
         """
+        if operator is None:
+            operator = "in"
         if target_role and target_role in self.roles:
             filter_column = self.roles.get(target_role)
+            datatype = determine_datatype(self, target_role)
         else:
             filter_column = self.columns[0]
+            datatype = determine_datatype(self)
 
-        if column_type(filter_column) == "DATE":
+        if datatype == "date":
             value = list(map(convert_date, value))
-        elif column_type(filter_column) in ("DATETIME", "TIMESTAMP"):
+        elif datatype == "datetime":
             value = list(map(convert_datetime, value))
 
-        if operator is None or operator == "in":
+        if operator == "in":
             # Default operator is 'in' so if no operator is provided, handle
             # like an 'in'
             if None in value:
@@ -395,6 +348,7 @@ class Ingredient(object):
                 # Sort to generate deterministic query sql for caching
                 value = sorted(value)
                 return filter_column.in_(value)
+
         elif operator == "notin":
             if None in value:
                 # filter out the Nones
@@ -489,6 +443,7 @@ class Filter(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Filter, self).__init__(**kwargs)
         self.filters = [expression]
+        self.datatype = "bool"
 
     def _stringify(self):
         return filter_to_string(self)
@@ -509,6 +464,7 @@ class Having(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Having, self).__init__(**kwargs)
         self.havings = [expression]
+        self.datatype = "bool"
 
     def _stringify(self):
         return " ".join(str(expr) for expr in self.havings)
@@ -576,6 +532,8 @@ class Dimension(Ingredient):
 
     def __init__(self, expression, **kwargs):
         super(Dimension, self).__init__(**kwargs)
+        if self.datatype is None:
+            self.datatype = datatype_from_column_expression(expression)
 
         # We must always have a value role
         self.roles = {"value": expression}
@@ -589,6 +547,10 @@ class Dimension(Ingredient):
                 if role == "raw":
                     raise BadIngredient("raw is a reserved role in dimensions")
                 self.roles[role] = v
+
+        if not self.datatype_by_role:
+            for k, expr in self.roles.items():
+                self.datatype_by_role[k] = datatype_from_column_expression(expr)
 
         self.columns = []
         self._group_by = []
@@ -745,6 +707,8 @@ class Metric(Ingredient):
     def __init__(self, expression, **kwargs):
         super(Metric, self).__init__(**kwargs)
         self.columns = [expression]
+        if self.datatype is None:
+            self.datatype = datatype_from_column_expression(expression)
 
         # We must always have a value role
         self.roles = {"value": expression}
