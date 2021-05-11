@@ -4,6 +4,7 @@ import warnings
 from uuid import uuid4
 
 import attr
+from sqlalchemy.orm.query import Query
 import tablib
 from sqlalchemy import alias, func
 from sureberus import normalize_dict, normalize_schema
@@ -474,6 +475,15 @@ class Recipe(object):
         # cache results
 
         self._query = recipe_parts["query"]
+        if False:
+            # query = recipe_parts["query"]
+            # total_subquery = query.columns()
+            # total_subquery = self._session.query(func.count().label("_total_count")).select_from(
+            #     query.limit(None).offset(None).order_by(None)
+            # )
+            subq = self._query.with_entities(func.count().label("_total_count")).limit(None).offset(None).order_by(None).subquery()
+            self._query = self._query.add_columns(func.max(subq.c._total_count))
+
         return self._query
 
     def _table(self):
