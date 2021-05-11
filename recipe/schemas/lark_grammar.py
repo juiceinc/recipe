@@ -1021,8 +1021,10 @@ class SQLAlchemyBuilder(object):
             if (
                 enforce_aggregation
                 and not validator.found_aggregation
-                and self.last_datatype == "num"
             ):
-                return (func.sum(expr), self.last_datatype)
+                if self.last_datatype == "num":
+                    return (func.sum(expr), "num")
+                else:
+                    return (func.count(expr), "num")
             else:
                 return (expr, self.last_datatype)

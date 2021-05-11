@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+from typing import List
 import attr
 from functools import total_ordering
 from uuid import uuid4
