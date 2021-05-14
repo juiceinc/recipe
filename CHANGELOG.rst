@@ -2,6 +2,11 @@
 Changelog
 =========
 
+v0.24.0 (2021-05-14)
+-----------------------------------------
+* Track the datatype used by ingredient columns
+* Require parsed metrics to generate a number
+
 v0.23.4 (2021-05-03)
 -----------------------------------------
 * Improve automatic filtering with uncompilable ingredients
