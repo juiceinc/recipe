@@ -85,7 +85,7 @@ class TestSQLAlchemyBuilder(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            expr = self.builder.parse(field, enforce_aggregation=True, debug=True)
+            expr, _ = self.builder.parse(field, enforce_aggregation=True, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_data_type(self):
@@ -95,16 +95,18 @@ class TestSQLAlchemyBuilder(TestBase):
         [ScORE] + [ScORE]               -> num
         max([ScORE] + [ScORE])          -> num
         max(score) - min(score)         -> num
-        department                      -> string
-        department > "foo"              -> boolean
+        department                      -> str
+        department > "foo"              -> bool
         day(test_date)                  -> date
         month(test_datetime)            -> date
-        department > "foo" anD [score] < 22    -> boolean
+        department > "foo" anD [score] < 22    -> bool
+        min(department)                 -> str
+        min(test_date)                  -> date
+        count(*)                        -> num
         """
 
         for field, expected_data_type in self.examples(good_examples):
-            self.builder.parse(field)
-            data_type = self.builder.last_datatype
+            _, data_type = self.builder.parse(field)
             self.assertEqual(data_type, expected_data_type)
 
     def test_selectable_recipe(self):
@@ -117,14 +119,13 @@ class TestSQLAlchemyBuilder(TestBase):
         b = SQLAlchemyBuilder(selectable=recipe)
         type_examples = """
         [age]                         -> num
-        [first]                       -> string
-        [first] > "foo"               -> boolean
+        [first]                       -> str
+        [first] > "foo"               -> bool
         age * 2                       -> num
         """
 
         for field, expected_data_type in self.examples(type_examples):
-            b.parse(field)
-            data_type = b.last_datatype
+            _, data_type = b.parse(field)
             self.assertEqual(data_type, expected_data_type)
 
         sql_examples = """
@@ -134,7 +135,7 @@ class TestSQLAlchemyBuilder(TestBase):
         age * 2                       -> anon_1.age * 2
         """
         for field, expected_sql in self.examples(sql_examples):
-            expr = b.parse(field, debug=True)
+            expr, _ = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_selectable_orm(self):
@@ -145,15 +146,14 @@ class TestSQLAlchemyBuilder(TestBase):
         type_examples = """
         [score]                         -> num
         score                           -> num
-        [testid]                        -> string
-        [username] > "foo"              -> boolean
+        [testid]                        -> str
+        [username] > "foo"              -> bool
         score * 2                       -> num
         test_date                       -> date
         """
 
         for field, expected_data_type in self.examples(type_examples):
-            b.parse(field)
-            data_type = b.last_datatype
+            _, data_type = b.parse(field)
             self.assertEqual(data_type, expected_data_type)
 
         sql_examples = """
@@ -164,7 +164,7 @@ class TestSQLAlchemyBuilder(TestBase):
         test_date                       -> datatypes.test_date
         """
         for field, expected_sql in self.examples(sql_examples):
-            expr = b.parse(field, debug=True)
+            expr, _ = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_selectable_census(self):
@@ -174,14 +174,15 @@ class TestSQLAlchemyBuilder(TestBase):
         b = SQLAlchemyBuilder(selectable=Census)
         type_examples = """
         age                             -> num
-        state                           -> string
+        state                           -> str
         [pop2000] + pop2008             -> num
-        state + sex                     -> string
+        state + sex                     -> str
+        state = "2"                     -> bool
+        max(pop2000) > 100              -> bool
         """
 
         for field, expected_data_type in self.examples(type_examples):
-            b.parse(field)
-            data_type = b.last_datatype
+            _, data_type = b.parse(field)
             self.assertEqual(data_type, expected_data_type)
 
         sql_examples = """
@@ -191,7 +192,7 @@ class TestSQLAlchemyBuilder(TestBase):
         state + sex                     -> census.state || census.sex
         """
         for field, expected_sql in self.examples(sql_examples):
-            expr = b.parse(field, debug=True)
+            expr, _ = b.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
 
@@ -236,7 +237,7 @@ class TestDataTypesTable(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            expr = self.builder.parse(field, debug=True)
+            expr, _ = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_division_and_math(self):
@@ -267,7 +268,7 @@ class TestDataTypesTable(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            expr = self.builder.parse(field, debug=True)
+            expr, _ = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_no_brackets(self):
@@ -302,7 +303,7 @@ class TestDataTypesTable(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            expr = self.builder.parse(field, debug=True)
+            expr, _ = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_arrays(self):
@@ -321,7 +322,7 @@ class TestDataTypesTable(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            expr = self.builder.parse(field, debug=False)
+            expr, _ = self.builder.parse(field, debug=False)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_boolean(self):
@@ -349,7 +350,7 @@ class TestDataTypesTable(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            expr = self.builder.parse(field, debug=True)
+            expr, _ = self.builder.parse(field, debug=True)
 
             if to_sql(expr) != expected_sql:
                 print("===" * 10)
@@ -415,19 +416,19 @@ num and string can not be added together
  ^
 ===
 [score] = [department] ->
-Can't compare num to string
+Can't compare num to str
 
 [score] = [department]
  ^
 ===
 [score] = "5" ->
-Can't compare num to string
+Can't compare num to str
 
 [score] = "5"
  ^
 ===
 [department] = 3.24 ->
-Can't compare string to num
+Can't compare str to num
 
 [department] = 3.24
  ^
@@ -461,6 +462,18 @@ When dividing, the denominator can not be zero
 ===
 [score] / (10-10) ->
 When dividing, the denominator can not be zero
+===
+avg(department) ->
+A str can not be aggregated using avg.
+
+avg(department)
+^
+===
+avg(test_date) ->
+A date can not be aggregated using avg.
+
+avg(test_date)
+^
 """
 
         for field, expected_error in self.bad_examples(bad_examples):
@@ -501,7 +514,7 @@ class TestDataTypesTableDates(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            expr = self.builder.parse(field, debug=True)
+            expr, _ = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_dates_without_freetime(self):
@@ -518,7 +531,7 @@ class TestDataTypesTableDates(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            expr = self.builder.parse(field, debug=True)
+            expr, _ = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_failure(self):
@@ -579,7 +592,7 @@ class TestDataTypesTableDatesInBigquery(TestDataTypesTableDates):
 
         for field, expected_sql in self.examples(good_examples):
             print("Parsing field", field, self.builder.drivername)
-            expr = self.builder.parse(field, debug=True)
+            expr, _ = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
 
@@ -603,7 +616,7 @@ class TestAggregations(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            expr = self.builder.parse(field, forbid_aggregation=False, debug=True)
+            expr, _ = self.builder.parse(field, forbid_aggregation=False, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_forbid_aggregation(self):
@@ -623,13 +636,13 @@ sum(score)
 ^
 ===
 sum(department) ->
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 sum(department)
 ^
 ===
 2.1235 + sum(department) ->
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 2.1235 + sum(department)
          ^
@@ -639,7 +652,7 @@ Aggregations are not allowed in this field.
 
 sum(score) + sum(department)
 ^
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 sum(score) + sum(department)
              ^
@@ -649,7 +662,7 @@ Aggregations are not allowed in this field.
 
 sum(score) + sum(department)
 ^
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 sum(score) + sum(department)
              ^
@@ -671,19 +684,19 @@ sum(score) + sum(department)
 
         bad_examples = """
 sum(department) ->
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 sum(department)
 ^
 ===
 2.1235 + sum(department) ->
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 2.1235 + sum(department)
          ^
 ===
 sum(score) + sum(department) ->
-A string can not be aggregated using sum.
+A str can not be aggregated using sum.
 
 sum(score) + sum(department)
              ^
@@ -724,7 +737,7 @@ percentile13([score])
         """
 
         for field, expected_sql in self.examples(good_examples):
-            expr = self.builder.parse(field, debug=True)
+            expr, _ = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
 
@@ -762,10 +775,11 @@ class TestIf(TestBase):
         month(if([score] > 2, test_datetime))                           -> date_trunc('month', CASE WHEN (datatypes.score > 2) THEN datatypes.test_datetime END)
         if(score<2,"babies",score<13,"children",score<20,"teens","oldsters")       -> CASE WHEN (datatypes.score < 2) THEN 'babies' WHEN (datatypes.score < 13) THEN 'children' WHEN (datatypes.score < 20) THEN 'teens' ELSE 'oldsters' END
         if((score)<2,"babies",(score)<13,"children",(score)<20,"teens","oldsters") -> CASE WHEN (datatypes.score < 2) THEN 'babies' WHEN (datatypes.score < 13) THEN 'children' WHEN (datatypes.score < 20) THEN 'teens' ELSE 'oldsters' END
+        if(department = "1", score, department="2", score*2)            -> CASE WHEN (datatypes.department = '1') THEN datatypes.score WHEN (datatypes.department = '2') THEN datatypes.score * 2 END
         """
 
         for field, expected_sql in self.examples(good_examples):
-            expr = self.builder.parse(field, debug=True)
+            expr, _ = self.builder.parse(field, debug=True)
             self.assertEqual(to_sql(expr), expected_sql)
 
     def test_failing_if(self):
@@ -779,16 +793,10 @@ if(department, score)
    ^
 ===
 if(department = 2, score) ->
-Can't compare string to num
+Can't compare str to num
 
 if(department = 2, score)
    ^
-===
-if(department = "1", score, department, score*2) ->
-This should be a boolean column or expression
-
-if(department = "1", score, department, score*2)
-                            ^
 ===
 if(department = "1", score, department, score*2) ->
 This should be a boolean column or expression
@@ -809,13 +817,13 @@ if(department, score, valid_score, score*2)
    ^
 ===
 if(department = "foo", score, valid_score, department) ->
-The values in this if statement must be the same type, not num and string
+The values in this if statement must be the same type, not num and str
 
 if(department = "foo", score, valid_score, department)
                                            ^
 ===
 if(department = "foo", department, valid_score, score) ->
-The values in this if statement must be the same type, not string and num
+The values in this if statement must be the same type, not str and num
 
 if(department = "foo", department, valid_score, score)
                                                 ^
@@ -825,9 +833,9 @@ if(department = "foo", department, valid_score, score)
             with self.assertRaises(Exception) as e:
                 self.builder.parse(field, forbid_aggregation=True, debug=True)
             if str(e.exception).strip() != expected_error.strip():
-                print("===" * 10)
+                print("===actual===")
                 print(str(e.exception))
-                print("vs")
+                print("===expected===")
                 print(expected_error)
                 print("===" * 10)
             self.assertEqual(str(e.exception).strip(), expected_error.strip())
@@ -851,7 +859,7 @@ class TestSQLAlchemySerialize(TestBase):
         """
 
         for field, expected_sql in self.examples(good_examples):
-            expr = self.builder.parse(field, forbid_aggregation=False, debug=True)
+            expr, _ = self.builder.parse(field, forbid_aggregation=False, debug=True)
             ser = dumps(expr)
             expr = loads(ser, self.builder.selectable.metadata, oven.Session())
             self.assertEqual(to_sql(expr), expected_sql)

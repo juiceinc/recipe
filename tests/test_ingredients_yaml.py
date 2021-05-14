@@ -29,7 +29,7 @@ from recipe import (
 
 
 class ConfigTestBase(object):
-    """A base class for testing shelves built from v1 or v2 config. """
+    """A base class for testing shelves built from v1 or v2 config."""
 
     # The directory to look for yaml config files
     yaml_location = "ingredients"
@@ -49,13 +49,8 @@ class ConfigTestBase(object):
         return self.shelf_from_yaml(contents, selectable)
 
     def shelf_from_yaml(self, yaml_config, selectable):
-        """Create a shelf directly from configuration """
-
-        # Don't reparse
-        if yaml_config not in self.shelf_cache:
-            shelf = Shelf.from_validated_yaml(yaml_config, selectable)
-            self.shelf_cache[yaml_config] = shelf
-        return self.shelf_cache[yaml_config]
+        """Create a shelf directly from configuration"""
+        return Shelf.from_validated_yaml(yaml_config, selectable)
 
 
 class TestRecipeIngredientsYaml(ConfigTestBase):
@@ -163,7 +158,7 @@ Vermont,609480,1230082,Vermont
         )
 
     def test_nested_census_from_validated_yaml(self):
-        """Build a recipe that depends on the results of another recipe """
+        """Build a recipe that depends on the results of another recipe"""
         shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
@@ -572,7 +567,7 @@ Vermont,620602,The Green Mountain State,Vermont
         )
 
     def test_shelf_with_references(self):
-        """Build a recipe using a shelf that uses field references """
+        """Build a recipe using a shelf that uses field references"""
         shelf = self.shelf_from_filename("census_references.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
@@ -599,7 +594,7 @@ Vermont,0.4374284968466095,The Green Mountain State,Vermont
         )
 
     def test_shelf_with_invalidcolumn(self):
-        """Build a recipe using a shelf that uses field references """
+        """Build a recipe using a shelf that uses field references"""
         shelf = self.shelf_from_filename("census_references.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
@@ -611,7 +606,7 @@ Vermont,0.4374284968466095,The Green Mountain State,Vermont
             recipe.to_sql()
 
     def test_shelf_with_condition_references(self):
-        """Build a recipe using a shelf that uses condition references """
+        """Build a recipe using a shelf that uses condition references"""
         shelf = self.shelf_from_filename("census_references.yaml", Census)
         recipe = (
             Recipe(shelf=shelf, session=self.session)
@@ -638,17 +633,17 @@ Vermont,311842,The Green Mountain State,Vermont
         )
 
     def test_bad_census(self):
-        """ Test a bad yaml file """
+        """Test a bad yaml file"""
         with pytest.raises(Exception):
             self.shelf_from_filename("census_bad.yaml", Census)
 
     def test_bad_census_in(self):
-        """ Test a bad yaml file """
+        """Test a bad yaml file"""
         with pytest.raises(Exception):
             self.shelf_from_filename("census_bad_in.yaml", Census)
 
     def test_deprecated_ingredients_dividemetric(self):
-        """ Test deprecated ingredient kinds in a yaml file """
+        """Test deprecated ingredient kinds in a yaml file"""
         shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
 
         # We can DivideMetric
@@ -675,7 +670,7 @@ Vermont,0.9820786913351858,Vermont
         )
 
     def test_deprecated_ingredients_lookupdimension(self):
-        """ Test deprecated ingredient kinds in a yaml file """
+        """Test deprecated ingredient kinds in a yaml file"""
         shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
 
         # We can LookupDimension
@@ -737,7 +732,7 @@ OFFSET 0"""
         )
 
     def test_deprecated_ingredients_idvaluedim(self):
-        """ Test deprecated ingredient kinds in a yaml file """
+        """Test deprecated ingredient kinds in a yaml file"""
         shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
 
         # We can IdValueDimension
@@ -752,7 +747,7 @@ OFFSET 0"""
             recipe.to_sql()
 
     def test_deprecated_ingredients_idvaluedim(self):
-        """ Test deprecated ingredient kinds in a yaml file """
+        """Test deprecated ingredient kinds in a yaml file"""
         shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
 
         # We can IdValueDimension
@@ -798,7 +793,7 @@ class TestNullHandling(ConfigTestBase):
     yaml_location = "parsed_ingredients"
 
     def test_dimension_null_handling(self):
-        """ Test different ways of handling nulls in dimensions """
+        """Test different ways of handling nulls in dimensions"""
         shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
 
         recipe = (
@@ -826,7 +821,7 @@ sales,,sales
         )
 
     def test_dimension_null_handling_with_lookup_default(self):
-        """ Test different ways of handling nulls in dimensions """
+        """Test different ways of handling nulls in dimensions"""
 
         # This uses the lookup_default to replace items that aren't found in lookup
         # department_lookup:
@@ -863,7 +858,7 @@ sales,,Sales,sales
         )
 
     def test_dimension_null_handling_with_null_in_lookup(self):
-        """ Test different ways of handling nulls in dimensions """
+        """Test different ways of handling nulls in dimensions"""
 
         # This uses a null in the lookup
         # department_lookup_with_null:
@@ -900,7 +895,7 @@ sales,,Sales,sales
         )
 
     def test_dimension_null_handling_with_default(self):
-        """ Test different ways of handling nulls in dimensions """
+        """Test different ways of handling nulls in dimensions"""
 
         # This uses default which will coalesce missing values to a defined value
         # department_default:
@@ -934,7 +929,7 @@ sales,,sales
         )
 
     def test_dimension_null_handling_with_buckets(self):
-        """ Test different ways of handling nulls in dimensions """
+        """Test different ways of handling nulls in dimensions"""
 
         # This uses default which will coalesce missing values to a defined value
         # department_default:
@@ -979,7 +974,7 @@ Other,9999,80.0,Other
         )
 
     def test_dimension_null_handling_multi_approaches(self):
-        """ Test different ways of handling nulls in dimensions """
+        """Test different ways of handling nulls in dimensions"""
 
         # This uses all null handling together (coalesce with default wins and
         # is then turned into "Unknown")
@@ -1019,7 +1014,7 @@ N/A,80.0,Unknown,N/A
         )
 
     def test_metric_null_handling(self):
-        """ Test handling nulls in metrics """
+        """Test handling nulls in metrics"""
         shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
 
         # score_with_default:
@@ -1057,7 +1052,7 @@ class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
     yaml_location = "parsed_ingredients"
 
     def test_bad_census(self):
-        """ Test a bad yaml file """
+        """Test a bad yaml file"""
         shelf = self.shelf_from_filename("census_bad.yaml", Census)
         assert isinstance(shelf["pop2000"], InvalidIngredient)
         assert (
@@ -1065,7 +1060,7 @@ class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
         )
 
     def test_bad_census_in(self):
-        """ Test a bad yaml file """
+        """Test a bad yaml file"""
         shelf = self.shelf_from_filename("census_bad_in.yaml", Census)
         assert isinstance(shelf["pop2000"], InvalidIngredient)
         assert (
@@ -1073,7 +1068,7 @@ class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
         )
 
     def test_shelf_with_invalidcolumn(self):
-        """Build a recipe using a shelf that uses field references """
+        """Build a recipe using a shelf that uses field references"""
         shelf = self.shelf_from_filename("census_references.yaml", Census)
         assert isinstance(shelf["badfield"], InvalidIngredient)
         recipe = (
@@ -1170,7 +1165,7 @@ Vermont,0.4374284968466102,The Green Mountain State,Vermont
         )
 
     def test_shelf_with_invalidingredient(self):
-        """Build a recipe using a shelf that uses field references """
+        """Build a recipe using a shelf that uses field references"""
         shelf = self.shelf_from_filename("census.yaml", Census)
         assert isinstance(shelf["baddim"], InvalidIngredient)
         recipe = (
@@ -1210,7 +1205,7 @@ Vermont,609480.0,The Green Mountain State,Vermont
         )
 
     def test_deprecated_ingredients_idvaluedim(self):
-        """ Test deprecated ingredient kinds in a yaml file """
+        """Test deprecated ingredient kinds in a yaml file"""
         shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
 
         # We can IdValueDimension
@@ -1315,7 +1310,7 @@ hi,4,hi
 
 
 class TestParsedSQLGeneration(ConfigTestBase):
-    """More tests of SQL generation on complex parsed expressions """
+    """More tests of SQL generation on complex parsed expressions"""
 
     def test_weird_table_with_column_named_true(self):
         shelf = self.shelf_from_yaml(
@@ -1566,26 +1561,26 @@ _version: 2
 count_star:
     kind: Metric
     field: "count(*)"
-max_username:
+count_username:
     kind: Metric
-    field: "max(username)"        
+    field: "count(username)"
 """,
             recipe,
         )
         recipe2 = Recipe(shelf=shelf2, session=self.session).metrics(
-            "count_star", "max_username"
+            "count_star", "count_username"
         )
         assert (
             recipe2.to_sql()
             == """SELECT count(*) AS count_star,
-       max(anon_1.username) AS max_username
+       count(anon_1.username) AS count_username
 FROM
   (SELECT scores_with_nulls.username AS username,
           count(*) AS count_star
    FROM scores_with_nulls
    GROUP BY username) AS anon_1"""
         )
-        self.assert_recipe_csv(recipe2, "count_star,max_username\n3,chris\n")
+        self.assert_recipe_csv(recipe2, "count_star,count_username\n3,3\n")
 
 
 class TestParsedIntellligentDates(ConfigTestBase):
