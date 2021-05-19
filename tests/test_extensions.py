@@ -1607,12 +1607,12 @@ class TestPaginateInlineExtension(object):
         )
 
     def compare_csv(self, recipe, csv):
-        """Compare a recipe to csv """
+        """Compare a recipe to csv"""
         csvrows = list(DictReader(csv.split("\n")))
         reciperows = list(recipe.all())
         assert len(csvrows) == len(reciperows)
         for csvrow, reciperow in zip(csvrows, reciperows):
-            for k,v in csvrow.items():
+            for k, v in csvrow.items():
                 assert str(getattr(reciperow, k)) == v
 
     def test_no_pagination(self):
@@ -1874,9 +1874,12 @@ ORDER BY pop2000 DESC
 LIMIT 10
 OFFSET 0"""
         )
-        self.compare_csv(recipe, """state,pop2000,state_id
+        self.compare_csv(
+            recipe,
+            """state,pop2000,state_id
 Tennessee,5685230,Tennessee
-Vermont,609480,Vermont""")
+Vermont,609480,Vermont""",
+        )
 
         # Default ordering is not used when the recipe already
         # has an ordering
@@ -1992,9 +1995,12 @@ ORDER BY state
 LIMIT 10
 OFFSET 0"""
         )
-        self.compare_csv(recipe, """state,pop2000,state_id
+        self.compare_csv(
+            recipe,
+            """state,pop2000,state_id
 Tennessee,5685230,Tennessee
-""")
+""",
+        )
 
         # Same as above
         recipe = self.recipe_from_config(
@@ -2005,9 +2011,12 @@ Tennessee,5685230,Tennessee
                 "pagination_q": "T%",
             }
         )
-        self.compare_csv(recipe, """state,pop2000,state_id
+        self.compare_csv(
+            recipe,
+            """state,pop2000,state_id
 Tennessee,5685230,Tennessee
-""")
+""",
+        )
 
     def test_pagination_q_idvalue(self):
         """Pagination queries use the value of an id value dimension"""
@@ -2055,9 +2064,11 @@ OFFSET 0"""
             }
         )
         assert "LIKE" in recipe.to_sql()
-        self.compare_csv(recipe, """idvalue_state_id,idvalue_state,pop2000,idvalue_state_id
+        self.compare_csv(
+            recipe,
+            """idvalue_state_id,idvalue_state,pop2000,idvalue_state_id
 Tennessee,State:Tennessee,5685230,Tennessee
-"""
+""",
         )
 
     def test_apply_pagination_filters(self):
@@ -2102,10 +2113,12 @@ Tennessee,State:Tennessee,5685230,Tennessee
             .pagination_q("M")
             .pagination_search_keys("sex", "state")
         )
-        self.compare_csv(recipe, """state,pop2000,state_id
+        self.compare_csv(
+            recipe,
+            """state,pop2000,state_id
 Tennessee,2761277,Tennessee
 Vermont,298532,Vermont
-"""
+""",
         )
 
         recipe = self.recipe_from_config(
@@ -2152,7 +2165,9 @@ OFFSET 0"""
             .pagination_q("T%")
             .pagination_search_keys("state", "sex")
         )
-        self.compare_csv(recipe, """age,sex,state,pop2000,age_id,sex_id,state_id
+        self.compare_csv(
+            recipe,
+            """age,sex,state,pop2000,age_id,sex_id,state_id
 40,F,Tennessee,47199,40,F,Tennessee
 41,F,Tennessee,45660,41,F,Tennessee
 42,F,Tennessee,45959,42,F,Tennessee
@@ -2163,7 +2178,7 @@ OFFSET 0"""
 47,F,Tennessee,42004,47,F,Tennessee
 48,F,Tennessee,41435,48,F,Tennessee
 49,F,Tennessee,39967,49,F,Tennessee
-"""
+""",
         )
         recipe = (
             self.recipe()
@@ -2174,7 +2189,9 @@ OFFSET 0"""
             .pagination_q("T%")
             .pagination_search_keys("state", "sex")
         )
-        self.compare_csv(recipe, """age,sex,state,pop2000,age_id,sex_id,state_id
+        self.compare_csv(
+            recipe,
+            """age,sex,state,pop2000,age_id,sex_id,state_id
 40,F,Tennessee,47199,40,F,Tennessee
 41,F,Tennessee,45660,41,F,Tennessee
 42,F,Tennessee,45959,42,F,Tennessee
@@ -2185,7 +2202,7 @@ OFFSET 0"""
 47,F,Tennessee,42004,47,F,Tennessee
 48,F,Tennessee,41435,48,F,Tennessee
 49,F,Tennessee,39967,49,F,Tennessee
-"""
+""",
         )
 
 
