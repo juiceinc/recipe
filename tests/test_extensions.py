@@ -1583,9 +1583,6 @@ GROUP BY summarize.department"""
         assert sales_row.test_cnt == 1
 
 
-
-
-
 class TestPaginateInlineExtension(object):
     def setup(self):
         # create a Session
