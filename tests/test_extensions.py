@@ -1,6 +1,7 @@
 from copy import copy
 
 import pytest
+from csv import DictReader
 from faker import Faker
 from sqlalchemy import func
 
@@ -1583,7 +1584,6 @@ GROUP BY summarize.department"""
         assert sales_row.test_cnt == 1
 
 
-from csv import DictReader
 class TestPaginateInlineExtension(object):
     def setup(self):
         # create a Session

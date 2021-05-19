@@ -395,7 +395,7 @@ class AutomaticFilters(RecipeExtension):
 
 
 class UserFilters(RecipeExtension):
-    """ Add automatic filtering. """
+    """Add automatic filtering."""
 
     def __init__(self, *args, **kwargs):
         super(UserFilters, self).__init__(*args, **kwargs)
@@ -514,12 +514,12 @@ class Anonymize(RecipeExtension):
 
     @recipe_arg()
     def anonymize(self, value):
-        """ Should this recipe be anonymized"""
+        """Should this recipe be anonymized"""
         assert isinstance(value, bool)
         self._anonymize = value
 
     def add_ingredients(self):
-        """ Put the anonymizers in the last position of formatters """
+        """Put the anonymizers in the last position of formatters"""
         for ingredient in self.recipe._cauldron.values():
             if hasattr(ingredient.meta, "anonymizer"):
                 anonymizer = ingredient.meta.anonymizer
@@ -781,7 +781,7 @@ class Paginate(RecipeExtension):
         self._pagination_page = max(1, value)
 
     def _apply_pagination_order_by(self):
-        """Inject pagination ordering ahead of any existing ordering. """
+        """Inject pagination ordering ahead of any existing ordering."""
 
         # Inject the paginator ordering ahead of the existing ordering and filter
         # out sort items that aren't in the cauldron
@@ -819,7 +819,7 @@ class Paginate(RecipeExtension):
                 self.recipe.order_by(*new_order_by)
 
     def _apply_pagination_q(self):
-        """ Apply pagination querying to all paginate search keys"""
+        """Apply pagination querying to all paginate search keys"""
         q = self._pagination_q
         if self._apply_pagination_filters and q:
             search_keys = self._paginate_search_keys or self.recipe.dimension_ids
@@ -844,12 +844,12 @@ class Paginate(RecipeExtension):
                 self.recipe._cauldron.use(search_filter)
 
     def add_ingredients(self):
-        """Apply pagination ordering and search to this query if necessary. """
+        """Apply pagination ordering and search to this query if necessary."""
         self._apply_pagination_order_by()
         self._apply_pagination_q()
 
     def modify_postquery_parts(self, postquery_parts):
-        """Apply validated pagination limits and offset to a completed query. """
+        """Apply validated pagination limits and offset to a completed query."""
 
         limit = self._pagination_page_size
         if limit == 0 or not self._apply_pagination:
@@ -987,7 +987,7 @@ class PaginateInline(Paginate):
     }
 
     def modify_postquery_parts(self, postquery_parts):
-        """Apply validated pagination limits and offset to a completed query. """
+        """Apply validated pagination limits and offset to a completed query."""
 
         limit = self._pagination_page_size
         if limit == 0 or not self._apply_pagination:
