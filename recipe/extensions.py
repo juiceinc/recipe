@@ -894,6 +894,139 @@ class Paginate(RecipeExtension):
             return self._validated_pagination
 
 
+class PaginateInline(Paginate):
+    """
+    Allows recipes to paginate results while returning total record count as a
+    field in the recipe itself. PaginateInline differs from Paginate is how
+    the recipe behaves when hitting the last page. Because PaginateInline
+    only knows the total number of items after a recipe has run, it is possible
+    to set a page that goes beyond the total number of results. In this case
+    PaginateInline will result in a query that returns 0 results. The pagination
+    page in this case will be reset back to the first page and the query will
+    run again.
+
+    **Using and controlling pagination**
+
+    Pagination returns pages of data using limit and offset.
+
+    Pagination is enabled by setting a nonzero page size, like this::
+
+        shelf = Shelf({
+            'state': Dimension(Census.state),
+            'gender': Dimension(Census.gender),
+            'population': Metric(func.sum(Census.population)),
+        })
+        recipe = Recipe(shelf=shelf, extension_classes=[PaginateInline])\
+            .dimensions('state')\
+            .metrics('population')\
+            .pagination_page_size(10)
+
+
+    Pagination may be disabled by setting `.apply_pagination(False)`.
+
+    **Searching**
+
+    `pagination_q` allows a recipe to be searched for a string.
+    The default search fields are all dimensions used in the recipe.
+    Search keys can be customized with `pagination_search_keys`.
+    Search may be disabled by setting `.apply_pagination_filters(False)`
+    The value role will be targetted when searching dimensions.
+
+    **Sorting**
+
+    Pagination can override ordering applied to a recipe by setting
+    `.pagination_order_by(...)` to a list of ordering keys. If keys are
+    preceded by a "-", ordering is descending, otherwise ordering is ascending.
+
+    **An example using all features**
+
+    Here's an example that searches for keys that start with "t", showing
+    the fifth page of results::
+
+        shelf = Shelf({
+            'state': Dimension(Census.state),
+            'gender': Dimension(Census.gender),
+            'age': Dimension(Census.age),
+            'population': Metric(func.sum(Census.population)),
+        })
+        recipe = self.recipe()\
+            .metrics("pop2000")\
+            .dimensions("state", "sex", "age")\
+            .pagination_page_size(10)\
+            .pagination_page(5)\
+            .pagination_q('t%')\
+            .pagination_search_keys("state", "sex")
+
+
+    This will generate SQL like::
+
+        SELECT census.age AS age,
+               census.sex AS sex,
+               census.state AS state,
+               sum(census.population) AS population
+        FROM census
+        WHERE lower(census.state) LIKE lower('t%')
+          OR lower(census.sex) LIKE lower('t%')
+        GROUP BY census.age,
+                 census.sex,
+                 census.state
+        LIMIT 10
+        OFFSET 40
+
+    """
+
+    recipe_schema = {
+        "apply_pagination": {"type": "boolean"},
+        "apply_pagination_filters": {"type": "boolean"},
+        "pagination_order_by": {"type": "list", "elements": {"type": "string"}},
+        "pagination_default_order_by": {"type": "list", "elements": {"type": "string"}},
+        "pagination_q": {"type": "string"},
+        "pagination_search_keys": {"type": "list", "elements": {"type": "string"}},
+        "pagination_page_size": {"type": "integer"},
+        "pagination_page": {"type": "integer"},
+    }
+
+    def modify_postquery_parts(self, postquery_parts):
+        """Apply validated pagination limits and offset to a completed query. """
+
+        limit = self._pagination_page_size
+        if limit == 0 or not self._apply_pagination:
+            return postquery_parts
+
+        # Do not validate the page
+        # TODO: Get the total count from a row in the final query
+        validated_page = page = self._pagination_page
+
+        self._validated_pagination = {
+            "requestedPage": page,
+            "page": page,
+            "pageSize": limit,
+            "totalItems": 0,
+        }
+
+        # page=1 is the first page
+        offset = limit * (validated_page - 1)
+
+        postquery_parts["query"] = postquery_parts["query"].limit(limit)
+        if offset:
+            postquery_parts["query"] = postquery_parts["query"].offset(offset)
+
+        return postquery_parts
+
+    def validated_pagination(self):
+        """Return pagination validated against the actual number of items in the
+        response.
+
+        :raises BadRecipe:
+        """
+        if self._validated_pagination is None:
+            raise BadRecipe(
+                "validated_pagination can only be accessed after the recipe has run"
+            )
+        else:
+            return self._validated_pagination
+
+
 class BlendRecipe(RecipeExtension):
     """Add blend recipes, used for joining data from another table to a base
     table
