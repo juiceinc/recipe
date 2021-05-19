@@ -1012,26 +1012,44 @@ class PaginateInline(Paginate):
             postquery_parts["query"] = postquery_parts["query"].offset(offset)
 
         q = postquery_parts["query"]
-        # from sqlalchemy.orm import Query
-        count_query = q.limit(None).offset(None).order_by(None).from_self(func.count().label("counts"))
 
-        q = count_query.join(q)
-        # q = q.add_columns(func.count().label('_totalcnt')).from_self().join(count_query)
+        # Count the rows in our query without limit or offset or ordering
+        total_counter = (
+            q.limit(None)
+            .offset(None)
+            .order_by(None)
+            .from_self(func.count().label("_total_count"))
+            .subquery()
+        )
+        q = q.add_columns(total_counter.c._total_count.label("_total_count"))
+
         postquery_parts["query"] = q
         return postquery_parts
 
     def validated_pagination(self):
         """Return pagination validated against the actual number of items in the
         response.
-
-        :raises BadRecipe:
         """
-        if self._validated_pagination is None:
-            raise BadRecipe(
-                "validated_pagination can only be accessed after the recipe has run"
-            )
+        validated_pagination = {
+            "requestedPage": self._pagination_page,
+            "page": self._pagination_page,
+            "pageSize": self._pagination_page_size,
+            "totalItems": 0,
+        }
+        rows = self.recipe.all()
+        if rows:
+            row = rows[0]
+            validated_pagination["totalItems"] = row._total_count
         else:
-            return self._validated_pagination
+            if self._pagination_page == 1:
+                validated_pagination["totalItems"] = 0
+            else:
+                # Go to the first page and rerun the query
+                self.pagination_page(1)
+                self.recipe.reset()
+                return self.validated_pagination()
+
+        return validated_pagination
 
 
 class BlendRecipe(RecipeExtension):
