@@ -1011,6 +1011,13 @@ class PaginateInline(Paginate):
         if offset:
             postquery_parts["query"] = postquery_parts["query"].offset(offset)
 
+        q = postquery_parts["query"]
+        # from sqlalchemy.orm import Query
+        count_query = q.limit(None).offset(None).order_by(None).from_self(func.count().label("counts"))
+
+        q = count_query.join(q)
+        # q = q.add_columns(func.count().label('_totalcnt')).from_self().join(count_query)
+        postquery_parts["query"] = q
         return postquery_parts
 
     def validated_pagination(self):

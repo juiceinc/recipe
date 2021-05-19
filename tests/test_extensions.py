@@ -25,6 +25,7 @@ from recipe.extensions import (
     RecipeExtension,
     SummarizeOver,
     Paginate,
+    PaginateInline,
 )
 
 
@@ -1580,6 +1581,142 @@ GROUP BY summarize.department"""
         assert ops_row.test_cnt == 5
         assert sales_row.department == "sales"
         assert sales_row.test_cnt == 1
+
+
+
+
+
+class TestPaginateInlineExtension(object):
+    def setup(self):
+        # create a Session
+        self.session = oven.Session()
+        self.shelf = copy(census_shelf)
+        self.extension_classes = [PaginateInline]
+
+    def recipe(self):
+        return Recipe(
+            shelf=copy(census_shelf),
+            session=self.session,
+            extension_classes=self.extension_classes,
+        )
+
+    def recipe_from_config(self, config):
+        return Recipe.from_config(
+            copy(census_shelf),
+            config,
+            session=self.session,
+            extension_classes=self.extension_classes,
+        )
+
+    def test_no_pagination(self):
+        recipe = self.recipe().metrics("pop2000").dimensions("state")
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY state"""
+        )
+
+        recipe = self.recipe_from_config(
+            {"metrics": ["pop2000"], "dimensions": ["state"]}
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY state"""
+        )
+
+    def test_pagination(self):
+        """If pagination page size is configured, pagination is applied to results"""
+        recipe = (
+            self.recipe().metrics("pop2000").dimensions("age").pagination_page_size(10)
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.age AS age,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY age
+ORDER BY age
+LIMIT 10
+OFFSET 0"""
+        )
+        assert recipe.validated_pagination() == {
+            "page": 1,
+            "pageSize": 10,
+            "requestedPage": 1,
+            "totalItems": 86,
+        }
+
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+            }
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY state
+ORDER BY state
+LIMIT 10
+OFFSET 0"""
+        )
+        assert recipe.validated_pagination() == {
+            "page": 1,
+            "pageSize": 10,
+            "requestedPage": 1,
+            "totalItems": 2,
+        }
+
+        recipe = recipe.pagination_page(2)
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY state
+ORDER BY state
+LIMIT 10
+OFFSET 0"""
+        )
+        assert recipe.validated_pagination() == {
+            "page": 1,
+            "pageSize": 10,
+            "requestedPage": 2,
+            "totalItems": 2,
+        }
+
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 1,
+                "pagination_page": 2,
+            }
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY state
+ORDER BY state
+LIMIT 1
+OFFSET 1"""
+        )
+        assert recipe.validated_pagination() == {
+            "page": 2,
+            "pageSize": 1,
+            "requestedPage": 2,
+            "totalItems": 2,
+        }
 
 
 class TestCompareRecipeExtension(object):
