@@ -123,7 +123,7 @@ def make_lark_grammar(columns):
     {make_columns_grammar(columns)}
 
     {gather_columns("unusable_col", columns, "unusable", [])}
-    {gather_columns("date.1", columns, "date", ["date_conv", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "dt_day_conv", "dt_week_conv", "dt_month_conv", "dt_quarter_conv", "dt_year_conv", "datetime_to_date_conv", "date_aggr", "date_if_statement", "date_coalesce"])}
+    {gather_columns("date.1", columns, "date", ["date_conv", "date_fn", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "dt_day_conv", "dt_week_conv", "dt_month_conv", "dt_quarter_conv", "dt_year_conv", "datetime_to_date_conv", "date_aggr", "date_if_statement", "date_coalesce"])}
     {gather_columns("datetime.2", columns, "datetime", ["datetime_conv", "datetime_if_statement", "datetime_coalesce"])}
     // Datetimes that are converted to the end of day
     {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
@@ -182,6 +182,7 @@ def make_lark_grammar(columns):
 
     // Date
     date_conv.3: /date/i "(" ESCAPED_STRING ")"
+    date_fn.3: /date/i "(" num "," num "," num ")"
     datetime_to_date_conv.3: /date/i "(" datetime ")"  -> dt_day_conv
     datetime_conv.2: /date/i "(" ESCAPED_STRING ")"
     datetime_end_conv.1: /date/i "(" ESCAPED_STRING ")"
@@ -600,6 +601,9 @@ class TransformToSQLAlchemyExpression(Transformer):
             return self.columns[v.data]
         else:
             return v
+
+    def date_fn(self, _, y, m, d):
+        return func.date(y, m, d)
 
     def datetime(self, v):
         if isinstance(v, Tree):
