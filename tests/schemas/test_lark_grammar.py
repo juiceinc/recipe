@@ -528,6 +528,8 @@ class TestDataTypesTableDates(TestBase):
         quarter([test_date]) > date("2020-12-30")        -> date_trunc('quarter', datatypes.test_date) > '2020-12-30'
         year([test_date]) > date("2020-12-30")           -> date_trunc('year', datatypes.test_date) > '2020-12-30'
         date([test_datetime])                            -> date_trunc('day', datatypes.test_datetime)
+        date(2020, 1, 1)                                 -> date(2020, 1, 1)
+        month(date(2020, 1, 1))                          -> date_trunc('month', date(2020, 1, 1))
         """
 
         for field, expected_sql in self.examples(good_examples):
