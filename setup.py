@@ -49,7 +49,7 @@ setup(
     author="Chris Gemignani",
     author_email="chris.gemignani@juiceanalytics.com",
     url="https://github.com/juiceinc/recipe",
-    packages=find_packages(),
+    packages=find_packages(include=["recipe*"]),
     include_package_data=True,
     license="MIT",
     classifiers=[
