@@ -64,11 +64,15 @@ def datatype_from_column_expression(c):
             elif isinstance(c.type, Boolean):
                 datatype = "bool"
     except CompileError:
+        pass
+
+    if datatype == "unknown":
         col_expr = str(c).lower()
-        if col_expr.startswith("date_trunc"):
+        if col_expr.startswith("date"):
             datatype = "date"
-        elif col_expr.startswith("timestamp_trunc"):
+        elif col_expr.startswith("timestamp"):
             datatype = "datetime"
+
     return datatype
 
 
