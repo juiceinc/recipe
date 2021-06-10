@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.24.1 (2021-06-10)
+-----------------------------------------
+* Fix datatype tracking in some cases
+
 v0.24.0 (2021-05-14)
 -----------------------------------------
 * Track the datatype used by ingredient columns
