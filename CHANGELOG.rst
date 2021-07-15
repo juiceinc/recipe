@@ -2,6 +2,19 @@
 Changelog
 =========
 
+v0.25.1 (2021-06-15)
+-----------------------------------------
+* Fix datatype tracking in some cases
+
+v0.25.0 (2021-06-07)
+-----------------------------------------
+* Add to date syntax
+* Avoid installing a top-level tests package in setup.py
+
+v0.24.1 (2021-06-10)
+-----------------------------------------
+* Fix datatype tracking in some cases
+
 v0.24.0 (2021-05-14)
 -----------------------------------------
 * Track the datatype used by ingredient columns

@@ -28,7 +28,7 @@ if sys.argv[-1] == "test":
 # yapf: disable
 install = [
     'ordered-set',
-    'sqlalchemy>=1.2.2',
+    'sqlalchemy>=1.2.2,<1.4',
     'sqlparse',
     'tablib',
     'pyyaml',
@@ -43,13 +43,13 @@ install = [
 
 setup(
     name="recipe",
-    version="0.24.0",
+    version="0.25.1",
     description="Lego construction kit for SQL",
     long_description=(open("README.rst").read()),
     author="Chris Gemignani",
     author_email="chris.gemignani@juiceanalytics.com",
     url="https://github.com/juiceinc/recipe",
-    packages=find_packages(),
+    packages=find_packages(include=["recipe*"]),
     include_package_data=True,
     license="MIT",
     classifiers=[
