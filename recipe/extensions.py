@@ -961,15 +961,33 @@ class PaginateInline(Paginate):
     This will generate SQL like::
 
         SELECT census.age AS age,
-               census.sex AS sex,
-               census.state AS state,
-               sum(census.population) AS population
-        FROM census
-        WHERE lower(census.state) LIKE lower('t%')
-          OR lower(census.sex) LIKE lower('t%')
-        GROUP BY census.age,
-                 census.sex,
-                 census.state
+            census.sex AS sex,
+            census.state AS state,
+            sum(census.pop2000) AS pop2000,
+            anon_1._total_count AS _total_count
+        FROM census,
+
+        (SELECT count(*) AS _total_count
+         FROM
+            (SELECT census.age AS age,
+                    census.sex AS sex,
+                    census.state AS state,
+                    sum(census.pop2000) AS pop2000
+            FROM census
+            WHERE lower(census.state) LIKE lower('T%')
+                OR lower(census.sex) LIKE lower('T%')
+            GROUP BY age,
+                    sex,
+                    state) AS anon_2) AS anon_1
+
+        WHERE lower(census.state) LIKE lower('T%')
+        OR lower(census.sex) LIKE lower('T%')
+        GROUP BY age,
+                sex,
+                state
+        ORDER BY state,
+                sex,
+                age
         LIMIT 10
         OFFSET 40
 

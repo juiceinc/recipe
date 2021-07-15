@@ -2130,7 +2130,6 @@ Vermont,298532,Vermont
                 "pagination_search_keys": ["sex", "state"],
             }
         )
-        print(recipe.to_sql())
         assert (
             recipe.to_sql()
             == """SELECT census.state AS state,
