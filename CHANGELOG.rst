@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.26.0 (2021-07-15)
+-----------------------------------------
+* Add PaginateInline extension
+
 v0.25.1 (2021-06-15)
 -----------------------------------------
 * Fix datatype tracking in some cases
