@@ -395,7 +395,7 @@ class AutomaticFilters(RecipeExtension):
 
 
 class UserFilters(RecipeExtension):
-    """ Add automatic filtering. """
+    """Add automatic filtering."""
 
     def __init__(self, *args, **kwargs):
         super(UserFilters, self).__init__(*args, **kwargs)
@@ -514,12 +514,12 @@ class Anonymize(RecipeExtension):
 
     @recipe_arg()
     def anonymize(self, value):
-        """ Should this recipe be anonymized"""
+        """Should this recipe be anonymized"""
         assert isinstance(value, bool)
         self._anonymize = value
 
     def add_ingredients(self):
-        """ Put the anonymizers in the last position of formatters """
+        """Put the anonymizers in the last position of formatters"""
         for ingredient in self.recipe._cauldron.values():
             if hasattr(ingredient.meta, "anonymizer"):
                 anonymizer = ingredient.meta.anonymizer
@@ -781,7 +781,7 @@ class Paginate(RecipeExtension):
         self._pagination_page = max(1, value)
 
     def _apply_pagination_order_by(self):
-        """Inject pagination ordering ahead of any existing ordering. """
+        """Inject pagination ordering ahead of any existing ordering."""
 
         # Inject the paginator ordering ahead of the existing ordering and filter
         # out sort items that aren't in the cauldron
@@ -819,7 +819,7 @@ class Paginate(RecipeExtension):
                 self.recipe.order_by(*new_order_by)
 
     def _apply_pagination_q(self):
-        """ Apply pagination querying to all paginate search keys"""
+        """Apply pagination querying to all paginate search keys"""
         q = self._pagination_q
         if self._apply_pagination_filters and q:
             search_keys = self._paginate_search_keys or self.recipe.dimension_ids
@@ -844,12 +844,12 @@ class Paginate(RecipeExtension):
                 self.recipe._cauldron.use(search_filter)
 
     def add_ingredients(self):
-        """Apply pagination ordering and search to this query if necessary. """
+        """Apply pagination ordering and search to this query if necessary."""
         self._apply_pagination_order_by()
         self._apply_pagination_q()
 
     def modify_postquery_parts(self, postquery_parts):
-        """Apply validated pagination limits and offset to a completed query. """
+        """Apply validated pagination limits and offset to a completed query."""
 
         limit = self._pagination_page_size
         if limit == 0 or not self._apply_pagination:
@@ -892,6 +892,182 @@ class Paginate(RecipeExtension):
             )
         else:
             return self._validated_pagination
+
+
+class PaginateInline(Paginate):
+    """
+    Allows recipes to paginate results while returning total record count as a
+    field in the recipe itself. PaginateInline differs from Paginate is how
+    the recipe behaves when hitting the last page. Because PaginateInline
+    only knows the total number of items after a recipe has run, it is possible
+    to set a page that goes beyond the total number of results. In this case
+    PaginateInline will result in a query that returns 0 results. The pagination
+    page in this case will be reset back to the first page and the query will
+    run again.
+
+    **Using and controlling pagination**
+
+    Pagination returns pages of data using limit and offset.
+
+    Pagination is enabled by setting a nonzero page size, like this::
+
+        shelf = Shelf({
+            'state': Dimension(Census.state),
+            'gender': Dimension(Census.gender),
+            'population': Metric(func.sum(Census.population)),
+        })
+        recipe = Recipe(shelf=shelf, extension_classes=[PaginateInline])\
+            .dimensions('state')\
+            .metrics('population')\
+            .pagination_page_size(10)
+
+
+    Pagination may be disabled by setting `.apply_pagination(False)`.
+
+    **Searching**
+
+    `pagination_q` allows a recipe to be searched for a string.
+    The default search fields are all dimensions used in the recipe.
+    Search keys can be customized with `pagination_search_keys`.
+    Search may be disabled by setting `.apply_pagination_filters(False)`
+    The value role will be targetted when searching dimensions.
+
+    **Sorting**
+
+    Pagination can override ordering applied to a recipe by setting
+    `.pagination_order_by(...)` to a list of ordering keys. If keys are
+    preceded by a "-", ordering is descending, otherwise ordering is ascending.
+
+    **An example using all features**
+
+    Here's an example that searches for keys that start with "t", showing
+    the fifth page of results::
+
+        shelf = Shelf({
+            'state': Dimension(Census.state),
+            'gender': Dimension(Census.gender),
+            'age': Dimension(Census.age),
+            'population': Metric(func.sum(Census.population)),
+        })
+        recipe = self.recipe()\
+            .metrics("pop2000")\
+            .dimensions("state", "sex", "age")\
+            .pagination_page_size(10)\
+            .pagination_page(5)\
+            .pagination_q('t%')\
+            .pagination_search_keys("state", "sex")
+
+
+    This will generate SQL like::
+
+        SELECT census.age AS age,
+            census.sex AS sex,
+            census.state AS state,
+            sum(census.pop2000) AS pop2000,
+            anon_1._total_count AS _total_count
+        FROM census,
+
+        (SELECT count(*) AS _total_count
+         FROM
+            (SELECT census.age AS age,
+                    census.sex AS sex,
+                    census.state AS state,
+                    sum(census.pop2000) AS pop2000
+            FROM census
+            WHERE lower(census.state) LIKE lower('T%')
+                OR lower(census.sex) LIKE lower('T%')
+            GROUP BY age,
+                    sex,
+                    state) AS anon_2) AS anon_1
+
+        WHERE lower(census.state) LIKE lower('T%')
+        OR lower(census.sex) LIKE lower('T%')
+        GROUP BY age,
+                sex,
+                state
+        ORDER BY state,
+                sex,
+                age
+        LIMIT 10
+        OFFSET 40
+
+    """
+
+    recipe_schema = {
+        "apply_pagination": {"type": "boolean"},
+        "apply_pagination_filters": {"type": "boolean"},
+        "pagination_order_by": {"type": "list", "elements": {"type": "string"}},
+        "pagination_default_order_by": {"type": "list", "elements": {"type": "string"}},
+        "pagination_q": {"type": "string"},
+        "pagination_search_keys": {"type": "list", "elements": {"type": "string"}},
+        "pagination_page_size": {"type": "integer"},
+        "pagination_page": {"type": "integer"},
+    }
+
+    def modify_postquery_parts(self, postquery_parts):
+        """Apply validated pagination limits and offset to a completed query."""
+
+        limit = self._pagination_page_size
+        if limit == 0 or not self._apply_pagination:
+            return postquery_parts
+
+        # Do not validate the page
+        # TODO: Get the total count from a row in the final query
+        validated_page = page = self._pagination_page
+
+        self._validated_pagination = {
+            "requestedPage": page,
+            "page": page,
+            "pageSize": limit,
+            "totalItems": 0,
+        }
+
+        # page=1 is the first page
+        offset = limit * (validated_page - 1)
+
+        postquery_parts["query"] = postquery_parts["query"].limit(limit)
+        if offset:
+            postquery_parts["query"] = postquery_parts["query"].offset(offset)
+
+        q = postquery_parts["query"]
+
+        # Count the rows in our query without limit or offset or ordering
+        total_counter = (
+            q.limit(None)
+            .offset(None)
+            .order_by(None)
+            .from_self(func.count().label("_total_count"))
+            .subquery()
+        )
+        q = q.add_columns(total_counter.c._total_count.label("_total_count"))
+
+        postquery_parts["query"] = q
+        return postquery_parts
+
+    def validated_pagination(self):
+        """Return pagination validated against the actual number of items in the
+        response.
+        """
+        validated_pagination = {
+            "requestedPage": self._pagination_page,
+            "page": self._pagination_page,
+            "pageSize": self._pagination_page_size,
+            "totalItems": 0,
+        }
+        rows = self.recipe.all()
+        if rows:
+            row = rows[0]
+            validated_pagination["totalItems"] = row._total_count
+        else:
+            if self._pagination_page == 1:
+                validated_pagination["totalItems"] = 0
+            else:
+                # Go to the first page and rerun the query
+                self.pagination_page(1)
+                self.recipe.reset()
+                return self.validated_pagination()
+
+        return validated_pagination
 
 
 class BlendRecipe(RecipeExtension):

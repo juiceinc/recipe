@@ -83,6 +83,9 @@ Extensions
 .. autoclass:: Paginate
     :members:
 
+.. autoclass:: PaginateInline
+    :members:
+
 ----------
 Exceptions
 ----------
