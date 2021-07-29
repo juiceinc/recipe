@@ -1645,7 +1645,7 @@ GROUP BY state"""
             recipe.to_sql()
             == """SELECT census.age AS age,
        sum(census.pop2000) AS pop2000,
-       anon_1._total_count AS _total_count
+       min(anon_1._total_count) AS _total_count
 FROM census,
 
   (SELECT count(*) AS _total_count
@@ -1677,7 +1677,7 @@ OFFSET 0"""
             recipe.to_sql()
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000,
-       anon_1._total_count AS _total_count
+       min(anon_1._total_count) AS _total_count
 FROM census,
 
   (SELECT count(*) AS _total_count
@@ -1703,7 +1703,7 @@ OFFSET 0"""
             recipe.to_sql()
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000,
-       anon_1._total_count AS _total_count
+       min(anon_1._total_count) AS _total_count
 FROM census,
 
   (SELECT count(*) AS _total_count
@@ -1736,7 +1736,7 @@ OFFSET 10"""
             recipe.to_sql()
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000,
-       anon_1._total_count AS _total_count
+       min(anon_1._total_count) AS _total_count
 FROM census,
 
   (SELECT count(*) AS _total_count
@@ -1804,7 +1804,7 @@ GROUP BY state"""
             recipe.to_sql()
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000,
-       anon_1._total_count AS _total_count
+       min(anon_1._total_count) AS _total_count
 FROM census,
 
   (SELECT count(*) AS _total_count
@@ -1831,7 +1831,7 @@ OFFSET 0"""
             recipe.to_sql()
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000,
-       anon_1._total_count AS _total_count
+       min(anon_1._total_count) AS _total_count
 FROM census,
 
   (SELECT count(*) AS _total_count
@@ -1860,7 +1860,7 @@ OFFSET 0"""
             recipe.to_sql()
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000,
-       anon_1._total_count AS _total_count
+       min(anon_1._total_count) AS _total_count
 FROM census,
 
   (SELECT count(*) AS _total_count
@@ -1895,7 +1895,7 @@ Vermont,609480,Vermont""",
             recipe.to_sql()
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000,
-       anon_1._total_count AS _total_count
+       min(anon_1._total_count) AS _total_count
 FROM census,
 
   (SELECT count(*) AS _total_count
@@ -1924,7 +1924,7 @@ OFFSET 0"""
             recipe.to_sql()
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000,
-       anon_1._total_count AS _total_count
+       min(anon_1._total_count) AS _total_count
 FROM census,
 
   (SELECT count(*) AS _total_count
@@ -1952,7 +1952,7 @@ OFFSET 0"""
             recipe.to_sql()
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000,
-       anon_1._total_count AS _total_count
+       min(anon_1._total_count) AS _total_count
 FROM census,
 
   (SELECT count(*) AS _total_count
@@ -1979,7 +1979,7 @@ OFFSET 0"""
             recipe.to_sql()
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000,
-       anon_1._total_count AS _total_count
+       min(anon_1._total_count) AS _total_count
 FROM census,
 
   (SELECT count(*) AS _total_count
@@ -2033,7 +2033,7 @@ Tennessee,5685230,Tennessee
             == """SELECT census.state AS idvalue_state_id,
        'State:' || census.state AS idvalue_state,
        sum(census.pop2000) AS pop2000,
-       anon_1._total_count AS _total_count
+       min(anon_1._total_count) AS _total_count
 FROM census,
 
   (SELECT count(*) AS _total_count
@@ -2134,7 +2134,7 @@ Vermont,298532,Vermont
             recipe.to_sql()
             == """SELECT census.state AS state,
        sum(census.pop2000) AS pop2000,
-       anon_1._total_count AS _total_count
+       min(anon_1._total_count) AS _total_count
 FROM census,
 
   (SELECT count(*) AS _total_count

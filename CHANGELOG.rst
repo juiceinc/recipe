@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.26.1 (2021-07-29)
+-----------------------------------------
+* Fix aggregation for PaginateInline extension
+
 v0.26.0 (2021-07-15)
 -----------------------------------------
 * Add PaginateInline extension
