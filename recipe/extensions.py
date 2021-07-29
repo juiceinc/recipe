@@ -964,7 +964,7 @@ class PaginateInline(Paginate):
             census.sex AS sex,
             census.state AS state,
             sum(census.pop2000) AS pop2000,
-            anon_1._total_count AS _total_count
+            min(anon_1._total_count) AS _total_count
         FROM census,
 
         (SELECT count(*) AS _total_count
@@ -1039,7 +1039,8 @@ class PaginateInline(Paginate):
             .from_self(func.count().label("_total_count"))
             .subquery()
         )
-        q = q.add_columns(total_counter.c._total_count.label("_total_count"))
+        # Need an aggregation even though there's only one row
+        q = q.add_columns(func.min(total_counter.c._total_count).label("_total_count"))
 
         postquery_parts["query"] = q
         return postquery_parts
