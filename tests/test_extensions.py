@@ -1636,6 +1636,57 @@ FROM census
 GROUP BY state"""
         )
 
+    def test_pagination_invalid_page(self):
+        """If we fetch a pagination page beyond the bounds we are reset to page=1"""
+        recipe = (
+            self.recipe().metrics("pop2000").dimensions("age").pagination_page_size(10).pagination_page(100)
+        )
+        # first we will fetch with a limit that is too high.
+        assert (
+            recipe.to_sql()
+            == """SELECT census.age AS age,
+       sum(census.pop2000) AS pop2000,
+       min(anon_1._total_count) AS _total_count
+FROM census,
+
+  (SELECT count(*) AS _total_count
+   FROM
+     (SELECT census.age AS age,
+             sum(census.pop2000) AS pop2000
+      FROM census
+      GROUP BY age) AS anon_2) AS anon_1
+GROUP BY age
+ORDER BY age
+LIMIT 10
+OFFSET 990"""
+        )
+        assert recipe.
+        # AFter validating pagination, we wind up fetching the first page.
+        assert recipe.validated_pagination() == {
+            "page": 1,
+            "pageSize": 10,
+            "requestedPage": 1,
+            "totalItems": 86,
+        }
+        assert (
+            recipe.to_sql()
+            == """SELECT census.age AS age,
+       sum(census.pop2000) AS pop2000,
+       min(anon_1._total_count) AS _total_count
+FROM census,
+
+  (SELECT count(*) AS _total_count
+   FROM
+     (SELECT census.age AS age,
+             sum(census.pop2000) AS pop2000
+      FROM census
+      GROUP BY age) AS anon_2) AS anon_1
+GROUP BY age
+ORDER BY age
+LIMIT 10
+OFFSET 0"""
+        )
+
     def test_pagination(self):
         """If pagination page size is configured, pagination is applied to results"""
         recipe = (
