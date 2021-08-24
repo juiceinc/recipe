@@ -1,6 +1,7 @@
 import logging
 import time
 import warnings
+from copy import copy
 from uuid import uuid4
 
 import attr
@@ -89,6 +90,12 @@ class Recipe(object):
         self._use_cache = True
 
         self.stats = Stats()
+
+        # Store the original dimensions and metrics put into the recipe.
+        # These may contain duplicates, which will not exist after the
+        # ingredients are added to the cauldron.
+        self.raw_metrics = tuple()
+        self.raw_dimensions = tuple()
 
         if metrics is not None:
             self.metrics(*metrics)
@@ -277,6 +284,7 @@ class Recipe(object):
                          Metric objects
         :type metrics: list
         """
+        self.raw_metrics = self.raw_metrics + copy(metrics)
         for m in metrics:
             self._cauldron.use(self._shelf.find(m, Metric))
 
@@ -293,6 +301,7 @@ class Recipe(object):
                          Dimension objects
         :type dimensions: list
         """
+        self.raw_dimensions = self.raw_dimensions + copy(dimensions)
         for d in dimensions:
             self._cauldron.use(self._shelf.find(d, Dimension))
 

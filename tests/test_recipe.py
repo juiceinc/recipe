@@ -36,6 +36,27 @@ GROUP BY first"""
         assert recipe.all()[0].age == 15
         assert recipe.stats.rows == 1
 
+    def test_metrics_dimensions(self):
+        """Metric_ids and dimension_ids hold unique used metrics and dimensions.
+        raw_metrics and raw_dimensions store ingredients as added."""
+
+        # We call dimensions and metrics multiple times
+        recipe = self.recipe().metrics("age").dimensions("first", "first").metrics("age")
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY first"""
+        )
+        assert recipe.all()[0].first == "hi"
+        assert recipe.all()[0].age == 15
+        assert recipe.stats.rows == 1
+        assert recipe.metric_ids == ("age",)
+        assert recipe.dimension_ids == ("first",)
+        assert recipe.raw_dimensions == ("first", "first")
+        assert recipe.raw_metrics == ("age", "age")
+
     def test_idvaluedimension(self):
         recipe = self.recipe().metrics("age").dimensions("firstlast")
         assert (
