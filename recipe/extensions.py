@@ -780,12 +780,16 @@ class Paginate(RecipeExtension):
         # Pagination page must be a positive integer
         self._pagination_page = max(1, value)
 
+    def do_pagination(self):
+        """Should pagination be added to this recipe."""
+        return self._apply_pagination and self._pagination_page_size > 0
+
     def _apply_pagination_order_by(self):
         """Inject pagination ordering ahead of any existing ordering."""
 
         # Inject the paginator ordering ahead of the existing ordering and filter
         # out sort items that aren't in the cauldron
-        if self._apply_pagination and self._pagination_page_size > 0:
+        if self.do_pagination():
 
             def make_ordering_key(ingr):
                 if isinstance(ingr, Ingredient):
@@ -850,10 +854,10 @@ class Paginate(RecipeExtension):
 
     def modify_postquery_parts(self, postquery_parts):
         """Apply validated pagination limits and offset to a completed query."""
+        if not self.do_pagination():
+            return postquery_parts
 
         limit = self._pagination_page_size
-        if limit == 0 or not self._apply_pagination:
-            return postquery_parts
 
         # Validate what page we are on by looking at the total
         # number of items.
@@ -882,16 +886,9 @@ class Paginate(RecipeExtension):
 
     def validated_pagination(self):
         """Return pagination validated against the actual number of items in the
-        response.
-
-        :raises BadRecipe:
+        response. Returns None if the recipe has not run.
         """
-        if self._validated_pagination is None:
-            raise BadRecipe(
-                "validated_pagination can only be accessed after the recipe has run"
-            )
-        else:
-            return self._validated_pagination
+        return self._validated_pagination
 
 
 class PaginateInline(Paginate):
@@ -1006,13 +1003,12 @@ class PaginateInline(Paginate):
 
     def modify_postquery_parts(self, postquery_parts):
         """Apply validated pagination limits and offset to a completed query."""
-
-        limit = self._pagination_page_size
-        if limit == 0 or not self._apply_pagination:
+        if not self.do_pagination():
             return postquery_parts
 
-        # Do not validate the page
-        # TODO: Get the total count from a row in the final query
+        limit = self._pagination_page_size
+        # Get the unvalidated page. When we validate pagination
+        # we may need to reset to page 1 if no items are returned.
         validated_page = page = self._pagination_page
 
         self._validated_pagination = {
@@ -1049,26 +1045,25 @@ class PaginateInline(Paginate):
         """Return pagination validated against the actual number of items in the
         response.
         """
-        validated_pagination = {
-            "requestedPage": self._pagination_page,
-            "page": self._pagination_page,
-            "pageSize": self._pagination_page_size,
-            "totalItems": 0,
-        }
-        rows = self.recipe.all()
-        if rows:
-            row = rows[0]
-            validated_pagination["totalItems"] = row._total_count
-        else:
-            if self._pagination_page == 1:
-                validated_pagination["totalItems"] = 0
+        if self.do_pagination():
+            validated_pagination = {
+                "requestedPage": self._pagination_page,
+                "page": self._pagination_page,
+                "pageSize": self._pagination_page_size,
+                "totalItems": 0,
+            }
+            rows = self.recipe.all()
+            if rows:
+                row = rows[0]
+                validated_pagination["totalItems"] = row._total_count
             else:
-                # Go to the first page and rerun the query
-                self.pagination_page(1)
-                self.recipe.reset()
-                return self.validated_pagination()
+                if self._pagination_page != 1:
+                    # Go to the first page and rerun the query
+                    self.pagination_page(1)
+                    self.recipe.reset()
+                    return self.validated_pagination()
 
-        return validated_pagination
+            return validated_pagination
 
 
 class BlendRecipe(RecipeExtension):
