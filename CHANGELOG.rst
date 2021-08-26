@@ -2,6 +2,12 @@
 Changelog
 =========
 
+v0.27.0 (2021-08-26)
+-----------------------------------------
+* Update requirements
+* Drop support for python3.6
+* Save metric and dimension keys without deduping
+
 v0.26.1 (2021-07-29)
 -----------------------------------------
 * Fix aggregation for PaginateInline extension
