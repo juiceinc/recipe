@@ -1660,7 +1660,6 @@ ORDER BY age
 LIMIT 10
 OFFSET 990"""
         )
-        assert recipe.
         # AFter validating pagination, we wind up fetching the first page.
         assert recipe.validated_pagination() == {
             "page": 1,
