@@ -1,8 +1,8 @@
 -r requirements.txt
 bump2version==1.0.1
 packaging==19.2
-pytest==6.4.2
-pytest-cov==2.21.1
+pytest==6.2.4
+pytest-cov==2.12.1
 twine==3.4.2
 freezegun
 psycopg2-binary
