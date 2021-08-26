@@ -240,13 +240,13 @@ class Recipe(object):
 
     @recipe_arg()
     def cache_region(self, value):
-        """Set a cache region for recipe-caching to use """
+        """Set a cache region for recipe-caching to use"""
         assert isinstance(value, str)
         self._cache_region = value
 
     @recipe_arg()
     def cache_prefix(self, value):
-        """Set a cache prefix for recipe-caching to use """
+        """Set a cache prefix for recipe-caching to use"""
         assert isinstance(value, str)
         self._cache_prefix = value
 
@@ -258,7 +258,7 @@ class Recipe(object):
 
     @recipe_arg()
     def shelf(self, shelf=None):
-        """ Defines a shelf to use for this recipe """
+        """Defines a shelf to use for this recipe"""
         if shelf is None:
             self._shelf = Shelf({})
         elif isinstance(shelf, Shelf):
@@ -381,7 +381,7 @@ class Recipe(object):
     # ------
 
     def _is_postgres(self):
-        """ Determine if the running engine is postgres """
+        """Determine if the running engine is postgres"""
         try:
             driver = self._session.bind.url.drivername
             if "redshift" in driver or "postg" in driver or "pg" in driver:

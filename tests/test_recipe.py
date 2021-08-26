@@ -41,7 +41,9 @@ GROUP BY first"""
         raw_metrics and raw_dimensions store ingredients as added."""
 
         # We call dimensions and metrics multiple times
-        recipe = self.recipe().metrics("age").dimensions("first", "first").metrics("age")
+        recipe = (
+            self.recipe().metrics("age").dimensions("first", "first").metrics("age")
+        )
         assert (
             recipe.to_sql()
             == """SELECT foo.first AS first,
@@ -564,8 +566,8 @@ FROM census"""
         )
 
     def test_percentile_with_dimension(self):
-        """ While this query doesn't run in sqlite, it has been tested in
-        redshift and bigquery """
+        """While this query doesn't run in sqlite, it has been tested in
+        redshift and bigquery"""
         yaml = """
 state:
     kind: Dimension
@@ -859,8 +861,8 @@ South\t5685230\tSouth\r
         assert len(r.all()) == 2
 
     def test_recipe_as_selectable_from_validated_yaml(self):
-        """ A recipe can be used as a selectable for a shelf
-        created from yaml """
+        """A recipe can be used as a selectable for a shelf
+        created from yaml"""
         recipe = (
             Recipe(shelf=census_shelf, session=self.session)
             .metrics("pop2000")
@@ -890,8 +892,8 @@ FROM
         assert r.dataset.tsv == """pop\r\n3147355.0\r\n"""
 
     def test_recipe_as_selectable_from_yaml(self):
-        """ A recipe can be used as a selectable for a shelf
-        created from yaml """
+        """A recipe can be used as a selectable for a shelf
+        created from yaml"""
         recipe = (
             Recipe(shelf=census_shelf, session=self.session)
             .metrics("pop2000")
@@ -921,7 +923,7 @@ FROM
         assert r.dataset.tsv == """pop\r\n3147355.0\r\n"""
 
     def test_recipe_as_subquery(self):
-        """ Use a recipe subquery as a source for generating a new shelf."""
+        """Use a recipe subquery as a source for generating a new shelf."""
 
         recipe = (
             Recipe(shelf=census_shelf, session=self.session)
