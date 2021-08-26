@@ -1639,7 +1639,11 @@ GROUP BY state"""
     def test_pagination_invalid_page(self):
         """If we fetch a pagination page beyond the bounds we are reset to page=1"""
         recipe = (
-            self.recipe().metrics("pop2000").dimensions("age").pagination_page_size(10).pagination_page(100)
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("age")
+            .pagination_page_size(10)
+            .pagination_page(100)
         )
         # first we will fetch with a limit that is too high.
         assert (

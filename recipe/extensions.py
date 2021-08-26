@@ -1066,7 +1066,6 @@ class PaginateInline(Paginate):
             return validated_pagination
 
 
-
 class BlendRecipe(RecipeExtension):
     """Add blend recipes, used for joining data from another table to a base
     table
