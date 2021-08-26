@@ -36,7 +36,7 @@ GROUP BY first"""
         assert recipe.all()[0].age == 15
         assert recipe.stats.rows == 1
 
-    def test_metrics_dimensions(self):
+    def test_raw_metrics_raw_dimensions(self):
         """Metric_ids and dimension_ids hold unique used metrics and dimensions.
         raw_metrics and raw_dimensions store ingredients as added."""
 
