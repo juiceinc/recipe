@@ -1,7 +1,7 @@
 import time
 from unittest import TestCase
 from sqlalchemy.ext.serializer import loads, dumps
-from copy import deepcopy
+
 from freezegun import freeze_time
 
 from recipe import Recipe
@@ -614,6 +614,7 @@ class TestAggregations(TestBase):
         count_distinct(department)   -> count(DISTINCT datatypes.department)
         count_distinct(department = "MO" AND score > 20) -> count(DISTINCT (datatypes.department = 'MO' AND datatypes.score > 20))
         count_distinct(if(department = "MO" AND score > 20, department)) -> count(DISTINCT CASE WHEN (datatypes.department = 'MO' AND datatypes.score > 20) THEN datatypes.department END)
+        count(IF(department = "MO" AND score > 20, department)) -> count(CASE WHEN (datatypes.department = 'MO' AND datatypes.score > 20) THEN datatypes.department END)
         count(*)                     -> count(*)
         """
 

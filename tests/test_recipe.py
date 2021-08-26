@@ -36,6 +36,29 @@ GROUP BY first"""
         assert recipe.all()[0].age == 15
         assert recipe.stats.rows == 1
 
+    def test_raw_metrics_raw_dimensions(self):
+        """Metric_ids and dimension_ids hold unique used metrics and dimensions.
+        raw_metrics and raw_dimensions store ingredients as added."""
+
+        # We call dimensions and metrics multiple times
+        recipe = (
+            self.recipe().metrics("age").dimensions("first", "first").metrics("age")
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY first"""
+        )
+        assert recipe.all()[0].first == "hi"
+        assert recipe.all()[0].age == 15
+        assert recipe.stats.rows == 1
+        assert recipe.metric_ids == ("age",)
+        assert recipe.dimension_ids == ("first",)
+        assert recipe.raw_dimensions == ("first", "first")
+        assert recipe.raw_metrics == ("age", "age")
+
     def test_idvaluedimension(self):
         recipe = self.recipe().metrics("age").dimensions("firstlast")
         assert (
@@ -543,8 +566,8 @@ FROM census"""
         )
 
     def test_percentile_with_dimension(self):
-        """ While this query doesn't run in sqlite, it has been tested in
-        redshift and bigquery """
+        """While this query doesn't run in sqlite, it has been tested in
+        redshift and bigquery"""
         yaml = """
 state:
     kind: Dimension
@@ -838,8 +861,8 @@ South\t5685230\tSouth\r
         assert len(r.all()) == 2
 
     def test_recipe_as_selectable_from_validated_yaml(self):
-        """ A recipe can be used as a selectable for a shelf
-        created from yaml """
+        """A recipe can be used as a selectable for a shelf
+        created from yaml"""
         recipe = (
             Recipe(shelf=census_shelf, session=self.session)
             .metrics("pop2000")
@@ -869,8 +892,8 @@ FROM
         assert r.dataset.tsv == """pop\r\n3147355.0\r\n"""
 
     def test_recipe_as_selectable_from_yaml(self):
-        """ A recipe can be used as a selectable for a shelf
-        created from yaml """
+        """A recipe can be used as a selectable for a shelf
+        created from yaml"""
         recipe = (
             Recipe(shelf=census_shelf, session=self.session)
             .metrics("pop2000")
@@ -900,7 +923,7 @@ FROM
         assert r.dataset.tsv == """pop\r\n3147355.0\r\n"""
 
     def test_recipe_as_subquery(self):
-        """ Use a recipe subquery as a source for generating a new shelf."""
+        """Use a recipe subquery as a source for generating a new shelf."""
 
         recipe = (
             Recipe(shelf=census_shelf, session=self.session)

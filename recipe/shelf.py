@@ -1,7 +1,7 @@
 from copy import copy
 
-from lark.exceptions import VisitError, GrammarError
-from ordered_set import OrderedSet
+from lark.exceptions import VisitError
+from collections import OrderedDict
 from sqlalchemy import Float, Integer, String, Table
 from sqlalchemy.util import lightweight_named_tuple
 from sureberus import errors as E
@@ -170,7 +170,7 @@ class Shelf(object):
     # End dict interface
 
     def ingredients(self):
-        """ Return the ingredients in this shelf in a deterministic order """
+        """Return the ingredients in this shelf in a deterministic order"""
         return sorted(list(self.values()))
 
     @property
@@ -391,14 +391,14 @@ class Shelf(object):
                     else:
                         order_by_keys.append(ingredient.id)
 
-        order_bys = OrderedSet()
+        order_bys = OrderedDict()
         for key in order_by_keys:
             try:
                 ingr = self.find(key, (Dimension, Metric))
                 for c in ingr.order_by_columns:
                     # Avoid duplicate order by columns
                     if str(c) not in [str(o) for o in order_bys]:
-                        order_bys.add(c)
+                        order_bys[c] = None
             except BadRecipe as e:
                 # Ignore order_by if the dimension/metric is not used.
                 # TODO: Add structlog warning
@@ -409,7 +409,7 @@ class Shelf(object):
             "group_bys": group_bys,
             "filters": filters,
             "havings": havings,
-            "order_bys": list(order_bys),
+            "order_bys": list(order_bys.keys()),
         }
 
     def enchant(self, data, cache_context=None):

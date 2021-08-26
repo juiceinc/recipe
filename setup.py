@@ -27,7 +27,6 @@ if sys.argv[-1] == "test":
 
 # yapf: disable
 install = [
-    'ordered-set',
     'sqlalchemy>=1.2.2,<1.4',
     'sqlparse',
     'tablib',
@@ -44,7 +43,7 @@ install = [
 setup(
     name="recipe",
     version="0.26.1",
-    description="Lego construction kit for SQL",
+    description="A construction kit for SQL",
     long_description=(open("README.rst").read()),
     author="Chris Gemignani",
     author_email="chris.gemignani@juiceanalytics.com",
@@ -58,7 +57,6 @@ setup(
         "Natural Language :: English",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
