@@ -1003,7 +1003,7 @@ class PaginateInline(Paginate):
 
     def modify_postquery_parts(self, postquery_parts):
         """Apply validated pagination limits and offset to a completed query."""
-        if not (self._apply_pagination and self._pagination_page_size > 0):
+        if not self.do_pagination():
             return postquery_parts
 
         limit = self._pagination_page_size
@@ -1057,9 +1057,7 @@ class PaginateInline(Paginate):
                 row = rows[0]
                 validated_pagination["totalItems"] = row._total_count
             else:
-                if self._pagination_page == 1:
-                    validated_pagination["totalItems"] = 0
-                else:
+                if self._pagination_page != 1:
                     # Go to the first page and rerun the query
                     self.pagination_page(1)
                     self.recipe.reset()
