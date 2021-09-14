@@ -172,7 +172,7 @@ class AutomaticFilters(RecipeExtension):
 
     def _build_compound_filter(self, key, values):
         """Build a filter using a compound key. Compound keys are comma delimited.
-        Values may either be a list of lists or a list of json encoded lists
+        Compound values may either be a list of lists or a list of json encoded lists
 
         For instance::
 
