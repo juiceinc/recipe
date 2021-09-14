@@ -428,7 +428,9 @@ GROUP BY first"""
 
         # Unbalanced items
         recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters({"first,last": ['["foo", "moo"]', '["chicken"]']})
+        recipe = recipe.automatic_filters(
+            {"first,last": ['["foo", "moo"]', '["chicken"]']}
+        )
         assert (
             recipe.to_sql()
             == """SELECT foo.first AS first,
