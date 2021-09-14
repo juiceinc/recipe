@@ -21,7 +21,7 @@ SAFE_DIVISON_EPSILON = 0.000000001
 
 
 def parse_validated_condition(cond, selectable):
-    """ Convert a validated condition into a SQLAlchemy boolean expression """
+    """Convert a validated condition into a SQLAlchemy boolean expression"""
     if cond is None:
         return
 
@@ -142,7 +142,7 @@ def parse_validated_field(fld, selectable, use_bucket_labels=True):
 
 
 def create_ingredient_from_config(ingr_dict, selectable):
-    """ Create an ingredient from a validated config object. """
+    """Create an ingredient from a validated config object."""
     kind = ingr_dict.pop("kind", "metric")
     IngredientClass = ingredient_class_for_name(kind.title())
 
@@ -191,6 +191,8 @@ def create_ingredient_from_config(ingr_dict, selectable):
     except BadIngredient as e:
         error = {
             "type": "bad_ingredient",
-            "extra": {"details": str(e),},
+            "extra": {
+                "details": str(e),
+            },
         }
         return InvalidIngredient(error=error)

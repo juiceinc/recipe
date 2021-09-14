@@ -80,7 +80,9 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                 if datatype != "num":
                     error = {
                         "type": "Can not parse field",
-                        "extra": {"details": "A string can not be aggregated",},
+                        "extra": {
+                            "details": "A string can not be aggregated",
+                        },
                     }
                     return InvalidIngredient(error=error)
                 args = [expr]
@@ -129,7 +131,10 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                     condition_defn, forbid_aggregation=True, debug=debug
                 )
                 parsed_quickselects.append(
-                    {"name": qs["name"], "condition": expr,}
+                    {
+                        "name": qs["name"],
+                        "condition": expr,
+                    }
                 )
             ingr_dict["quickselects"] = parsed_quickselects
 
@@ -153,7 +158,9 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
 
         error = {
             "type": "Can not parse field",
-            "extra": {"details": error_msg,},
+            "extra": {
+                "details": error_msg,
+            },
         }
         return InvalidIngredient(error=error)
 
@@ -163,6 +170,8 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
         # Some internal error while running the Ingredient constructor
         error = {
             "type": "bad_ingredient",
-            "extra": {"details": str(e),},
+            "extra": {
+                "details": str(e),
+            },
         }
         return InvalidIngredient(error=error)

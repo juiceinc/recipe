@@ -31,7 +31,7 @@ class TestUtils(object):
 
 class TestPadValues(object):
     def test_pad_values(self):
-        """A list or tuple of values are padded to a multiple of bin size """
+        """A list or tuple of values are padded to a multiple of bin size"""
         with pytest.raises(Exception):
             pad_values("rocket")
 
@@ -55,7 +55,11 @@ class TestPadValues(object):
             "RECIPE-DUMMY-VAL-9",
             "RECIPE-DUMMY-VAL-10",
         ) == v
-        v = pad_values(["hi",])
+        v = pad_values(
+            [
+                "hi",
+            ]
+        )
         assert [
             "hi",
             "RECIPE-DUMMY-VAL-1",
