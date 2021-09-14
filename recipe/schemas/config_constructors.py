@@ -191,8 +191,6 @@ def create_ingredient_from_config(ingr_dict, selectable):
     except BadIngredient as e:
         error = {
             "type": "bad_ingredient",
-            "extra": {
-                "details": str(e),
-            },
+            "extra": {"details": str(e),},
         }
         return InvalidIngredient(error=error)

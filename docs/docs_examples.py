@@ -1,21 +1,19 @@
-from sqlalchemy import (
-    Column, Date, DateTime, Float, Integer, String, distinct, func
-)
+from sqlalchemy import Column, Date, DateTime, Float, Integer, String, distinct, func
 from sqlalchemy.ext.declarative import declarative_base
 
 from recipe import *
 
-oven = get_oven('sqlite://')
+oven = get_oven("sqlite://")
 Base = declarative_base(bind=oven.engine)
 
-TABLEDEF = '''
+TABLEDEF = """
         CREATE TABLE IF NOT EXISTS foo
         (first text,
          last text,
          age int,
          birth_date date,
          dt datetime);
-'''
+"""
 
 oven.engine.execute(TABLEDEF)
 oven.engine.execute(
@@ -23,13 +21,13 @@ oven.engine.execute(
 )
 
 # Create a table for testing summarization
-TABLEDEF = '''
+TABLEDEF = """
         CREATE TABLE IF NOT EXISTS scores
         (username text,
          department text,
          testid text,
          score float);
-'''
+"""
 
 oven.engine.execute(TABLEDEF)
 oven.engine.execute(
@@ -44,14 +42,14 @@ oven.engine.execute(
 )
 
 # Create a table for denormalized tables with tags
-TABLEDEF = '''
+TABLEDEF = """
         CREATE TABLE IF NOT EXISTS tagscores
         (username text,
          tag text,
          department text,
          testid text,
          score float);
-'''
+"""
 
 oven.engine.execute(TABLEDEF)
 oven.engine.execute(
@@ -8869,156 +8867,160 @@ oven.engine.execute(
 
 import yaml
 
-class MyTable(Base):
-    first = Column('first', String(), primary_key=True)
-    last = Column('last', String())
-    age = Column('age', Integer())
-    birth_date = Column('birth_date', Date())
-    dt = Column('dt', DateTime())
 
-    __tablename__ = 'foo'
-    __table_args__ = {'extend_existing': True}
+class MyTable(Base):
+    first = Column("first", String(), primary_key=True)
+    last = Column("last", String())
+    age = Column("age", Integer())
+    birth_date = Column("birth_date", Date())
+    dt = Column("dt", DateTime())
+
+    __tablename__ = "foo"
+    __table_args__ = {"extend_existing": True}
 
 
 class Scores(Base):
-    username = Column('username', String(), primary_key=True)
-    department = Column('department', String())
-    testid = Column('testid', String())
-    score = Column('score', Float())
+    username = Column("username", String(), primary_key=True)
+    department = Column("department", String())
+    testid = Column("testid", String())
+    score = Column("score", Float())
 
-    __tablename__ = 'scores'
-    __table_args__ = {'extend_existing': True}
+    __tablename__ = "scores"
+    __table_args__ = {"extend_existing": True}
 
 
 class TagScores(Base):
-    username = Column('username', String(), primary_key=True)
-    department = Column('department', String())
-    tag = Column('tag', String())
-    testid = Column('testid', String())
-    score = Column('score', Float())
+    username = Column("username", String(), primary_key=True)
+    department = Column("department", String())
+    tag = Column("tag", String())
+    testid = Column("testid", String())
+    score = Column("score", Float())
 
-    __tablename__ = 'tagscores'
-    __table_args__ = {'extend_existing': True}
+    __tablename__ = "tagscores"
+    __table_args__ = {"extend_existing": True}
 
 
 class Census(Base):
-    state = Column('state', String(), primary_key=True)
-    gender = Column('gender', String())
-    age = Column('age', Integer())
-    pop2000 = Column('pop2000', Integer())
-    pop2008 = Column('pop2008', Integer())
+    state = Column("state", String(), primary_key=True)
+    gender = Column("gender", String())
+    age = Column("age", Integer())
+    pop2000 = Column("pop2000", Integer())
+    pop2008 = Column("pop2008", Integer())
 
-    __tablename__ = 'census'
-    __table_args__ = {'extend_existing': True}
+    __tablename__ = "census"
+    __table_args__ = {"extend_existing": True}
 
 
 class StateFact(Base):
-    id = Column('id', String(), primary_key=True)
-    name = Column('name', String())
-    abbreviation = Column('abbreviation', String())
-    country = Column('country', String())
-    type = Column('type', String())
-    sort = Column('sort', String())
-    status = Column('status', String())
-    occupied = Column('occupied', String())
-    notes = Column('notes', String())
-    fips_state = Column('fips_state', String())
-    assoc_press = Column('assoc_press', String())
-    standard_federal_region = Column('standard_federal_region', String())
-    census_region = Column('census_region', String())
-    census_region_name = Column('census_region_name', String())
-    census_division = Column('census_division', String())
-    census_division_name = Column('census_division_name', String())
-    circuit_court = Column('circuit_court', String())
+    id = Column("id", String(), primary_key=True)
+    name = Column("name", String())
+    abbreviation = Column("abbreviation", String())
+    country = Column("country", String())
+    type = Column("type", String())
+    sort = Column("sort", String())
+    status = Column("status", String())
+    occupied = Column("occupied", String())
+    notes = Column("notes", String())
+    fips_state = Column("fips_state", String())
+    assoc_press = Column("assoc_press", String())
+    standard_federal_region = Column("standard_federal_region", String())
+    census_region = Column("census_region", String())
+    census_region_name = Column("census_region_name", String())
+    census_division = Column("census_division", String())
+    census_division_name = Column("census_division_name", String())
+    circuit_court = Column("circuit_court", String())
 
-    __tablename__ = 'state_fact'
-    __table_args__ = {'extend_existing': True}
+    __tablename__ = "state_fact"
+    __table_args__ = {"extend_existing": True}
 
 
-mytable_shelf = Shelf({
-    'first': Dimension(MyTable.first),
-    'last': Dimension(MyTable.last),
-    'firstlast': Dimension(MyTable.last, id_expression=MyTable.first),
-    'age': Metric(func.sum(MyTable.age)),
-})
+mytable_shelf = Shelf(
+    {
+        "first": Dimension(MyTable.first),
+        "last": Dimension(MyTable.last),
+        "firstlast": Dimension(MyTable.last, id_expression=MyTable.first),
+        "age": Metric(func.sum(MyTable.age)),
+    }
+)
 
-mytable_extrarole_shelf = Shelf({
-    'first':
-        Dimension(MyTable.first),
-    'last':
-        Dimension(MyTable.last),
-    'firstlastage':
-        Dimension(
-            MyTable.last,
-            id_expression=MyTable.first,
-            age_expression=MyTable.age
+mytable_extrarole_shelf = Shelf(
+    {
+        "first": Dimension(MyTable.first),
+        "last": Dimension(MyTable.last),
+        "firstlastage": Dimension(
+            MyTable.last, id_expression=MyTable.first, age_expression=MyTable.age
         ),
-    'age':
-        Metric(func.sum(MyTable.age)),
-})
+        "age": Metric(func.sum(MyTable.age)),
+    }
+)
 
-scores_shelf = Shelf({
-    'username':
-        Dimension(Scores.username),
-    'department':
-        Dimension(Scores.department, anonymizer=lambda value: value[::-1]),
-    'testid':
-        Dimension(Scores.testid),
-    'test_cnt':
-        Metric(func.count(distinct(TagScores.testid))),
-    'score':
-        Metric(func.avg(Scores.score))
-})
+scores_shelf = Shelf(
+    {
+        "username": Dimension(Scores.username),
+        "department": Dimension(
+            Scores.department, anonymizer=lambda value: value[::-1]
+        ),
+        "testid": Dimension(Scores.testid),
+        "test_cnt": Metric(func.count(distinct(TagScores.testid))),
+        "score": Metric(func.avg(Scores.score)),
+    }
+)
 
-tagscores_shelf = Shelf({
-    'username': Dimension(TagScores.username),
-    'department': Dimension(TagScores.department),
-    'testid': Dimension(TagScores.testid),
-    'tag': Dimension(TagScores.tag),
-    'test_cnt': Metric(func.count(distinct(TagScores.testid))),
-    'score': Metric(func.avg(TagScores.score), summary_aggregation=func.sum)
-})
+tagscores_shelf = Shelf(
+    {
+        "username": Dimension(TagScores.username),
+        "department": Dimension(TagScores.department),
+        "testid": Dimension(TagScores.testid),
+        "tag": Dimension(TagScores.tag),
+        "test_cnt": Metric(func.count(distinct(TagScores.testid))),
+        "score": Metric(func.avg(TagScores.score), summary_aggregation=func.sum),
+    }
+)
 
-census_shelf = Shelf({
-    'state':
-        Dimension(Census.state),
-    'gender':
-        Dimension(Census.gender),
-    'age':
-        Dimension(Census.age),
-    'pop2000':
-        Metric(func.sum(Census.pop2000)),
-    'pop2000_sum':
-        Metric(func.sum(Census.pop2000), summary_aggregation=func.sum),
-    'pop2008':
-        Metric(func.sum(Census.pop2008)),
-})
+census_shelf = Shelf(
+    {
+        "state": Dimension(Census.state),
+        "gender": Dimension(Census.gender),
+        "age": Dimension(Census.age),
+        "pop2000": Metric(func.sum(Census.pop2000)),
+        "pop2000_sum": Metric(func.sum(Census.pop2000), summary_aggregation=func.sum),
+        "pop2008": Metric(func.sum(Census.pop2008)),
+    }
+)
 
-statefact_shelf = Shelf({
-    'state': Dimension(StateFact.name),
-    'abbreviation': Dimension(StateFact.abbreviation),
-})
+statefact_shelf = Shelf(
+    {
+        "state": Dimension(StateFact.name),
+        "abbreviation": Dimension(StateFact.abbreviation),
+    }
+)
+
 
 class Census(Base):
-    state = Column('state', String(), primary_key=True)
-    sex = Column('sex', String())
-    age = Column('age', Integer())
-    pop2000 = Column('pop2000', Integer())
-    pop2008 = Column('pop2008', Integer())
+    state = Column("state", String(), primary_key=True)
+    sex = Column("sex", String())
+    age = Column("age", Integer())
+    pop2000 = Column("pop2000", Integer())
+    pop2008 = Column("pop2008", Integer())
 
-    __tablename__ = 'census'
-    __table_args__ = {'extend_existing': True}
+    __tablename__ = "census"
+    __table_args__ = {"extend_existing": True}
 
-shelf = Shelf({
-    'state': Dimension(Census.state),
-    'age': WtdAvgMetric(Census.age, Census.pop2000),
-    'population': Metric(func.sum(Census.pop2000))
-})
 
-r = Recipe(shelf=shelf, session=oven.Session())\
-    .dimensions('state')\
-    .metrics('age')\
-    .order_by('-age')
+shelf = Shelf(
+    {
+        "state": Dimension(Census.state),
+        "age": WtdAvgMetric(Census.age, Census.pop2000),
+        "population": Metric(func.sum(Census.pop2000)),
+    }
+)
+
+r = (
+    Recipe(shelf=shelf, session=oven.Session())
+    .dimensions("state")
+    .metrics("age")
+    .order_by("-age")
+)
 
 print(r.dataset.csv)
 
@@ -9063,119 +9065,156 @@ print(recipe.dataset.csv)
 
 
 recipe_yaml = yaml.load(r)
-recipe = Recipe.from_config(s, recipe_yaml, session=oven.Session(), 
-    extension_classes=(AutomaticFilters, CompareRecipe))\
-    .automatic_filters({'state__like': 'C%'})\
-    .compare(Recipe(shelf=s, session=oven.Session()).metrics('age'))
+recipe = (
+    Recipe.from_config(
+        s,
+        recipe_yaml,
+        session=oven.Session(),
+        extension_classes=(AutomaticFilters, CompareRecipe),
+    )
+    .automatic_filters({"state__like": "C%"})
+    .compare(Recipe(shelf=s, session=oven.Session()).metrics("age"))
+)
 print(recipe.to_sql())
 print(recipe.dataset.csv)
 
 
+shelf = Shelf(
+    {
+        "state": Dimension(Census.state),
+        "gender_desc": Dimension(
+            Census.gender, lookup={"M": "Male", "F": "Female"}, lookup_default="Unknown"
+        ),
+        "age": WtdAvgMetric(Census.age, Census.pop2000),
+        "population": Metric(func.sum(Census.pop2000)),
+    }
+)
 
-shelf = Shelf({
-    'state': Dimension(Census.state),
-    'gender_desc': Dimension(Census.gender, lookup={'M': 'Male',
-        'F': 'Female'}, lookup_default='Unknown'),
-    'age': WtdAvgMetric(Census.age, Census.pop2000),
-    'population': Metric(func.sum(Census.pop2000))
-})
-
-recipe = Recipe(shelf=shelf, session=oven.Session())\
-    .dimensions('gender_desc').metrics('population')
+recipe = (
+    Recipe(shelf=shelf, session=oven.Session())
+    .dimensions("gender_desc")
+    .metrics("population")
+)
 print(recipe.to_sql())
 print(recipe.dataset.csv)
 
 
+shelf = Shelf(
+    {
+        "state": Dimension(Census.state),
+        "age": WtdAvgMetric(Census.age, Census.pop2000),
+        "gender": Dimension(Census.gender),
+        "population": Metric(
+            func.sum(Census.pop2000),
+            formatters=[lambda value: int(round(value, -6) / 1000000)],
+        ),
+    }
+)
 
-shelf = Shelf({
-    'state': Dimension(Census.state),
-    'age': WtdAvgMetric(Census.age, Census.pop2000),
-    'gender': Dimension(Census.gender),
-    'population': Metric(func.sum(Census.pop2000), formatters=[
-        lambda value: int(round(value, -6) / 1000000)
-    ])
-})
-
-recipe = Recipe(shelf=shelf, session=oven.Session())\
-    .dimensions('gender').metrics('population')
+recipe = (
+    Recipe(shelf=shelf, session=oven.Session())
+    .dimensions("gender")
+    .metrics("population")
+)
 
 for row in recipe.all():
-    print('{} has {} million people'.format(row.gender, row.population))
-    print('\tThe original value is: {}'.format(row.population_raw))
+    print("{} has {} million people".format(row.gender, row.population))
+    print("\tThe original value is: {}".format(row.population_raw))
 
-shelf = Shelf({
-    'state': Dimension(Census.state),
-    'age': WtdAvgMetric(Census.age, Census.pop2000),
-    'gender': Dimension(Census.gender),
-    'population': Metric(func.sum(Census.pop2000))
-})
+shelf = Shelf(
+    {
+        "state": Dimension(Census.state),
+        "age": WtdAvgMetric(Census.age, Census.pop2000),
+        "gender": Dimension(Census.gender),
+        "population": Metric(func.sum(Census.pop2000)),
+    }
+)
 
 
-shelf = Shelf({
-    'age': Dimension(Census.age),
-    'state': Dimension(Census.state),
-    'population': Metric(func.sum(Census.pop2000)),
-    'teens': Filter(Census.age.between(13,19)),
-})
-recipe = Recipe(shelf=shelf, session=oven.Session())\
-    .dimensions('state')\
-    .metrics('population')\
-    .filters('teens')
+shelf = Shelf(
+    {
+        "age": Dimension(Census.age),
+        "state": Dimension(Census.state),
+        "population": Metric(func.sum(Census.pop2000)),
+        "teens": Filter(Census.age.between(13, 19)),
+    }
+)
+recipe = (
+    Recipe(shelf=shelf, session=oven.Session())
+    .dimensions("state")
+    .metrics("population")
+    .filters("teens")
+)
 
 print(recipe.to_sql())
 print(recipe.dataset.csv)
 
-shelf = Shelf({
-    'age': Dimension(Census.age),
-    'avgage': WtdAvgMetric(Census.age, Census.pop2000),
-    'state': Dimension(Census.state),
-    'population': Metric(func.sum(Census.pop2000)),
-})
-bigger = shelf['population'].build_filter(10000000, operator='gt')
+shelf = Shelf(
+    {
+        "age": Dimension(Census.age),
+        "avgage": WtdAvgMetric(Census.age, Census.pop2000),
+        "state": Dimension(Census.state),
+        "population": Metric(func.sum(Census.pop2000)),
+    }
+)
+bigger = shelf["population"].build_filter(10000000, operator="gt")
 
-recipe = Recipe(shelf=shelf, session=oven.Session())\
-    .dimensions('state')\
-    .metrics('population')\
-    .order_by('-population')\
+recipe = (
+    Recipe(shelf=shelf, session=oven.Session())
+    .dimensions("state")
+    .metrics("population")
+    .order_by("-population")
     .filters(bigger)
+)
 
 print(recipe.to_sql())
 print(recipe.dataset.csv)
 
-shelf = Shelf({
-    'state': Dimension(Census.state),
-    'avgage': WtdAvgMetric(Census.age, Census.pop2000),
-})
-recipe = Recipe(shelf=shelf, session=oven.Session())\
-    .dimensions('state').metrics('avgage')
-
-print(recipe.to_sql())
-print(recipe.dataset.csv)
-
-
-shelf = Shelf({
-    'state': Dimension(Census.state),
-    'popgrowth': DivideMetric(func.sum(Census.pop2008-Census.pop2000), func.sum(Census.pop2000)),
-})
-recipe = Recipe(shelf=shelf, session=oven.Session())\
-    .dimensions('state').metrics('popgrowth')
+shelf = Shelf(
+    {
+        "state": Dimension(Census.state),
+        "avgage": WtdAvgMetric(Census.age, Census.pop2000),
+    }
+)
+recipe = (
+    Recipe(shelf=shelf, session=oven.Session()).dimensions("state").metrics("avgage")
+)
 
 print(recipe.to_sql())
 print(recipe.dataset.csv)
 
 
-shelf = Shelf({
-    'total_population': Metric(func.sum(Census.pop2000)),
-    'min_population': Metric(func.min(Census.pop2000)),
-    'max_population': Metric(func.max(Census.pop2000))
-})
-recipe = Recipe(shelf=shelf, session=oven.Session())\
-    .metrics('total_population', 'min_population', 'max_population')
+shelf = Shelf(
+    {
+        "state": Dimension(Census.state),
+        "popgrowth": DivideMetric(
+            func.sum(Census.pop2008 - Census.pop2000), func.sum(Census.pop2000)
+        ),
+    }
+)
+recipe = (
+    Recipe(shelf=shelf, session=oven.Session()).dimensions("state").metrics("popgrowth")
+)
+
 print(recipe.to_sql())
 print(recipe.dataset.csv)
 
 
-s = '''
+shelf = Shelf(
+    {
+        "total_population": Metric(func.sum(Census.pop2000)),
+        "min_population": Metric(func.min(Census.pop2000)),
+        "max_population": Metric(func.max(Census.pop2000)),
+    }
+)
+recipe = Recipe(shelf=shelf, session=oven.Session()).metrics(
+    "total_population", "min_population", "max_population"
+)
+print(recipe.to_sql())
+print(recipe.dataset.csv)
+
+
+s = """
 teens:
     kind: Metric
     field: 
@@ -9186,18 +9225,18 @@ teens:
 state:
     kind: Dimension
     field: state
-'''
+"""
 shelf_yaml = yaml.load(s)
 
 shelf = Shelf.from_config(shelf_yaml, Census)
-recipe = Recipe(shelf=shelf, session=oven.Session())\
-    .dimensions('state')\
-    .metrics('teens')
+recipe = (
+    Recipe(shelf=shelf, session=oven.Session()).dimensions("state").metrics("teens")
+)
 print(recipe.to_sql())
 print(recipe.dataset.csv)
 
 
-s = '''
+s = """
 teens:
     kind: Metric
     field: 
@@ -9214,17 +9253,17 @@ pct_teens:
 state:
     kind: Dimension
     field: state
-'''
+"""
 shelf_yaml = yaml.load(s)
 
 shelf = Shelf.from_config(shelf_yaml, Census)
-recipe = Recipe(shelf=shelf, session=oven.Session())\
-    .dimensions('state')\
-    .metrics('pct_teens')
+recipe = (
+    Recipe(shelf=shelf, session=oven.Session()).dimensions("state").metrics("pct_teens")
+)
 print(recipe.to_sql())
 print(recipe.dataset.csv)
 
-s = '''
+s = """
 total_pop:
     kind: Metric
     field: pop2000
@@ -9253,13 +9292,15 @@ mixed_buckets:
     - label: 'teens'
       lt: 20
     buckets_default_label: 'oldsters'
-'''
+"""
 shelf_yaml = yaml.load(s)
 
 shelf = Shelf.from_config(shelf_yaml, Census)
-recipe = Recipe(shelf=shelf, session=oven.Session())\
-    .dimensions('mixed_buckets')\
-    .metrics('total_pop')\
-    .order_by('mixed_buckets')
+recipe = (
+    Recipe(shelf=shelf, session=oven.Session())
+    .dimensions("mixed_buckets")
+    .metrics("total_pop")
+    .order_by("mixed_buckets")
+)
 print(recipe.to_sql())
 print(recipe.dataset.csv)

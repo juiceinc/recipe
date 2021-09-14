@@ -355,8 +355,7 @@ class Ingredient(object):
                 non_none_value = sorted([v for v in value if v is not None])
                 if non_none_value:
                     return and_(
-                        filter_column.isnot(None),
-                        filter_column.notin_(non_none_value),
+                        filter_column.isnot(None), filter_column.notin_(non_none_value),
                     )
                 else:
                     return filter_column.isnot(None)

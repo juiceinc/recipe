@@ -55,11 +55,7 @@ class TestPadValues(object):
             "RECIPE-DUMMY-VAL-9",
             "RECIPE-DUMMY-VAL-10",
         ) == v
-        v = pad_values(
-            [
-                "hi",
-            ]
-        )
+        v = pad_values(["hi",])
         assert [
             "hi",
             "RECIPE-DUMMY-VAL-1",
