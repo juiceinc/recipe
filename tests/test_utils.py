@@ -31,7 +31,7 @@ class TestUtils(object):
 
 class TestPadValues(object):
     def test_pad_values(self):
-        """A list or tuple of values are padded to a multiple of bin size """
+        """A list or tuple of values are padded to a multiple of bin size"""
         with pytest.raises(Exception):
             pad_values("rocket")
 
