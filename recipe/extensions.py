@@ -1,3 +1,4 @@
+from json import loads
 from sqlalchemy import and_, func, text, or_, String
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -171,16 +172,22 @@ class AutomaticFilters(RecipeExtension):
 
     def _build_compound_filter(self, key, values):
         """Build a filter using a compound key. Compound keys are comma delimited.
+        Values may either be a list of lists or a list of json encoded lists
 
         For instance::
 
-            key=state,age
+            key="state,age"
             values=[["California",22],["Iowa", 24]]
 
         will generate a filter equal to the following::
 
             WHERE (state='California' AND age=22) OR
                   (state='Iowa' and age=24)
+
+        Optionally, the values can be a json encoded list.
+
+            key="state,age"
+            values=['["California", 22]', '["Iowa", 24]']
 
         Args:
             key (str): A string containing a comma separated list of ids.
@@ -192,6 +199,12 @@ class AutomaticFilters(RecipeExtension):
         keys = key.split(",")
         or_items = []
         for val in values:
+            if isinstance(val, str):
+                val = loads(val)
+                if not isinstance(val, list):
+                    raise ValueError(
+                        "Compound filter values must be json encoded lists"
+                    )
             and_items = []
             for d, v in zip(keys, val):
                 filt = self._build_automatic_filter(d, v)

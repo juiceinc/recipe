@@ -394,6 +394,69 @@ WHERE foo.first = 'cow'
 GROUP BY first"""
         )
 
+    def test_compound_filters_json(self):
+        """Compound filters may be json encoded"""
+        # A single compound filter item
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters({"first,last": ['["foo", "moo"]']})
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.first = 'foo'
+  AND foo.last = 'moo'
+GROUP BY first"""
+        )
+
+        # A multiple items
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters(
+            {"first,last": ['["foo", "moo"]', '["chicken", "cluck"]']}
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.first = 'foo'
+  AND foo.last = 'moo'
+  OR foo.first = 'chicken'
+  AND foo.last = 'cluck'
+GROUP BY first"""
+        )
+
+        # Unbalanced items
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters({"first,last": ['["foo", "moo"]', '["chicken"]']})
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.first = 'foo'
+  AND foo.last = 'moo'
+  OR foo.first = 'chicken'
+GROUP BY first"""
+        )
+
+        # Using operators
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters(
+            {"first,last__like": ['["cow", "moo*"]', '["chicken", "cluck*"]']}
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.first = 'cow'
+  AND foo.last LIKE 'moo*'
+  OR foo.first = 'chicken'
+  AND foo.last LIKE 'cluck*'
+GROUP BY first"""
+        )
+
 
 class TestAnonymizeRecipeExtension(object):
     def setup(self):
