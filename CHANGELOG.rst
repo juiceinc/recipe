@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.27.1 (2021-09-14))
+-----------------------------------------
+* Allow compound selection to take a list of json encoded strings
+
 v0.27.0 (2021-08-26)
 -----------------------------------------
 * Update requirements
