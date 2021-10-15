@@ -69,7 +69,7 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
 
     # For some formats, we will automatically convert dates
     format = ingr_dict.get("format")
-    if format.startswith("<") and format.endswith(">"):
+    if isinstance(format, str) and format.startswith("<") and format.endswith(">"):
         format = format[1:-1]
     convert_dates_lookup = {"%Y": "year_conv", "%B %Y": "month_conv"}
     convert_dates_with = convert_dates_lookup.get(format)
