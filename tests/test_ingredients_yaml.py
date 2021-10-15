@@ -1769,10 +1769,15 @@ test5:
     kind: Dimension
     field: dt
     format: ".2f"
-""", DateTester,
+""",
+            DateTester,
         )
-        recipe = Recipe(shelf=shelf, session=self.session).dimensions("test", "test2", "test3", "test4", "test5")
-        assert recipe.to_sql() == """SELECT date_trunc('year', datetester.dt) AS test,
+        recipe = Recipe(shelf=shelf, session=self.session).dimensions(
+            "test", "test2", "test3", "test4", "test5"
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT date_trunc('year', datetester.dt) AS test,
        date_trunc('year', datetester.dt) AS test2,
        date_trunc('month', datetester.dt) AS test3,
        date_trunc('month', datetester.dt) AS test4,
@@ -1783,6 +1788,8 @@ GROUP BY test,
          test3,
          test4,
          test5"""
+        )
+
 
 class TestParsedFieldConfig(ConfigTestBase):
     """Parsed fields save the original config"""
