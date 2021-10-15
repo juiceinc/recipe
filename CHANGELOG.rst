@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.28.0 (2021-10-15)
+-----------------------------------------
+* Add directives that will convert dates and datetimes to the nearest year/month/day
+
 v0.27.1 (2021-09-14))
 -----------------------------------------
 * Allow compound selection to take a list of json encoded strings
