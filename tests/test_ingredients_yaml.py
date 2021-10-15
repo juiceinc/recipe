@@ -1743,6 +1743,53 @@ test:
             unique_sql.add(recipe.to_sql())
         assert len(unique_sql) == 3
 
+    def test_convert_date(self):
+        """We can convert dates using formats"""
+
+        shelf = self.shelf_from_yaml(
+            """
+_version: 2
+test:
+    kind: Dimension
+    field: dt
+    format: "%Y"
+test2:
+    kind: Dimension
+    field: dt
+    format: "<%Y>"
+test3:
+    kind: Dimension
+    field: dt
+    format: "<%B %Y>"
+test4:
+    kind: Dimension
+    field: dt
+    format: "%B %Y"
+test5:
+    kind: Dimension
+    field: dt
+    format: ".2f"
+""",
+            DateTester,
+        )
+        recipe = Recipe(shelf=shelf, session=self.session).dimensions(
+            "test", "test2", "test3", "test4", "test5"
+        )
+        assert (
+            recipe.to_sql()
+            == """SELECT date_trunc('year', datetester.dt) AS test,
+       date_trunc('year', datetester.dt) AS test2,
+       date_trunc('month', datetester.dt) AS test3,
+       date_trunc('month', datetester.dt) AS test4,
+       datetester.dt AS test5
+FROM datetester
+GROUP BY test,
+         test2,
+         test3,
+         test4,
+         test5"""
+        )
+
 
 class TestParsedFieldConfig(ConfigTestBase):
     """Parsed fields save the original config"""

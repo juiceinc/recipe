@@ -432,10 +432,7 @@ class SQLALchemyValidator(Visitor):
         """Aggregating a bad data type"""
         fn = tree.children[0].children[0]
         dt = self._data_type(tree.children[0].children[1])
-        self._add_error(
-            f"A {dt} can not be aggregated using {fn}.",
-            tree,
-        )
+        self._add_error(f"A {dt} can not be aggregated using {fn}.", tree)
 
     def error_between_expr(self, tree):
         col, BETWEEN, left, AND, right = tree.children
@@ -487,11 +484,19 @@ class SQLALchemyValidator(Visitor):
 class TransformToSQLAlchemyExpression(Transformer):
     """Converts a field to a SQLAlchemy expression"""
 
-    def __init__(self, selectable, columns, drivername, forbid_aggregation=True):
+    def __init__(
+        self,
+        selectable,
+        columns,
+        drivername,
+        forbid_aggregation=True,
+    ):
         self.text = None
         self.selectable = selectable
         self.columns = columns
         self.last_datatype = None
+        # Convert all dates with this conversion
+        self.convert_dates_with = None
         self.forbid_aggregation = forbid_aggregation
         self.drivername = drivername
 
@@ -598,18 +603,28 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def date(self, v):
         if isinstance(v, Tree):
-            return self.columns[v.data]
+            fld = self.columns[v.data]
+            if self.convert_dates_with:
+                converter = getattr(self, self.convert_dates_with, None)
+                if converter:
+                    fld = converter(None, fld)
         else:
-            return v
+            fld = v
+        return fld
 
     def date_fn(self, _, y, m, d):
         return func.date(y, m, d)
 
     def datetime(self, v):
         if isinstance(v, Tree):
-            return self.columns[v.data]
+            fld = self.columns[v.data]
+            if self.convert_datetimes_with:
+                converter = getattr(self, self.convert_datetimes_with, None)
+                if converter:
+                    fld = converter(None, fld)
         else:
-            return v
+            fld = v
+        return fld
 
     def datetime_end(self, v):
         if isinstance(v, Tree):
@@ -632,7 +647,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return dt
 
     def day_conv(self, _, fld):
-        """Truncate to mondays"""
+        """Truncate to the day"""
         if self.drivername == "bigquery":
             return func.date_trunc(fld, text("day"))
         else:
@@ -669,7 +684,7 @@ class TransformToSQLAlchemyExpression(Transformer):
             return func.date_trunc("year", fld)
 
     def dt_day_conv(self, _, fld):
-        """Truncate to mondays"""
+        """Truncate to day"""
         if self.drivername == "bigquery":
             return func.timestamp_trunc(fld, text("day"))
         else:
@@ -821,10 +836,7 @@ class TransformToSQLAlchemyExpression(Transformer):
             left, right = right, left
 
         if right is None and comparator in ("__eq__", "__ne__"):
-            is_comp = {
-                "__eq__": "is_",
-                "__ne__": "isnot",
-            }
+            is_comp = {"__eq__": "is_", "__ne__": "isnot"}
             comparator = is_comp.get(comparator, comparator)
 
         return getattr(left, comparator)(right)
@@ -979,7 +991,9 @@ class SQLAlchemyBuilder(object):
             # predict_all=True,
         )
         self.transformer = TransformToSQLAlchemyExpression(
-            self.selectable, self.columns, self.drivername
+            self.selectable,
+            self.columns,
+            self.drivername,
         )
 
         # The data type of the last parsed expression
@@ -987,7 +1001,13 @@ class SQLAlchemyBuilder(object):
 
     @functools.lru_cache(maxsize=None)
     def parse(
-        self, text, forbid_aggregation=False, enforce_aggregation=False, debug=False
+        self,
+        text,
+        forbid_aggregation=False,
+        enforce_aggregation=False,
+        debug=False,
+        convert_dates_with=None,
+        convert_datetimes_with=None,
     ):
         """Return a parse tree for text
 
@@ -998,6 +1018,8 @@ class SQLAlchemyBuilder(object):
             enforce_aggregation (bool, optional):
               Wrap the expression in an aggregation if one is not provided. Defaults to False.
             debug (bool, optional): Show some debug info. Defaults to False.
+            convert_dates_with (str, optional): A converter to use for date fields
+            convert_datetimes_with (str, optional): A converter to use for datetime fields
 
         Raises:
             GrammarError: A description of any errors and where they occur
@@ -1021,6 +1043,8 @@ class SQLAlchemyBuilder(object):
             if debug:
                 print("Tree:\n" + tree.pretty())
             self.transformer.text = text
+            self.transformer.convert_dates_with = convert_dates_with
+            self.transformer.convert_datetimes_with = convert_datetimes_with
             expr = self.transformer.transform(tree)
             if (
                 enforce_aggregation
