@@ -196,6 +196,54 @@ class TestSQLAlchemyBuilder(TestBase):
             self.assertEqual(to_sql(expr), expected_sql)
 
 
+class TestSQLAlchemyBuilderConvertDates(TestBase):
+    def test_enforce_convert_dates(self):
+        """Enforce aggregation will wrap the function in a sum if no aggregation was seen"""
+
+        good_examples = """
+        [test_date]                       -> date_trunc('year', datatypes.test_date)
+        test_date                         -> date_trunc('year', datatypes.test_date)
+        coalesce([test_date], date("2020-01-01"))   -> coalesce(date_trunc('year', datatypes.test_date), '2020-01-01')
+        """
+        for field, expected_sql in self.examples(good_examples):
+            expr, _ = self.builder.parse(
+                field,
+                enforce_aggregation=True,
+                debug=True,
+                convert_dates_with="year_conv",
+            )
+            self.assertEqual(to_sql(expr), expected_sql)
+
+        good_examples = """
+        [test_date]                       -> date_trunc('month', datatypes.test_date)
+        test_date                         -> date_trunc('month', datatypes.test_date)
+        coalesce([test_date], date("2020-01-01"))   -> coalesce(date_trunc('month', datatypes.test_date), '2020-01-01')
+        """
+        for field, expected_sql in self.examples(good_examples):
+            expr, _ = self.builder.parse(
+                field,
+                enforce_aggregation=True,
+                debug=True,
+                convert_dates_with="month_conv",
+            )
+            self.assertEqual(to_sql(expr), expected_sql)
+
+        # If the date conversion doesn't exist, don't convert
+        good_examples = """
+        [test_date]                       -> datatypes.test_date
+        test_date                         -> datatypes.test_date
+        coalesce([test_date], date("2020-01-01"))   -> coalesce(datatypes.test_date, '2020-01-01')
+        """
+        for field, expected_sql in self.examples(good_examples):
+            expr, _ = self.builder.parse(
+                field,
+                enforce_aggregation=True,
+                debug=True,
+                convert_dates_with="a_potato",
+            )
+            self.assertEqual(to_sql(expr), expected_sql)
+
+
 class TestDataTypesTable(TestBase):
     def test_fields_and_addition(self):
         """These examples should all succeed"""

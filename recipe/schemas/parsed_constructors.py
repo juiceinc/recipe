@@ -67,22 +67,41 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
 
     args = []
 
+    # For some formats, we will automatically convert dates
+    format = ingr_dict.get("format")
+    if format.startswith("<") and format.endswith(">"):
+        format = format[1:-1]
+    convert_dates_lookup = {"%Y": "year_conv", "%B %Y": "month_conv"}
+    convert_dates_with = convert_dates_lookup.get(format)
+    convert_datetimes_lookup = {
+        "%Y": "dt_year_conv",
+        "%B %Y": "dt_month_conv",
+        "%B %-d, %Y": "dt_day_conv",
+        "%-d %b %Y": "dt_day_conv",
+        "%-m/%-d/%Y": "dt_day_conv",
+        "%B %-d, %Y": "dt_day_conv",
+        "%-m-%-d-%Y": "dt_day_conv",
+    }
+    convert_datetimes_with = convert_datetimes_lookup.get(format)
+
     try:
         if kind in ("metric", "dimension"):
             if kind == "metric":
                 fld_defn = ingr_dict.pop("field", None)
                 # SQLAlchemy ingredient with required aggregation
                 expr, datatype = builder.parse(
-                    fld_defn, enforce_aggregation=True, debug=debug
+                    fld_defn,
+                    enforce_aggregation=True,
+                    debug=debug,
+                    convert_dates_with=convert_dates_with,
+                    convert_datetimes_with=convert_datetimes_with,
                 )
                 # Save the data type in the ingredient
                 ingr_dict["datatype"] = datatype
                 if datatype != "num":
                     error = {
                         "type": "Can not parse field",
-                        "extra": {
-                            "details": "A string can not be aggregated",
-                        },
+                        "extra": {"details": "A string can not be aggregated"},
                     }
                     return InvalidIngredient(error=error)
                 args = [expr]
@@ -100,7 +119,11 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                         {"name": "order_by_expression", "field": order_by_fld}
                     )
                 expr, datatype = builder.parse(
-                    fld_defn, forbid_aggregation=True, debug=debug
+                    fld_defn,
+                    forbid_aggregation=True,
+                    debug=debug,
+                    convert_dates_with=convert_dates_with,
+                    convert_datetimes_with=convert_datetimes_with,
                 )
                 # Save the data type in the ingredient
                 ingr_dict["datatype"] = datatype
@@ -118,7 +141,11 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                         role = raw_role
 
                     expr, datatype = builder.parse(
-                        extra.get("field"), forbid_aggregation=True, debug=debug
+                        extra.get("field"),
+                        forbid_aggregation=True,
+                        debug=debug,
+                        convert_dates_with=convert_dates_with,
+                        convert_datetimes_with=convert_datetimes_with,
                     )
                     datatype_by_role[role] = datatype
                     ingr_dict[raw_role] = expr
@@ -128,26 +155,33 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
             for qs in ingr_dict.pop("quickselects", []):
                 condition_defn = qs.get("condition")
                 expr, _ = builder.parse(
-                    condition_defn, forbid_aggregation=True, debug=debug
+                    condition_defn,
+                    forbid_aggregation=True,
+                    debug=debug,
+                    convert_dates_with=convert_dates_with,
+                    convert_datetimes_with=convert_datetimes_with,
                 )
-                parsed_quickselects.append(
-                    {
-                        "name": qs["name"],
-                        "condition": expr,
-                    }
-                )
+                parsed_quickselects.append({"name": qs["name"], "condition": expr})
             ingr_dict["quickselects"] = parsed_quickselects
 
         elif kind == "filter":
             condition_defn = ingr_dict.get("condition")
             expr, _ = builder.parse(
-                condition_defn, forbid_aggregation=True, debug=debug
+                condition_defn,
+                forbid_aggregation=True,
+                debug=debug,
+                convert_dates_with=convert_dates_with,
+                convert_datetimes_with=convert_datetimes_with,
             )
             args = [expr]
         elif kind == "having":
             condition_defn = ingr_dict.get("condition")
             expr, _ = builder.parse(
-                condition_defn, forbid_aggregation=False, debug=debug
+                condition_defn,
+                forbid_aggregation=False,
+                debug=debug,
+                convert_dates_with=convert_dates_with,
+                convert_datetimes_with=convert_datetimes_with,
             )
             args = [expr]
 
@@ -156,22 +190,12 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
         if "Expecting:" in error_msg:
             error_msg = error_msg.split("Expecting:")[0]
 
-        error = {
-            "type": "Can not parse field",
-            "extra": {
-                "details": error_msg,
-            },
-        }
+        error = {"type": "Can not parse field", "extra": {"details": error_msg}}
         return InvalidIngredient(error=error)
 
     try:
         return IngredientClass(*args, **ingr_dict)
     except BadIngredient as e:
         # Some internal error while running the Ingredient constructor
-        error = {
-            "type": "bad_ingredient",
-            "extra": {
-                "details": str(e),
-            },
-        }
+        error = {"type": "bad_ingredient", "extra": {"details": str(e)}}
         return InvalidIngredient(error=error)
