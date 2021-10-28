@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.28.1 (2021-10-28)
+-----------------------------------------
+* Fix for splitting operators in automatic filters
+
 v0.28.0 (2021-10-15)
 -----------------------------------------
 * Add directives that will convert dates and datetimes to the nearest year/month/day
