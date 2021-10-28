@@ -224,7 +224,7 @@ class AutomaticFilters(RecipeExtension):
         """
         operator = None
         if "__" in dim:
-            dim, operator = dim.split("__")
+            dim, operator = dim.rsplit("__", 1)
         if self.include_keys is not None and dim not in self.include_keys:
             # Ignore keys that are not in include_keys
             return None
