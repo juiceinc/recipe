@@ -28,7 +28,6 @@ from recipe import oven
 from recipe.ingredients import Having
 
 
-
 class TestRecipeIngredients(object):
     def setup(self):
         self.oven = get_oven(connection_string)
@@ -159,7 +158,11 @@ count:
 """,
             self.table,
         )
-        recipe = Recipe(shelf=shelf, session=self.session).dimensions("test").metrics("count")
+        recipe = (
+            Recipe(shelf=shelf, session=self.session)
+            .dimensions("test")
+            .metrics("count")
+        )
         print(recipe.to_sql())
         print(recipe.all())
         assert recipe.all()[0].test == datetime(2005, 12, 1, 12, 15)

@@ -698,7 +698,9 @@ class TransformToSQLAlchemyExpression(Transformer):
         if self.drivername == "bigquery":
             return func.timestamp_trunc(fld, text("day"))
         elif self.drivername.startswith("mssql"):
-            return func.datetimefromparts(func.year(fld), func.month(fld), func.day(fld), 0, 0, 0, 0)
+            return func.datetimefromparts(
+                func.year(fld), func.month(fld), func.day(fld), 0, 0, 0, 0
+            )
         else:
             # Postgres + redshift
             return func.date_trunc("day", fld)
@@ -717,7 +719,9 @@ class TransformToSQLAlchemyExpression(Transformer):
         if self.drivername == "bigquery":
             return func.timestamp_trunc(fld, text("month"))
         elif self.drivername.startswith("mssql"):
-            return func.datetimefromparts(func.year(fld), func.month(fld), 1, 0, 0, 0, 0)
+            return func.datetimefromparts(
+                func.year(fld), func.month(fld), 1, 0, 0, 0, 0
+            )
         else:
             # Postgres + redshift
             return func.date_trunc("month", fld)
@@ -735,7 +739,11 @@ class TransformToSQLAlchemyExpression(Transformer):
         if self.drivername == "bigquery":
             return func.timestamp_trunc(fld, text("year"))
         elif self.drivername.startswith("mssql"):
-            return text(func.datetimefromparts(func.year(fld), 1, 1, 0, 0, 0, 0).compile(compile_kwargs={"literal_binds": True}))
+            return text(
+                func.datetimefromparts(func.year(fld), 1, 1, 0, 0, 0, 0).compile(
+                    compile_kwargs={"literal_binds": True}
+                )
+            )
         else:
             # Postgres + redshift
             return func.date_trunc("year", fld)
