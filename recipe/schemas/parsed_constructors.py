@@ -67,6 +67,11 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
 
     args = []
 
+    if builder.drivername.startswith("mssql"):
+        group_by_strategy = "direct"
+    else:
+        group_by_strategy = "labels"
+
     # For some formats, we will automatically convert dates
     format = ingr_dict.get("format")
     if isinstance(format, str) and format.startswith("<") and format.endswith(">"):
@@ -106,6 +111,7 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                     return InvalidIngredient(error=error)
                 args = [expr]
             else:
+                ingr_dict["group_by_strategy"] = group_by_strategy
                 fld_defn = ingr_dict.pop("field", None)
                 buckets = ingr_dict.pop("buckets", None)
                 buckets_default_label = ingr_dict.pop("buckets_default_label", None)
