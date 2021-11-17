@@ -1,7 +1,8 @@
 """Test Recipe against multiple database engines"""
 
-from datetime import date, datetime
 import os
+from datetime import date, datetime
+
 from sqlalchemy import Column, Date, DateTime, Integer, MetaData, String, Table, insert
 
 from recipe import Recipe, Shelf, get_oven
