@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.29.0 (2021-11-17)
+-----------------------------------------
+* Improve mssql support
+
 v0.28.1 (2021-10-28)
 -----------------------------------------
 * Fix for splitting operators in automatic filters

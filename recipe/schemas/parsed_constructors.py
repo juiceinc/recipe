@@ -84,6 +84,15 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
     }
     convert_datetimes_with = convert_datetimes_lookup.get(format)
 
+    if builder.drivername.startswith("mssql"):
+        # SQLServer can not use aliases in group bys and also
+        # does not support date/time conversions due to an issue with pyodbc
+        # parameters in queries
+        # https://github.com/mkleehammer/pyodbc/issues/479
+        default_group_by_strategy = "direct"
+    else:
+        default_group_by_strategy = "labels"
+
     try:
         if kind in ("metric", "dimension"):
             if kind == "metric":
@@ -106,6 +115,9 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                     return InvalidIngredient(error=error)
                 args = [expr]
             else:
+                ingr_dict["group_by_strategy"] = ingr_dict.get(
+                    "group_by_strategy", default_group_by_strategy
+                )
                 fld_defn = ingr_dict.pop("field", None)
                 buckets = ingr_dict.pop("buckets", None)
                 buckets_default_label = ingr_dict.pop("buckets_default_label", None)

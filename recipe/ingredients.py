@@ -191,7 +191,10 @@ class Ingredient(object):
                 for col, lbl in reversed(list(zip(self.columns, self._labels)))
             ]
         else:
-            return reversed(self.columns)
+            if self.ordering == "desc":
+                return [col.desc() for col in reversed(self.columns)]
+            else:
+                return reversed(self.columns)
 
     @property
     def cauldron_extras(self):
