@@ -35,6 +35,13 @@ from .utils import (
 )
 
 
+# SQL server can not support parameters in queries that are used for grouping
+# https://github.com/mkleehammer/pyodbc/issues/479
+# To avoid parameterization, we pass literals
+literal_1 = text("1")
+literal_0 = text("0")
+
+
 def make_columns_grammar(columns):
     """Return a lark rule that looks like
 
@@ -484,13 +491,7 @@ class SQLALchemyValidator(Visitor):
 class TransformToSQLAlchemyExpression(Transformer):
     """Converts a field to a SQLAlchemy expression"""
 
-    def __init__(
-        self,
-        selectable,
-        columns,
-        drivername,
-        forbid_aggregation=True,
-    ):
+    def __init__(self, selectable, columns, drivername, forbid_aggregation=True):
         self.text = None
         self.selectable = selectable
         self.columns = columns
@@ -613,7 +614,10 @@ class TransformToSQLAlchemyExpression(Transformer):
         return fld
 
     def date_fn(self, _, y, m, d):
-        return func.date(y, m, d)
+        if self.drivername.startswith("mssql"):
+            return func.datefromparts(y, m, d)
+        else:
+            return func.date(y, m, d)
 
     def datetime(self, v):
         if isinstance(v, Tree):
@@ -670,12 +674,13 @@ class TransformToSQLAlchemyExpression(Transformer):
         if self.drivername == "bigquery":
             return func.date_trunc(fld, text("month"))
         elif self.drivername.startswith("mssql"):
-            return func.datefromparts(func.year(fld), func.month(fld), 1)
+            return func.datefromparts(func.year(fld), func.month(fld), literal_1)
         else:
             # Postgres + redshift
             return func.date_trunc("month", fld)
 
     def quarter_conv(self, _, fld):
+        # Convert each date to the first day of each quarter
         if self.drivername == "bigquery":
             return func.date_trunc(fld, text("quarter"))
         elif self.drivername.startswith("mssql"):
@@ -688,7 +693,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         if self.drivername == "bigquery":
             return func.date_trunc(fld, text("year"))
         elif self.drivername.startswith("mssql"):
-            return func.datefromparts(func.year(fld), 1, 1)
+            return func.datefromparts(func.year(fld), literal_1, literal_1)
         else:
             # Postgres + redshift
             return func.date_trunc("year", fld)
@@ -698,7 +703,15 @@ class TransformToSQLAlchemyExpression(Transformer):
         if self.drivername == "bigquery":
             return func.timestamp_trunc(fld, text("day"))
         elif self.drivername.startswith("mssql"):
-            return func.datetimefromparts(func.year(fld), func.month(fld), func.day(fld), 0, 0, 0, 0)
+            return func.datetimefromparts(
+                func.year(fld),
+                func.month(fld),
+                func.day(fld),
+                literal_0,
+                literal_0,
+                literal_0,
+                literal_0,
+            )
         else:
             # Postgres + redshift
             return func.date_trunc("day", fld)
@@ -717,7 +730,15 @@ class TransformToSQLAlchemyExpression(Transformer):
         if self.drivername == "bigquery":
             return func.timestamp_trunc(fld, text("month"))
         elif self.drivername.startswith("mssql"):
-            return func.datetimefromparts(func.year(fld), func.month(fld), 1, 0, 0, 0, 0)
+            return func.datetimefromparts(
+                func.year(fld),
+                func.month(fld),
+                literal_1,
+                literal_0,
+                literal_0,
+                literal_0,
+                literal_0,
+            )
         else:
             # Postgres + redshift
             return func.date_trunc("month", fld)
@@ -735,7 +756,18 @@ class TransformToSQLAlchemyExpression(Transformer):
         if self.drivername == "bigquery":
             return func.timestamp_trunc(fld, text("year"))
         elif self.drivername.startswith("mssql"):
-            return text(func.datetimefromparts(func.year(fld), 1, 1, 0, 0, 0, 0).compile(compile_kwargs={"literal_binds": True}))
+            # SQL server can not support parameters in queries that are used for grouping
+            # https://github.com/mkleehammer/pyodbc/issues/479
+            # To avoid parameterization, we pass literals
+            return func.datetimefromparts(
+                func.year(fld),
+                literal_1,
+                literal_1,
+                literal_0,
+                literal_0,
+                literal_0,
+                literal_0,
+            )
         else:
             # Postgres + redshift
             return func.date_trunc("year", fld)
@@ -1011,9 +1043,7 @@ class SQLAlchemyBuilder(object):
             # predict_all=True,
         )
         self.transformer = TransformToSQLAlchemyExpression(
-            self.selectable,
-            self.columns,
-            self.drivername,
+            self.selectable, self.columns, self.drivername
         )
 
         # The data type of the last parsed expression
