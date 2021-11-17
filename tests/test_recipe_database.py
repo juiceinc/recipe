@@ -88,7 +88,8 @@ count:
         )
 
     def teardown(self):
-        self.meta.drop_all(self.oven.engine)
+        if not self.skip_tests:
+            self.meta.drop_all(self.oven.engine)
 
     def shelf_from_yaml(self, yaml_config, selectable):
         """Create a shelf directly from configuration"""
