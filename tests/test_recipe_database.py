@@ -1,36 +1,24 @@
 """Test Recipe against multiple database engines"""
 
-from copy import copy
 from datetime import date, datetime
+import os
+from sqlalchemy import Column, Date, DateTime, Integer, MetaData, String, Table, insert
 
-import pytest
-from dateutil.relativedelta import relativedelta
-from sqlalchemy import (
-    Column,
-    Date,
-    DateTime,
-    Float,
-    Integer,
-    String,
-    Table,
-    distinct,
-    func,
-    join,
-    MetaData,
-    insert,
-)
-from sqlalchemy.ext.declarative import declarative_base
-from sureberus.schema import Boolean
-from yaml import safe_load
-
-from recipe import Dimension, Metric, Recipe, Shelf, get_oven
-from recipe import oven
-from recipe.ingredients import Having
+from recipe import Recipe, Shelf, get_oven
 
 
+def str_dedent(s):
+    return "\n".join([x.lstrip() for x in s.split("\n")]).lstrip("\n")
 
-class TestRecipeIngredients(object):
+
+class TestRecipeSQLServer(object):
     def setup(self):
+        connection_string = os.environ.get("SQL_SERVER_CONNECTION_STR", None)
+        self.skip_tests = False
+        if connection_string is None:
+            self.skip_tests = True
+            return
+
         self.oven = get_oven(connection_string)
 
         self.meta = MetaData(bind=self.oven.engine)
@@ -45,20 +33,6 @@ class TestRecipeIngredients(object):
             Column("birth_date", Date),
             Column("dt", DateTime),
             extend_existing=True,
-        )
-
-        self.shelf = Shelf(
-            {
-                "first": Dimension(self.table.c.first, group_by_strategy="direct"),
-                "last": Dimension(self.table.c.last, group_by_strategy="direct"),
-                "firstlast": Dimension(
-                    self.table.c.last,
-                    id_expression=self.table.c.first,
-                    group_by_strategy="direct",
-                ),
-                "age": Metric(func.sum(self.table.c.age)),
-                "count": Metric(func.count("*")),
-            }
         )
         self.meta.create_all(self.oven.engine)
 
@@ -80,87 +54,119 @@ class TestRecipeIngredients(object):
         ]
         with self.oven.engine.connect() as conn:
             for row in data:
-                result = conn.execute(insert(self.table).values(**row))
+                conn.execute(insert(self.table).values(**row))
 
-    def shelf_from_yaml(self, yaml_config, selectable):
-        """Create a shelf directly from configuration"""
-        return Shelf.from_validated_yaml(yaml_config, selectable)
-
-    def teardown(self):
-        self.meta.drop_all(self.oven.engine)
-
-    #     def recipe(self, **kwargs):
-    #         return Recipe(shelf=self.shelf, session=self.session, **kwargs)
-
-    #     def test_dimension(self):
-    #         recipe = self.recipe().metrics("age","count").dimensions("first")
-    #         assert recipe.all()[0].first == "hi"
-    #         assert recipe.all()[0].age == 15
-    #         assert recipe.all()[0].count == 2
-    #         assert recipe.stats.rows == 1
-
-    #     def test_idvaluedimension(self):
-    #         recipe = self.recipe().metrics("age").dimensions("firstlast")
-    #         assert recipe.all()[0].firstlast == "fred"
-    #         assert recipe.all()[0].firstlast_id == "hi"
-    #         assert recipe.all()[0].age == 10
-    #         assert recipe.all()[1].firstlast == "there"
-    #         assert recipe.all()[1].firstlast_id == "hi"
-    #         assert recipe.all()[1].age == 5
-    #         assert recipe.stats.rows == 2
-
-    #     def test_having(self):
-
-    #         hv = Having(func.sum(self.table.c.age) < 10)
-    #         recipe = (
-    #             self.recipe()
-    #             .metrics("age")
-    #             .dimensions("last")
-    #             .filters(self.table.c.age > 2)
-    #             .filters(hv)
-    #             .order_by("last")
-    #         )
-    #         assert (
-    #             recipe.dataset.csv.replace("\r\n", "\n")
-    #             == """last,age,last_id
-    # there,5,there
-    # """
-    #         )
-
-    def test_convert_date(self):
-        """We can convert dates using formats"""
-
-        shelf = self.shelf_from_yaml(
+        self.shelf = self.shelf_from_yaml(
             """
 _version: 2
-test:
+first:
+    kind: Dimension
+    field: first
+last:
+    kind: Dimension
+    field: last
+firstlast:
+    kind: Dimension
+    field: "first + last"
+    id_field: first
+age:
+    kind: Measure
+    field: sum(age)
+test_month:
+    kind: Dimension
+    field: month(birth_date)
+year_by_format:
     kind: Dimension
     field: dt
     format: "%Y"
-test2:
-    kind: Dimension
-    field: dt
-    format: "<%Y>"
-test3:
-    kind: Dimension
-    field: dt
-    format: "<%B %Y>"
-test4:
-    kind: Dimension
-    field: dt
-    format: "%B %Y"
-test5:
-    kind: Dimension
-    field: dt
-    format: ".2f"
 count:
     kind: Measure
     field: count(*)
 """,
             self.table,
         )
-        recipe = Recipe(shelf=shelf, session=self.session).dimensions("test").metrics("count")
-        print(recipe.to_sql())
-        print(recipe.all())
-        assert recipe.all()[0].test == datetime(2005, 12, 1, 12, 15)
-        # assert recipe.all()[0].test5 == datetime(2005, 1, 1)
+
+    def teardown(self):
+        self.meta.drop_all(self.oven.engine)
+
+    def shelf_from_yaml(self, yaml_config, selectable):
+        """Create a shelf directly from configuration"""
+        return Shelf.from_validated_yaml(yaml_config, selectable)
+
+    def recipe(self, **kwargs):
+        return Recipe(shelf=self.shelf, session=self.session, **kwargs)
+
+    def assertRecipeCSV(self, recipe, content):
+        actual = recipe.dataset.csv.replace("\r\n", "\n")
+        expected = str_dedent(content)
+        assert actual == expected
+
+    def test_dimension(self):
+        if self.skip_tests:
+            return
+        recipe = self.recipe().metrics("age", "count").dimensions("first")
+        self.assertRecipeCSV(
+            recipe,
+            """
+            first,age,count,first_id
+            hi,15,2,hi
+            """,
+        )
+        recipe = self.recipe().metrics("age").dimensions("firstlast")
+        self.assertRecipeCSV(
+            recipe,
+            """
+            firstlast_id,firstlast,age,firstlast_id
+            hi,hifred,10,hi
+            hi,hithere,5,hi
+            """,
+        )
+
+    def test_dates_and_Datetimes(self):
+        """We can convert dates using formats"""
+        if self.skip_tests:
+            return
+        recipe = (
+            self.recipe()
+            .dimensions("year_by_format")
+            .metrics("count")
+            .order_by("year_by_format")
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            year_by_format,count,year_by_format_id
+            2005-01-01 00:00:00,1,2005-01-01 00:00:00
+            2013-01-01 00:00:00,1,2013-01-01 00:00:00
+            """,
+        )
+        recipe = (
+            self.recipe()
+            .dimensions("year_by_format")
+            .metrics("count")
+            .order_by("-year_by_format")
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            year_by_format,count,year_by_format_id
+            2013-01-01 00:00:00,1,2013-01-01 00:00:00
+            2005-01-01 00:00:00,1,2005-01-01 00:00:00
+            """,
+        )
+
+        # Test a month() conversion
+        recipe = (
+            self.recipe()
+            .dimensions("test_month")
+            .metrics("age", "count")
+            .order_by("-test_month")
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            test_month,age,count,test_month_id
+            2015-05-01,10,1,2015-05-01
+            2015-01-01,5,1,2015-01-01
+            """,
+        )
