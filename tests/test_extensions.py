@@ -459,6 +459,61 @@ WHERE foo.first = 'cow'
 GROUP BY first"""
         )
 
+    def test_invalid_operators(self):
+        """Only valid operators are parsed from the dimension"""
+        # Using operators
+        # A valid operator is used
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters({"last__like": "moo"})
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.last LIKE 'moo'
+GROUP BY first"""
+        )
+
+        # This is an invalid operator and will get looked up on the shelf
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters({"last__mike": "moo"})
+        with pytest.raises(BadRecipe):
+            recipe.all()
+
+        # If we add this to the shelf, it works.
+        self.shelf = Shelf(
+            {
+                "first": Dimension(MyTable.first),
+                "last": Dimension(MyTable.last),
+                "firstlast": Dimension(MyTable.last, id_expression=MyTable.first),
+                "age": Metric(func.sum(MyTable.age)),
+                "last__mike": Dimension(MyTable.last),
+            }
+        )
+
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters({"last__mike": "moo"})
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.last = 'moo'
+GROUP BY first"""
+        )
+
+        # We can chain a valid operator
+        recipe = self.recipe().metrics("age").dimensions("first")
+        recipe = recipe.automatic_filters({"last__mike__like": "moo"})
+        assert (
+            recipe.to_sql()
+            == """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.last LIKE 'moo'
+GROUP BY first"""
+        )
+
 
 class TestAnonymizeRecipeExtension(object):
     def setup(self):
