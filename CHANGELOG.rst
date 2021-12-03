@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.29.1 (2021-12-03)
+-----------------------------------------
+* Fix automatic filters when dimension ids contain double underscores
+
 v0.29.0 (2021-11-17)
 -----------------------------------------
 * Improve mssql support

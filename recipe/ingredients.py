@@ -11,6 +11,25 @@ from recipe.utils.datatype import (
     datatype_from_column_expression,
 )
 
+ALLOWED_OPERATORS = set(
+    [
+        "eq",
+        "ne",
+        "lt",
+        "lte",
+        "gt",
+        "gte",
+        "is",
+        "isnot",
+        "like",
+        "ilike",
+        "quickselect",
+        "in",
+        "notin",
+        "between",
+    ]
+)
+
 
 @total_ordering
 class Ingredient(object):
@@ -247,6 +266,8 @@ class Ingredient(object):
             A Filter object
         """
 
+        # Developer's note: Valid operators should appear in ALLOWED_OPERATORS
+        # This is used by the AutomaticFilter extension.
         if operator is None:
             operator = "eq"
         if target_role and target_role in self.roles:
@@ -321,6 +342,9 @@ class Ingredient(object):
 
             A Filter object
         """
+
+        # Developer's note: Valid operators should appear in ALLOWED_OPERATORS
+        # This is used by the AutomaticFilter extension.
         if operator is None:
             operator = "in"
         if target_role and target_role in self.roles:
@@ -358,8 +382,7 @@ class Ingredient(object):
                 non_none_value = sorted([v for v in value if v is not None])
                 if non_none_value:
                     return and_(
-                        filter_column.isnot(None),
-                        filter_column.notin_(non_none_value),
+                        filter_column.isnot(None), filter_column.notin_(non_none_value)
                     )
                 else:
                     return filter_column.isnot(None)
