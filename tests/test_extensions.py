@@ -459,7 +459,7 @@ WHERE foo.first = 'cow'
 GROUP BY first"""
         )
 
-    def test_operators(self):
+    def test_invalid_operators(self):
         """Only valid operators are parsed from the dimension"""
         # Using operators
         # A valid operator is used
@@ -481,7 +481,16 @@ GROUP BY first"""
             recipe.all()
 
         # If we add this to the shelf, it works.
-        self.shelf["last__mike"] = Dimension(MyTable.last)
+        self.shelf = Shelf(
+            {
+                "first": Dimension(MyTable.first),
+                "last": Dimension(MyTable.last),
+                "firstlast": Dimension(MyTable.last, id_expression=MyTable.first),
+                "age": Metric(func.sum(MyTable.age)),
+                "last__mike": Dimension(MyTable.last),
+            }
+        )
+
         recipe = self.recipe().metrics("age").dimensions("first")
         recipe = recipe.automatic_filters({"last__mike": "moo"})
         assert (
