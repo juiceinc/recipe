@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from recipe.core import Recipe
 from recipe.exceptions import BadRecipe
-from recipe.ingredients import Dimension, Ingredient, Metric, Filter
+from recipe.ingredients import ALLOWED_OPERATORS, Dimension, Ingredient, Metric, Filter
 from recipe.utils import FakerAnonymizer, recipe_arg, pad_values
 
 Base = declarative_base()
@@ -223,8 +223,15 @@ class AutomaticFilters(RecipeExtension):
         The dim may contain a dimension id and an optional operator
         """
         operator = None
+
+        # Check to see if the dim endswith a valid operator
         if "__" in dim:
-            dim, operator = dim.rsplit("__", 1)
+            newdim, operator = dim.rsplit("__", 1)
+            operator = operator.lower()
+            if operator in ALLOWED_OPERATORS:
+                dim = newdim
+            else:
+                operator = None
         if self.include_keys is not None and dim not in self.include_keys:
             # Ignore keys that are not in include_keys
             return None
