@@ -277,6 +277,9 @@ class TestDataTypesTable(TestBase):
         [score] != Null                 -> datatypes.score IS NOT NULL
         [score] <> Null                 -> datatypes.score IS NOT NULL
         [score] IS NOT nULL             -> datatypes.score IS NOT NULL
+        [department] like "foo"         -> datatypes.department LIKE '%foo%'
+        [department] ilike "foo%"       -> lower(datatypes.department) LIKE lower('foo%')
+        "F" + [department] ILIKE "f__"  -> lower('F' || datatypes.department) LIKE lower('f__')
         string([score])                 -> CAST(datatypes.score AS VARCHAR)
         coalesce([score], 0.14)         -> coalesce(datatypes.score, 0.14)
         int([department])               -> CAST(datatypes.department AS INTEGER)
@@ -344,6 +347,9 @@ class TestDataTypesTable(TestBase):
         score != Null                 -> datatypes.score IS NOT NULL
         score <> Null                 -> datatypes.score IS NOT NULL
         score IS NOT nULL             -> datatypes.score IS NOT NULL
+        department like "foo"         -> datatypes.department LIKE '%foo%'
+        department ilike "foo%"       -> lower(datatypes.department) LIKE lower('foo%')
+        "F" + department ILIKE "f__"  -> lower('F' || datatypes.department) LIKE lower('f__')
         string(score)                 -> CAST(datatypes.score AS VARCHAR)
         coalesce(score, 0.14)         -> coalesce(datatypes.score, 0.14)
         int(department)               -> CAST(datatypes.department AS INTEGER)
@@ -377,6 +383,7 @@ class TestDataTypesTable(TestBase):
         good_examples = """
         [score] > 3                                           -> datatypes.score > 3
         [department] > "b"                                    -> datatypes.department > 'b'
+        string([score]) like "9_"                             -> CAST(datatypes.score AS VARCHAR) LIKE '9_'
         [score] > 3 AND [score] < 5                           -> datatypes.score > 3 AND datatypes.score < 5
         [score] > 3 AND [score] < 5 AND [score] = 4           -> datatypes.score > 3 AND datatypes.score < 5 AND datatypes.score = 4
         [score] > 3 AND True                                  -> datatypes.score > 3

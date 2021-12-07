@@ -134,7 +134,7 @@ def make_lark_grammar(columns):
     {gather_columns("datetime.2", columns, "datetime", ["datetime_conv", "datetime_if_statement", "datetime_coalesce"])}
     // Datetimes that are converted to the end of day
     {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
-    {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "date_bool_expr", "datetime_bool_expr", "vector_expr", "between_expr", "date_between_expr", "datetime_between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
+    {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "date_bool_expr", "datetime_bool_expr", "str_like_expr", "vector_expr", "between_expr", "date_between_expr", "datetime_between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
     {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast", "string_coalesce", "string_if_statement", "string_aggr"])}
     {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "num_coalesce", "aggr", "error_aggr", "num_if_statement", "age_conv"])}
     string_add: string "+" string
@@ -164,10 +164,12 @@ def make_lark_grammar(columns):
     and_boolean.3: boolean AND boolean
     or_boolean.2: boolean OR boolean
     bool_expr: col comparator col | col null_comparator NULL
+    str_like_expr: string LIKE ESCAPED_STRING
     date_bool_expr.1: date comparator (date | string)
     datetime_bool_expr.2: datetime comparator (datetime | string)
     comparator: EQ | NE | LT | LTE | GT | GTE
     null_comparator: EQ | NE | IS | IS NOT
+    LIKE: /i?like/i
     EQ: "="
     NE: "!=" | "<>"
     LT: "<"
@@ -904,6 +906,18 @@ class TransformToSQLAlchemyExpression(Transformer):
         if isinstance(right, str):
             right = self.datetime_conv(None, right)
         return self.bool_expr(left, comparator, right)
+
+    def str_like_expr(self, left, comparator, right):
+        """If right doesn't contain a wildcard, search for right
+        anywhere in the string."""
+        if not "_" in right and "%" not in right:
+            right = f"%{right}%"
+        if comparator.lower() == "like":
+            return left.like(right)
+        elif comparator.lower() == "ilike":
+            return left.ilike(right)
+        else:
+            raise Exception("Unknown comparator")
 
     # Aggregations
 
