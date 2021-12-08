@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.29.3 (2021-12-07)
+-----------------------------------------
+* Add support for like and ilike in parsed expressions
+
 v0.29.1 (2021-12-03)
 -----------------------------------------
 * Fix automatic filters when dimension ids contain double underscores
