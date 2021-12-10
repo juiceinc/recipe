@@ -9,6 +9,7 @@ from recipe.utils import generate_faker_seed
 from tests.test_base import (
     Census,
     MyTable,
+    RecipeTestCase,
     census_shelf,
     mytable_shelf,
     oven,
@@ -35,8 +36,9 @@ class DummyExtension(RecipeExtension):
         return "a"
 
 
-class TestExtensions(object):
-    def setup(self):
+class TestExtensions(RecipeTestCase):
+    def setUp(self):
+        super().setUp()
         # create a Session
         self.session = oven.Session()
         self.shelf = mytable_shelf
@@ -54,10 +56,10 @@ class TestExtensions(object):
 
         recipe = self.recipe().metrics("age").dimensions("first")
 
-        with pytest.raises(AttributeError):
+        with self.assertRaises(AttributeError):
             value = recipe.a()
 
-        with pytest.raises(AttributeError):
+        with self.assertRaises(AttributeError):
             recipe.b()
 
         self.extension_classes = [DummyExtension]
@@ -66,7 +68,7 @@ class TestExtensions(object):
         value = recipe.a()
         assert value == "a"
 
-        with pytest.raises(AttributeError):
+        with self.assertRaises(AttributeError):
             recipe.b()
 
 
@@ -77,8 +79,9 @@ class AddFilter(RecipeExtension):
         self.recipe.filters(MyTable.first > 2)
 
 
-class TestAddFilterExtension(object):
-    def setup(self):
+class TestAddFilterExtension(RecipeTestCase):
+    def setUp(self):
+        super().setUp()
         # create a Session
         self.session = oven.Session()
         self.shelf = mytable_shelf
@@ -93,31 +96,23 @@ class TestAddFilterExtension(object):
 
     def test_add_filter(self):
         recipe = self.recipe().metrics("age").dimensions("first")
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first > 2
-GROUP BY first"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS first,
+            sum(foo.age) AS age
+        FROM foo
+        WHERE foo.first > 2
+        GROUP BY first""",
         )
 
 
-class TestAutomaticFiltersExtension(object):
-    def setup(self):
-        # create a Session
-        self.session = oven.Session()
-        self.shelf = mytable_shelf
-        self.extension_classes = [AutomaticFilters]
-
-    def recipe(self):
-        return Recipe(
-            shelf=self.shelf,
-            session=self.session,
-            extension_classes=self.extension_classes,
-        )
+class TestAutomaticFiltersExtension(RecipeTestCase):
+    shelf = mytable_shelf
+    extension_classes = [AutomaticFilters]
+    session = oven.Session()
 
     def test_from_config(self):
+        """Check the internal state of an extension after configuration"""
         recipe = Recipe.from_config(
             self.shelf,
             {
@@ -161,101 +156,112 @@ class TestAutomaticFiltersExtension(object):
             recipe = recipe.foo(True)
 
     def test_apply(self):
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.apply_automatic_filters(False)
-
-        assert recipe.recipe_extensions[0].apply is False
-
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY first"""
+        recipe = (
+            self.recipe()
+            .metrics("age")
+            .dimensions("first")
+            .apply_automatic_filters(False)
+        )
+        self.assertFalse(recipe.recipe_extensions[0].apply)
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS first,
+                sum(foo.age) AS age
+            FROM foo
+            GROUP BY first""",
         )
 
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.apply_automatic_filters(True)
-
-        assert recipe.recipe_extensions[0].apply is True
-
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY first"""
+        recipe = (
+            self.recipe()
+            .metrics("age")
+            .dimensions("first")
+            .apply_automatic_filters(True)
+        )
+        self.assertTrue(recipe.recipe_extensions[0].apply)
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS first,
+                sum(foo.age) AS age
+            FROM foo
+            GROUP BY first""",
         )
 
     def test_automatic_filters(self):
         """Automatic filters"""
         recipe = self.recipe().metrics("age").dimensions("first")
         recipe = recipe.automatic_filters({"first": ["foo"]})
-
-        assert recipe.recipe_extensions[0].apply is True
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first IN ('foo')
-GROUP BY first"""
+        self.assertTrue(recipe.recipe_extensions[0].apply)
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS first,
+                sum(foo.age) AS age
+            FROM foo
+            WHERE foo.first IN ('foo')
+            GROUP BY first""",
         )
 
-        with pytest.raises(AssertionError):
+        with self.assertRaises(AssertionError):
             # Automatic filters must be a dict
             recipe.automatic_filters(2)
 
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters({"first": [None]})
-
-        assert recipe.recipe_extensions[0].apply is True
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first IS NULL
-GROUP BY first"""
+        recipe = (
+            self.recipe()
+            .metrics("age")
+            .dimensions("first")
+            .automatic_filters({"first": [None]})
+        )
+        self.assertTrue(recipe.recipe_extensions[0].apply)
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS first,
+                sum(foo.age) AS age
+            FROM foo
+            WHERE foo.first IS NULL
+            GROUP BY first""",
         )
 
     def test_apply_automatic_filters(self):
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters({"first": ["foo"]}).apply_automatic_filters(
-            False
+        recipe = (
+            self.recipe()
+            .metrics("age")
+            .dimensions("first")
+            .automatic_filters({"first": ["foo"]})
+            .apply_automatic_filters(False)
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY first"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS first,
+                sum(foo.age) AS age
+            FROM foo
+            GROUP BY first""",
         )
 
     def test_include_exclude_keys(self):
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters(
-            {"first": ["foo"]}
-        ).include_automatic_filter_keys("foo")
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY first"""
+        recipe = (
+            self.recipe()
+            .metrics("age")
+            .dimensions("first")
+            .automatic_filters({"first": ["foo"]})
+            .include_automatic_filter_keys("foo")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS first,
+                sum(foo.age) AS age
+            FROM foo
+            GROUP BY first"""
         )
 
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters(
+        recipe = self.recipe().metrics("age").dimensions("first").automatic_filters(
             {"first": ["foo"]}
         ).include_automatic_filter_keys("foo", "first")
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first IN ('foo')
-GROUP BY first"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS first,
+                sum(foo.age) AS age
+            FROM foo
+            WHERE foo.first IN ('foo')
+            GROUP BY first"""
         )
 
         recipe = self.recipe().metrics("age").dimensions("first")

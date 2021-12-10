@@ -1,3 +1,7 @@
+from datetime import date
+from unittest import TestCase
+
+from dateutil.relativedelta import relativedelta
 from sqlalchemy import (
     Column,
     Date,
@@ -5,16 +9,13 @@ from sqlalchemy import (
     Float,
     Integer,
     String,
+    Table,
     distinct,
     func,
-    Table,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sureberus.schema import Boolean
 
-from recipe import IdValueDimension, Dimension, Metric, Filter, Shelf, get_oven
-from datetime import date
-from dateutil.relativedelta import relativedelta
+from recipe import Dimension, Filter, IdValueDimension, Metric, Shelf, get_oven
 
 oven = get_oven("sqlite://")
 Base = declarative_base(bind=oven.engine)
@@ -151,6 +152,27 @@ oven.engine.execute(
 ('chip', 'musician', 'ops', '4', 100),
 ('annika', 'individual', 'ops', '5', 80),
 ('annika', 'individual', 'ops', '6', 90)
+"""
+)
+
+# Create a table for denormalized tables with tags
+TABLEDEF = """
+        CREATE TABLE IF NOT EXISTS id_tests
+        (student text,
+         student_id int,
+         age int,
+         age_id int,
+         score float);
+"""
+
+oven.engine.execute(TABLEDEF)
+oven.engine.execute(
+    """insert into id_tests values
+('chris', 1, 1, 40, 20.5),
+('chris', 1, 2, 41, 23.5),
+('annika', 2, 2, 42, 25.5),
+('annika', 2, 3, 43, 15.5),
+('chip', 3, 4, 44, 95.5)
 """
 )
 
@@ -380,6 +402,11 @@ DataTypesTable = Table(
 )
 
 
+IdTestsTable = Table(
+    "id_tests", Base.metadata, autoload=True, autoload_with=oven.engine
+)
+
+
 class DataTypeser(Base):
     username = Column("username", String(), primary_key=True)
     department = Column("department", String())
@@ -524,3 +551,31 @@ statefact_shelf = Shelf(
         "abbreviation": Dimension(StateFact.abbreviation),
     }
 )
+
+
+def str_dedent(s):
+    return "\n".join([x.lstrip() for x in s.split("\n")]).lstrip("\n").rstrip("\n")
+
+
+class RecipeTestCase(TestCase):
+    def assertRecipeCSV(self, recipe, csv_text):
+        """Recipe data returns the supplied csv content"""
+        self.assertEqual(
+            str_dedent(recipe.dataset.export("csv", lineterminator=str("\n"))),
+            str_dedent(csv_text),
+        )
+
+    def assertRecipeSQL(self, recipe, sql_text):
+        """Recipe data returns the supplied csv content"""
+        if str_dedent(recipe.to_sql()) != str_dedent(sql_text):
+            print(f"Actual:\n{recipe.to_sql()}\n\nExpected:\n{sql_text}")
+        self.assertEqual(str_dedent(recipe.to_sql()), str_dedent(sql_text))
+
+    def recipe(self):
+        from recipe import Recipe
+        return Recipe(
+            shelf=self.shelf,
+            session=self.session,
+            extension_classes=self.extension_classes,
+        )
+

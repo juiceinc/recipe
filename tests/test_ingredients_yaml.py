@@ -10,7 +10,9 @@ from dateutil.relativedelta import relativedelta
 import pytest
 from tests.test_base import (
     Census,
+    IdTestsTable,
     MyTable,
+    RecipeTestCase,
     oven,
     ScoresWithNulls,
     DateTester,
@@ -28,18 +30,16 @@ from recipe import (
 )
 
 
-class ConfigTestBase(object):
+class ConfigTestBase(RecipeTestCase):
     """A base class for testing shelves built from v1 or v2 config."""
 
     # The directory to look for yaml config files
     yaml_location = "ingredients"
     shelf_cache = {}
 
-    def setup(self):
+    def setUp(self):
+        super().setUp()
         self.session = oven.Session()
-
-    def assert_recipe_csv(self, recipe, csv_text):
-        assert recipe.dataset.export("csv", lineterminator=str("\n")) == csv_text
 
     def shelf_from_filename(self, shelf_name, selectable=None):
         """Load a file from the sample ingredients.yaml files."""
@@ -59,11 +59,12 @@ class TestRecipeIngredientsYaml(ConfigTestBase):
         recipe = (
             Recipe(shelf=shelf, session=self.session).metrics("age").dimensions("first")
         )
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """first,age,first_id
-hi,15,hi
-""",
+            """
+            first,age,first_id
+            hi,15,hi
+            """,
         )
 
     def test_ingredients1_from_yaml(self):
@@ -71,31 +72,31 @@ hi,15,hi
         recipe = (
             Recipe(shelf=shelf, session=self.session).metrics("age").dimensions("first")
         )
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """first,age,first_id
-hi,15,hi
-""",
+            """
+            first,age,first_id
+            hi,15,hi
+            """,
         )
 
     def test_ingredients1_between_dates(self):
         shelf = self.shelf_from_filename("ingredients1.yaml", MyTable)
         recipe = Recipe(shelf=shelf, session=self.session).metrics("date_between")
         today = date.today()
-        assert (
-            recipe.to_sql()
-            == """SELECT sum(CASE
-               WHEN (foo.birth_date BETWEEN '{}' AND '{}') THEN foo.age
-           END) AS date_between
-FROM foo""".format(
-                date(today.year - 20, today.month, today.day), today
-            )
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """date_between
-15
-""",
+            f"""SELECT sum(CASE
+               WHEN (foo.birth_date BETWEEN '{date(today.year - 20, today.month, today.day)}' AND '{today}') THEN foo.age
+           END) AS date_between
+            FROM foo""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            date_between
+            15
+            """,
         )
 
         # dt_between is a datetime, it generates the same query with
@@ -118,7 +119,7 @@ FROM foo""".format(
         )
         assert str(date(today.year - 20, today.month, today.day)) in recipe.to_sql()
         assert str(today) in recipe.to_sql()
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
             """dt_between
 15
@@ -133,12 +134,13 @@ FROM foo""".format(
             .metrics("pop2000", "ttlpop")
             .order_by("state")
         )
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """state,pop2000,ttlpop,state_id
-Tennessee,5685230,11887637,Tennessee
-Vermont,609480,1230082,Vermont
-""",
+            """
+            state,pop2000,ttlpop,state_id
+            Tennessee,5685230,11887637,Tennessee
+            Vermont,609480,1230082,Vermont
+            """,
         )
 
     def test_census_from_yaml(self):
@@ -149,12 +151,13 @@ Vermont,609480,1230082,Vermont
             .metrics("pop2000", "ttlpop")
             .order_by("state")
         )
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """state,pop2000,ttlpop,state_id
-Tennessee,5685230,11887637,Tennessee
-Vermont,609480,1230082,Vermont
-""",
+            """
+            state,pop2000,ttlpop,state_id
+            Tennessee,5685230,11887637,Tennessee
+            Vermont,609480,1230082,Vermont
+            """,
         )
 
     def test_nested_census_from_validated_yaml(self):
@@ -170,23 +173,25 @@ Vermont,609480,1230082,Vermont
         nested_recipe = Recipe(shelf=nested_shelf, session=self.session).metrics(
             "ttlpop", "num_states"
         )
-        assert (
-            nested_recipe.to_sql()
-            == """SELECT count(anon_1.state) AS num_states,
-       sum(anon_1.ttlpop) AS ttlpop
-FROM
-  (SELECT census.state AS state,
-          sum(census.pop2000) AS pop2000,
-          sum(census.pop2000 + census.pop2008) AS ttlpop
-   FROM census
-   GROUP BY state
-   ORDER BY state) AS anon_1"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             nested_recipe,
-            """num_states,ttlpop
-2,13117719
-""",
+            """SELECT count(anon_1.state) AS num_states,
+                sum(anon_1.ttlpop) AS ttlpop
+            FROM
+            (SELECT census.state AS state,
+                    sum(census.pop2000) AS pop2000,
+                    sum(census.pop2000 + census.pop2008) AS ttlpop
+            FROM census
+            GROUP BY state
+            ORDER BY state) AS anon_1
+            """,
+        )
+        self.assertRecipeCSV(
+            nested_recipe,
+            """
+            num_states,ttlpop
+            2,13117719
+            """,
         )
 
     def test_nested_census_from_yaml(self):
@@ -201,11 +206,12 @@ FROM
         nested_recipe = Recipe(shelf=nested_shelf, session=self.session).metrics(
             "ttlpop", "num_states"
         )
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             nested_recipe,
-            """num_states,ttlpop
-2,13117719
-""",
+            """
+            num_states,ttlpop
+            2,13117719
+            """,
         )
 
     def test_census_buckets(self):
@@ -215,69 +221,72 @@ FROM
             .dimensions("age_buckets")
             .metrics("pop2000")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT CASE
-           WHEN (census.age < 2) THEN 'babies'
-           WHEN (census.age < 13) THEN 'children'
-           WHEN (census.age < 20) THEN 'teens'
-           ELSE 'oldsters'
-       END AS age_buckets,
-       CASE
-           WHEN (census.age < 2) THEN 0
-           WHEN (census.age < 13) THEN 1
-           WHEN (census.age < 20) THEN 2
-           ELSE 9999
-       END AS age_buckets_order_by,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY age_buckets,
-         age_buckets_order_by
-ORDER BY age_buckets_order_by,
-         age_buckets"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """age_buckets,age_buckets_order_by,pop2000,age_buckets_id
-babies,0,164043,babies
-children,1,948240,children
-teens,2,614548,teens
-oldsters,9999,4567879,oldsters
-""",
+            """SELECT CASE
+                    WHEN (census.age < 2) THEN 'babies'
+                    WHEN (census.age < 13) THEN 'children'
+                    WHEN (census.age < 20) THEN 'teens'
+                    ELSE 'oldsters'
+                END AS age_buckets,
+                CASE
+                    WHEN (census.age < 2) THEN 0
+                    WHEN (census.age < 13) THEN 1
+                    WHEN (census.age < 20) THEN 2
+                    ELSE 9999
+                END AS age_buckets_order_by,
+                sum(census.pop2000) AS pop2000
+            FROM census
+            GROUP BY age_buckets,
+                    age_buckets_order_by
+            ORDER BY age_buckets_order_by,
+                    age_buckets""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            age_buckets,age_buckets_order_by,pop2000,age_buckets_id
+            babies,0,164043,babies
+            children,1,948240,children
+            teens,2,614548,teens
+            oldsters,9999,4567879,oldsters
+            """,
         )
 
     def test_census_condition_between(self):
         shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = Recipe(shelf=shelf, session=self.session).metrics("teenagers")
-        assert (
-            recipe.to_sql()
-            == """SELECT sum(CASE
-               WHEN (census.age BETWEEN 13 AND 19) THEN census.pop2000
-           END) AS teenagers
-FROM census"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """teenagers
-614548
-""",
+            """SELECT sum(CASE
+                            WHEN (census.age BETWEEN 13 AND 19) THEN census.pop2000
+                        END) AS teenagers
+                FROM census""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            teenagers
+            614548
+            """,
         )
 
     def test_census_condition_between_dates(self):
         shelf = self.shelf_from_filename("census.yaml", Census)
         recipe = Recipe(shelf=shelf, session=self.session).metrics("teenagers")
-        assert (
-            recipe.to_sql()
-            == """SELECT sum(CASE
-               WHEN (census.age BETWEEN 13 AND 19) THEN census.pop2000
-           END) AS teenagers
-FROM census"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """teenagers
-614548
-""",
+            """SELECT sum(CASE
+                            WHEN (census.age BETWEEN 13 AND 19) THEN census.pop2000
+                        END) AS teenagers
+                FROM census""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            teenagers
+            614548
+            """,
         )
 
     def test_census_mixed_buckets(self):
@@ -288,9 +297,9 @@ FROM census"""
             .metrics("pop2000")
             .order_by("-mixed_buckets")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT CASE
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT CASE
            WHEN (census.state IN ('Vermont',
                                   'New Hampshire')) THEN 'northeast'
            WHEN (census.age < 2) THEN 'babies'
@@ -331,18 +340,19 @@ FROM census
 GROUP BY mixed_buckets,
          mixed_buckets_order_by
 ORDER BY mixed_buckets_order_by DESC,
-         mixed_buckets DESC"""
+         mixed_buckets DESC""",
         )
 
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """mixed_buckets,mixed_buckets_order_by,pop2000,mixed_buckets_id
-oldsters,9999,4124620,oldsters
-teens,3,550515,teens
-children,2,859206,children
-babies,1,150889,babies
-northeast,0,609480,northeast
-""",
+            """
+            mixed_buckets,mixed_buckets_order_by,pop2000,mixed_buckets_id
+            oldsters,9999,4124620,oldsters
+            teens,3,550515,teens
+            children,2,859206,children
+            babies,1,150889,babies
+            northeast,0,609480,northeast
+            """,
         )
 
     def test_census_buckets_ordering(self):
@@ -353,9 +363,9 @@ northeast,0,609480,northeast
             .metrics("pop2000")
             .order_by("age_buckets")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT CASE
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT CASE
            WHEN (census.age < 2) THEN 'babies'
            WHEN (census.age < 13) THEN 'children'
            WHEN (census.age < 20) THEN 'teens'
@@ -372,16 +382,17 @@ FROM census
 GROUP BY age_buckets,
          age_buckets_order_by
 ORDER BY age_buckets_order_by,
-         age_buckets"""
+         age_buckets""",
         )
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """age_buckets,age_buckets_order_by,pop2000,age_buckets_id
-babies,0,164043,babies
-children,1,948240,children
-teens,2,614548,teens
-oldsters,9999,4567879,oldsters
-""",
+            """
+            age_buckets,age_buckets_order_by,pop2000,age_buckets_id
+            babies,0,164043,babies
+            children,1,948240,children
+            teens,2,614548,teens
+            oldsters,9999,4567879,oldsters
+            """,
         )
         recipe = (
             Recipe(shelf=shelf, session=self.session)
@@ -389,9 +400,9 @@ oldsters,9999,4567879,oldsters
             .metrics("pop2000")
             .order_by("-age_buckets")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT CASE
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT CASE
            WHEN (census.age < 2) THEN 'babies'
            WHEN (census.age < 13) THEN 'children'
            WHEN (census.age < 20) THEN 'teens'
@@ -408,16 +419,17 @@ FROM census
 GROUP BY age_buckets,
          age_buckets_order_by
 ORDER BY age_buckets_order_by DESC,
-         age_buckets DESC"""
+         age_buckets DESC""",
         )
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """age_buckets,age_buckets_order_by,pop2000,age_buckets_id
-oldsters,9999,4567879,oldsters
-teens,2,614548,teens
-children,1,948240,children
-babies,0,164043,babies
-""",
+            """
+            age_buckets,age_buckets_order_by,pop2000,age_buckets_id
+            oldsters,9999,4567879,oldsters
+            teens,2,614548,teens
+            children,1,948240,children
+            babies,0,164043,babies
+            """,
         )
 
     def test_census_buckets_nolabel(self):
@@ -429,9 +441,9 @@ babies,0,164043,babies
             .metrics("pop2000")
             .order_by("age_buckets_nolabel")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT CASE
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT CASE
            WHEN (census.age < 2) THEN 'babies'
            WHEN (census.age < 13) THEN 'children'
            WHEN (census.age < 20) THEN 'teens'
@@ -448,16 +460,17 @@ FROM census
 GROUP BY age_buckets_nolabel,
          age_buckets_nolabel_order_by
 ORDER BY age_buckets_nolabel_order_by,
-         age_buckets_nolabel"""
+         age_buckets_nolabel""",
         )
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """age_buckets_nolabel,age_buckets_nolabel_order_by,pop2000,age_buckets_nolabel_id
-babies,0,164043,babies
-children,1,948240,children
-teens,2,614548,teens
-Not found,9999,4567879,Not found
-""",
+            """
+            age_buckets_nolabel,age_buckets_nolabel_order_by,pop2000,age_buckets_nolabel_id
+            babies,0,164043,babies
+            children,1,948240,children
+            teens,2,614548,teens
+            Not found,9999,4567879,Not found
+            """,
         )
 
     def test_complex_census_from_validated_yaml(self):
@@ -470,22 +483,23 @@ Not found,9999,4567879,Not found
             .metrics("pop2000")
             .order_by("state")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT census.state AS state_raw,
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT census.state AS state_raw,
        sum(CASE
                WHEN (census.age > 40) THEN census.pop2000
            END) AS pop2000
 FROM census
 GROUP BY state_raw
-ORDER BY state_raw"""
+ORDER BY state_raw""",
         )
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """state_raw,pop2000,state,state_id
-Tennessee,2392122,The Volunteer State,Tennessee
-Vermont,271469,The Green Mountain State,Vermont
-""",
+            """
+            state_raw,pop2000,state,state_id
+            Tennessee,2392122,The Volunteer State,Tennessee
+            Vermont,271469,The Green Mountain State,Vermont
+            """,
         )
 
     def test_complex_census_from_validated_yaml_math(self):
@@ -497,19 +511,20 @@ Vermont,271469,The Green Mountain State,Vermont
             .dimensions("state")
             .metrics("allthemath")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT census.state AS state_raw,
-       sum((((census.pop2000 + census.pop2008) - census.pop2000) * census.pop2008) / (coalesce(CAST(census.pop2000 AS FLOAT), 0.0) + 1e-09)) AS allthemath
-FROM census
-GROUP BY state_raw"""
-        )  # noqa: E501
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """state_raw,allthemath,state,state_id
-Tennessee,6873286.452931551,The Volunteer State,Tennessee
-Vermont,660135.4074068918,The Green Mountain State,Vermont
-""",
+            """SELECT census.state AS state_raw,
+                sum((((census.pop2000 + census.pop2008) - census.pop2000) * census.pop2008) / (coalesce(CAST(census.pop2000 AS FLOAT), 0.0) + 1e-09)) AS allthemath
+            FROM census
+            GROUP BY state_raw""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            state_raw,allthemath,state,state_id
+            Tennessee,6873286.452931551,The Volunteer State,Tennessee
+            Vermont,660135.4074068918,The Green Mountain State,Vermont
+            """,
         )
 
     def test_complex_census_quickselect_from_validated_yaml(self):
@@ -525,21 +540,22 @@ Vermont,660135.4074068918,The Green Mountain State,Vermont
             .order_by("state")
             .automatic_filters({"state__quickselect": "younger"})
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT census.state AS state_raw,
-       sum(census.pop2008) AS pop2008
-FROM census
-WHERE census.age < 40
-GROUP BY state_raw
-ORDER BY state_raw"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """state_raw,pop2008,state,state_id
-Tennessee,3297299,The Volunteer State,Tennessee
-Vermont,300605,The Green Mountain State,Vermont
-""",
+            """SELECT census.state AS state_raw,
+                sum(census.pop2008) AS pop2008
+            FROM census
+            WHERE census.age < 40
+            GROUP BY state_raw
+            ORDER BY state_raw""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            state_raw,pop2008,state,state_id
+            Tennessee,3297299,The Volunteer State,Tennessee
+            Vermont,300605,The Green Mountain State,Vermont
+            """,
         )
         recipe = (
             Recipe(
@@ -550,20 +566,21 @@ Vermont,300605,The Green Mountain State,Vermont
             .order_by("state")
             .automatic_filters({"state__quickselect": "vermontier"})
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT census.state AS state_raw,
-       sum(census.pop2008) AS pop2008
-FROM census
-WHERE census.state = 'Vermont'
-GROUP BY state_raw
-ORDER BY state_raw"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """state_raw,pop2008,state,state_id
-Vermont,620602,The Green Mountain State,Vermont
-""",
+            """SELECT census.state AS state_raw,
+                sum(census.pop2008) AS pop2008
+            FROM census
+            WHERE census.state = 'Vermont'
+            GROUP BY state_raw
+            ORDER BY state_raw""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            state_raw,pop2008,state,state_id
+            Vermont,620602,The Green Mountain State,Vermont
+            """,
         )
 
     def test_shelf_with_references(self):
@@ -575,22 +592,23 @@ Vermont,620602,The Green Mountain State,Vermont
             .metrics("popdivide")
             .order_by("state")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT census.state AS state_raw,
-       CAST(sum(CASE
-                    WHEN (census.age > 40) THEN census.pop2000
-                END) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS popdivide
-FROM census
-GROUP BY state_raw
-ORDER BY state_raw"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """state_raw,popdivide,state,state_id
-Tennessee,0.3856763995010324,The Volunteer State,Tennessee
-Vermont,0.4374284968466095,The Green Mountain State,Vermont
-""",
+            """SELECT census.state AS state_raw,
+                CAST(sum(CASE
+                                WHEN (census.age > 40) THEN census.pop2000
+                            END) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS popdivide
+            FROM census
+            GROUP BY state_raw
+            ORDER BY state_raw""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            state_raw,popdivide,state,state_id
+            Tennessee,0.3856763995010324,The Volunteer State,Tennessee
+            Vermont,0.4374284968466095,The Green Mountain State,Vermont
+            """,
         )
 
     def test_shelf_with_invalidcolumn(self):
@@ -614,22 +632,23 @@ Vermont,0.4374284968466095,The Green Mountain State,Vermont
             .metrics("pop2008oldsters")
             .order_by("state")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT census.state AS state_raw,
-       sum(CASE
-               WHEN (census.age > 40) THEN census.pop2008
-           END) AS pop2008oldsters
-FROM census
-GROUP BY state_raw
-ORDER BY state_raw"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """state_raw,pop2008oldsters,state,state_id
-Tennessee,2821955,The Volunteer State,Tennessee
-Vermont,311842,The Green Mountain State,Vermont
-""",
+            """SELECT census.state AS state_raw,
+                sum(CASE
+                        WHEN (census.age > 40) THEN census.pop2008
+                    END) AS pop2008oldsters
+            FROM census
+            GROUP BY state_raw
+            ORDER BY state_raw""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            state_raw,pop2008oldsters,state,state_id
+            Tennessee,2821955,The Volunteer State,Tennessee
+            Vermont,311842,The Green Mountain State,Vermont
+            """,
         )
 
     def test_bad_census(self):
@@ -653,20 +672,21 @@ Vermont,311842,The Green Mountain State,Vermont
             .metrics("popchg")
             .order_by("state")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT census.state AS state,
-       CAST(sum(census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS popchg
-FROM census
-GROUP BY state
-ORDER BY state"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """state,popchg,state_id
-Tennessee,0.9166167263773563,Tennessee
-Vermont,0.9820786913351858,Vermont
-""",
+            """SELECT census.state AS state,
+                CAST(sum(census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS popchg
+            FROM census
+            GROUP BY state
+            ORDER BY state""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            state,popchg,state_id
+            Tennessee,0.9166167263773563,Tennessee
+            Vermont,0.9820786913351858,Vermont
+            """,
         )
 
     def test_deprecated_ingredients_lookupdimension(self):
@@ -680,20 +700,21 @@ Vermont,0.9820786913351858,Vermont
             .metrics("pop2000")
             .order_by("state_characteristic")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT census.state AS state_characteristic_raw,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state_characteristic_raw
-ORDER BY state_characteristic_raw"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """state_characteristic_raw,pop2000,state_characteristic,state_characteristic_id
-Tennessee,5685230,Volunteery,Tennessee
-Vermont,609480,Taciturny,Vermont
-""",
+            """SELECT census.state AS state_characteristic_raw,
+                sum(census.pop2000) AS pop2000
+            FROM census
+            GROUP BY state_characteristic_raw
+            ORDER BY state_characteristic_raw""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            state_characteristic_raw,pop2000,state_characteristic,state_characteristic_id
+            Tennessee,5685230,Volunteery,Tennessee
+            Vermont,609480,Taciturny,Vermont
+            """,
         )
 
         """ Test deprecated ingredient kinds in a yaml file """
@@ -707,28 +728,29 @@ Vermont,609480,Taciturny,Vermont
             .order_by("state_idval")
             .limit(5)
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT census.pop2000 AS state_idval_id,
-       census.state AS state_idval,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state_idval_id,
-         state_idval
-ORDER BY state_idval,
-         state_idval_id
-LIMIT 5
-OFFSET 0"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """state_idval_id,state_idval,pop2000,state_idval_id
-5033,Tennessee,5033,5033
-5562,Tennessee,5562,5562
-6452,Tennessee,6452,6452
-7322,Tennessee,7322,7322
-8598,Tennessee,8598,8598
-""",
+            """SELECT census.pop2000 AS state_idval_id,
+                census.state AS state_idval,
+                sum(census.pop2000) AS pop2000
+            FROM census
+            GROUP BY state_idval_id,
+                    state_idval
+            ORDER BY state_idval,
+                    state_idval_id
+            LIMIT 5
+            OFFSET 0""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            state_idval_id,state_idval,pop2000,state_idval_id
+            5033,Tennessee,5033,5033
+            5562,Tennessee,5562,5562
+            6452,Tennessee,6452,6452
+            7322,Tennessee,7322,7322
+            8598,Tennessee,8598,8598
+            """,
         )
 
     def test_deprecated_ingredients_idvaluedim(self):
@@ -758,34 +780,35 @@ OFFSET 0"""
             .order_by("state_idval")
             .limit(10)
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT census.pop2000 AS state_idval_id,
-       census.state AS state_idval,
-       CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS avgage
-FROM census
-GROUP BY state_idval_id,
-         state_idval
-ORDER BY state_idval,
-         state_idval_id
-LIMIT 10
-OFFSET 0"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT census.pop2000 AS state_idval_id,
+                census.state AS state_idval,
+                CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS avgage
+            FROM census
+            GROUP BY state_idval_id,
+                    state_idval
+            ORDER BY state_idval,
+                    state_idval_id
+            LIMIT 10
+            OFFSET 0""",
         )
 
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """state_idval_id,state_idval,avgage,state_idval_id
-5033,Tennessee,83.9999999999833,5033
-5562,Tennessee,82.99999999998506,5562
-6452,Tennessee,81.99999999998728,6452
-7322,Tennessee,80.99999999998893,7322
-8598,Tennessee,79.99999999999069,8598
-9583,Tennessee,78.99999999999176,9583
-10501,Tennessee,83.999999999992,10501
-10672,Tennessee,77.99999999999268,10672
-11141,Tennessee,82.99999999999255,11141
-11168,Tennessee,76.99999999999311,11168
-""",
+            """
+            state_idval_id,state_idval,avgage,state_idval_id
+            5033,Tennessee,83.9999999999833,5033
+            5562,Tennessee,82.99999999998506,5562
+            6452,Tennessee,81.99999999998728,6452
+            7322,Tennessee,80.99999999998893,7322
+            8598,Tennessee,79.99999999999069,8598
+            9583,Tennessee,78.99999999999176,9583
+            10501,Tennessee,83.999999999992,10501
+            10672,Tennessee,77.99999999999268,10672
+            11141,Tennessee,82.99999999999255,11141
+            11168,Tennessee,76.99999999999311,11168
+            """,
         )
 
 
@@ -802,22 +825,23 @@ class TestNullHandling(ConfigTestBase):
             .metrics("score")
             .order_by("department")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT scores_with_nulls.department AS department,
-       avg(scores_with_nulls.score) AS score
-FROM scores_with_nulls
-GROUP BY department
-ORDER BY department"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT scores_with_nulls.department AS department,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department
+            ORDER BY department""",
         )
 
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """department,score,department_id
-,80.0,
-ops,90.0,ops
-sales,,sales
-""",
+            """
+            department,score,department_id
+            ,80.0,
+            ops,90.0,ops
+            sales,,sales
+            """,
         )
 
     def test_dimension_null_handling_with_lookup_default(self):
@@ -839,22 +863,23 @@ sales,,sales
             .metrics("score")
             .order_by("department_lookup")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT scores_with_nulls.department AS department_lookup_raw,
-       avg(scores_with_nulls.score) AS score
-FROM scores_with_nulls
-GROUP BY department_lookup_raw
-ORDER BY department_lookup_raw"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT scores_with_nulls.department AS department_lookup_raw,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department_lookup_raw
+            ORDER BY department_lookup_raw""",
         )
 
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """department_lookup_raw,score,department_lookup,department_lookup_id
-,80.0,Unknown,
-ops,90.0,Operations,ops
-sales,,Sales,sales
-""",
+            """
+            department_lookup_raw,score,department_lookup,department_lookup_id
+            ,80.0,Unknown,
+            ops,90.0,Operations,ops
+            sales,,Sales,sales
+            """,
         )
 
     def test_dimension_null_handling_with_null_in_lookup(self):
@@ -876,22 +901,23 @@ sales,,Sales,sales
             .metrics("score")
             .order_by("department_lookup_with_null")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT scores_with_nulls.department AS department_lookup_with_null_raw,
-       avg(scores_with_nulls.score) AS score
-FROM scores_with_nulls
-GROUP BY department_lookup_with_null_raw
-ORDER BY department_lookup_with_null_raw"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT scores_with_nulls.department AS department_lookup_with_null_raw,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department_lookup_with_null_raw
+            ORDER BY department_lookup_with_null_raw""",
         )
 
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """department_lookup_with_null_raw,score,department_lookup_with_null,department_lookup_with_null_id
-,80.0,can not find department,
-ops,90.0,Operations,ops
-sales,,Sales,sales
-""",
+            """
+            department_lookup_with_null_raw,score,department_lookup_with_null,department_lookup_with_null_id
+            ,80.0,can not find department,
+            ops,90.0,Operations,ops
+            sales,,Sales,sales
+            """,
         )
 
     def test_dimension_null_handling_with_default(self):
@@ -910,22 +936,23 @@ sales,,Sales,sales
             .metrics("score")
             .order_by("department_default")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_default,
-       avg(scores_with_nulls.score) AS score
-FROM scores_with_nulls
-GROUP BY department_default
-ORDER BY department_default"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_default,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department_default
+            ORDER BY department_default""",
         )
 
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """department_default,score,department_default_id
-N/A,80.0,N/A
-ops,90.0,ops
-sales,,sales
-""",
+            """
+            department_default,score,department_default_id
+            N/A,80.0,N/A
+            ops,90.0,ops
+            sales,,sales
+            """,
         )
 
     def test_dimension_null_handling_with_buckets(self):
@@ -944,33 +971,34 @@ sales,,sales
             .metrics("score")
             .order_by("department_buckets")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT CASE
-           WHEN (scores_with_nulls.department = 'sales') THEN 'Sales'
-           WHEN (scores_with_nulls.department = 'ops') THEN 'Operations'
-           ELSE 'Other'
-       END AS department_buckets,
-       CASE
-           WHEN (scores_with_nulls.department = 'sales') THEN 0
-           WHEN (scores_with_nulls.department = 'ops') THEN 1
-           ELSE 9999
-       END AS department_buckets_order_by,
-       avg(scores_with_nulls.score) AS score
-FROM scores_with_nulls
-GROUP BY department_buckets,
-         department_buckets_order_by
-ORDER BY department_buckets_order_by,
-         department_buckets"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT CASE
+                    WHEN (scores_with_nulls.department = 'sales') THEN 'Sales'
+                    WHEN (scores_with_nulls.department = 'ops') THEN 'Operations'
+                    ELSE 'Other'
+                END AS department_buckets,
+                CASE
+                    WHEN (scores_with_nulls.department = 'sales') THEN 0
+                    WHEN (scores_with_nulls.department = 'ops') THEN 1
+                    ELSE 9999
+                END AS department_buckets_order_by,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department_buckets,
+                    department_buckets_order_by
+            ORDER BY department_buckets_order_by,
+                    department_buckets""",
         )
 
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """department_buckets,department_buckets_order_by,score,department_buckets_id
-Sales,0,,Sales
-Operations,1,90.0,Operations
-Other,9999,80.0,Other
-""",
+            """
+            department_buckets,department_buckets_order_by,score,department_buckets_id
+            Sales,0,,Sales
+            Operations,1,90.0,Operations
+            Other,9999,80.0,Other
+            """,
         )
 
     def test_dimension_null_handling_multi_approaches(self):
@@ -995,22 +1023,23 @@ Other,9999,80.0,Other
             .metrics("score")
             .order_by("-department_lookup_with_everything")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_lookup_with_everything_raw,
-       avg(scores_with_nulls.score) AS score
-FROM scores_with_nulls
-GROUP BY department_lookup_with_everything_raw
-ORDER BY department_lookup_with_everything_raw DESC"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_lookup_with_everything_raw,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department_lookup_with_everything_raw
+            ORDER BY department_lookup_with_everything_raw DESC""",
         )
 
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """department_lookup_with_everything_raw,score,department_lookup_with_everything,department_lookup_with_everything_id
-sales,,Sales,sales
-ops,90.0,Operations,ops
-N/A,80.0,Unknown,N/A
-""",
+            """
+            department_lookup_with_everything_raw,score,department_lookup_with_everything,department_lookup_with_everything_id
+            sales,,Sales,sales
+            ops,90.0,Operations,ops
+            N/A,80.0,Unknown,N/A
+            """,
         )
 
     def test_metric_null_handling(self):
@@ -1029,22 +1058,23 @@ N/A,80.0,Unknown,N/A
             .metrics("score_with_default")
             .order_by("department")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT scores_with_nulls.department AS department,
-       avg(coalesce(scores_with_nulls.score, -1.0)) AS score_with_default
-FROM scores_with_nulls
-GROUP BY department
-ORDER BY department"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT scores_with_nulls.department AS department,
+                avg(coalesce(scores_with_nulls.score, -1.0)) AS score_with_default
+            FROM scores_with_nulls
+            GROUP BY department
+            ORDER BY department""",
         )
 
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """department,score_with_default,department_id
-,39.5,
-ops,59.666666666666664,ops
-sales,-1.0,sales
-""",
+            """
+            department,score_with_default,department_id
+            ,39.5,
+            ops,59.666666666666664,ops
+            sales,-1.0,sales
+            """,
         )
 
 
@@ -1087,35 +1117,36 @@ class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
             .dimensions("age_buckets")
             .metrics("pop2000")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT CASE
-           WHEN (census.age < 2) THEN 'babies'
-           WHEN (census.age < 13) THEN 'children'
-           WHEN (census.age < 20) THEN 'teens'
-           ELSE 'oldsters'
-       END AS age_buckets,
-       CASE
-           WHEN (census.age < 2) THEN 0
-           WHEN (census.age < 13) THEN 1
-           WHEN (census.age < 20) THEN 2
-           ELSE 9999
-       END AS age_buckets_order_by,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY age_buckets,
-         age_buckets_order_by
-ORDER BY age_buckets_order_by,
-         age_buckets"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """age_buckets,age_buckets_order_by,pop2000,age_buckets_id
-babies,0,164043,babies
-children,1,948240,children
-teens,2,614548,teens
-oldsters,9999,4567879,oldsters
-""",
+            """SELECT CASE
+                    WHEN (census.age < 2) THEN 'babies'
+                    WHEN (census.age < 13) THEN 'children'
+                    WHEN (census.age < 20) THEN 'teens'
+                    ELSE 'oldsters'
+                END AS age_buckets,
+                CASE
+                    WHEN (census.age < 2) THEN 0
+                    WHEN (census.age < 13) THEN 1
+                    WHEN (census.age < 20) THEN 2
+                    ELSE 9999
+                END AS age_buckets_order_by,
+                sum(census.pop2000) AS pop2000
+            FROM census
+            GROUP BY age_buckets,
+                    age_buckets_order_by
+            ORDER BY age_buckets_order_by,
+                    age_buckets""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            age_buckets,age_buckets_order_by,pop2000,age_buckets_id
+            babies,0,164043,babies
+            children,1,948240,children
+            teens,2,614548,teens
+            oldsters,9999,4567879,oldsters
+            """,
         )
 
     def test_deprecated_ingredients_dividemetric(self):
@@ -1143,25 +1174,26 @@ oldsters,9999,4567879,oldsters
             .metrics("popdivide")
             .order_by("state")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT census.state AS state_raw,
-       CASE
-           WHEN (sum(census.pop2008) = 0) THEN NULL
-           ELSE CAST(sum(CASE
-                             WHEN (census.age > 40) THEN census.pop2000
-                         END) AS FLOAT) / CAST(sum(census.pop2008) AS FLOAT)
-       END AS popdivide
-FROM census
-GROUP BY state_raw
-ORDER BY state_raw"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """state_raw,popdivide,state,state_id
-Tennessee,0.38567639950103244,The Volunteer State,Tennessee
-Vermont,0.4374284968466102,The Green Mountain State,Vermont
-""",
+            """SELECT census.state AS state_raw,
+                CASE
+                    WHEN (sum(census.pop2008) = 0) THEN NULL
+                    ELSE CAST(sum(CASE
+                                        WHEN (census.age > 40) THEN census.pop2000
+                                    END) AS FLOAT) / CAST(sum(census.pop2008) AS FLOAT)
+                END AS popdivide
+            FROM census
+            GROUP BY state_raw
+            ORDER BY state_raw""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            state_raw,popdivide,state,state_id
+            Tennessee,0.38567639950103244,The Volunteer State,Tennessee
+            Vermont,0.4374284968466102,The Green Mountain State,Vermont
+            """,
         )
 
     def test_shelf_with_invalidingredient(self):
@@ -1186,22 +1218,23 @@ Vermont,0.4374284968466102,The Green Mountain State,Vermont
             .dimensions("state")
             .metrics("allthemath")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT census.state AS state_raw,
-       sum(census.pop2000 + (census.pop2008 - census.pop2000 * CASE
-                                                                   WHEN (census.pop2000 = 0) THEN NULL
-                                                                   ELSE CAST(census.pop2008 AS FLOAT) / CAST(census.pop2000 AS FLOAT)
-                                                               END)) AS allthemath
-FROM census
-GROUP BY state_raw"""
-        )  # noqa: E501
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """state_raw,allthemath,state,state_id
-Tennessee,5685230.0,The Volunteer State,Tennessee
-Vermont,609480.0,The Green Mountain State,Vermont
-""",
+            """SELECT census.state AS state_raw,
+                sum(census.pop2000 + (census.pop2008 - census.pop2000 * CASE
+                    WHEN (census.pop2000 = 0) THEN NULL
+                    ELSE CAST(census.pop2008 AS FLOAT) / CAST(census.pop2000 AS FLOAT)
+                END)) AS allthemath
+            FROM census
+            GROUP BY state_raw""",
+        )  # noqa: E501
+        self.assertRecipeCSV(
+            recipe,
+            """
+            state_raw,allthemath,state,state_id
+            Tennessee,5685230.0,The Volunteer State,Tennessee
+            Vermont,609480.0,The Green Mountain State,Vermont
+            """,
         )
 
     def test_deprecated_ingredients_idvaluedim(self):
@@ -1216,38 +1249,39 @@ Vermont,609480.0,The Green Mountain State,Vermont
             .order_by("state_idval")
             .limit(10)
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT census.pop2000 AS state_idval_id,
-       census.state AS state_idval,
-       CASE
-           WHEN (sum(census.pop2000) = 0) THEN NULL
-           ELSE CAST(sum(census.age * census.pop2000) AS FLOAT) / CAST(sum(census.pop2000) AS FLOAT)
-       END AS avgage
-FROM census
-GROUP BY state_idval_id,
-         state_idval
-ORDER BY state_idval,
-         state_idval_id
-LIMIT 10
-OFFSET 0"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT census.pop2000 AS state_idval_id,
+                census.state AS state_idval,
+                CASE
+                    WHEN (sum(census.pop2000) = 0) THEN NULL
+                    ELSE CAST(sum(census.age * census.pop2000) AS FLOAT) / CAST(sum(census.pop2000) AS FLOAT)
+                END AS avgage
+            FROM census
+            GROUP BY state_idval_id,
+                    state_idval
+            ORDER BY state_idval,
+                    state_idval_id
+            LIMIT 10
+            OFFSET 0""",
         )
 
         # Parsed shelves provide better division
-        self.assert_recipe_csv(
+        self.assertRecipeCSV(
             recipe,
-            """state_idval_id,state_idval,avgage,state_idval_id
-5033,Tennessee,84.0,5033
-5562,Tennessee,83.0,5562
-6452,Tennessee,82.0,6452
-7322,Tennessee,81.0,7322
-8598,Tennessee,80.0,8598
-9583,Tennessee,79.0,9583
-10501,Tennessee,84.0,10501
-10672,Tennessee,78.0,10672
-11141,Tennessee,83.0,11141
-11168,Tennessee,77.0,11168
-""",
+            """
+            state_idval_id,state_idval,avgage,state_idval_id
+            5033,Tennessee,84.0,5033
+            5562,Tennessee,83.0,5562
+            6452,Tennessee,82.0,6452
+            7322,Tennessee,81.0,7322
+            8598,Tennessee,80.0,8598
+            9583,Tennessee,79.0,9583
+            10501,Tennessee,84.0,10501
+            10672,Tennessee,78.0,10672
+            11141,Tennessee,83.0,11141
+            11168,Tennessee,77.0,11168
+            """,
         )
 
     def test_is(self):
@@ -1258,21 +1292,22 @@ OFFSET 0"""
             .metrics("dt_test")
             .dimensions("first")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS first,
-       sum(CASE
-               WHEN (foo.birth_date IS NULL) THEN foo.age
-               ELSE 1
-           END) AS dt_test
-FROM foo
-GROUP BY first"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """first,dt_test,first_id
-hi,2,hi
-""",
+            """SELECT foo.first AS first,
+                sum(CASE
+                        WHEN (foo.birth_date IS NULL) THEN foo.age
+                        ELSE 1
+                    END) AS dt_test
+            FROM foo
+            GROUP BY first""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            first,dt_test,first_id
+            hi,2,hi
+            """,
         )
 
     def test_intelligent_date(self):
@@ -1289,23 +1324,22 @@ hi,2,hi
         today = date.today()
         start_dt = date(today.year - 1, 1, 1)
         end_dt = start_dt + relativedelta(years=1, days=-1)
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS first,
-       sum(CASE
-               WHEN (foo.birth_date BETWEEN '{}' AND '{}') THEN foo.age
-               ELSE 2
-           END) AS intelligent_date_test
-FROM foo
-GROUP BY first""".format(
-                start_dt, end_dt
-            )
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """first,intelligent_date_test,first_id
-hi,4,hi
-""",
+            f"""SELECT foo.first AS first,
+                sum(CASE
+                        WHEN (foo.birth_date BETWEEN '{start_dt}' AND '{end_dt}') THEN foo.age
+                        ELSE 2
+                    END) AS intelligent_date_test
+            FROM foo
+            GROUP BY first""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            first,intelligent_date_test,first_id
+            hi,4,hi
+            """,
         )
 
 
@@ -1324,12 +1358,12 @@ _version: 2
         )
 
         recipe = Recipe(shelf=shelf, session=self.session).dimensions("true")
-        assert (
-            recipe.to_sql()
-            == """SELECT weird_table_with_column_named_true."true" AS "true"
-FROM weird_table_with_column_named_true
-GROUP BY "true"
-            """.strip()
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT weird_table_with_column_named_true."true" AS "true"
+            FROM weird_table_with_column_named_true
+            GROUP BY "true"
+            """,
         )
 
     def test_complex_field(self):
@@ -1380,143 +1414,180 @@ parentheses:
             ScoresWithNulls,
         )
         recipe = Recipe(shelf=shelf, session=self.session).metrics("count_star")
-        assert (
-            recipe.to_sql()
-            == """SELECT count(*) AS count_star
-FROM scores_with_nulls"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT count(*) AS count_star
+            FROM scores_with_nulls""",
         )
-        self.assert_recipe_csv(recipe, "count_star\n6\n")
+        self.assertRecipeCSV(
+            recipe,
+            """
+        count_star
+        6
+        """,
+        )
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("total_nulls")
-        assert (
-            recipe.to_sql()
-            == """SELECT count(DISTINCT CASE
-                          WHEN (scores_with_nulls.score IS NULL) THEN scores_with_nulls.username
-                      END) AS total_nulls
-FROM scores_with_nulls"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT count(DISTINCT CASE
+                WHEN (scores_with_nulls.score IS NULL) THEN scores_with_nulls.username
+            END) AS total_nulls
+            FROM scores_with_nulls""",
         )
-        self.assert_recipe_csv(recipe, "total_nulls\n3\n")
+        self.assertRecipeCSV(
+            recipe,
+            """
+        total_nulls
+        3
+        """,
+        )
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("chip_nulls")
-        assert (
-            recipe.to_sql()
-            == """SELECT sum(CASE
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT sum(CASE
                WHEN (scores_with_nulls.score IS NULL
                      AND scores_with_nulls.username = 'chip') THEN 1
                ELSE 0
            END) AS chip_nulls
-FROM scores_with_nulls"""
+FROM scores_with_nulls""",
         )
-        self.assert_recipe_csv(recipe, "chip_nulls\n1\n")
+        self.assertRecipeCSV(
+            recipe,
+            """
+        chip_nulls
+        1
+        """,
+        )
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("chip_or_nulls")
-        assert (
-            recipe.to_sql()
-            == """SELECT sum(CASE
-               WHEN (scores_with_nulls.score IS NULL
-                     OR scores_with_nulls.username = 'chip') THEN 1
-               ELSE 0
-           END) AS chip_or_nulls
-FROM scores_with_nulls"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT sum(CASE
+                        WHEN (scores_with_nulls.score IS NULL
+                                OR scores_with_nulls.username = 'chip') THEN 1
+                        ELSE 0
+                    END) AS chip_or_nulls
+            FROM scores_with_nulls""",
         )
-        self.assert_recipe_csv(recipe, "chip_or_nulls\n5\n")
+        self.assertRecipeCSV(
+            recipe,
+            """
+            chip_or_nulls
+            5
+            """,
+        )
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("user_null_counter")
-        assert (
-            recipe.to_sql()
-            == """SELECT sum(CASE
-               WHEN (scores_with_nulls.username IS NULL) THEN 1
-               ELSE 0
-           END) AS user_null_counter
-FROM scores_with_nulls"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT sum(CASE
+                        WHEN (scores_with_nulls.username IS NULL) THEN 1
+                        ELSE 0
+                    END) AS user_null_counter
+            FROM scores_with_nulls""",
         )
 
-        self.assert_recipe_csv(recipe, "user_null_counter\n0\n")
+        self.assertRecipeCSV(
+            recipe,
+            """
+            user_null_counter
+            0
+            """,
+        )
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("simple_math")
-        assert (
-            recipe.to_sql()
-            == """SELECT count(*) + count(DISTINCT CASE
-                                     WHEN (scores_with_nulls.score IS NULL) THEN scores_with_nulls.username
-                                 END) + sum(CASE
-                                                WHEN (scores_with_nulls.score IS NULL
-                                                      AND scores_with_nulls.username = 'chip') THEN 1
-                                                ELSE 0
-                                            END) AS simple_math
-FROM scores_with_nulls"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT count(*) + count(DISTINCT CASE
+                WHEN (scores_with_nulls.score IS NULL) THEN scores_with_nulls.username
+            END) + sum(CASE
+                WHEN (scores_with_nulls.score IS NULL
+                    AND scores_with_nulls.username = 'chip') THEN 1
+                ELSE 0
+            END) AS simple_math
+            FROM scores_with_nulls""",
         )
-        self.assert_recipe_csv(recipe, "simple_math\n10\n")
+        self.assertRecipeCSV(recipe, "simple_math\n10\n")
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("refs_division")
-        assert (
-            recipe.to_sql()
-            == """SELECT CAST(count(*) AS FLOAT) / 100.0 AS refs_division
-FROM scores_with_nulls"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT CAST(count(*) AS FLOAT) / 100.0 AS refs_division
+            FROM scores_with_nulls""",
         )
-        self.assert_recipe_csv(recipe, "refs_division\n0.06\n")
+        self.assertRecipeCSV(
+            recipe,
+            """
+        refs_division
+        0.06
+        """,
+        )
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("refs_as_denom")
-        assert (
-            recipe.to_sql()
-            == """SELECT CASE
-           WHEN (count(*) = 0) THEN NULL
-           ELSE 12 / CAST(count(*) AS FLOAT)
-       END AS refs_as_denom
-FROM scores_with_nulls"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT CASE
+                    WHEN (count(*) = 0) THEN NULL
+                    ELSE 12 / CAST(count(*) AS FLOAT)
+                END AS refs_as_denom
+            FROM scores_with_nulls""",
         )
-        self.assert_recipe_csv(recipe, "refs_as_denom\n2.0\n")
+        self.assertRecipeCSV(recipe, "refs_as_denom\n2.0\n")
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("math")
-        assert (
-            recipe.to_sql()
-            == """SELECT CASE
-           WHEN (count(*) = 0) THEN NULL
-           ELSE CAST(count(*) AS FLOAT) / CAST(count(*) AS FLOAT)
-       END + 2.5 AS math
-FROM scores_with_nulls"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT CASE
+                    WHEN (count(*) = 0) THEN NULL
+                    ELSE CAST(count(*) AS FLOAT) / CAST(count(*) AS FLOAT)
+                END + 2.5 AS math
+            FROM scores_with_nulls""",
         )
-        self.assert_recipe_csv(recipe, "math\n3.5\n")
+        self.assertRecipeCSV(recipe, "math\n3.5\n")
 
         recipe = Recipe(shelf=shelf, session=self.session).metrics("parentheses")
-        assert (
-            recipe.to_sql()
-            == """SELECT CASE
-           WHEN (count(*) + 6.0 = 0) THEN NULL
-           ELSE CAST(count(*) AS FLOAT) / CAST(count(*) + 6.0 AS FLOAT)
-       END AS parentheses
-FROM scores_with_nulls"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT CASE
+                    WHEN (count(*) + 6.0 = 0) THEN NULL
+                    ELSE CAST(count(*) AS FLOAT) / CAST(count(*) + 6.0 AS FLOAT)
+                END AS parentheses
+            FROM scores_with_nulls""",
         )
-        self.assert_recipe_csv(recipe, "parentheses\n0.5\n")
+        self.assertRecipeCSV(recipe, "parentheses\n0.5\n")
 
         recipe = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("convertdate")
             .metrics("count_star")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT date_trunc('month', scores_with_nulls.test_date) AS convertdate,
-       count(*) AS count_star
-FROM scores_with_nulls
-GROUP BY convertdate"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT date_trunc('month', scores_with_nulls.test_date) AS convertdate,
+                count(*) AS count_star
+            FROM scores_with_nulls
+            GROUP BY convertdate""",
         )
         # Can't run this against sqlite so we don't test csv
 
         recipe = Recipe(shelf=shelf, session=self.session).dimensions("strings")
-        assert (
-            recipe.to_sql()
-            == """SELECT CAST(scores_with_nulls.test_date AS VARCHAR) || CAST(scores_with_nulls.score AS VARCHAR) AS strings
-FROM scores_with_nulls
-GROUP BY strings"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """strings,strings_id
-,
-2005-01-0480.0,2005-01-0480.0
-2005-01-07100.0,2005-01-07100.0
-2005-02-0180.0,2005-02-0180.0
-""",
+            """SELECT CAST(scores_with_nulls.test_date AS VARCHAR) || CAST(scores_with_nulls.score AS VARCHAR) AS strings
+            FROM scores_with_nulls
+            GROUP BY strings""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            strings,strings_id
+            ,
+            2005-01-0480.0,2005-01-0480.0
+            2005-01-07100.0,2005-01-07100.0
+            2005-02-0180.0,2005-02-0180.0
+            """,
         )
 
     def test_selectables(self):
@@ -1538,20 +1609,21 @@ count_star:
             .dimensions("username")
             .metrics("count_star")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT scores_with_nulls.username AS username,
-       count(*) AS count_star
-FROM scores_with_nulls
-GROUP BY username"""
-        )
-        self.assert_recipe_csv(
+        self.assertRecipeSQL(
             recipe,
-            """username,count_star,username_id
-annika,2,annika
-chip,3,chip
-chris,1,chris
-""",
+            """SELECT scores_with_nulls.username AS username,
+                count(*) AS count_star
+            FROM scores_with_nulls
+            GROUP BY username""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            username,count_star,username_id
+            annika,2,annika
+            chip,3,chip
+            chris,1,chris
+            """,
         )
 
         # Build a recipe using the first recipe
@@ -1570,17 +1642,17 @@ count_username:
         recipe2 = Recipe(shelf=shelf2, session=self.session).metrics(
             "count_star", "count_username"
         )
-        assert (
-            recipe2.to_sql()
-            == """SELECT count(*) AS count_star,
-       count(anon_1.username) AS count_username
-FROM
-  (SELECT scores_with_nulls.username AS username,
-          count(*) AS count_star
-   FROM scores_with_nulls
-   GROUP BY username) AS anon_1"""
+        self.assertRecipeSQL(
+            recipe2,
+            """SELECT count(*) AS count_star,
+                count(anon_1.username) AS count_username
+            FROM
+            (SELECT scores_with_nulls.username AS username,
+                    count(*) AS count_star
+            FROM scores_with_nulls
+            GROUP BY username) AS anon_1""",
         )
-        self.assert_recipe_csv(recipe2, "count_star,count_username\n3,3\n")
+        self.assertRecipeCSV(recipe2, "count_star,count_username\n3,3\n")
 
 
 class TestParsedIntellligentDates(ConfigTestBase):
@@ -1612,17 +1684,15 @@ test:
             today = date.today()
             start_dt = date(today.year, 1, 1)
             end_dt = start_dt + relativedelta(years=1, days=-1)
-            assert (
-                recipe.to_sql()
-                == """SELECT sum(CASE
-               WHEN (datetester.dt BETWEEN '{}' AND '{}') THEN datetester.count
-               ELSE 0
-           END) AS test
-FROM datetester""".format(
-                    start_dt, end_dt
-                )
+            self.assertRecipeSQL(
+                recipe,
+                f"""SELECT sum(CASE
+                    WHEN (datetester.dt BETWEEN '{start_dt}' AND '{end_dt}') THEN datetester.count
+                    ELSE 0
+                END) AS test
+                FROM datetester""",
             )
-            self.assert_recipe_csv(recipe, "test\n12\n")
+            self.assertRecipeCSV(recipe, "test\n12\n")
 
     def test_prior_years(self):
         """Test current year with a variety of spacing and capitalization"""
@@ -1631,31 +1701,27 @@ FROM datetester""".format(
 
         for is_prior_year in data:
             shelf = self.shelf_from_yaml(
-                """
+                f"""
 _version: 2
 test:
     kind: Metric
-    field: "if(dt {}, count, 0)"
-""".format(
-                    is_prior_year
-                ),
+    field: "if(dt {is_prior_year}, count, 0)"
+""",
                 DateTester,
             )
             recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
             today = date.today()
             start_dt = date(today.year - 1, 1, 1)
             end_dt = start_dt + relativedelta(years=1, days=-1)
-            assert (
-                recipe.to_sql()
-                == """SELECT sum(CASE
-               WHEN (datetester.dt BETWEEN '{}' AND '{}') THEN datetester.count
-               ELSE 0
-           END) AS test
-FROM datetester""".format(
-                    start_dt, end_dt
-                )
+            self.assertRecipeSQL(
+                recipe,
+                f"""SELECT sum(CASE
+                            WHEN (datetester.dt BETWEEN '{start_dt}' AND '{end_dt}') THEN datetester.count
+                            ELSE 0
+                        END) AS test
+                FROM datetester""",
             )
-            self.assert_recipe_csv(recipe, "test\n12\n")
+            self.assertRecipeCSV(recipe, "test\n12\n")
 
     def test_ytd(self):
         """Test current year with a variety of spacing and capitalization"""
@@ -1673,18 +1739,16 @@ FROM datetester""".format(
 
         for ytd in data:
             shelf = self.shelf_from_yaml(
-                """
+                f"""
 _version: 2
 test:
     kind: Metric
-    field: "if(dt {}, count, 0)"
-""".format(
-                    ytd
-                ),
+    field: "if(dt {ytd}, count, 0)"
+""",
                 DateTester,
             )
             recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
-            self.assert_recipe_csv(recipe, "test\n{}\n".format(today.month))
+            self.assertRecipeCSV(recipe, "test\n{}\n".format(today.month))
             unique_sql.add(recipe.to_sql())
         assert len(unique_sql) == 3
 
@@ -1704,18 +1768,16 @@ test:
 
         for ytd in data:
             shelf = self.shelf_from_yaml(
-                """
+                f"""
 _version: 2
 test:
     kind: Metric
-    field: "if(not(dt {}), count, 0)"
-""".format(
-                    ytd
-                ),
+    field: "if(not(dt {ytd}), count, 0)"
+""",
                 DateTester,
             )
             recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
-            self.assert_recipe_csv(recipe, "test\n{}\n".format(100 - today.month))
+            self.assertRecipeCSV(recipe, f"test\n{100-today.month}\n")
             unique_sql.add(recipe.to_sql())
         assert len(unique_sql) == 3
 
@@ -1728,18 +1790,16 @@ test:
 
         for ytd in data:
             shelf = self.shelf_from_yaml(
-                """
+                f"""
 _version: 2
 test:
     kind: Metric
-    field: "if(dt {}, count, 0)"
-""".format(
-                    ytd
-                ),
+    field: "if(dt {ytd}, count, 0)"
+""",
                 DateTester,
             )
             recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
-            self.assert_recipe_csv(recipe, "test\n3\n")
+            self.assertRecipeCSV(recipe, "test\n3\n")
             unique_sql.add(recipe.to_sql())
         assert len(unique_sql) == 3
 
@@ -1775,20 +1835,103 @@ test5:
         recipe = Recipe(shelf=shelf, session=self.session).dimensions(
             "test", "test2", "test3", "test4", "test5"
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT date_trunc('year', datetester.dt) AS test,
-       date_trunc('year', datetester.dt) AS test2,
-       date_trunc('month', datetester.dt) AS test3,
-       date_trunc('month', datetester.dt) AS test4,
-       datetester.dt AS test5
-FROM datetester
-GROUP BY test,
-         test2,
-         test3,
-         test4,
-         test5"""
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT date_trunc('year', datetester.dt) AS test,
+                date_trunc('year', datetester.dt) AS test2,
+                date_trunc('month', datetester.dt) AS test3,
+                date_trunc('month', datetester.dt) AS test4,
+                datetester.dt AS test5
+            FROM datetester
+            GROUP BY test,
+                    test2,
+                    test3,
+                    test4,
+                    test5""",
         )
+
+    def test_id_fields(self):
+        """We can have fields that end in _id
+
+        _id is a protected name
+        """
+
+        shelf = self.shelf_from_yaml(
+            """
+_version: 2
+student:
+    kind: Dimension
+    field: student
+student_id:
+    kind: Dimension
+    field: student_id
+""",
+            IdTestsTable,
+        )
+        recipe = Recipe(shelf=shelf, session=self.session).dimensions("student")
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT id_tests.student AS student
+            FROM id_tests
+            GROUP BY student""",
+        )
+        recipe = Recipe(shelf=shelf, session=self.session).dimensions("student_id")
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT id_tests.student_id AS student_id
+            FROM id_tests
+            GROUP BY student_id""",
+        )
+
+        recipe = Recipe(shelf=shelf, session=self.session).dimensions(
+            "student", "student_id"
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT id_tests.student AS student,
+                id_tests.student_id AS student_id
+            FROM id_tests
+            GROUP BY student,
+                    student_id""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            student,student_id,student_id,student_id_id
+            annika,2,annika,2
+            chip,3,chip,3
+            chris,1,chris,1
+            """,
+        )
+        firstrow = recipe.all()[0]
+        assert firstrow.student == "annika"
+        assert firstrow.student_id == "annika"
+        assert firstrow.student_id_id == 2
+
+        recipe = Recipe(shelf=shelf, session=self.session).dimensions(
+            "student_id", "student"
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT id_tests.student AS student,
+                id_tests.student_id AS student_id
+            FROM id_tests
+            GROUP BY student,
+                    student_id"""
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            student,student_id,student_id,student_id_id
+            annika,2,annika,2
+            chip,3,chip,3
+            chris,1,chris,1
+            """,
+        )
+        firstrow = recipe.all()[0]
+        assert firstrow.student == "annika"
+        assert firstrow.student_id == "annika"
+        assert firstrow.student_id_id == 2
 
 
 class TestParsedFieldConfig(ConfigTestBase):
