@@ -1,3 +1,6 @@
+from sqlalchemy.sql.sqltypes import Boolean
+from yaml import safe_load
+import os
 from datetime import date
 from unittest import TestCase
 
@@ -14,6 +17,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql.schema import MetaData
 
 from recipe import Dimension, Filter, IdValueDimension, Metric, Shelf, get_oven
 
@@ -558,6 +562,8 @@ def str_dedent(s):
 
 
 class RecipeTestCase(TestCase):
+    """Test cases that can build and test as recipe"""
+
     def assertRecipeCSV(self, recipe, csv_text):
         """Recipe data returns the supplied csv content"""
         self.assertEqual(
@@ -573,9 +579,231 @@ class RecipeTestCase(TestCase):
 
     def recipe(self):
         from recipe import Recipe
+
         return Recipe(
             shelf=self.shelf,
             session=self.session,
             extension_classes=self.extension_classes,
         )
 
+    connection_string = "sqlite://"
+    create_table_kwargs = {}
+
+    @classmethod
+    def load_data(cls, table_name):
+        """Load data from the data/ directory"""
+        table = getattr(cls, table_name)
+
+        data = safe_load(open(os.path.join(cls.root_dir, "data", f"{table_name}.yml")))
+        cls.oven.engine.execute(table.insert(), data)
+
+    @classmethod
+    def setUpClass(cls):
+        """get_some_resource() is slow, to avoid calling it for each test use setUpClass()
+        and store the result as class variable
+        """
+        super(RecipeTestCase, cls).setUpClass()
+        cls.meta = MetaData()
+        cls.oven = get_oven(cls.connection_string)
+        cls.root_dir = os.path.abspath(os.path.dirname(__file__))
+
+        cls.weird_table_with_column_named_true_table = Table(
+            "weird_table_with_column_named_true", cls.meta, Column("true", String)
+        )
+
+        cls.foo_table = Table(
+            "foo",
+            cls.meta,
+            Column("first", String),
+            Column("last", String),
+            Column("age", Integer),
+            Column("birth_date", Date),
+            Column("dt", DateTime),
+        )
+
+        cls.datetester_table = Table(
+            "datetester", cls.meta, Column("dt", Date), Column("count", Integer)
+        )
+
+        cls.scores_table = Table(
+            "scores",
+            cls.meta,
+            Column("username", String),
+            Column("department", String),
+            Column("testid", String),
+            Column("score", Float),
+            Column("test_date", Date),
+        )
+
+        cls.datatypes_table = Table(
+            "datatypes",
+            cls.meta,
+            Column("username", String),
+            Column("department", String),
+            Column("testid", String),
+            Column("score", Float),
+            Column("test_date", Date),
+            Column("test_datetime", DateTime),
+            Column("valid_score", Boolean),
+        )
+
+        cls.scores_with_nulls_table = Table(
+            "scores_with_nulls",
+            cls.meta,
+            Column("username", String),
+            Column("department", String),
+            Column("testid", String),
+            Column("score", Float),
+            Column("test_date", Date),
+        )
+
+        cls.tagscores_table = Table(
+            "tagscores",
+            cls.meta,
+            Column("username", String),
+            Column("tag", String),
+            Column("department", String),
+            Column("testid", String),
+            Column("score", Float),
+        )
+
+        cls.id_tests_table = Table(
+            "id_tests",
+            cls.meta,
+            Column("student", String),
+            Column("student_id", Integer),
+            Column("age", Integer),
+            Column("age_id", Integer),
+            Column("score", Float),
+        )
+
+        cls.census_table = Table(
+            "census",
+            cls.meta,
+            Column("state", String),
+            Column("sex", String),
+            Column("age", Integer),
+            Column("pop2000", Integer),
+            Column("pop2008", Integer),
+        )
+
+        cls.state_fact_table = Table(
+            "state_fact",
+            cls.meta,
+            Column("id", String),
+            Column("name", String),
+            Column("abbreviation", String),
+            Column("sort", String),
+            Column("status", String),
+            Column("occupied", String),
+            Column("notes", String),
+            Column("fips_state", String),
+            Column("assoc_press", String),
+            Column("standard_federal_region", String),
+            Column("census_region", String),
+            Column("census_region_name", String),
+            Column("census_division", String),
+            Column("census_division_name", String),
+            Column("circuit_court", String),
+        )
+
+        cls.meta.drop_all(cls.oven.engine)
+        cls.meta.create_all(cls.oven.engine)
+        cls.load_data("weird_table_with_column_named_true_table")
+        cls.load_data("foo_table")
+        cls.load_data("scores_table")
+        cls.load_data("datatypes_table")
+        cls.load_data("scores_with_nulls_table")
+        cls.load_data("tagscores_table")
+        cls.load_data("id_tests_table")
+        cls.load_data("census_table")
+        cls.load_data("state_fact_table")
+
+        # Load the datetester_table with dynamic date data
+        start_dt = date(date.today().year, date.today().month, 1)
+        data = [
+            {"dt": start_dt + relativedelta(months=offset_month), "count": 1}
+            for offset_month in range(-50, 50)
+        ]
+        cls.oven.engine.execute(cls.datetester_table.insert(), data)
+
+        cls.mytable_shelf = Shelf(
+            {
+                "first": Dimension(MyTable.first),
+                "last": Dimension(MyTable.last),
+                "firstlast": Dimension(MyTable.last, id_expression=MyTable.first),
+                "age": Metric(func.sum(MyTable.age)),
+            }
+        )
+
+        cls.mytable_extrarole_shelf = Shelf(
+            {
+                "first": Dimension(MyTable.first),
+                "last": Dimension(MyTable.last),
+                "firstlastage": Dimension(
+                    MyTable.last, id_expression=MyTable.first, age_expression=MyTable.age
+                ),
+                "age": Metric(func.sum(MyTable.age)),
+            }
+        )
+
+        cls.scores_shelf = Shelf(
+            {
+                "username": Dimension(Scores.username),
+                "department": Dimension(
+                    Scores.department, anonymizer=lambda value: value[::-1] if value else "None"
+                ),
+                "testid": Dimension(Scores.testid),
+                "test_cnt": Metric(func.count(distinct(TagScores.testid))),
+                "score": Metric(func.avg(Scores.score)),
+            }
+        )
+
+        cls.tagscores_shelf = Shelf(
+            {
+                "username": Dimension(TagScores.username),
+                "department": Dimension(TagScores.department),
+                "testid": Dimension(TagScores.testid),
+                "tag": Dimension(TagScores.tag),
+                "test_cnt": Metric(func.count(distinct(TagScores.testid))),
+                "score": Metric(func.avg(TagScores.score), summary_aggregation=func.sum),
+            }
+        )
+
+        cls.census_shelf = Shelf(
+            {
+                "state": Dimension(Census.state),
+                "idvalue_state": IdValueDimension(Census.state, "State:" + Census.state),
+                "sex": Dimension(Census.sex),
+                "age": Dimension(Census.age),
+                "pop2000": Metric(func.sum(Census.pop2000)),
+                "pop2000_sum": Metric(func.sum(Census.pop2000), summary_aggregation=func.sum),
+                "pop2008": Metric(func.sum(Census.pop2008)),
+                "filter_all": Filter(1 == 0),
+            }
+        )
+
+        cls.statefact_shelf = Shelf(
+            {
+                "state": Dimension(StateFact.name),
+                "abbreviation": Dimension(StateFact.abbreviation),
+            }
+        )
+
+    def test_sample_data_loaded(self):
+        values = [
+            ("weird_table_with_column_named_true", 2),
+            ("foo", 2),
+            ("scores", 6),
+            ("datatypes", 6),
+            ("scores_with_nulls", 6),
+            ("tagscores", 10),
+            ("id_tests", 5),
+            ("census", 344),
+            ("state_fact", 2),
+            ("datetester", 100),
+        ]
+        with self.oven.engine.connect() as conn:
+            for table_name, row_cnt in values:
+                result = conn.execute(f"select count(*) from {table_name}").fetchone()
+                self.assertEqual(result[0], row_cnt)
