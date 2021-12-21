@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 import time
 import warnings
@@ -111,6 +112,8 @@ class Recipe(object):
         self._limit = 0
         self._offset = 0
 
+        print("HERE WE GO")
+        print(extension_classes)
         self.recipe_extensions = [
             ExtensionClass(self) for ExtensionClass in extension_classes
         ]
@@ -239,25 +242,25 @@ class Recipe(object):
         return self._cauldron.filter_ids
 
     @recipe_arg()
-    def cache_region(self, value):
+    def cache_region(self, value) -> Recipe:
         """Set a cache region for recipe-caching to use"""
         assert isinstance(value, str)
         self._cache_region = value
 
     @recipe_arg()
-    def cache_prefix(self, value):
+    def cache_prefix(self, value) -> Recipe:
         """Set a cache prefix for recipe-caching to use"""
         assert isinstance(value, str)
         self._cache_prefix = value
 
     @recipe_arg()
-    def use_cache(self, value):
+    def use_cache(self, value) -> Recipe:
         """If False, invalidate the cache before fetching data."""
         assert isinstance(value, bool)
         self._use_cache = value
 
     @recipe_arg()
-    def shelf(self, shelf=None):
+    def shelf(self, shelf=None) -> Recipe:
         """Defines a shelf to use for this recipe"""
         if shelf is None:
             self._shelf = Shelf({})
@@ -272,7 +275,7 @@ class Recipe(object):
             self._select_from = self._shelf.Meta.select_from
 
     @recipe_arg()
-    def metrics(self, *metrics):
+    def metrics(self, *metrics) -> Recipe:
         """Add a list of Metric ingredients to the query. These can either be
         Metric objects or strings representing metrics on the shelf.
 
@@ -289,7 +292,7 @@ class Recipe(object):
             self._cauldron.use(self._shelf.find(m, Metric))
 
     @recipe_arg()
-    def dimensions(self, *dimensions):
+    def dimensions(self, *dimensions) -> Recipe:
         """Add a list of Dimension ingredients to the query. These can either be
         Dimension objects or strings representing dimensions on the shelf.
 
@@ -306,7 +309,7 @@ class Recipe(object):
             self._cauldron.use(self._shelf.find(d, Dimension))
 
     @recipe_arg()
-    def filters(self, *filters):
+    def filters(self, *filters) -> Recipe:
         """
         Add a list of Filter ingredients to the query. These can either be
         Filter objects or strings representing filters on the service's shelf.
@@ -336,7 +339,7 @@ class Recipe(object):
                 )
 
     @recipe_arg()
-    def order_by(self, *order_bys):
+    def order_by(self, *order_bys) -> Recipe:
         """Apply an ordering to the recipe results.
 
         :param order_bys: Order_bys to add to the recipe. Order_bys must
@@ -349,15 +352,15 @@ class Recipe(object):
         self._order_bys = order_bys
 
     @recipe_arg()
-    def select_from(self, selectable):
+    def select_from(self, selectable) -> Recipe:
         self._select_from = selectable
 
     @recipe_arg()
-    def session(self, session):
+    def session(self, session) -> Recipe:
         self._session = session
 
     @recipe_arg()
-    def limit(self, limit):
+    def limit(self, limit) -> Recipe:
         """Limit the number of rows returned from the database.
 
         :param limit: The number of rows to return in the recipe. 0 will
@@ -367,7 +370,7 @@ class Recipe(object):
         self._limit = limit
 
     @recipe_arg()
-    def offset(self, offset):
+    def offset(self, offset) -> Recipe:
         """Offset a number of rows before returning rows from the database.
 
         :param offset: The number of rows to offset in the recipe. 0 will

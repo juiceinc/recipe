@@ -6,17 +6,7 @@ from faker import Faker
 from sqlalchemy import func
 
 from recipe.utils import generate_faker_seed
-from tests.test_base import (
-    Census,
-    MyTable,
-    RecipeTestCase,
-    census_shelf,
-    mytable_shelf,
-    oven,
-    scores_shelf,
-    statefact_shelf,
-    tagscores_shelf,
-)
+from tests.test_base import RecipeTestCase
 
 from recipe import BadRecipe, Dimension, Metric, Recipe, Shelf
 from recipe.extensions import (
@@ -37,19 +27,11 @@ class DummyExtension(RecipeExtension):
 
 
 class TestExtensions(RecipeTestCase):
+    extension_classes = []
+
     def setUp(self):
         super().setUp()
-        # create a Session
-        self.session = oven.Session()
-        self.shelf = mytable_shelf
-        self.extension_classes = []
-
-    def recipe(self):
-        return Recipe(
-            shelf=self.shelf,
-            session=self.session,
-            extension_classes=self.extension_classes,
-        )
+        self.shelf = self.mytable_shelf
 
     def test_call_extension_method(self):
         Recipe.extensions = []
@@ -72,27 +54,20 @@ class TestExtensions(RecipeTestCase):
             recipe.b()
 
 
-class AddFilter(RecipeExtension):
-    """A simple extension that adds a filter"""
-
-    def add_ingredients(self):
-        self.recipe.filters(MyTable.first > 2)
-
-
 class TestAddFilterExtension(RecipeTestCase):
     def setUp(self):
         super().setUp()
-        # create a Session
-        self.session = oven.Session()
-        self.shelf = mytable_shelf
-        self.extension_classes = [AddFilter]
+        self.shelf = self.mytable_shelf
 
-    def recipe(self):
-        return Recipe(
-            shelf=self.shelf,
-            session=self.session,
-            extension_classes=self.extension_classes,
-        )
+        class AddFilter(RecipeExtension):
+            """A simple extension that adds a filter"""
+
+            bt = self.basic_table
+
+            def add_ingredients(self):
+                self.recipe.filters(self.bt.c.first > 2)
+
+        self.extension_classes = [AddFilter]
 
     def test_add_filter(self):
         recipe = self.recipe().metrics("age").dimensions("first")
@@ -107,9 +82,10 @@ class TestAddFilterExtension(RecipeTestCase):
 
 
 class TestAutomaticFiltersExtension(RecipeTestCase):
-    shelf = mytable_shelf
-    extension_classes = [AutomaticFilters]
-    session = oven.Session()
+    def setUp(self) -> None:
+        super().setUp()
+        self.shelf = self.mytable_shelf
+        self.extension_classes = [AutomaticFilters]
 
     def test_from_config(self):
         """Check the internal state of an extension after configuration"""
@@ -152,7 +128,7 @@ class TestAutomaticFiltersExtension(RecipeTestCase):
 
     def test_attribute_not_found(self):
         recipe = self.recipe().metrics("age").dimensions("first")
-        with pytest.raises(AttributeError):
+        with self.assertRaises(AttributeError):
             recipe = recipe.foo(True)
 
     def test_apply(self):
@@ -249,19 +225,23 @@ class TestAutomaticFiltersExtension(RecipeTestCase):
             """SELECT foo.first AS first,
                 sum(foo.age) AS age
             FROM foo
-            GROUP BY first"""
+            GROUP BY first""",
         )
 
-        recipe = self.recipe().metrics("age").dimensions("first").automatic_filters(
-            {"first": ["foo"]}
-        ).include_automatic_filter_keys("foo", "first")
+        recipe = (
+            self.recipe()
+            .metrics("age")
+            .dimensions("first")
+            .automatic_filters({"first": ["foo"]})
+            .include_automatic_filter_keys("foo", "first")
+        )
         self.assertRecipeSQL(
             recipe,
             """SELECT foo.first AS first,
                 sum(foo.age) AS age
             FROM foo
             WHERE foo.first IN ('foo')
-            GROUP BY first"""
+            GROUP BY first""",
         )
 
         recipe = self.recipe().metrics("age").dimensions("first")
@@ -483,17 +463,19 @@ GROUP BY first"""
         # This is an invalid operator and will get looked up on the shelf
         recipe = self.recipe().metrics("age").dimensions("first")
         recipe = recipe.automatic_filters({"last__mike": "moo"})
-        with pytest.raises(BadRecipe):
+        with self.assertRaises(BadRecipe):
             recipe.all()
 
         # If we add this to the shelf, it works.
         self.shelf = Shelf(
             {
-                "first": Dimension(MyTable.first),
-                "last": Dimension(MyTable.last),
-                "firstlast": Dimension(MyTable.last, id_expression=MyTable.first),
-                "age": Metric(func.sum(MyTable.age)),
-                "last__mike": Dimension(MyTable.last),
+                "first": Dimension(self.basic_table.c.first),
+                "last": Dimension(self.basic_table.c.last),
+                "firstlast": Dimension(
+                    self.basic_table.c.last, id_expression=self.basic_table.c.first
+                ),
+                "age": Metric(func.sum(self.basic_table.c.age)),
+                "last__mike": Dimension(self.basic_table.c.last),
             }
         )
 
@@ -521,31 +503,24 @@ GROUP BY first"""
         )
 
 
-class TestAnonymizeRecipeExtension(object):
-    def setup(self):
-        # create a Session
-        self.session = oven.Session()
-
+class TestAnonymizeRecipeExtension(RecipeTestCase):
+    def setUp(self):
+        super().setUp()
         self.shelf = Shelf(
             {
-                "first": Dimension(MyTable.first),
-                "firstanon": Dimension(MyTable.first, anonymizer="{fake:name}"),
+                "first": Dimension(self.basic_table.c.first),
+                "firstanon": Dimension(
+                    self.basic_table.c.first, anonymizer="{fake:name}"
+                ),
                 "last": Dimension(
-                    MyTable.last,
+                    self.basic_table.c.last,
                     # formatters=[lambda value: value[::-1]]),
                     anonymizer=lambda value: value[::-1],
                 ),
-                "age": Metric(func.sum(MyTable.age)),
+                "age": Metric(func.sum(self.basic_table.c.age)),
             }
         )
         self.extension_classes = [Anonymize]
-
-    def recipe(self):
-        return Recipe(
-            shelf=self.shelf,
-            session=self.session,
-            extension_classes=self.extension_classes,
-        )
 
     def test_from_config(self):
         recipe = Recipe.from_config(
@@ -560,7 +535,7 @@ class TestAnonymizeRecipeExtension(object):
         recipe = self.recipe().metrics("age").dimensions("first")
         recipe.anonymize(True)
 
-        with pytest.raises(AssertionError):
+        with self.assertRaises(AssertionError):
             recipe.anonymize("pig")
 
     def test_anonymize_with_anonymizer(self):
@@ -718,23 +693,15 @@ ORDER BY first"""
         assert recipe.stats.rows == 1
 
 
-class TestPaginateExtension(object):
-    def setup(self):
-        # create a Session
-        self.session = oven.Session()
-        self.shelf = copy(census_shelf)
+class TestPaginateExtension(RecipeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.shelf = copy(self.census_shelf)
         self.extension_classes = [Paginate]
-
-    def recipe(self):
-        return Recipe(
-            shelf=copy(census_shelf),
-            session=self.session,
-            extension_classes=self.extension_classes,
-        )
 
     def recipe_from_config(self, config):
         return Recipe.from_config(
-            copy(census_shelf),
+            copy(self.census_shelf),
             config,
             session=self.session,
             extension_classes=self.extension_classes,
@@ -1343,25 +1310,20 @@ OFFSET 40"""
         )
 
 
-class TestSummarizeOverExtension(object):
-    anonymized_foo_shelf = Shelf(
-        {
-            "first": Dimension(MyTable.first, anonymizer=lambda value: value[::-1]),
-            "last": Dimension(MyTable.last, anonymizer=lambda value: value[::-1]),
-            "age": Metric(func.sum(MyTable.age)),
-        }
-    )
-
-    def setup(self):
-        # create a Session
-        self.session = oven.Session()
+class TestSummarizeOverExtension(RecipeTestCase):
+    def setUp(self):
+        super().setUp()
         self.extension_classes = [SummarizeOver, Anonymize, AutomaticFilters]
-
-    def recipe(self):
-        return Recipe(
-            shelf=self.shelf,
-            session=self.session,
-            extension_classes=self.extension_classes,
+        self.anonymized_foo_shelf = Shelf(
+            {
+                "first": Dimension(
+                    self.basic_table.c.first, anonymizer=lambda value: value[::-1]
+                ),
+                "last": Dimension(
+                    self.basic_table.c.last, anonymizer=lambda value: value[::-1]
+                ),
+                "age": Metric(func.sum(self.basic_table.c.age)),
+            }
         )
 
     def test_from_config(self):
@@ -1449,7 +1411,7 @@ GROUP BY summarize.first_raw"""
 
     def test_summarize_over_scores(self):
         """Test a dataset that has multiple rows per user"""
-        self.shelf = scores_shelf
+        self.shelf = self.scores_shelf
         recipe = (
             self.recipe()
             .metrics("score")
@@ -1477,7 +1439,7 @@ GROUP BY summarize.department"""
 
     def test_summarize_over_scores_limit(self):
         """Test that limits and offsets work"""
-        self.shelf = scores_shelf
+        self.shelf = self.scores_shelf
 
         recipe = (
             self.recipe()
@@ -1520,7 +1482,7 @@ OFFSET 0""",
 
     def test_summarize_over_scores_order(self):
         """Order bys are hoisted to the outer query"""
-        self.shelf = scores_shelf
+        self.shelf = self.scores_shelf
 
         recipe = (
             self.recipe()
@@ -1553,7 +1515,7 @@ ORDER BY summarize.department"""
 
     def test_summarize_over_scores_order_anonymize(self):
         """Order bys are hoisted to the outer query"""
-        self.shelf = scores_shelf
+        self.shelf = self.scores_shelf
 
         recipe = (
             self.recipe()
@@ -1587,7 +1549,7 @@ ORDER BY summarize.department_raw"""
 
     def test_summarize_over_scores_automatic_filters(self):
         """Test that automatic filters take place in the subquery"""
-        self.shelf = scores_shelf
+        self.shelf = self.scores_shelf
 
         recipe = (
             self.recipe()
@@ -1624,7 +1586,7 @@ GROUP BY summarize.department"""
 
     def test_summarize_over_tagscores(self):
         """Test a dataset that has multiple rows per user"""
-        self.shelf = tagscores_shelf
+        self.shelf = self.tagscores_shelf
         recipe = (
             self.recipe()
             .metrics("score")
@@ -1653,7 +1615,7 @@ GROUP BY summarize.department"""
 
     def test_summarize_over_tagscores_automatic_filters(self):
         """Test a dataset that has multiple rows per user"""
-        self.shelf = tagscores_shelf
+        self.shelf = self.tagscores_shelf
         recipe = (
             self.recipe()
             .metrics("score")
@@ -1682,7 +1644,7 @@ GROUP BY summarize.department"""
 
     def test_summarize_over_tagscores_test_cnt(self):
         """Test a dataset that has multiple rows per user"""
-        self.shelf = tagscores_shelf
+        self.shelf = self.tagscores_shelf
         recipe = (
             self.recipe()
             .metrics("test_cnt")
@@ -1710,23 +1672,15 @@ GROUP BY summarize.department"""
         assert sales_row.test_cnt == 1
 
 
-class TestPaginateInlineExtension(object):
-    def setup(self):
-        # create a Session
-        self.session = oven.Session()
-        self.shelf = copy(census_shelf)
+class TestPaginateInlineExtension(RecipeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.shelf = copy(self.census_shelf)
         self.extension_classes = [PaginateInline]
-
-    def recipe(self):
-        return Recipe(
-            shelf=copy(census_shelf),
-            session=self.session,
-            extension_classes=self.extension_classes,
-        )
 
     def recipe_from_config(self, config):
         return Recipe.from_config(
-            copy(census_shelf),
+            copy(self.census_shelf),
             config,
             session=self.session,
             extension_classes=self.extension_classes,
@@ -2385,20 +2339,11 @@ OFFSET 0"""
         )
 
 
-class TestCompareRecipeExtension(object):
-    def setup(self):
-        # create a Session
-        self.session = oven.Session()
-
-        self.shelf = copy(census_shelf)
+class TestCompareRecipeExtension(RecipeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.shelf = copy(self.census_shelf)
         self.extension_classes = [CompareRecipe]
-
-    def recipe(self):
-        return Recipe(
-            shelf=self.shelf,
-            session=self.session,
-            extension_classes=self.extension_classes,
-        )
 
     def test_compare(self):
         """A basic comparison recipe. The base recipe looks at all data, the
@@ -2412,7 +2357,7 @@ class TestCompareRecipeExtension(object):
             self.recipe()
             .metrics("pop2000")
             .dimensions("sex")
-            .filters(Census.state == "Vermont")
+            .filters(self.census_table.c.state == "Vermont")
         )
 
         assert len(r.all()) == 2
@@ -2451,7 +2396,7 @@ ORDER BY census.sex"""
             self.recipe()
             .metrics("pop2000_sum")
             .dimensions("sex")
-            .filters(Census.state == "Vermont")
+            .filters(self.census_table.c.state == "Vermont")
         )
 
         assert len(r.all()) == 2
@@ -2487,7 +2432,7 @@ ORDER BY census.sex"""
             self.recipe()
             .metrics("pop2000")
             .dimensions("sex")
-            .filters(Census.state == "Vermont"),
+            .filters(self.census_table.c.state == "Vermont"),
             suffix="_x",
         )
 
@@ -2531,7 +2476,7 @@ ORDER BY census.sex"""
             self.recipe()
             .metrics("pop2000")
             .dimensions("sex")
-            .filters(Census.state == "Vermont"),
+            .filters(self.census_table.c.state == "Vermont"),
             suffix="_vermont",
         )
         r = r.compare(self.recipe().metrics("pop2000"), suffix="_total")
@@ -2580,28 +2525,18 @@ ORDER BY census.sex,
             self.recipe()
             .metrics("pop2000")
             .dimensions("state")
-            .filters(Census.state == "Vermont"),
+            .filters(self.census_table.c.state == "Vermont"),
             suffix="_x",
         )
 
-        with pytest.raises(BadRecipe):
+        with self.assertRaises(BadRecipe):
             r.all()
 
 
-class TestBlendRecipeExtension(object):
-    def setup(self):
-        # create a Session
-        self.session = oven.Session()
-
-        self.shelf = copy(census_shelf)
+class TestBlendRecipeExtension(RecipeTestCase):
+    def setUp(self):
+        self.shelf = copy(self.census_shelf)
         self.extension_classes = [BlendRecipe]
-
-    def recipe(self):
-        return Recipe(
-            shelf=self.shelf,
-            session=self.session,
-            extension_classes=self.extension_classes,
-        )
 
     def test_self_blend(self):
         """A basic comparison recipe. The base recipe looks at all data, the
@@ -2616,7 +2551,7 @@ class TestBlendRecipeExtension(object):
             self.recipe()
             .metrics("pop2008")
             .dimensions("sex")
-            .filters(Census.sex == "F")
+            .filters(self.census_table.c.sex == "F")
         )
         r = r.full_blend(blend_recipe, join_base="sex", join_blend="sex")
 
@@ -2655,7 +2590,9 @@ ORDER BY census.sex"""
         r = self.recipe().metrics("pop2000").dimensions("state").order_by("state")
 
         blend_recipe = (
-            self.recipe().shelf(statefact_shelf).dimensions("state", "abbreviation")
+            self.recipe()
+            .shelf(self.statefact_shelf)
+            .dimensions("state", "abbreviation")
         )
         r = r.blend(blend_recipe, join_base="state", join_blend="state")
 
