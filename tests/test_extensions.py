@@ -555,6 +555,8 @@ GROUP BY first""",
 
 
 class TestAnonymizeRecipeExtension(RecipeTestCase):
+    extension_classes = [Anonymize]
+
     def setUp(self):
         super().setUp()
         self.shelf = Shelf(
@@ -564,27 +566,17 @@ class TestAnonymizeRecipeExtension(RecipeTestCase):
                     self.basic_table.c.first, anonymizer="{fake:name}"
                 ),
                 "last": Dimension(
-                    self.basic_table.c.last,
-                    # formatters=[lambda value: value[::-1]]),
-                    anonymizer=lambda value: value[::-1],
+                    self.basic_table.c.last, anonymizer=lambda value: value[::-1]
                 ),
                 "age": Metric(func.sum(self.basic_table.c.age)),
             }
         )
-        self.extension_classes = [Anonymize]
-
-    def test_from_config(self):
-        recipe = Recipe.from_config(
-            self.shelf,
-            {"metrics": ["age"], "dimensions": ["last"], "anonymize": True},
-            session=self.session,
-            extension_classes=self.extension_classes,
-        )
-        assert recipe.recipe_extensions[0]._anonymize is True
 
     def test_apply(self):
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe.anonymize(True)
+        recipe = self.recipe().metrics("age").dimensions("first").anonymize(True)
+        self.assertTrue(recipe.recipe_extensions[0]._anonymize)
+        recipe = self.recipe().metrics("age").dimensions("first").anonymize(False)
+        self.assertFalse(recipe.recipe_extensions[0]._anonymize)
 
         with self.assertRaises(AssertionError):
             recipe.anonymize("pig")
@@ -597,14 +589,6 @@ class TestAnonymizeRecipeExtension(RecipeTestCase):
             .dimensions("last")
             .order_by("last")
             .anonymize(False)
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.last AS last,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY last
-ORDER BY last""",
         )
         self.assertRecipeCSV(
             recipe,
@@ -619,16 +603,8 @@ ORDER BY last""",
             self.recipe()
             .metrics("age")
             .dimensions("last")
-            .anonymize(True)
             .order_by("last")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.last AS last_raw,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY last_raw
-ORDER BY last_raw""",
+            .anonymize(True)
         )
         self.assertRecipeCSV(
             recipe,
@@ -648,43 +624,11 @@ ORDER BY last_raw""",
             .order_by("firstanon")
             .anonymize(False)
         )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS firstanon,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY firstanon
-ORDER BY firstanon""",
-        )
-        assert recipe.all()[0].firstanon == "hi"
-        assert recipe.all()[0].firstanon_id == "hi"
-        assert recipe.all()[0].age == 15
-        assert recipe.stats.rows == 1
-
-        recipe = (
-            self.recipe()
-            .metrics("age")
-            .dimensions("firstanon")
-            .order_by("firstanon")
-            .anonymize(True)
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS firstanon_raw,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY firstanon_raw
-ORDER BY firstanon_raw""",
-        )
-
-        fake = Faker(locale="en_US")
-        fake.seed_instance(generate_faker_seed("hi"))
-        fake_value = fake.name()
         self.assertRecipeCSV(
             recipe,
             """
-            firstanon_raw,age,firstanon,firstanon_id
-            hi,15,Grant Hernandez,hi
+            firstanon,age,firstanon_id
+            hi,15,hi
             """,
         )
 
@@ -695,14 +639,12 @@ ORDER BY firstanon_raw""",
             .order_by("firstanon")
             .anonymize(True)
         )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS firstanon_raw,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY firstanon_raw
-ORDER BY firstanon_raw""",
-        )
+        # Faker values are deterministic
+        fake = Faker(locale="en_US")
+        fake.seed_instance(generate_faker_seed("hi"))
+        fake_value = fake.name()
+        self.assertEqual(fake_value, "Grant Hernandez")
+
         self.assertRecipeCSV(
             recipe,
             """
@@ -713,51 +655,21 @@ ORDER BY firstanon_raw""",
 
     def test_anonymize_without_anonymizer(self):
         """If the dimension doesn't have an anonymizer, there is no change"""
-        recipe = (
-            self.recipe()
-            .metrics("age")
-            .dimensions("first")
-            .order_by("first")
-            .anonymize(False)
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY first
-ORDER BY first""",
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            first,age,first_id
-            hi,15,hi
-            """,
-        )
-
-        recipe = (
-            self.recipe()
-            .metrics("age")
-            .dimensions("first")
-            .order_by("first")
-            .anonymize(True)
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY first
-ORDER BY first""",
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            first,age,first_id
-            hi,15,hi
-            """,
-        )
+        for anonymize_it in (True, False):
+            recipe = (
+                self.recipe()
+                .metrics("age")
+                .dimensions("first")
+                .order_by("first")
+                .anonymize(anonymize_it)
+            )
+            self.assertRecipeCSV(
+                recipe,
+                """
+                first,age,first_id
+                hi,15,hi
+                """,
+            )
 
 
 class TestPaginateExtension(RecipeTestCase):
