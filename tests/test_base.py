@@ -1,12 +1,12 @@
-from sqlalchemy.sql.sqltypes import Boolean
-from yaml import safe_load
 import os
+from copy import copy
 from datetime import date
 from unittest import TestCase
 
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import (
     Column,
+    Boolean,
     Date,
     DateTime,
     Float,
@@ -15,12 +15,12 @@ from sqlalchemy import (
     Table,
     distinct,
     func,
+    MetaData,
+    select,
 )
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.sql.schema import MetaData
+from yaml import safe_load
 
-from recipe import Dimension, Filter, IdValueDimension, Metric, Shelf, get_oven
-
+from recipe import Dimension, Filter, IdValueDimension, Metric, Recipe, Shelf, get_oven
 
 # oven = get_oven("sqlite://")
 # Base = declarative_base(bind=oven.engine)
@@ -563,14 +563,18 @@ def str_dedent(s):
 
 
 class RecipeTestCase(TestCase):
-    """Test cases that can build and test as recipe"""
+    """Test cases that can build and test a recipe"""
+
+    maxDiff = None
 
     def assertRecipeCSV(self, recipe, csv_text):
         """Recipe data returns the supplied csv content"""
-        self.assertEqual(
-            str_dedent(recipe.dataset.export("csv", lineterminator=str("\n"))),
-            str_dedent(csv_text),
-        )
+        actual = recipe.dataset.export("csv", lineterminator=str("\n")).strip("\n")
+        expected = str_dedent(csv_text).strip("\n")
+        if actual != expected:
+            print(f"Actual:\n{actual}\n\nExpected:\n{expected}")
+
+        self.assertEqual(actual, expected)
 
     def assertRecipeSQL(self, recipe, sql_text):
         """Recipe data returns the supplied csv content"""
@@ -578,15 +582,25 @@ class RecipeTestCase(TestCase):
             print(f"Actual:\n{recipe.to_sql()}\n\nExpected:\n{sql_text}")
         self.assertEqual(str_dedent(recipe.to_sql()), str_dedent(sql_text))
 
-    def recipe(self):
-        from recipe import Recipe
-        from copy import copy
+    def recipe(self, **kwargs):
+        recipe_args = {
+            "shelf": getattr(self, "shelf", Shelf()),
+            "session": self.session,
+            "extension_classes": getattr(self, "extension_classes", []),
+        }
+        recipe_args.update(kwargs)
+        return Recipe(**recipe_args)
 
-        return Recipe(
-            shelf=copy(self.shelf),
-            session=self.session,
-            extension_classes=self.extension_classes,
-        )
+    def recipe_from_config(self, config, **kwargs):
+        recipe_args = {
+            "shelf": getattr(self, "shelf", Shelf()),
+            "session": self.session,
+            "extension_classes": getattr(self, "extension_classes", []),
+        }
+        recipe_args.update(kwargs)
+        shelf = recipe_args.pop("shelf")
+
+        return Recipe.from_config(shelf, config, **recipe_args)
 
     connection_string = "sqlite://"
     create_table_kwargs = {}
@@ -623,6 +637,7 @@ class RecipeTestCase(TestCase):
             Column("age", Integer),
             Column("birth_date", Date),
             Column("dt", DateTime),
+            **cls.create_table_kwargs,
         )
 
         cls.datetester_table = Table(
@@ -637,6 +652,7 @@ class RecipeTestCase(TestCase):
             Column("testid", String),
             Column("score", Float),
             Column("test_date", Date),
+            **cls.create_table_kwargs,
         )
 
         cls.datatypes_table = Table(
@@ -649,6 +665,7 @@ class RecipeTestCase(TestCase):
             Column("test_date", Date),
             Column("test_datetime", DateTime),
             Column("valid_score", Boolean),
+            **cls.create_table_kwargs,
         )
 
         cls.scores_with_nulls_table = Table(
@@ -659,6 +676,7 @@ class RecipeTestCase(TestCase):
             Column("testid", String),
             Column("score", Float),
             Column("test_date", Date),
+            **cls.create_table_kwargs,
         )
 
         cls.tagscores_table = Table(
@@ -669,6 +687,7 @@ class RecipeTestCase(TestCase):
             Column("department", String),
             Column("testid", String),
             Column("score", Float),
+            **cls.create_table_kwargs,
         )
 
         cls.id_tests_table = Table(
@@ -679,6 +698,7 @@ class RecipeTestCase(TestCase):
             Column("age", Integer),
             Column("age_id", Integer),
             Column("score", Float),
+            **cls.create_table_kwargs,
         )
 
         cls.census_table = Table(
@@ -689,6 +709,7 @@ class RecipeTestCase(TestCase):
             Column("age", Integer),
             Column("pop2000", Integer),
             Column("pop2008", Integer),
+            **cls.create_table_kwargs,
         )
 
         cls.state_fact_table = Table(
@@ -709,6 +730,7 @@ class RecipeTestCase(TestCase):
             Column("census_division", String),
             Column("census_division_name", String),
             Column("circuit_court", String),
+            **cls.create_table_kwargs,
         )
 
         cls.meta.drop_all(cls.oven.engine)
@@ -807,18 +829,22 @@ class RecipeTestCase(TestCase):
 
     def test_sample_data_loaded(self):
         values = [
-            ("weird_table_with_column_named_true", 2),
-            ("foo", 2),
-            ("scores", 6),
-            ("datatypes", 6),
-            ("scores_with_nulls", 6),
-            ("tagscores", 10),
-            ("id_tests", 5),
-            ("census", 344),
-            ("state_fact", 2),
-            ("datetester", 100),
+            (self.weird_table_with_column_named_true_table, 2),
+            (self.basic_table, 2),
+            (self.scores_table, 6),
+            (self.datatypes_table, 6),
+            (self.scores_with_nulls_table, 6),
+            (self.tagscores_table, 10),
+            (self.id_tests_table, 5),
+            (self.census_table, 344),
+            (self.state_fact_table, 2),
+            (self.datetester_table, 100),
         ]
-        with self.oven.engine.connect() as conn:
-            for table_name, row_cnt in values:
-                result = conn.execute(f"select count(*) from {table_name}").fetchone()
-                self.assertEqual(result[0], row_cnt)
+
+        for table, count in values:
+            self.assertEqual(
+                self.session.execute(
+                    select([func.count()]).select_from(table)
+                ).scalar(),
+                count,
+            )

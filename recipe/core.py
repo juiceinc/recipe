@@ -112,8 +112,6 @@ class Recipe(object):
         self._limit = 0
         self._offset = 0
 
-        print("HERE WE GO")
-        print(extension_classes)
         self.recipe_extensions = [
             ExtensionClass(self) for ExtensionClass in extension_classes
         ]
