@@ -1,3 +1,4 @@
+from json import dumps
 from copy import copy
 from csv import DictReader
 
@@ -20,6 +21,15 @@ from recipe.extensions import (
 )
 from recipe.utils import generate_faker_seed, recipe_arg
 from tests.test_base import RecipeTestCase
+
+
+def convert_to_json_encoded(d: dict) -> dict:
+    newd = {}
+    for k, v in d.items():
+        if "," in k and isinstance(v, list):
+            v = [dumps(itm) if not isinstance(itm, str) else itm for itm in v]
+        newd[k] = v
+    return newd
 
 
 class DummyExtension(RecipeExtension):
@@ -308,261 +318,199 @@ class TestAutomaticFiltersExtension(RecipeTestCase):
         self.assertTrue("WHERE" not in recipe.to_sql().upper())
 
     def test_include_exclude_keys(self):
-        recipe = (
-            self.recipe()
-            .metrics("age")
-            .dimensions("first")
-            .automatic_filters({"first": ["foo"]})
-            .include_automatic_filter_keys("foo")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-                sum(foo.age) AS age
-            FROM foo
-            GROUP BY first""",
-        )
+        # Include and exclude keys that don't appear in automatic filters
+        for recipe in (
+            (
+                self.recipe()
+                .metrics("age")
+                .dimensions("first")
+                .automatic_filters({"first": ["foo"]})
+                .include_automatic_filter_keys("foo")
+            ),
+            self.recipe_from_config(
+                {
+                    "metrics": ["age"],
+                    "dimensions": ["first"],
+                    "automatic_filters": {"first": ["foo"]},
+                    "include_automatic_filter_keys": ["foo"],
+                }
+            ),
+            (
+                self.recipe()
+                .metrics("age")
+                .dimensions("first")
+                .automatic_filters({"first": ["foo"]})
+                .exclude_automatic_filter_keys("first")
+            ),
+            self.recipe_from_config(
+                {
+                    "metrics": ["age"],
+                    "dimensions": ["first"],
+                    "automatic_filters": {"first": ["foo"]},
+                    "exclude_automatic_filter_keys": ["first"],
+                }
+            ),
+        ):
+            self.assertRecipeSQL(
+                recipe,
+                """SELECT foo.first AS first,
+                    sum(foo.age) AS age
+                FROM foo
+                GROUP BY first""",
+            )
 
-        recipe = (
-            self.recipe()
-            .metrics("age")
-            .dimensions("first")
-            .automatic_filters({"first": ["foo"]})
-            .include_automatic_filter_keys("foo", "first")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-                sum(foo.age) AS age
-            FROM foo
-            WHERE foo.first IN ('foo')
-            GROUP BY first""",
-        )
+        for recipe in (
+            (
+                self.recipe()
+                .metrics("age")
+                .dimensions("first")
+                .automatic_filters({"first": ["foo"]})
+                .include_automatic_filter_keys("foo", "first")
+            ),
+            self.recipe_from_config(
+                {
+                    "metrics": ["age"],
+                    "dimensions": ["first"],
+                    "automatic_filters": {"first": ["foo"]},
+                    "include_automatic_filter_keys": ["foo", "first"],
+                }
+            ),
+            # Excluding irrelevant keys
+            (
+                self.recipe()
+                .metrics("age")
+                .dimensions("first")
+                .automatic_filters({"first": ["foo"]})
+                .exclude_automatic_filter_keys("foo")
+            ),
+            self.recipe_from_config(
+                {
+                    "metrics": ["age"],
+                    "dimensions": ["first"],
+                    "automatic_filters": {"first": ["foo"]},
+                    "exclude_automatic_filter_keys": ["foo"],
+                }
+            ),
+        ):
+            self.assertRecipeSQL(
+                recipe,
+                """SELECT foo.first AS first,
+                    sum(foo.age) AS age
+                FROM foo
+                WHERE foo.first IN ('foo')
+                GROUP BY first""",
+            )
 
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters(
-            {"first": ["foo"]}
-        ).exclude_automatic_filter_keys("foo")
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first IN ('foo')
-GROUP BY first""",
-        )
-
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters(
-            {"first": ["foo"]}
-        ).exclude_automatic_filter_keys("first")
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY first""",
-        )
-
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters(
-            {"first": ["foo"]}
-        ).exclude_automatic_filter_keys("first")
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-GROUP BY first""",
-        )
-
-    def test_operators(self):
+    def test_operators_and_compound_filters(self):
+        """Test operators and compound filters. Filter values may be json encoded"""
         # Testing operators
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters({"first__notin": ["foo"]})
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first NOT IN ('foo')
-GROUP BY first""",
-        )
-
-        # between operator
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters({"first__between": ["foo", "moo"]})
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first BETWEEN 'foo' AND 'moo'
-GROUP BY first""",
-        )
-
-        # scalar operator
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters({"first__lt": "moo"})
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first < 'moo'
-GROUP BY first""",
-        )
-
-    def test_compound_filters(self):
-        # A single compound filter item
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters({"first,last": [["foo", "moo"]]})
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first = 'foo'
-  AND foo.last = 'moo'
-GROUP BY first""",
-        )
-
-        # A multiple items
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters(
-            {"first,last": [["foo", "moo"], ["chicken", "cluck"]]}
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first = 'foo'
+        values = (
+            ({"first__notin": ["foo"]}, "foo.first NOT IN ('foo')"),
+            ({"first__between": ["foo", "moo"]}, "foo.first BETWEEN 'foo' AND 'moo'"),
+            # Case doesn't matter
+            ({"first__NOTIN": ["foo"]}, "foo.first NOT IN ('foo')"),
+            ({"first__betWEEN": ["foo", "moo"]}, "foo.first BETWEEN 'foo' AND 'moo'"),
+            ({"first__lt": "moo"}, "foo.first < 'moo'"),
+            (
+                {"first,last": [["foo", "moo"]]},
+                "foo.first = 'foo'\n  AND foo.last = 'moo'",
+            ),
+            (
+                {"first,last": [["foo", "moo"], ["chicken", "cluck"]]},
+                """foo.first = 'foo'
   AND foo.last = 'moo'
   OR foo.first = 'chicken'
-  AND foo.last = 'cluck'
-GROUP BY first""",
-        )
-
-        # Unbalanced items
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters({"first,last": [["foo", "moo"], ["chicken"]]})
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first = 'foo'
+  AND foo.last = 'cluck'""",
+            ),
+            # Unbalanced compound filters
+            (
+                {"first,last": [["foo", "moo"], ["chicken"]]},
+                """foo.first = 'foo'
+  AND foo.last = 'moo'
+  OR foo.first = 'chicken'""",
+            ),
+            # Compound filters with operators
+            (
+                {"first,last__like": [["cow", "moo%"], ["chicken", "cluck%"]]},
+                """foo.first = 'cow'
+  AND foo.last LIKE 'moo%'
+  OR foo.first = 'chicken'
+  AND foo.last LIKE 'cluck%'""",
+            ),
+            # Compound filters may be json encoded
+            (
+                {"first,last": ['["foo", "moo"]']},
+                """foo.first = 'foo'
+  AND foo.last = 'moo'""",
+            ),
+            # Compound filters, json encoded, multiple items
+            (
+                {"first,last": ['["foo", "moo"]', '["chicken", "cluck"]']},
+                """foo.first = 'foo'
   AND foo.last = 'moo'
   OR foo.first = 'chicken'
-GROUP BY first""",
+  AND foo.last = 'cluck'""",
+            ),
         )
+        for af, expected_sql in values:
+            # json encode all the values
+            json_encoded_af = convert_to_json_encoded(af)
+            recipe = (
+                self.recipe().metrics("age").dimensions("first").automatic_filters(af)
+            )
+            recipe_from_config = self.recipe_from_config(
+                {
+                    "metrics": ["age"],
+                    "dimensions": ["first"],
+                    "automatic_filters": af,
+                    "exclude_automatic_filter_keys": ["foo"],
+                }
+            )
+            recipe_from_config_json = self.recipe_from_config(
+                {
+                    "metrics": ["age"],
+                    "dimensions": ["first"],
+                    "automatic_filters": json_encoded_af,
+                    "exclude_automatic_filter_keys": ["foo"],
+                }
+            )
 
-        # Using operators
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters(
-            {"first,last__like": [["cow", "moo*"], ["chicken", "cluck*"]]}
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
+            for r in (recipe, recipe_from_config, recipe_from_config_json):
+                self.assertRecipeSQL(
+                    r,
+                    f"""SELECT foo.first AS first,
+    sum(foo.age) AS age
 FROM foo
-WHERE foo.first = 'cow'
-  AND foo.last LIKE 'moo*'
-  OR foo.first = 'chicken'
-  AND foo.last LIKE 'cluck*'
+WHERE {expected_sql}
 GROUP BY first""",
-        )
-
-    def test_compound_filters_json(self):
-        """Compound filters may be json encoded"""
-        # A single compound filter item
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters({"first,last": ['["foo", "moo"]']})
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first = 'foo'
-  AND foo.last = 'moo'
-GROUP BY first""",
-        )
-
-        # A multiple items
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters(
-            {"first,last": ['["foo", "moo"]', '["chicken", "cluck"]']}
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first = 'foo'
-  AND foo.last = 'moo'
-  OR foo.first = 'chicken'
-  AND foo.last = 'cluck'
-GROUP BY first""",
-        )
-
-        # Unbalanced items
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters(
-            {"first,last": ['["foo", "moo"]', '["chicken"]']}
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first = 'foo'
-  AND foo.last = 'moo'
-  OR foo.first = 'chicken'
-GROUP BY first""",
-        )
-
-        # Using operators
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters(
-            {"first,last__like": ['["cow", "moo*"]', '["chicken", "cluck*"]']}
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.first = 'cow'
-  AND foo.last LIKE 'moo*'
-  OR foo.first = 'chicken'
-  AND foo.last LIKE 'cluck*'
-GROUP BY first""",
-        )
+                )
 
     def test_invalid_operators(self):
-        """Only valid operators are parsed from the dimension"""
-        # Using operators
-        # A valid operator is used
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters({"last__like": "moo"})
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.last LIKE 'moo'
-GROUP BY first""",
-        )
-
-        # This is an invalid operator and will get looked up on the shelf
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters({"last__mike": "moo"})
-        with self.assertRaises(BadRecipe):
-            recipe.all()
+        """Invalid operators raise an exception"""
+        # Testing operators
+        values = [{"last__mike": "moo"}]
+        for af in values:
+            for recipe in (
+                (
+                    self.recipe()
+                    .metrics("age")
+                    .dimensions("first")
+                    .automatic_filters(af)
+                ),
+                self.recipe_from_config(
+                    {
+                        "metrics": ["age"],
+                        "dimensions": ["first"],
+                        "automatic_filters": af,
+                        "exclude_automatic_filter_keys": ["foo"],
+                    }
+                ),
+            ):
+                with self.assertRaises(BadRecipe):
+                    recipe.all()
 
         # If we add this to the shelf, it works.
-        self.shelf = Shelf(
+        newshelf = Shelf(
             {
                 "first": Dimension(self.basic_table.c.first),
                 "last": Dimension(self.basic_table.c.last),
@@ -574,8 +522,12 @@ GROUP BY first""",
             }
         )
 
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters({"last__mike": "moo"})
+        recipe = (
+            self.recipe(shelf=newshelf)
+            .metrics("age")
+            .dimensions("first")
+            .automatic_filters({"last__mike": "moo"})
+        )
         self.assertRecipeSQL(
             recipe,
             """SELECT foo.first AS first,
@@ -585,9 +537,13 @@ WHERE foo.last = 'moo'
 GROUP BY first""",
         )
 
-        # We can chain a valid operator
-        recipe = self.recipe().metrics("age").dimensions("first")
-        recipe = recipe.automatic_filters({"last__mike__like": "moo"})
+        # We can chain a valid operator to an ingredient that has a __
+        recipe = (
+            self.recipe(shelf=newshelf)
+            .metrics("age")
+            .dimensions("first")
+            .automatic_filters({"last__mike__like": "moo"})
+        )
         self.assertRecipeSQL(
             recipe,
             """SELECT foo.first AS first,
@@ -722,7 +678,7 @@ ORDER BY firstanon_raw""",
         )
 
         fake = Faker(locale="en_US")
-        fake.seed_instance(generate_faker_seed(u"hi"))
+        fake.seed_instance(generate_faker_seed("hi"))
         fake_value = fake.name()
         self.assertRecipeCSV(
             recipe,
