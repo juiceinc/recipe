@@ -5,7 +5,7 @@ from csv import DictReader
 import pytest
 from faker import Faker
 from sqlalchemy import func
-from sureberus.errors import BadType
+from sureberus.errors import BadType, SureError
 
 from recipe import BadRecipe, Dimension, Metric, Recipe, Shelf
 from recipe.extensions import (
@@ -33,7 +33,7 @@ def convert_to_json_encoded(d: dict) -> dict:
 
 
 class DummyExtension(RecipeExtension):
-    recipe_schema = {"a": {"type": "string"}}
+    recipe_schema = {"a": {"type": "string"}, "a_int": {"type": "integer"}}
 
     def __init__(self, recipe):
         super().__init__(recipe)
@@ -41,14 +41,19 @@ class DummyExtension(RecipeExtension):
 
     @recipe_arg()
     def from_config(self, obj):
+        # a_int is in schema but is not handled by a directive
         handle_directives(obj, {"a": self.a})
 
     @recipe_arg()
     def a(self, value):
         self.value = value
 
+    @recipe_arg()
+    def a_int(self, value):
+        self.value = str(value * 2)
 
-class TestExtensionAttributes(RecipeTestCase):
+
+class ExtensionAttributesTestCase(RecipeTestCase):
     """Test that extensions expose attributes that are available for chaining on recipe"""
 
     def setUp(self):
@@ -102,8 +107,16 @@ class TestExtensionAttributes(RecipeTestCase):
         with self.assertRaises(AttributeError):
             recipe.b()
 
+        # Pass an unhandled config option.
+        with self.assertRaises(BadRecipe):
+            r = self.recipe_from_config(
+                {"metrics": ["age"], "dimensions": ["first"], "a_int": 2}
+            )
 
-class TestAddFilterExtension(RecipeTestCase):
+
+class SimpleExtensionTestCase(RecipeTestCase):
+    """Test a simple extension that always adds a filter"""
+
     def setUp(self):
         super().setUp()
         self.shelf = self.mytable_shelf
@@ -140,7 +153,9 @@ class TestAddFilterExtension(RecipeTestCase):
         self.assertEqual(recipe.dataset.csv, recipe_from_config.dataset.csv)
 
 
-class TestAutomaticFiltersExtension(RecipeTestCase):
+class AutomaticFiltersTestCase(RecipeTestCase):
+    """The AutomaticFilters extension."""
+
     extension_classes = [AutomaticFilters]
 
     def setUp(self) -> None:
@@ -149,21 +164,67 @@ class TestAutomaticFiltersExtension(RecipeTestCase):
 
     def test_from_config(self):
         """Check the internal state of an extension after configuration"""
-        recipe = self.recipe_from_config(
+        for recipe in self.recipe_list(
+            (
+                self.recipe()
+                .metrics("age")
+                .dimensions("first")
+                .automatic_filters({"first": ["foo"]})
+                .include_automatic_filter_keys("foo", "moo")
+                .exclude_automatic_filter_keys("foo", "you")
+                .apply_automatic_filters(False)
+            ),
             {
                 "metrics": ["age"],
                 "dimensions": ["first"],
                 "automatic_filters": {"first": ["foo"]},
-                "include_automatic_filter_keys": ["foo"],
-                "exclude_automatic_filter_keys": ["foo"],
+                "include_automatic_filter_keys": ["foo", "moo"],
+                "exclude_automatic_filter_keys": ["foo", "you"],
                 "apply_automatic_filters": False,
-            }
-        )
-        ext = recipe.recipe_extensions[0]
-        self.assertEqual(ext._automatic_filters, {"first": ["foo"]})
-        self.assertEqual(ext.include_keys, ("foo",))
-        self.assertEqual(ext.exclude_keys, ("foo",))
-        self.assertFalse(ext.apply)
+            },
+        ):
+            ext = recipe.recipe_extensions[0]
+            self.assertEqual(ext._automatic_filters, {"first": ["foo"]})
+            self.assertEqual(ext.include_keys, ("foo", "moo"))
+            self.assertEqual(ext.exclude_keys, ("foo", "you"))
+            self.assertFalse(ext.apply)
+
+    def test_recipe_schema(self):
+        """From config values are validated"""
+        base_config = {"metrics": ["age"], "dimensions": ["first"]}
+        valid_configs = [
+            {"automatic_filters": {"first": ["foo"], "last": ["cow", "pig", "fruit"]}},
+            {"automatic_filters": {"first": ["foo"]}},
+            {"include_automatic_filter_keys": ["potato", "avocado"]},
+            {"exclude_automatic_filter_keys": ["potato"]},
+            {"exclude_automatic_filter_keys": []},
+            {"apply_automatic_filters": True},
+        ]
+        for extra_config in valid_configs:
+            config = copy(base_config)
+            config.update(extra_config)
+            # We can construct and run the recipe
+            recipe = self.recipe_from_config(config)
+            recipe.all()
+            self.assertRecipeSQLContains(recipe, "age")
+
+        invalid_configs = [
+            # Keys must be strings
+            {"automatic_filters": {2: ["foo"]}},
+            # Must be a dict
+            {"automatic_filters": 2},
+            # Values must be strings
+            {"include_automatic_filter_keys": ["potato", 2]},
+            # Values must be lists of strings
+            {"exclude_automatic_filter_keys": "potato"},
+            # Values must be lists of strings
+            {"apply_automatic_filters": "TRUE"},
+        ]
+        for extra_config in invalid_configs:
+            config = copy(base_config)
+            config.update(extra_config)
+            with self.assertRaises(SureError):
+                recipe = self.recipe_from_config(config)
 
     def test_proxy_calls(self):
         recipe = (
@@ -195,20 +256,12 @@ class TestAutomaticFiltersExtension(RecipeTestCase):
         self.assertEqual(recipe.recipe_extensions[0].exclude_keys, ("last",))
 
     def test_apply(self):
-        for recipe in (
-            (
-                self.recipe()
-                .metrics("age")
-                .dimensions("first")
-                .apply_automatic_filters(False)
-            ),
-            self.recipe_from_config(
-                {
-                    "metrics": ["age"],
-                    "dimensions": ["first"],
-                    "apply_automatic_filters": False,
-                }
-            ),
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "apply_automatic_filters": False,
+            }
         ):
             self.assertFalse(recipe.recipe_extensions[0].apply)
             self.assertRecipeSQL(
@@ -219,20 +272,12 @@ class TestAutomaticFiltersExtension(RecipeTestCase):
                 GROUP BY first""",
             )
 
-        for recipe in (
-            (
-                self.recipe()
-                .metrics("age")
-                .dimensions("first")
-                .apply_automatic_filters(True)
-            ),
-            self.recipe_from_config(
-                {
-                    "metrics": ["age"],
-                    "dimensions": ["first"],
-                    "apply_automatic_filters": True,
-                }
-            ),
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "apply_automatic_filters": True,
+            }
         ):
             self.assertTrue(recipe.recipe_extensions[0].apply)
             self.assertRecipeSQL(
@@ -245,20 +290,12 @@ class TestAutomaticFiltersExtension(RecipeTestCase):
 
     def test_automatic_filters(self):
         """Automatic filters must be a dict"""
-        for recipe in (
-            (
-                self.recipe()
-                .metrics("age")
-                .dimensions("first")
-                .automatic_filters({"first": ["foo"]})
-            ),
-            self.recipe_from_config(
-                {
-                    "metrics": ["age"],
-                    "dimensions": ["first"],
-                    "automatic_filters": {"first": ["foo"]},
-                }
-            ),
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {"first": ["foo"]},
+            }
         ):
             self.assertTrue(recipe.recipe_extensions[0].apply)
             self.assertRecipeSQL(
@@ -270,32 +307,12 @@ class TestAutomaticFiltersExtension(RecipeTestCase):
                 GROUP BY first""",
             )
 
-            with self.assertRaises(AssertionError):
-                # Automatic filters must be a dict
-                recipe.automatic_filters(2)
-
-        # Automatic filters must be a dict
-        with self.assertRaises(Exception):
-            self.recipe().metrics("age").dimensions("first").automatic_filters(2)
-        with self.assertRaises(Exception):
-            self.recipe_from_config(
-                {"metrics": ["age"], "dimensions": ["first"], "automatic_filters": 2}
-            )
-
-        for recipe in (
-            (
-                self.recipe()
-                .metrics("age")
-                .dimensions("first")
-                .automatic_filters({"first": [None]})
-            ),
-            self.recipe_from_config(
-                {
-                    "metrics": ["age"],
-                    "dimensions": ["first"],
-                    "automatic_filters": {"first": [None]},
-                }
-            ),
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {"first": [None]},
+            }
         ):
             self.assertTrue(recipe.recipe_extensions[0].apply)
             self.assertRecipeSQL(
@@ -319,37 +336,19 @@ class TestAutomaticFiltersExtension(RecipeTestCase):
 
     def test_include_exclude_keys(self):
         # Include and exclude keys that don't appear in automatic filters
-        for recipe in (
-            (
-                self.recipe()
-                .metrics("age")
-                .dimensions("first")
-                .automatic_filters({"first": ["foo"]})
-                .include_automatic_filter_keys("foo")
-            ),
-            self.recipe_from_config(
-                {
-                    "metrics": ["age"],
-                    "dimensions": ["first"],
-                    "automatic_filters": {"first": ["foo"]},
-                    "include_automatic_filter_keys": ["foo"],
-                }
-            ),
-            (
-                self.recipe()
-                .metrics("age")
-                .dimensions("first")
-                .automatic_filters({"first": ["foo"]})
-                .exclude_automatic_filter_keys("first")
-            ),
-            self.recipe_from_config(
-                {
-                    "metrics": ["age"],
-                    "dimensions": ["first"],
-                    "automatic_filters": {"first": ["foo"]},
-                    "exclude_automatic_filter_keys": ["first"],
-                }
-            ),
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {"first": ["foo"]},
+                "include_automatic_filter_keys": ["foo"],
+            },
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {"first": ["foo"]},
+                "exclude_automatic_filter_keys": ["first"],
+            },
         ):
             self.assertRecipeSQL(
                 recipe,
@@ -359,38 +358,20 @@ class TestAutomaticFiltersExtension(RecipeTestCase):
                 GROUP BY first""",
             )
 
-        for recipe in (
-            (
-                self.recipe()
-                .metrics("age")
-                .dimensions("first")
-                .automatic_filters({"first": ["foo"]})
-                .include_automatic_filter_keys("foo", "first")
-            ),
-            self.recipe_from_config(
-                {
-                    "metrics": ["age"],
-                    "dimensions": ["first"],
-                    "automatic_filters": {"first": ["foo"]},
-                    "include_automatic_filter_keys": ["foo", "first"],
-                }
-            ),
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {"first": ["foo"]},
+                "include_automatic_filter_keys": ["foo", "first"],
+            },
             # Excluding irrelevant keys
-            (
-                self.recipe()
-                .metrics("age")
-                .dimensions("first")
-                .automatic_filters({"first": ["foo"]})
-                .exclude_automatic_filter_keys("foo")
-            ),
-            self.recipe_from_config(
-                {
-                    "metrics": ["age"],
-                    "dimensions": ["first"],
-                    "automatic_filters": {"first": ["foo"]},
-                    "exclude_automatic_filter_keys": ["foo"],
-                }
-            ),
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {"first": ["foo"]},
+                "exclude_automatic_filter_keys": ["foo"],
+            },
         ):
             self.assertRecipeSQL(
                 recipe,
@@ -455,56 +436,98 @@ class TestAutomaticFiltersExtension(RecipeTestCase):
         for af, expected_sql in values:
             # json encode all the values
             json_encoded_af = convert_to_json_encoded(af)
-            recipe = (
-                self.recipe().metrics("age").dimensions("first").automatic_filters(af)
-            )
-            recipe_from_config = self.recipe_from_config(
+            for recipe in self.recipe_list(
+                {
+                    "metrics": ["age"],
+                    "dimensions": ["first"],
+                    "automatic_filters": af,
+                    "exclude_automatic_filter_keys": ["foo"],
+                },
+                {
+                    "metrics": ["age"],
+                    "dimensions": ["first"],
+                    "automatic_filters": json_encoded_af,
+                    "exclude_automatic_filter_keys": ["foo"],
+                },
+            ):
+                self.assertRecipeSQLContains(recipe, expected_sql)
+
+    def test_no_where_filters(self):
+        # Testing filters that don't add a where
+        values = [
+            {},
+            # Excluded by automatic filter keys
+            {"foo": ["22"]},
+            {"foo": []},
+            # Excluded by automatic filter keys
+            {"first": ["hi", "there"]},
+            # Compound filters with no values are excluded
+            {"first,last": [[]]},
+            {"first,last": [[], []]},
+        ]
+        for af in values:
+            for recipe in self.recipe_list(
+                {
+                    "metrics": ["age"],
+                    "dimensions": ["first"],
+                    "automatic_filters": af,
+                    "exclude_automatic_filter_keys": ["foo", "first"],
+                }
+            ):
+                self.assertRecipeSQLNotContains(recipe, "WHERE")
+
+    def test_exclude_all_filters(self):
+        # Testing filters that exclude everything
+        values = [{"first": []}]
+        for af in values:
+            for recipe in self.recipe_list(
                 {
                     "metrics": ["age"],
                     "dimensions": ["first"],
                     "automatic_filters": af,
                     "exclude_automatic_filter_keys": ["foo"],
                 }
-            )
-            recipe_from_config_json = self.recipe_from_config(
-                {
-                    "metrics": ["age"],
-                    "dimensions": ["first"],
-                    "automatic_filters": json_encoded_af,
-                    "exclude_automatic_filter_keys": ["foo"],
-                }
-            )
+            ):
+                self.assertRecipeSQLContains(recipe, "WHERE 1 != 1")
 
-            for r in (recipe, recipe_from_config, recipe_from_config_json):
-                self.assertRecipeSQL(
-                    r,
-                    f"""SELECT foo.first AS first,
-    sum(foo.age) AS age
-FROM foo
-WHERE {expected_sql}
-GROUP BY first""",
+    def test_invalid_compound_filters(self):
+        bad_compound_filters = [
+            # Values must be either lists or json encoded lists
+            (
+                {"first,last": ['"foo"']},
+                "Compound filter values must be json encoded lists",
+            ),
+            # Value must be valid json
+            ({"first,last": ['["foo"']}, "Compound filter values must be valid json"),
+            # Keys must be comma delimited valid dimensions
+            ({"first,potato": ['["moo", "cow"]']}, "potato doesn't exist on the shelf"),
+        ]
+
+        for bad_filter, error_msg in bad_compound_filters:
+            with self.assertRaises((ValueError, BadRecipe)) as cm:
+                recipe = self.recipe_from_config(
+                    {
+                        "metrics": ["age"],
+                        "dimensions": ["first"],
+                        "automatic_filters": bad_filter,
+                        "exclude_automatic_filter_keys": ["foo"],
+                    }
                 )
+                recipe.all()
+            self.assertEqual(str(cm.exception), error_msg)
 
     def test_invalid_operators(self):
         """Invalid operators raise an exception"""
         # Testing operators
         values = [{"last__mike": "moo"}]
         for af in values:
-            for recipe in (
-                (
-                    self.recipe()
-                    .metrics("age")
-                    .dimensions("first")
-                    .automatic_filters(af)
-                ),
-                self.recipe_from_config(
-                    {
-                        "metrics": ["age"],
-                        "dimensions": ["first"],
-                        "automatic_filters": af,
-                        "exclude_automatic_filter_keys": ["foo"],
-                    }
-                ),
+            for recipe in self.recipe_list(
+                {
+                    "metrics": ["age"],
+                    "dimensions": ["first"],
+                    "automatic_filters": af,
+                    "exclude_automatic_filter_keys": ["foo"],
+                }
             ):
                 with self.assertRaises(BadRecipe):
                     recipe.all()
@@ -522,36 +545,40 @@ GROUP BY first""",
             }
         )
 
-        recipe = (
-            self.recipe(shelf=newshelf)
-            .metrics("age")
-            .dimensions("first")
-            .automatic_filters({"last__mike": "moo"})
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.last = 'moo'
-GROUP BY first""",
-        )
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {"last__mike": "moo"},
+            },
+            shelf=newshelf,
+        ):
+            self.assertRecipeSQL(
+                recipe,
+                """SELECT foo.first AS first,
+        sum(foo.age) AS age
+    FROM foo
+    WHERE foo.last = 'moo'
+    GROUP BY first""",
+            )
 
         # We can chain a valid operator to an ingredient that has a __
-        recipe = (
-            self.recipe(shelf=newshelf)
-            .metrics("age")
-            .dimensions("first")
-            .automatic_filters({"last__mike__like": "moo"})
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.first AS first,
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {"last__mike__like": "moo"},
+            },
+            shelf=newshelf,
+        ):
+            self.assertRecipeSQL(
+                recipe,
+                """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
 WHERE foo.last LIKE 'moo'
 GROUP BY first""",
-        )
+            )
 
 
 class TestAnonymizeRecipeExtension(RecipeTestCase):
@@ -681,28 +708,22 @@ class TestPaginateExtension(RecipeTestCase):
 
     def test_no_pagination(self):
         """Pagination is not on until configured"""
-        for recipe in (
+        for recipe in self.recipe_list(
             self.recipe().metrics("pop2000").dimensions("state"),
-            self.recipe_from_config({"metrics": ["pop2000"], "dimensions": ["state"]}),
+            {"metrics": ["pop2000"], "dimensions": ["state"]},
         ):
             self.assertTrue("LIMIT" not in recipe.to_sql())
 
     def test_pagination(self):
         """If pagination page size is configured, pagination is applied to results"""
-        for recipe in (
+        for recipe in self.recipe_list(
             (
                 self.recipe()
                 .metrics("pop2000")
                 .dimensions("age")
                 .pagination_page_size(10)
             ),
-            self.recipe_from_config(
-                {
-                    "metrics": ["pop2000"],
-                    "dimensions": ["age"],
-                    "pagination_page_size": 10,
-                }
-            ),
+            {"metrics": ["pop2000"], "dimensions": ["age"], "pagination_page_size": 10},
         ):
             self.assertRecipeSQLContains(recipe, "LIMIT 10")
             self.assertRecipeSQLContains(recipe, "OFFSET 0")
@@ -753,7 +774,7 @@ class TestPaginateExtension(RecipeTestCase):
             )
 
     def test_apply_pagination(self):
-        for recipe in (
+        for recipe in self.recipe_list(
             (
                 self.recipe()
                 .metrics("pop2000")
@@ -761,22 +782,20 @@ class TestPaginateExtension(RecipeTestCase):
                 .pagination_page_size(10)
                 .apply_pagination(False)
             ),
-            self.recipe_from_config(
-                {
-                    "metrics": ["pop2000"],
-                    "dimensions": ["state"],
-                    "pagination_page_size": 10,
-                    "apply_pagination": False,
-                }
-            ),
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+                "apply_pagination": False,
+            },
         ):
-            self.assertTrue("LIMIT" not in recipe.to_sql().upper())
-            self.assertTrue("OFFSET" not in recipe.to_sql().upper())
+            self.assertRecipeSQLNotContains(recipe, "LIMIT")
+            self.assertRecipeSQLNotContains(recipe, "OFFSET")
 
     def test_pagination_order_by(self):
         """Pagination requires ordering"""
 
-        for recipe in (
+        for recipe in self.recipe_list(
             (
                 self.recipe()
                 .metrics("pop2000")
@@ -784,14 +803,12 @@ class TestPaginateExtension(RecipeTestCase):
                 .pagination_page_size(10)
                 .pagination_order_by("-state")
             ),
-            self.recipe_from_config(
-                {
-                    "metrics": ["pop2000"],
-                    "dimensions": ["state"],
-                    "pagination_page_size": 10,
-                    "pagination_order_by": ["-state"],
-                }
-            ),
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state"],
+                "pagination_page_size": 10,
+                "pagination_order_by": ["-state"],
+            },
         ):
             self.assertRecipeSQLContains(recipe, "ORDER BY state DESC")
             self.assertRecipeSQLContains(recipe, "LIMIT 10")
@@ -799,105 +816,49 @@ class TestPaginateExtension(RecipeTestCase):
     def test_pagination_default_order_by(self):
         # Default order by applies a pagination
 
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .pagination_default_order_by("-pop2000")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state
-ORDER BY pop2000 DESC
-LIMIT 10
-OFFSET 0""",
-        )
-
-        # Default ordering is not used when the recipe already
-        # has an ordering
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .order_by("state")
-            .pagination_page_size(10)
-            .pagination_default_order_by("-pop2000")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
-
-        # Default ordering is not used when the recipe
-        # has a explicit pagination_order_by
-        # has an ordering
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .pagination_order_by("state")
-            .pagination_page_size(10)
-            .dimensions("state")
-            .pagination_default_order_by("-pop2000")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
-
-        recipe = self.recipe_from_config(
+        for recipe in self.recipe_list(
+            (
+                self.recipe()
+                .metrics("pop2000")
+                .dimensions("state")
+                .pagination_page_size(10)
+                .pagination_default_order_by("-pop2000")
+            ),
             {
                 "metrics": ["pop2000"],
                 "dimensions": ["state"],
                 "pagination_page_size": 10,
                 "pagination_default_order_by": ["-pop2000"],
-            }
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state
-ORDER BY pop2000 DESC
-LIMIT 10
-OFFSET 0""",
-        )
+            },
+        ):
+            self.assertRecipeSQLContains(recipe, "ORDER BY pop2000 DESC")
+            # Default ordering is not used when the recipe already
+            # has an ordering
+            recipe = recipe.order_by("state")
+            self.assertRecipeSQLNotContains(recipe, "ORDER BY pop2000 DESC")
+            self.assertRecipeSQLContains(recipe, "ORDER BY state")
 
-        recipe = self.recipe_from_config(
+        # Default ordering is not used when the recipe
+        # has a explicit pagination_order_by
+        # has an ordering
+        for recipe in self.recipe_list(
+            (
+                self.recipe()
+                .metrics("pop2000")
+                .pagination_order_by("state")
+                .pagination_page_size(10)
+                .dimensions("state")
+                .pagination_default_order_by("-pop2000")
+            ),
             {
                 "metrics": ["pop2000"],
                 "dimensions": ["state"],
                 "order_by": ["state"],
                 "pagination_page_size": 10,
                 "pagination_default_order_by": ["-pop2000"],
-            }
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
+            },
+        ):
+            self.assertRecipeSQLContains(recipe, "ORDER BY state")
 
     def test_pagination_q(self):
         recipe = (
