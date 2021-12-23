@@ -673,210 +673,128 @@ class TestAnonymizeRecipeExtension(RecipeTestCase):
 
 
 class TestPaginateExtension(RecipeTestCase):
+    extension_classes = [Paginate]
+
     def setUp(self):
         super().setUp()
-        self.shelf = copy(self.census_shelf)
-        self.extension_classes = [Paginate]
-
-    def recipe_from_config(self, config):
-        return Recipe.from_config(
-            copy(self.census_shelf),
-            config,
-            session=self.session,
-            extension_classes=self.extension_classes,
-        )
+        self.shelf = self.census_shelf
 
     def test_no_pagination(self):
-        recipe = self.recipe().metrics("pop2000").dimensions("state")
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state""",
-        )
-
-        recipe = self.recipe_from_config(
-            {"metrics": ["pop2000"], "dimensions": ["state"]}
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state""",
-        )
+        """Pagination is not on until configured"""
+        for recipe in (
+            self.recipe().metrics("pop2000").dimensions("state"),
+            self.recipe_from_config({"metrics": ["pop2000"], "dimensions": ["state"]}),
+        ):
+            self.assertTrue("LIMIT" not in recipe.to_sql())
 
     def test_pagination(self):
         """If pagination page size is configured, pagination is applied to results"""
-        recipe = (
-            self.recipe().metrics("pop2000").dimensions("age").pagination_page_size(10)
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.age AS age,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY age
-ORDER BY age
-LIMIT 10
-OFFSET 0""",
-        )
-        self.assertEqual(
-            recipe.validated_pagination(),
-            {"page": 1, "pageSize": 10, "requestedPage": 1, "totalItems": 86},
-        )
+        for recipe in (
+            (
+                self.recipe()
+                .metrics("pop2000")
+                .dimensions("age")
+                .pagination_page_size(10)
+            ),
+            self.recipe_from_config(
+                {
+                    "metrics": ["pop2000"],
+                    "dimensions": ["age"],
+                    "pagination_page_size": 10,
+                }
+            ),
+        ):
+            self.assertRecipeSQLContains(recipe, "LIMIT 10")
+            self.assertRecipeSQLContains(recipe, "OFFSET 0")
+            self.assertEqual(
+                recipe.validated_pagination(),
+                {"page": 1, "pageSize": 10, "requestedPage": 1, "totalItems": 86},
+            )
 
-        recipe = self.recipe_from_config(
-            {
-                "metrics": ["pop2000"],
-                "dimensions": ["state"],
-                "pagination_page_size": 10,
-            }
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
-        self.assertEqual(
-            recipe.validated_pagination(),
-            {"page": 1, "pageSize": 10, "requestedPage": 1, "totalItems": 2},
-        )
+            # Let's go to the second page
+            recipe = recipe.pagination_page(2)
+            self.assertRecipeSQLContains(recipe, "LIMIT 10")
+            self.assertRecipeSQLContains(recipe, "OFFSET 10")
 
-        recipe = recipe.pagination_page(2)
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
-        self.assertEqual(
-            recipe.validated_pagination(),
-            {"page": 1, "pageSize": 10, "requestedPage": 2, "totalItems": 2},
-        )
+            self.assertEqual(
+                recipe.validated_pagination(),
+                {"page": 2, "pageSize": 10, "requestedPage": 2, "totalItems": 86},
+            )
 
-        recipe = self.recipe_from_config(
-            {
-                "metrics": ["pop2000"],
-                "dimensions": ["state"],
-                "pagination_page_size": 1,
-                "pagination_page": 2,
-            }
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state
-ORDER BY state
-LIMIT 1
-OFFSET 1""",
-        )
-        self.assertEqual(
-            recipe.validated_pagination(),
-            {"page": 2, "pageSize": 1, "requestedPage": 2, "totalItems": 2},
-        )
+            # Let's go to an impossible page
+            recipe = recipe.pagination_page(200)
+            self.assertRecipeSQLContains(recipe, "LIMIT 10")
+            self.assertRecipeSQLContains(recipe, "OFFSET 80")
 
-    def test_pagination_nodata(self):
-        """What does pagination do when there is no data"""
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("age")
-            .filters("filter_all")
-            .pagination_page_size(10)
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.age AS age,
-       sum(census.pop2000) AS pop2000
-FROM census
-WHERE 0 = 1
-GROUP BY age
-ORDER BY age
-LIMIT 10
-OFFSET 0""",
-        )
-        self.assertEqual(
-            recipe.validated_pagination(),
-            {"page": 1, "pageSize": 10, "requestedPage": 1, "totalItems": 0},
-        )
+            self.assertEqual(
+                recipe.validated_pagination(),
+                {"page": 9, "pageSize": 10, "requestedPage": 200, "totalItems": 86},
+            )
+
+            recipe = recipe.pagination_page(-1)
+            self.assertRecipeSQLContains(recipe, "LIMIT 10")
+            self.assertRecipeSQLContains(recipe, "OFFSET 0")
+
+            self.assertEqual(
+                recipe.validated_pagination(),
+                {"page": 1, "pageSize": 10, "requestedPage": 1, "totalItems": 86},
+            )
+
+            # What if there's no data
+            recipe = (
+                recipe.filters("filter_all").pagination_page(1).pagination_page_size(5)
+            )
+            self.assertRecipeSQLContains(recipe, "WHERE 0 = 1")
+            self.assertRecipeSQLContains(recipe, "LIMIT 5")
+            self.assertRecipeSQLContains(recipe, "OFFSET 0")
+            self.assertEqual(
+                recipe.validated_pagination(),
+                {"page": 1, "pageSize": 5, "requestedPage": 1, "totalItems": 0},
+            )
 
     def test_apply_pagination(self):
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .apply_pagination(False)
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state""",
-        )
-
-        recipe = self.recipe_from_config(
-            {"metrics": ["pop2000"], "dimensions": ["state"], "apply_pagination": False}
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state""",
-        )
+        for recipe in (
+            (
+                self.recipe()
+                .metrics("pop2000")
+                .dimensions("state")
+                .pagination_page_size(10)
+                .apply_pagination(False)
+            ),
+            self.recipe_from_config(
+                {
+                    "metrics": ["pop2000"],
+                    "dimensions": ["state"],
+                    "pagination_page_size": 10,
+                    "apply_pagination": False,
+                }
+            ),
+        ):
+            self.assertTrue("LIMIT" not in recipe.to_sql().upper())
+            self.assertTrue("OFFSET" not in recipe.to_sql().upper())
 
     def test_pagination_order_by(self):
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .pagination_order_by("-state")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state
-ORDER BY state DESC
-LIMIT 10
-OFFSET 0""",
-        )
+        """Pagination requires ordering"""
 
-        recipe = self.recipe_from_config(
-            {
-                "metrics": ["pop2000"],
-                "dimensions": ["state"],
-                "pagination_page_size": 10,
-                "pagination_order_by": ["-state"],
-            }
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state
-ORDER BY state DESC
-LIMIT 10
-OFFSET 0""",
-        )
+        for recipe in (
+            (
+                self.recipe()
+                .metrics("pop2000")
+                .dimensions("state")
+                .pagination_page_size(10)
+                .pagination_order_by("-state")
+            ),
+            self.recipe_from_config(
+                {
+                    "metrics": ["pop2000"],
+                    "dimensions": ["state"],
+                    "pagination_page_size": 10,
+                    "pagination_order_by": ["-state"],
+                }
+            ),
+        ):
+            self.assertRecipeSQLContains(recipe, "ORDER BY state DESC")
+            self.assertRecipeSQLContains(recipe, "LIMIT 10")
 
     def test_pagination_default_order_by(self):
         # Default order by applies a pagination

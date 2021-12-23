@@ -566,8 +566,10 @@ class RecipeTestCase(TestCase):
     """Test cases that can build and test a recipe"""
 
     maxDiff = None
+    connection_string = "sqlite://"
+    create_table_kwargs = {}
 
-    def assertRecipeCSV(self, recipe, csv_text):
+    def assertRecipeCSV(self, recipe: Recipe, csv_text: str):
         """Recipe data returns the supplied csv content"""
         actual = recipe.dataset.export("csv", lineterminator=str("\n")).strip("\n")
         expected = str_dedent(csv_text).strip("\n")
@@ -576,13 +578,18 @@ class RecipeTestCase(TestCase):
 
         self.assertEqual(actual, expected)
 
-    def assertRecipeSQL(self, recipe, sql_text):
+    def assertRecipeSQL(self, recipe: Recipe, sql_text: str):
         """Recipe data returns the supplied csv content"""
         if str_dedent(recipe.to_sql()) != str_dedent(sql_text):
             print(f"Actual:\n{recipe.to_sql()}\n\nExpected:\n{sql_text}")
         self.assertEqual(str_dedent(recipe.to_sql()), str_dedent(sql_text))
 
+    def assertRecipeSQLContains(self, recipe: Recipe, contains_sql_text: str):
+        """Recipe data returns the supplied csv content"""
+        self.assertTrue(str_dedent(contains_sql_text) in str_dedent(recipe.to_sql()))
+
     def recipe(self, **kwargs):
+        """Construct a recipe."""
         recipe_args = {
             "shelf": getattr(self, "shelf", Shelf()),
             "session": self.session,
@@ -591,7 +598,8 @@ class RecipeTestCase(TestCase):
         recipe_args.update(kwargs)
         return Recipe(**recipe_args)
 
-    def recipe_from_config(self, config, **kwargs):
+    def recipe_from_config(self, config: dict, **kwargs):
+        """Construct a recipe from a configuration dict."""
         recipe_args = {
             "shelf": getattr(self, "shelf", Shelf()),
             "session": self.session,
@@ -601,9 +609,6 @@ class RecipeTestCase(TestCase):
         shelf = recipe_args.pop("shelf")
 
         return Recipe.from_config(shelf, config, **recipe_args)
-
-    connection_string = "sqlite://"
-    create_table_kwargs = {}
 
     @classmethod
     def load_data(cls, table_name):
@@ -615,8 +620,9 @@ class RecipeTestCase(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """get_some_resource() is slow, to avoid calling it for each test use setUpClass()
-        and store the result as class variable
+        """Set up tables using a connection_string to define an oven.
+        
+        Tables are loaded using data in data/{tablename}.yml
         """
         super(RecipeTestCase, cls).setUpClass()
         cls.meta = MetaData()
