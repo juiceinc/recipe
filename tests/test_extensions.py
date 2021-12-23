@@ -226,7 +226,8 @@ class AutomaticFiltersTestCase(RecipeTestCase):
             with self.assertRaises(SureError):
                 recipe = self.recipe_from_config(config)
 
-    def test_proxy_calls(self):
+    def test_builder_pattern(self):
+        """We can chain directives together, returning recipe"""
         recipe = (
             self.recipe()
             .metrics("age")
@@ -581,7 +582,7 @@ GROUP BY first""",
             )
 
 
-class TestAnonymizeRecipeExtension(RecipeTestCase):
+class AnonymizeTestCase(RecipeTestCase):
     extension_classes = [Anonymize]
 
     def setUp(self):
@@ -599,23 +600,42 @@ class TestAnonymizeRecipeExtension(RecipeTestCase):
             }
         )
 
-    def test_apply(self):
-        recipe = self.recipe().metrics("age").dimensions("first").anonymize(True)
-        self.assertTrue(recipe.recipe_extensions[0]._anonymize)
-        recipe = self.recipe().metrics("age").dimensions("first").anonymize(False)
-        self.assertFalse(recipe.recipe_extensions[0]._anonymize)
+    def test_from_config(self):
+        """Check the internal state of an extension after configuration and regular construction"""
+        for recipe in self.recipe_list(
+            (self.recipe().metrics("age").dimensions("first").anonymize(True)),
+            {"metrics": ["age"], "dimensions": ["first"], "anonymize": True},
+        ):
+            ext = recipe.recipe_extensions[0]
+            self.assertTrue(ext._anonymize)
 
-        with self.assertRaises(AssertionError):
-            recipe.anonymize("pig")
+    def test_recipe_schema(self):
+        """From config values are validated"""
+        base_config = {"metrics": ["age"], "dimensions": ["first"]}
+        valid_configs = [{"anonymize": True}, {"anonymize": False}]
+        for extra_config in valid_configs:
+            config = copy(base_config)
+            config.update(extra_config)
+            # We can construct and run the recipe
+            recipe = self.recipe_from_config(config)
+            recipe.all()
+
+        invalid_configs = [{"anonymize": "TRUE"}, {"anonymize": 0}]
+        for extra_config in invalid_configs:
+            config = copy(base_config)
+            config.update(extra_config)
+            with self.assertRaises(SureError):
+                recipe = self.recipe_from_config(config)
 
     def test_anonymize_with_anonymizer(self):
         """Anonymize requires ingredients to have an anonymizer"""
-        recipe = (
-            self.recipe()
-            .metrics("age")
-            .dimensions("last")
-            .order_by("last")
-            .anonymize(False)
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["age"],
+                "dimensions": ["last"],
+                "order_by": ["last"],
+                "anonymize": False,
+            }
         )
         self.assertRecipeCSV(
             recipe,
@@ -626,12 +646,13 @@ class TestAnonymizeRecipeExtension(RecipeTestCase):
             """,
         )
 
-        recipe = (
-            self.recipe()
-            .metrics("age")
-            .dimensions("last")
-            .order_by("last")
-            .anonymize(True)
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["age"],
+                "dimensions": ["last"],
+                "order_by": ["last"],
+                "anonymize": True,
+            }
         )
         self.assertRecipeCSV(
             recipe,
@@ -644,12 +665,13 @@ class TestAnonymizeRecipeExtension(RecipeTestCase):
 
     def test_anonymize_with_faker_anonymizer(self):
         """Anonymize requires ingredients to have an anonymizer"""
-        recipe = (
-            self.recipe()
-            .metrics("age")
-            .dimensions("firstanon")
-            .order_by("firstanon")
-            .anonymize(False)
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["age"],
+                "dimensions": ["firstanon"],
+                "order_by": ["firstanon"],
+                "anonymize": False,
+            }
         )
         self.assertRecipeCSV(
             recipe,
@@ -659,19 +681,14 @@ class TestAnonymizeRecipeExtension(RecipeTestCase):
             """,
         )
 
-        recipe = (
-            self.recipe()
-            .metrics("age")
-            .dimensions("firstanon")
-            .order_by("firstanon")
-            .anonymize(True)
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["age"],
+                "dimensions": ["firstanon"],
+                "order_by": ["firstanon"],
+                "anonymize": True,
+            }
         )
-        # Faker values are deterministic
-        fake = Faker(locale="en_US")
-        fake.seed_instance(generate_faker_seed("hi"))
-        fake_value = fake.name()
-        self.assertEqual(fake_value, "Grant Hernandez")
-
         self.assertRecipeCSV(
             recipe,
             """
@@ -679,6 +696,12 @@ class TestAnonymizeRecipeExtension(RecipeTestCase):
             hi,15,Grant Hernandez,hi
             """,
         )
+
+        # Faker values are deterministic
+        fake = Faker(locale="en_US")
+        fake.seed_instance(generate_faker_seed("hi"))
+        fake_value = fake.name()
+        self.assertEqual(fake_value, "Grant Hernandez")
 
     def test_anonymize_without_anonymizer(self):
         """If the dimension doesn't have an anonymizer, there is no change"""
@@ -699,31 +722,115 @@ class TestAnonymizeRecipeExtension(RecipeTestCase):
             )
 
 
-class TestPaginateExtension(RecipeTestCase):
+class PaginateTestCase(RecipeTestCase):
     extension_classes = [Paginate]
 
     def setUp(self):
         super().setUp()
         self.shelf = self.census_shelf
 
+    def test_from_config(self):
+        """Check the internal state of an extension after configuration"""
+        for recipe in self.recipe_list(
+            (
+                self.recipe()
+                .metrics("pop2000")
+                .dimensions("state", "sex")
+                .pagination_page_size(10)
+                .pagination_page(5)
+                .pagination_q("T%")
+                .pagination_search_keys("state", "sex")
+                .pagination_order_by("-sex")
+            ),
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state", "sex"],
+                "pagination_page_size": 10,
+                "pagination_page": 5,
+                "pagination_q": "T%",
+                "pagination_search_keys": ["state", "sex"],
+                "pagination_order_by": ["-sex"],
+            },
+        ):
+            ext = recipe.recipe_extensions[0]
+            self.assertEqual(ext._apply_pagination, True)
+            self.assertEqual(ext._pagination_q, "T%")
+            self.assertEqual(ext._paginate_search_keys, ("state", "sex"))
+            self.assertEqual(ext._pagination_page_size, 10)
+            self.assertEqual(ext._pagination_page, 5)
+            self.assertEqual(ext._pagination_order_by, ("-sex",))
+            self.assertEqual(ext._validated_pagination, None)
+
+            # After the recipe runs, validated pagination is available
+            self.assertRecipeCSV(
+                recipe,
+                """
+                sex,state,pop2000,sex_id,state_id
+                M,Tennessee,2761277,M,Tennessee
+                F,Tennessee,2923953,F,Tennessee
+                """,
+            )
+            self.assertEqual(
+                ext._validated_pagination,
+                {"requestedPage": 5, "page": 1, "pageSize": 10, "totalItems": 2},
+            )
+
+    def test_recipe_schema(self):
+        """From config values are validated"""
+        base_config = {"metrics": ["pop2000"], "dimensions": ["state"]}
+        valid_configs = [
+            {"apply_pagination": True},
+            {"apply_pagination_filters": False},
+            {"pagination_order_by": ["-state"]},
+            {"pagination_order_by": ["-state"]},
+            {"pagination_order_by": ["-state", "pop2000"]},
+            {"pagination_q": "T%"},
+            {"pagination_q": "T_stad_"},
+            {"pagination_search_keys": ["state"]},
+            {"pagination_page_size": 1000},
+            {"pagination_page_size": 0},
+            {"pagination_page": -1},
+            {"pagination_page": 100},
+        ]
+        for extra_config in valid_configs:
+            config = copy(base_config)
+            config.update(extra_config)
+            # We can construct and run the recipe
+            recipe = self.recipe_from_config(config)
+            recipe.all()
+            self.assertRecipeSQLContains(recipe, "state")
+
+        invalid_configs = [
+            {"apply_pagination": 1},
+            {"apply_pagination_filters": [False]},
+            {"pagination_order_by": [1]},
+            {"pagination_order_by": {"name": "fred"}},
+            {"pagination_order_by": None},
+            {"pagination_q": ["T%"]},
+            {"pagination_q": 23},
+            {"pagination_search_keys": [25]},
+            {"pagination_page_size": "a"},
+            {"pagination_page_size": []},
+            {"pagination_page": ["foo"]},
+            {"pagination_page": 900.0},
+        ]
+        for extra_config in invalid_configs:
+            config = copy(base_config)
+            config.update(extra_config)
+            with self.assertRaises(SureError):
+                recipe = self.recipe_from_config(config)
+
     def test_no_pagination(self):
         """Pagination is not on until configured"""
         for recipe in self.recipe_list(
-            self.recipe().metrics("pop2000").dimensions("state"),
-            {"metrics": ["pop2000"], "dimensions": ["state"]},
+            {"metrics": ["pop2000"], "dimensions": ["state"]}
         ):
             self.assertTrue("LIMIT" not in recipe.to_sql())
 
     def test_pagination(self):
         """If pagination page size is configured, pagination is applied to results"""
         for recipe in self.recipe_list(
-            (
-                self.recipe()
-                .metrics("pop2000")
-                .dimensions("age")
-                .pagination_page_size(10)
-            ),
-            {"metrics": ["pop2000"], "dimensions": ["age"], "pagination_page_size": 10},
+            {"metrics": ["pop2000"], "dimensions": ["age"], "pagination_page_size": 10}
         ):
             self.assertRecipeSQLContains(recipe, "LIMIT 10")
             self.assertRecipeSQLContains(recipe, "OFFSET 0")
@@ -747,6 +854,7 @@ class TestPaginateExtension(RecipeTestCase):
             self.assertRecipeSQLContains(recipe, "LIMIT 10")
             self.assertRecipeSQLContains(recipe, "OFFSET 80")
 
+            # page is clamped to the real value
             self.assertEqual(
                 recipe.validated_pagination(),
                 {"page": 9, "pageSize": 10, "requestedPage": 200, "totalItems": 86},
@@ -775,19 +883,12 @@ class TestPaginateExtension(RecipeTestCase):
 
     def test_apply_pagination(self):
         for recipe in self.recipe_list(
-            (
-                self.recipe()
-                .metrics("pop2000")
-                .dimensions("state")
-                .pagination_page_size(10)
-                .apply_pagination(False)
-            ),
             {
                 "metrics": ["pop2000"],
                 "dimensions": ["state"],
                 "pagination_page_size": 10,
                 "apply_pagination": False,
-            },
+            }
         ):
             self.assertRecipeSQLNotContains(recipe, "LIMIT")
             self.assertRecipeSQLNotContains(recipe, "OFFSET")
@@ -796,19 +897,12 @@ class TestPaginateExtension(RecipeTestCase):
         """Pagination requires ordering"""
 
         for recipe in self.recipe_list(
-            (
-                self.recipe()
-                .metrics("pop2000")
-                .dimensions("state")
-                .pagination_page_size(10)
-                .pagination_order_by("-state")
-            ),
             {
                 "metrics": ["pop2000"],
                 "dimensions": ["state"],
                 "pagination_page_size": 10,
                 "pagination_order_by": ["-state"],
-            },
+            }
         ):
             self.assertRecipeSQLContains(recipe, "ORDER BY state DESC")
             self.assertRecipeSQLContains(recipe, "LIMIT 10")
@@ -817,19 +911,12 @@ class TestPaginateExtension(RecipeTestCase):
         # Default order by applies a pagination
 
         for recipe in self.recipe_list(
-            (
-                self.recipe()
-                .metrics("pop2000")
-                .dimensions("state")
-                .pagination_page_size(10)
-                .pagination_default_order_by("-pop2000")
-            ),
             {
                 "metrics": ["pop2000"],
                 "dimensions": ["state"],
                 "pagination_page_size": 10,
                 "pagination_default_order_by": ["-pop2000"],
-            },
+            }
         ):
             self.assertRecipeSQLContains(recipe, "ORDER BY pop2000 DESC")
             # Default ordering is not used when the recipe already
@@ -842,50 +929,17 @@ class TestPaginateExtension(RecipeTestCase):
         # has a explicit pagination_order_by
         # has an ordering
         for recipe in self.recipe_list(
-            (
-                self.recipe()
-                .metrics("pop2000")
-                .pagination_order_by("state")
-                .pagination_page_size(10)
-                .dimensions("state")
-                .pagination_default_order_by("-pop2000")
-            ),
             {
                 "metrics": ["pop2000"],
                 "dimensions": ["state"],
                 "order_by": ["state"],
                 "pagination_page_size": 10,
                 "pagination_default_order_by": ["-pop2000"],
-            },
+            }
         ):
             self.assertRecipeSQLContains(recipe, "ORDER BY state")
 
     def test_pagination_q(self):
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .pagination_q("T%")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-WHERE lower(census.state) LIKE lower('T%')
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """state,pop2000,state_id
-Tennessee,5685230,Tennessee
-""",
-        )
-
         recipe = self.recipe_from_config(
             {
                 "metrics": ["pop2000"],
@@ -905,32 +959,15 @@ ORDER BY state
 LIMIT 10
 OFFSET 0""",
         )
+        self.assertRecipeCSV(
+            recipe,
+            """state,pop2000,state_id
+Tennessee,5685230,Tennessee
+""",
+        )
 
     def test_pagination_q_idvalue(self):
         """Pagination queries use the value of an id value dimension"""
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("idvalue_state")
-            .pagination_page_size(10)
-            .pagination_q("T%")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS idvalue_state_id,
-       'State:' || census.state AS idvalue_state,
-       sum(census.pop2000) AS pop2000
-FROM census
-WHERE lower('State:' || census.state) LIKE lower('T%')
-GROUP BY idvalue_state_id,
-         idvalue_state
-ORDER BY idvalue_state,
-         idvalue_state_id
-LIMIT 10
-OFFSET 0""",
-        )
-        self.assertEqual(len(recipe.all()), 0)
-
         recipe = self.recipe_from_config(
             {
                 "metrics": ["pop2000"],
@@ -953,35 +990,24 @@ ORDER BY idvalue_state,
 LIMIT 10
 OFFSET 0""",
         )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            idvalue_state_id,idvalue_state,pop2000,idvalue_state_id
+            Tennessee,State:Tennessee,5685230,Tennessee
+            """,
+        )
 
         self.assertRecipeCSV(
             recipe,
-            """idvalue_state_id,idvalue_state,pop2000,idvalue_state_id
-Tennessee,State:Tennessee,5685230,Tennessee
-""",
+            """
+            idvalue_state_id,idvalue_state,pop2000,idvalue_state_id
+            Tennessee,State:Tennessee,5685230,Tennessee
+            """,
         )
 
     def test_apply_pagination_filters(self):
         """apply_pagination_filters False will disable adding search"""
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .pagination_q("T%")
-            .apply_pagination_filters(False)
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
-
         recipe = self.recipe_from_config(
             {
                 "metrics": ["pop2000"],
@@ -1003,55 +1029,6 @@ OFFSET 0""",
         )
 
     def test_pagination_search_keys(self):
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .pagination_q("M")
-            .pagination_search_keys("sex")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-WHERE lower(census.sex) LIKE lower('M')
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
-
-        # If multiple search keys are provided, they are ORed together
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .pagination_q("M")
-            .pagination_search_keys("sex", "state")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-WHERE lower(census.sex) LIKE lower('M')
-  OR lower(census.state) LIKE lower('M')
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """state,pop2000,state_id
-Tennessee,2761277,Tennessee
-Vermont,298532,Vermont
-""",
-        )
-
         recipe = self.recipe_from_config(
             {
                 "metrics": ["pop2000"],
@@ -1073,17 +1050,26 @@ ORDER BY state
 LIMIT 10
 OFFSET 0""",
         )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            state,pop2000,state_id
+            Tennessee,2761277,Tennessee
+            Vermont,298532,Vermont
+            """,
+        )
 
     def test_all(self):
         """Test all pagination options together"""
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state", "sex", "age")
-            .pagination_page_size(10)
-            .pagination_page(5)
-            .pagination_q("T%")
-            .pagination_search_keys("state", "sex")
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state", "sex", "age"],
+                "pagination_page_size": 10,
+                "pagination_page": 5,
+                "pagination_q": "T%",
+                "pagination_search_keys": ["state", "sex"],
+            }
         )
         self.assertRecipeSQL(
             recipe,
@@ -1118,45 +1104,6 @@ OFFSET 40""",
             48,F,Tennessee,41435,48,F,Tennessee
             49,F,Tennessee,39967,49,F,Tennessee
             """,
-        )
-
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state", "sex", "age")
-            .pagination_page_size(10)
-            .pagination_page(5)
-            .pagination_q("T%")
-            .pagination_search_keys("state", "sex")
-        )
-
-        recipe = self.recipe_from_config(
-            {
-                "metrics": ["pop2000"],
-                "dimensions": ["state", "sex", "age"],
-                "pagination_page_size": 10,
-                "pagination_page": 5,
-                "pagination_q": "T%",
-                "pagination_search_keys": ["state", "sex"],
-            }
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.age AS age,
-       census.sex AS sex,
-       census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-WHERE lower(census.state) LIKE lower('T%')
-  OR lower(census.sex) LIKE lower('T%')
-GROUP BY age,
-         sex,
-         state
-ORDER BY state,
-         sex,
-         age
-LIMIT 10
-OFFSET 40""",
         )
 
 
