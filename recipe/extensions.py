@@ -1018,17 +1018,6 @@ class PaginateInline(Paginate):
 
     """
 
-    recipe_schema = {
-        "apply_pagination": {"type": "boolean"},
-        "apply_pagination_filters": {"type": "boolean"},
-        "pagination_order_by": {"type": "list", "elements": {"type": "string"}},
-        "pagination_default_order_by": {"type": "list", "elements": {"type": "string"}},
-        "pagination_q": {"type": "string"},
-        "pagination_search_keys": {"type": "list", "elements": {"type": "string"}},
-        "pagination_page_size": {"type": "integer"},
-        "pagination_page": {"type": "integer"},
-    }
-
     def modify_postquery_parts(self, postquery_parts):
         """Apply validated pagination limits and offset to a completed query."""
         if not self.do_pagination():
