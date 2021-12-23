@@ -1,4 +1,6 @@
+import io
 import os
+import csv
 from copy import copy
 from datetime import date
 from unittest import TestCase
@@ -558,6 +560,23 @@ from recipe import Dimension, Filter, IdValueDimension, Metric, Recipe, Shelf, g
 # )
 
 
+def strip_columns_from_csv(content, ignore_columns=None):
+    if ignore_columns:
+        rows = list(csv.DictReader(content.splitlines()))
+        for row in rows:
+            for col in ignore_columns:
+                row.pop(col, None)
+        if rows:
+            csv_content = io.StringIO()
+            first_row = rows[0]
+            writer = csv.DictWriter(csv_content, fieldnames=list(first_row.keys()))
+            writer.writeheader()
+            writer.writerows(rows)
+            return csv_content.getvalue().replace("\r\n", "\n").strip("\n")
+
+    return content
+
+
 def str_dedent(s):
     return "\n".join([x.lstrip() for x in s.split("\n")]).lstrip("\n").rstrip("\n")
 
@@ -569,9 +588,10 @@ class RecipeTestCase(TestCase):
     connection_string = "sqlite://"
     create_table_kwargs = {}
 
-    def assertRecipeCSV(self, recipe: Recipe, csv_text: str):
+    def assertRecipeCSV(self, recipe: Recipe, csv_text: str, ignore_columns=None):
         """Recipe data returns the supplied csv content"""
         actual = recipe.dataset.export("csv", lineterminator=str("\n")).strip("\n")
+        actual = strip_columns_from_csv(actual, ignore_columns=ignore_columns)
         expected = str_dedent(csv_text).strip("\n")
         if actual != expected:
             print(f"Actual:\n{actual}\n\nExpected:\n{expected}")
@@ -867,3 +887,8 @@ class RecipeTestCase(TestCase):
                 ).scalar(),
                 expected_count,
             )
+
+    def test_strip_columns_from_csv(self):
+        content = """a,b,c\n1,2,3"""
+        c2 = strip_columns_from_csv(content, ignore_columns=["b"])
+        self.assertEqual(c2, "a,c\n1,3")

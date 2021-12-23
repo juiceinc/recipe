@@ -723,6 +723,14 @@ class AnonymizeTestCase(RecipeTestCase):
 
 
 class PaginateTestCase(RecipeTestCase):
+    """Test Pagination
+
+    Developer's Note: For pagination we are testing csv results
+    rather than generated sql because we want to use the same tests
+    to test the Paginate and the PaginateInline which generate different
+    SQL.
+    """
+
     extension_classes = [Paginate]
 
     def setUp(self):
@@ -737,7 +745,7 @@ class PaginateTestCase(RecipeTestCase):
                 .metrics("pop2000")
                 .dimensions("state", "sex")
                 .pagination_page_size(10)
-                .pagination_page(5)
+                .pagination_page(1)
                 .pagination_q("T%")
                 .pagination_search_keys("state", "sex")
                 .pagination_order_by("-sex")
@@ -746,7 +754,7 @@ class PaginateTestCase(RecipeTestCase):
                 "metrics": ["pop2000"],
                 "dimensions": ["state", "sex"],
                 "pagination_page_size": 10,
-                "pagination_page": 5,
+                "pagination_page": 1,
                 "pagination_q": "T%",
                 "pagination_search_keys": ["state", "sex"],
                 "pagination_order_by": ["-sex"],
@@ -757,11 +765,14 @@ class PaginateTestCase(RecipeTestCase):
             self.assertEqual(ext._pagination_q, "T%")
             self.assertEqual(ext._paginate_search_keys, ("state", "sex"))
             self.assertEqual(ext._pagination_page_size, 10)
-            self.assertEqual(ext._pagination_page, 5)
+            self.assertEqual(ext._pagination_page, 1)
             self.assertEqual(ext._pagination_order_by, ("-sex",))
             self.assertEqual(ext._validated_pagination, None)
 
             # After the recipe runs, validated pagination is available
+            print(recipe.to_sql())
+            print(recipe.all())
+            print(recipe.validated_pagination())
             self.assertRecipeCSV(
                 recipe,
                 """
@@ -771,8 +782,8 @@ class PaginateTestCase(RecipeTestCase):
                 """,
             )
             self.assertEqual(
-                ext._validated_pagination,
-                {"requestedPage": 5, "page": 1, "pageSize": 10, "totalItems": 2},
+                recipe.validated_pagination(),
+                {"requestedPage": 1, "page": 1, "pageSize": 10, "totalItems": 2},
             )
 
     def test_recipe_schema(self):
@@ -851,14 +862,14 @@ class PaginateTestCase(RecipeTestCase):
             )
 
             # Let's go to an impossible page
-            recipe = recipe.pagination_page(200)
+            recipe = recipe.pagination_page(9)
             self.assertRecipeSQLContains(recipe, "LIMIT 10")
             self.assertRecipeSQLContains(recipe, "OFFSET 80")
 
             # page is clamped to the real value
             self.assertEqual(
                 recipe.validated_pagination(),
-                {"page": 9, "pageSize": 10, "requestedPage": 200, "totalItems": 86},
+                {"page": 9, "pageSize": 10, "requestedPage": 9, "totalItems": 86},
             )
 
             recipe = recipe.pagination_page(-1)
@@ -949,22 +960,12 @@ class PaginateTestCase(RecipeTestCase):
                 "pagination_q": "T%",
             }
         )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-WHERE lower(census.state) LIKE lower('T%')
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
         self.assertRecipeCSV(
             recipe,
-            """state,pop2000,state_id
-Tennessee,5685230,Tennessee
-""",
+            """
+            state,pop2000,state_id
+            Tennessee,5685230,Tennessee
+            """,
         )
 
     def test_pagination_q_idvalue(self):
@@ -977,20 +978,6 @@ Tennessee,5685230,Tennessee
                 "pagination_q": "State:T%",
             }
         )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS idvalue_state_id,
-       'State:' || census.state AS idvalue_state,
-       sum(census.pop2000) AS pop2000
-FROM census
-WHERE lower('State:' || census.state) LIKE lower('State:T%')
-GROUP BY idvalue_state_id,
-         idvalue_state
-ORDER BY idvalue_state,
-         idvalue_state_id
-LIMIT 10
-OFFSET 0""",
-        )
         self.assertRecipeCSV(
             recipe,
             """
@@ -999,6 +986,7 @@ OFFSET 0""",
             """,
         )
 
+        print(recipe.dataset.csv)
         self.assertRecipeCSV(
             recipe,
             """
@@ -1018,16 +1006,6 @@ OFFSET 0""",
                 "apply_pagination_filters": False,
             }
         )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
 
     def test_pagination_search_keys(self):
         recipe = self.recipe_from_config(
@@ -1038,18 +1016,6 @@ OFFSET 0""",
                 "pagination_q": "M",
                 "pagination_search_keys": ["sex", "state"],
             }
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-WHERE lower(census.sex) LIKE lower('M')
-  OR lower(census.state) LIKE lower('M')
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
         )
         self.assertRecipeCSV(
             recipe,
@@ -1072,24 +1038,6 @@ OFFSET 0""",
                 "pagination_search_keys": ["state", "sex"],
             }
         )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.age AS age,
-       census.sex AS sex,
-       census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-WHERE lower(census.state) LIKE lower('T%')
-  OR lower(census.sex) LIKE lower('T%')
-GROUP BY age,
-         sex,
-         state
-ORDER BY state,
-         sex,
-         age
-LIMIT 10
-OFFSET 40""",
-        )
         self.assertRecipeCSV(
             recipe,
             """
@@ -1106,6 +1054,225 @@ OFFSET 40""",
             49,F,Tennessee,39967,49,F,Tennessee
             """,
         )
+
+
+class PaginateInlineTestCase(PaginateTestCase):
+    extension_classes = [PaginateInline]
+
+    def assertRecipeCSV(self, recipe: Recipe, csv_text: str):
+        super().assertRecipeCSV(recipe, csv_text, ignore_columns=["_total_count"])
+
+    def test_pagination_q_idvalue(self):
+        """Pagination queries use the value of an id value dimension"""
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["idvalue_state"],
+                "pagination_page_size": 10,
+                "pagination_q": "State:T%",
+            }
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            idvalue_state_id,idvalue_state,pop2000
+            Tennessee,State:Tennessee,5685230
+            """,
+        )
+
+        self.assertRecipeCSV(
+            recipe,
+            """
+            idvalue_state_id,idvalue_state,pop2000
+            Tennessee,State:Tennessee,5685230
+            """,
+        )
+
+
+class TestCompareRecipeExtension(RecipeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.shelf = copy(self.census_shelf)
+        self.extension_classes = [CompareRecipe]
+
+    def test_compare(self):
+        """A basic comparison recipe. The base recipe looks at all data, the
+        comparison only applies to vermont
+
+        Note: Ordering is only preserved on postgres engines.
+        """
+
+        r = self.recipe().metrics("pop2000").dimensions("sex").order_by("sex")
+        r = r.compare(
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("sex")
+            .filters(self.census_table.c.state == "Vermont")
+        )
+
+        self.assertRecipeSQL(
+            r,
+            """SELECT census.sex AS sex,
+       sum(census.pop2000) AS pop2000,
+       avg(anon_1.pop2000) AS pop2000_compare
+FROM census
+LEFT OUTER JOIN
+  (SELECT census.sex AS sex,
+          sum(census.pop2000) AS pop2000
+   FROM census
+   WHERE census.state = 'Vermont'
+   GROUP BY sex) AS anon_1 ON census.sex = anon_1.sex
+GROUP BY census.sex
+ORDER BY census.sex""",
+        )
+        self.assertRecipeCSV(
+            r,
+            """
+        sex,pop2000,pop2000_compare,sex_id
+        F,3234901,310948.0,F
+        M,3059809,298532.0,M
+        """,
+        )
+
+    def test_compare_custom_aggregation(self):
+        """A basic comparison recipe. The base recipe looks at all data, the
+        comparison only applies to vermont
+
+        Note: Ordering is only preserved on postgres engines.
+        """
+        r = self.recipe().metrics("pop2000").dimensions("sex").order_by("sex")
+        r = r.compare(
+            self.recipe()
+            .metrics("pop2000_sum")
+            .dimensions("sex")
+            .filters(self.census_table.c.state == "Vermont")
+        )
+
+        self.assertRecipeSQL(
+            r,
+            """SELECT census.sex AS sex,
+       sum(census.pop2000) AS pop2000,
+       sum(anon_1.pop2000_sum) AS pop2000_sum_compare
+FROM census
+LEFT OUTER JOIN
+  (SELECT census.sex AS sex,
+          sum(census.pop2000) AS pop2000_sum
+   FROM census
+   WHERE census.state = 'Vermont'
+   GROUP BY sex) AS anon_1 ON census.sex = anon_1.sex
+GROUP BY census.sex
+ORDER BY census.sex""",
+        )
+        self.assertRecipeCSV(
+            r,
+            """
+            sex,pop2000,pop2000_sum_compare,sex_id
+            F,3234901,53483056,F
+            M,3059809,51347504,M
+            """,
+        )
+
+    def test_compare_suffix(self):
+        """Test that the proper suffix gets added to the comparison metrics"""
+
+        r = self.recipe().metrics("pop2000").dimensions("sex").order_by("sex")
+        r = r.compare(
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("sex")
+            .filters(self.census_table.c.state == "Vermont"),
+            suffix="_x",
+        )
+
+        self.assertRecipeSQL(
+            r,
+            """SELECT census.sex AS sex,
+       sum(census.pop2000) AS pop2000,
+       avg(anon_1.pop2000) AS pop2000_x
+FROM census
+LEFT OUTER JOIN
+  (SELECT census.sex AS sex,
+          sum(census.pop2000) AS pop2000
+   FROM census
+   WHERE census.state = 'Vermont'
+   GROUP BY sex) AS anon_1 ON census.sex = anon_1.sex
+GROUP BY census.sex
+ORDER BY census.sex""",
+        )
+        self.assertRecipeCSV(
+            r,
+            """
+            sex,pop2000,pop2000_x,sex_id
+            F,3234901,310948.0,F
+            M,3059809,298532.0,M
+            """,
+        )
+
+    def test_multiple_compares(self):
+        """Test that we can do multiple comparisons"""
+
+        r = (
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("sex", "state")
+            .order_by("sex", "state")
+        )
+        r = r.compare(
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("sex")
+            .filters(self.census_table.c.state == "Vermont"),
+            suffix="_vermont",
+        )
+        r = r.compare(self.recipe().metrics("pop2000"), suffix="_total")
+
+        self.assertRecipeSQL(
+            r,
+            """SELECT census.sex AS sex,
+       census.state AS state,
+       sum(census.pop2000) AS pop2000,
+       avg(anon_1.pop2000) AS pop2000_vermont,
+       avg(anon_2.pop2000) AS pop2000_total
+FROM census
+LEFT OUTER JOIN
+  (SELECT census.sex AS sex,
+          sum(census.pop2000) AS pop2000
+   FROM census
+   WHERE census.state = 'Vermont'
+   GROUP BY sex) AS anon_1 ON census.sex = anon_1.sex
+LEFT OUTER JOIN
+  (SELECT sum(census.pop2000) AS pop2000
+   FROM census) AS anon_2 ON 1=1
+GROUP BY census.sex,
+         census.state
+ORDER BY census.sex,
+         census.state""",
+        )
+        self.assertRecipeCSV(
+            r,
+            """
+            sex,state,pop2000,pop2000_vermont,pop2000_total,sex_id,state_id
+            F,Tennessee,2923953,310948.0,6294710.0,F,Tennessee
+            F,Vermont,310948,310948.0,6294710.0,F,Vermont
+            M,Tennessee,2761277,298532.0,6294710.0,M,Tennessee
+            M,Vermont,298532,298532.0,6294710.0,M,Vermont
+            """,
+        )
+
+    def test_mismatched_dimensions_raises(self):
+        """Dimensions in the comparison recipe must be a subset of the
+        dimensions in the base recipe"""
+        r = self.recipe().metrics("pop2000").dimensions("sex").order_by("sex")
+        r = r.compare(
+            self.recipe()
+            .metrics("pop2000")
+            .dimensions("state")
+            .filters(self.census_table.c.state == "Vermont"),
+            suffix="_x",
+        )
+
+        with self.assertRaises(BadRecipe):
+            r.all()
 
 
 class TestSummarizeOverExtension(RecipeTestCase):
@@ -1468,857 +1635,6 @@ GROUP BY summarize.department""",
         assert ops_row.test_cnt == 5
         assert sales_row.department == "sales"
         assert sales_row.test_cnt == 1
-
-
-class TestPaginateInlineExtension(RecipeTestCase):
-    def setUp(self):
-        super().setUp()
-        self.shelf = copy(self.census_shelf)
-        self.extension_classes = [PaginateInline]
-
-    def recipe_from_config(self, config):
-        return Recipe.from_config(
-            copy(self.census_shelf),
-            config,
-            session=self.session,
-            extension_classes=self.extension_classes,
-        )
-
-    def test_no_pagination(self):
-        recipe = self.recipe().metrics("pop2000").dimensions("state")
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state""",
-        )
-
-        recipe = self.recipe_from_config(
-            {"metrics": ["pop2000"], "dimensions": ["state"]}
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state""",
-        )
-
-    def test_pagination_invalid_page(self):
-        """If we fetch a pagination page beyond the bounds we are reset to page=1"""
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("age")
-            .pagination_page_size(10)
-            .pagination_page(100)
-        )
-        # first we will fetch with a limit that is too high.
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.age AS age,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.age AS age,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      GROUP BY age) AS anon_2) AS anon_1
-GROUP BY age
-ORDER BY age
-LIMIT 10
-OFFSET 990""",
-        )
-        # AFter validating pagination, we wind up fetching the first page.
-        assert recipe.validated_pagination() == {
-            "page": 1,
-            "pageSize": 10,
-            "requestedPage": 1,
-            "totalItems": 86,
-        }
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.age AS age,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.age AS age,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      GROUP BY age) AS anon_2) AS anon_1
-GROUP BY age
-ORDER BY age
-LIMIT 10
-OFFSET 0""",
-        )
-
-    def test_pagination(self):
-        """If pagination page size is configured, pagination is applied to results"""
-        recipe = (
-            self.recipe().metrics("pop2000").dimensions("age").pagination_page_size(10)
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.age AS age,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.age AS age,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      GROUP BY age) AS anon_2) AS anon_1
-GROUP BY age
-ORDER BY age
-LIMIT 10
-OFFSET 0""",
-        )
-        assert recipe.validated_pagination() == {
-            "page": 1,
-            "pageSize": 10,
-            "requestedPage": 1,
-            "totalItems": 86,
-        }
-
-        recipe = self.recipe_from_config(
-            {
-                "metrics": ["pop2000"],
-                "dimensions": ["state"],
-                "pagination_page_size": 10,
-            }
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.state AS state,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      GROUP BY state) AS anon_2) AS anon_1
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
-        assert recipe.validated_pagination() == {
-            "page": 1,
-            "pageSize": 10,
-            "requestedPage": 1,
-            "totalItems": 2,
-        }
-
-        recipe = recipe.pagination_page(2)
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.state AS state,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      GROUP BY state) AS anon_2) AS anon_1
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 10""",
-        )
-        assert recipe.validated_pagination() == {
-            "page": 1,
-            "pageSize": 10,
-            "requestedPage": 1,
-            "totalItems": 2,
-        }
-
-        recipe = self.recipe_from_config(
-            {
-                "metrics": ["pop2000"],
-                "dimensions": ["state"],
-                "pagination_page_size": 1,
-                "pagination_page": 2,
-            }
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.state AS state,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      GROUP BY state) AS anon_2) AS anon_1
-GROUP BY state
-ORDER BY state
-LIMIT 1
-OFFSET 1""",
-        )
-        assert recipe.validated_pagination() == {
-            "page": 2,
-            "pageSize": 1,
-            "requestedPage": 2,
-            "totalItems": 2,
-        }
-
-    def test_pagination_nodata(self):
-        """What does pagination do when there is no data"""
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("age")
-            .filters("filter_all")
-            .pagination_page_size(10)
-        )
-        assert recipe.validated_pagination() == {
-            "page": 1,
-            "pageSize": 10,
-            "requestedPage": 1,
-            "totalItems": 0,
-        }
-
-    def test_apply_pagination(self):
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .apply_pagination(False)
-        )
-        recipe = self.recipe_from_config(
-            {"metrics": ["pop2000"], "dimensions": ["state"], "apply_pagination": False}
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000
-FROM census
-GROUP BY state""",
-        )
-
-    def test_pagination_order_by(self):
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .pagination_order_by("-state")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.state AS state,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      GROUP BY state) AS anon_2) AS anon_1
-GROUP BY state
-ORDER BY state DESC
-LIMIT 10
-OFFSET 0""",
-        )
-
-        recipe = self.recipe_from_config(
-            {
-                "metrics": ["pop2000"],
-                "dimensions": ["state"],
-                "pagination_page_size": 10,
-                "pagination_order_by": ["-state"],
-            }
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.state AS state,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      GROUP BY state) AS anon_2) AS anon_1
-GROUP BY state
-ORDER BY state DESC
-LIMIT 10
-OFFSET 0""",
-        )
-
-    def test_pagination_default_order_by(self):
-        # Default order by applies a pagination
-
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .pagination_default_order_by("-pop2000")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.state AS state,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      GROUP BY state) AS anon_2) AS anon_1
-GROUP BY state
-ORDER BY pop2000 DESC
-LIMIT 10
-OFFSET 0""",
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            state,pop2000,_total_count,state_id
-            Tennessee,5685230,2,Tennessee
-            Vermont,609480,2,Vermont
-            """,
-        )
-
-        # Default ordering is not used when the recipe already
-        # has an ordering
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .order_by("state")
-            .pagination_page_size(10)
-            .pagination_default_order_by("-pop2000")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.state AS state,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      GROUP BY state) AS anon_2) AS anon_1
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
-
-        # Default ordering is not used when the recipe
-        # has a explicit pagination_order_by
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .pagination_order_by("state")
-            .pagination_page_size(10)
-            .dimensions("state")
-            .pagination_default_order_by("-pop2000")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.state AS state,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      GROUP BY state) AS anon_2) AS anon_1
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
-
-        # Finally we use default order by
-        recipe = self.recipe_from_config(
-            {
-                "metrics": ["pop2000"],
-                "dimensions": ["state"],
-                "pagination_page_size": 10,
-                "pagination_default_order_by": ["-pop2000"],
-            }
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.state AS state,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      GROUP BY state) AS anon_2) AS anon_1
-GROUP BY state
-ORDER BY pop2000 DESC
-LIMIT 10
-OFFSET 0""",
-        )
-
-    def test_pagination_q(self):
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .pagination_q("T%")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.state AS state,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      WHERE lower(census.state) LIKE lower('T%')
-      GROUP BY state) AS anon_2) AS anon_1
-WHERE lower(census.state) LIKE lower('T%')
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            state,pop2000,_total_count,state_id
-            Tennessee,5685230,1,Tennessee
-""",
-        )
-
-        # Same as above
-        recipe = self.recipe_from_config(
-            {
-                "metrics": ["pop2000"],
-                "dimensions": ["state"],
-                "pagination_page_size": 10,
-                "pagination_q": "T%",
-            }
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            state,pop2000,_total_count,state_id
-            Tennessee,5685230,1,Tennessee
-""",
-        )
-
-    def test_pagination_q_idvalue(self):
-        """Pagination queries use the value of an id value dimension"""
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("idvalue_state")
-            .pagination_page_size(10)
-            .pagination_q("T%")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS idvalue_state_id,
-       'State:' || census.state AS idvalue_state,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.state AS idvalue_state_id,
-             'State:' || census.state AS idvalue_state,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      WHERE lower('State:' || census.state) LIKE lower('T%')
-      GROUP BY idvalue_state_id,
-               idvalue_state) AS anon_2) AS anon_1
-WHERE lower('State:' || census.state) LIKE lower('T%')
-GROUP BY idvalue_state_id,
-         idvalue_state
-ORDER BY idvalue_state,
-         idvalue_state_id
-LIMIT 10
-OFFSET 0""",
-        )
-        assert len(recipe.all()) == 0
-
-        recipe = self.recipe_from_config(
-            {
-                "metrics": ["pop2000"],
-                "dimensions": ["idvalue_state"],
-                "pagination_page_size": 10,
-                "pagination_q": "State:T%",
-            }
-        )
-        assert "LIKE" in recipe.to_sql()
-        self.assertRecipeCSV(
-            recipe,
-            """
-            idvalue_state_id,idvalue_state,pop2000,_total_count,idvalue_state_id
-            Tennessee,State:Tennessee,5685230,1,Tennessee
-            """,
-        )
-
-    def test_apply_pagination_filters(self):
-        """apply_pagination_filters False will disable adding search"""
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .pagination_q("T%")
-            .apply_pagination_filters(False)
-        )
-        assert "LIKE" not in recipe.to_sql()
-        recipe = self.recipe_from_config(
-            {
-                "metrics": ["pop2000"],
-                "dimensions": ["state"],
-                "pagination_page_size": 10,
-                "pagination_q": "T%",
-                "apply_pagination_filters": False,
-            }
-        )
-        assert "LIKE" not in recipe.to_sql()
-
-    def test_pagination_search_keys(self):
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .pagination_q("M")
-            .pagination_search_keys("sex")
-        )
-        assert "LIKE" in recipe.to_sql()
-
-        # If multiple search keys are provided, they are ORed together
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .pagination_page_size(10)
-            .pagination_q("M")
-            .pagination_search_keys("sex", "state")
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            state,pop2000,_total_count,state_id
-            Tennessee,2761277,2,Tennessee
-            Vermont,298532,2,Vermont
-            """,
-        )
-
-        recipe = self.recipe_from_config(
-            {
-                "metrics": ["pop2000"],
-                "dimensions": ["state"],
-                "pagination_page_size": 10,
-                "pagination_q": "M",
-                "pagination_search_keys": ["sex", "state"],
-            }
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-       sum(census.pop2000) AS pop2000,
-       min(anon_1._total_count) AS _total_count
-FROM census,
-
-  (SELECT count(*) AS _total_count
-   FROM
-     (SELECT census.state AS state,
-             sum(census.pop2000) AS pop2000
-      FROM census
-      WHERE lower(census.sex) LIKE lower('M')
-        OR lower(census.state) LIKE lower('M')
-      GROUP BY state) AS anon_2) AS anon_1
-WHERE lower(census.sex) LIKE lower('M')
-  OR lower(census.state) LIKE lower('M')
-GROUP BY state
-ORDER BY state
-LIMIT 10
-OFFSET 0""",
-        )
-
-    def test_all(self):
-        """Test all pagination options together"""
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state", "sex", "age")
-            .pagination_page_size(10)
-            .pagination_page(5)
-            .pagination_q("T%")
-            .pagination_search_keys("state", "sex")
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            age,sex,state,pop2000,_total_count,age_id,sex_id,state_id
-            40,F,Tennessee,47199,172,40,F,Tennessee
-            41,F,Tennessee,45660,172,41,F,Tennessee
-            42,F,Tennessee,45959,172,42,F,Tennessee
-            43,F,Tennessee,46308,172,43,F,Tennessee
-            44,F,Tennessee,44914,172,44,F,Tennessee
-            45,F,Tennessee,45282,172,45,F,Tennessee
-            46,F,Tennessee,43943,172,46,F,Tennessee
-            47,F,Tennessee,42004,172,47,F,Tennessee
-            48,F,Tennessee,41435,172,48,F,Tennessee
-            49,F,Tennessee,39967,172,49,F,Tennessee
-            """,
-        )
-        recipe = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state", "sex", "age")
-            .pagination_page_size(10)
-            .pagination_page(5)
-            .pagination_q("T%")
-            .pagination_search_keys("state", "sex")
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            age,sex,state,pop2000,_total_count,age_id,sex_id,state_id
-            40,F,Tennessee,47199,172,40,F,Tennessee
-            41,F,Tennessee,45660,172,41,F,Tennessee
-            42,F,Tennessee,45959,172,42,F,Tennessee
-            43,F,Tennessee,46308,172,43,F,Tennessee
-            44,F,Tennessee,44914,172,44,F,Tennessee
-            45,F,Tennessee,45282,172,45,F,Tennessee
-            46,F,Tennessee,43943,172,46,F,Tennessee
-            47,F,Tennessee,42004,172,47,F,Tennessee
-            48,F,Tennessee,41435,172,48,F,Tennessee
-            49,F,Tennessee,39967,172,49,F,Tennessee
-            """,
-        )
-
-
-class TestCompareRecipeExtension(RecipeTestCase):
-    def setUp(self):
-        super().setUp()
-        self.shelf = copy(self.census_shelf)
-        self.extension_classes = [CompareRecipe]
-
-    def test_compare(self):
-        """A basic comparison recipe. The base recipe looks at all data, the
-        comparison only applies to vermont
-
-        Note: Ordering is only preserved on postgres engines.
-        """
-
-        r = self.recipe().metrics("pop2000").dimensions("sex").order_by("sex")
-        r = r.compare(
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("sex")
-            .filters(self.census_table.c.state == "Vermont")
-        )
-
-        self.assertRecipeSQL(
-            r,
-            """SELECT census.sex AS sex,
-       sum(census.pop2000) AS pop2000,
-       avg(anon_1.pop2000) AS pop2000_compare
-FROM census
-LEFT OUTER JOIN
-  (SELECT census.sex AS sex,
-          sum(census.pop2000) AS pop2000
-   FROM census
-   WHERE census.state = 'Vermont'
-   GROUP BY sex) AS anon_1 ON census.sex = anon_1.sex
-GROUP BY census.sex
-ORDER BY census.sex""",
-        )
-        self.assertRecipeCSV(
-            r,
-            """
-        sex,pop2000,pop2000_compare,sex_id
-        F,3234901,310948.0,F
-        M,3059809,298532.0,M
-        """,
-        )
-
-    def test_compare_custom_aggregation(self):
-        """A basic comparison recipe. The base recipe looks at all data, the
-        comparison only applies to vermont
-
-        Note: Ordering is only preserved on postgres engines.
-        """
-        r = self.recipe().metrics("pop2000").dimensions("sex").order_by("sex")
-        r = r.compare(
-            self.recipe()
-            .metrics("pop2000_sum")
-            .dimensions("sex")
-            .filters(self.census_table.c.state == "Vermont")
-        )
-
-        self.assertRecipeSQL(
-            r,
-            """SELECT census.sex AS sex,
-       sum(census.pop2000) AS pop2000,
-       sum(anon_1.pop2000_sum) AS pop2000_sum_compare
-FROM census
-LEFT OUTER JOIN
-  (SELECT census.sex AS sex,
-          sum(census.pop2000) AS pop2000_sum
-   FROM census
-   WHERE census.state = 'Vermont'
-   GROUP BY sex) AS anon_1 ON census.sex = anon_1.sex
-GROUP BY census.sex
-ORDER BY census.sex""",
-        )
-        self.assertRecipeCSV(
-            r,
-            """
-            sex,pop2000,pop2000_sum_compare,sex_id
-            F,3234901,53483056,F
-            M,3059809,51347504,M
-            """,
-        )
-
-    def test_compare_suffix(self):
-        """Test that the proper suffix gets added to the comparison metrics"""
-
-        r = self.recipe().metrics("pop2000").dimensions("sex").order_by("sex")
-        r = r.compare(
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("sex")
-            .filters(self.census_table.c.state == "Vermont"),
-            suffix="_x",
-        )
-
-        self.assertRecipeSQL(
-            r,
-            """SELECT census.sex AS sex,
-       sum(census.pop2000) AS pop2000,
-       avg(anon_1.pop2000) AS pop2000_x
-FROM census
-LEFT OUTER JOIN
-  (SELECT census.sex AS sex,
-          sum(census.pop2000) AS pop2000
-   FROM census
-   WHERE census.state = 'Vermont'
-   GROUP BY sex) AS anon_1 ON census.sex = anon_1.sex
-GROUP BY census.sex
-ORDER BY census.sex""",
-        )
-        self.assertRecipeCSV(
-            r,
-            """
-            sex,pop2000,pop2000_x,sex_id
-            F,3234901,310948.0,F
-            M,3059809,298532.0,M
-            """,
-        )
-
-    def test_multiple_compares(self):
-        """Test that we can do multiple comparisons"""
-
-        r = (
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("sex", "state")
-            .order_by("sex", "state")
-        )
-        r = r.compare(
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("sex")
-            .filters(self.census_table.c.state == "Vermont"),
-            suffix="_vermont",
-        )
-        r = r.compare(self.recipe().metrics("pop2000"), suffix="_total")
-
-        self.assertRecipeSQL(
-            r,
-            """SELECT census.sex AS sex,
-       census.state AS state,
-       sum(census.pop2000) AS pop2000,
-       avg(anon_1.pop2000) AS pop2000_vermont,
-       avg(anon_2.pop2000) AS pop2000_total
-FROM census
-LEFT OUTER JOIN
-  (SELECT census.sex AS sex,
-          sum(census.pop2000) AS pop2000
-   FROM census
-   WHERE census.state = 'Vermont'
-   GROUP BY sex) AS anon_1 ON census.sex = anon_1.sex
-LEFT OUTER JOIN
-  (SELECT sum(census.pop2000) AS pop2000
-   FROM census) AS anon_2 ON 1=1
-GROUP BY census.sex,
-         census.state
-ORDER BY census.sex,
-         census.state""",
-        )
-        self.assertRecipeCSV(
-            r,
-            """
-            sex,state,pop2000,pop2000_vermont,pop2000_total,sex_id,state_id
-            F,Tennessee,2923953,310948.0,6294710.0,F,Tennessee
-            F,Vermont,310948,310948.0,6294710.0,F,Vermont
-            M,Tennessee,2761277,298532.0,6294710.0,M,Tennessee
-            M,Vermont,298532,298532.0,6294710.0,M,Vermont
-            """,
-        )
-
-    def test_mismatched_dimensions_raises(self):
-        """Dimensions in the comparison recipe must be a subset of the
-        dimensions in the base recipe"""
-        r = self.recipe().metrics("pop2000").dimensions("sex").order_by("sex")
-        r = r.compare(
-            self.recipe()
-            .metrics("pop2000")
-            .dimensions("state")
-            .filters(self.census_table.c.state == "Vermont"),
-            suffix="_x",
-        )
-
-        with self.assertRaises(BadRecipe):
-            r.all()
 
 
 class TestBlendRecipeExtension(RecipeTestCase):
