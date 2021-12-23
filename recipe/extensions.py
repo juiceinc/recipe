@@ -1,4 +1,5 @@
-from json import loads
+import inspect
+from json import loads, JSONDecodeError
 from sqlalchemy import and_, func, text, or_, String
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -69,7 +70,7 @@ class RecipeExtension(object):
         This method should be overridden by subclasses"""
         pass
 
-    def modify_recipe_parts(self, recipe_parts):
+    def modify_recipe_parts(self, recipe_parts: dict) -> dict:
         """
         Modify sqlalchemy components of the query
 
@@ -84,7 +85,7 @@ class RecipeExtension(object):
             "order_bys": recipe_parts["order_bys"],
         }
 
-    def modify_prequery_parts(self, prequery_parts):
+    def modify_prequery_parts(self, prequery_parts: dict) -> dict:
         """This method allows extensions to directly modify query,
         group_bys, filters, and order_bys generated from collected
         ingredients after a preliminary query using columns has been created.
@@ -97,7 +98,7 @@ class RecipeExtension(object):
             "order_bys": prequery_parts["order_bys"],
         }
 
-    def modify_postquery_parts(self, postquery_parts):
+    def modify_postquery_parts(self, postquery_parts: dict) -> dict:
         """This method allows extensions to directly modify query,
         group_bys, filters, and order_bys generated from collected
         ingredients after a final query using columns has been created.
@@ -110,12 +111,12 @@ class RecipeExtension(object):
             "order_bys": postquery_parts["order_bys"],
         }
 
-    def enchant_add_fields(self):
+    def enchant_add_fields(self) -> tuple:
         """This method allows extensions to add fields to a result row.
         Return a tuple of the field names that are being added with
         this method
         """
-        return ()
+        return tuple()
 
     def enchant_row(self, row):
         """This method adds the fields named in ``enchant_add_fields`` to
@@ -127,7 +128,13 @@ def handle_directives(directives, handlers):
     for k, v in directives.items():
         method = handlers.get(k)
         if method is None:
-            raise BadRecipe("Directive {} isn't handled".format(k))
+            stack = inspect.stack()
+            the_class = stack[1][0].f_locals["self"].__class__.__name__
+            raise BadRecipe(
+                f"Extension {the_class} accepts configuration '{k}', "
+                f"but doesn't properly handle it. '{k}' needs to be added to "
+                f"{the_class}.handle_directives."
+            )
         method(v)
 
 
@@ -140,7 +147,7 @@ class AutomaticFilters(RecipeExtension):
     """
 
     recipe_schema = {
-        "automatic_filters": {"type": "dict"},
+        "automatic_filters": {"type": "dict", "keyschema": {"type": "string"}},
         "include_automatic_filter_keys": {"type": "list", "schema": {"type": "string"}},
         "exclude_automatic_filter_keys": {"type": "list", "schema": {"type": "string"}},
         "apply_automatic_filters": {"type": "boolean"},
@@ -200,7 +207,10 @@ class AutomaticFilters(RecipeExtension):
         or_items = []
         for val in values:
             if isinstance(val, str):
-                val = loads(val)
+                try:
+                    val = loads(val)
+                except JSONDecodeError:
+                    raise ValueError("Compound filter values must be valid json")
                 if not isinstance(val, list):
                     raise ValueError(
                         "Compound filter values must be json encoded lists"
@@ -249,7 +259,10 @@ class AutomaticFilters(RecipeExtension):
             and isinstance(values, (list, tuple))
             # The first column is the one that will be filtered
             # limit filtering padding to columns that identify as String
-            and isinstance(dimension.columns[0].type, String)
+            and (
+                isinstance(dimension.columns[0].type, String)
+                or dimension.datatype == "str"
+            )
         ):
             values = pad_values(values)
 
@@ -268,12 +281,14 @@ class AutomaticFilters(RecipeExtension):
     @recipe_arg()
     def optimize_redshift(self, value):
         """Toggles whether automatic filters that filter on lists of strings
-        are automatically padded to multiples of 5. Doing so will avoid query
+        are automatically padded to multiples of 11. Doing so will avoid query
         re-compilation for queries that have approximately the same number
         of filter parameters::
 
             recipe.optimize_redshift(True)
         """
+        # Developer's note: This is set during query compilation and
+        # can not by adjusted by user code.
         self._optimize_redshift = value
 
     @recipe_arg()
@@ -413,14 +428,6 @@ class AutomaticFilters(RecipeExtension):
         """
         self.include_keys = keys
 
-
-class UserFilters(RecipeExtension):
-    """Add automatic filtering."""
-
-    def __init__(self, *args, **kwargs):
-        super(UserFilters, self).__init__(*args, **kwargs)
-
-
 class SummarizeOver(RecipeExtension):
 
     recipe_schema = {"summarize_over": {"type": "string"}}
@@ -479,18 +486,17 @@ class SummarizeOver(RecipeExtension):
                 met = self.recipe._cauldron.find(col.name, Metric)
                 summary_aggregation = met.meta.get("summary_aggregation", None)
                 if summary_aggregation is None:
-                    if str(met.expression).startswith(u"avg"):
+                    if str(met.expression).startswith("avg"):
                         summary_aggregation = func.avg
-                    elif str(met.expression).startswith(u"count"):
+                    elif str(met.expression).startswith("count"):
                         summary_aggregation = func.sum
-                    elif str(met.expression).startswith(u"sum"):
+                    elif str(met.expression).startswith("sum"):
                         summary_aggregation = func.sum
 
                 if summary_aggregation is None:
                     # We don't know how to aggregate this metric in a summary
                     raise BadRecipe(
-                        u"Provide a summary_aggregation for metric"
-                        u" {}".format(col.name)
+                        f"Provide a summary_aggregation for metric {col.name}"
                     )
                 metric_columns.append(summary_aggregation(col).label(col.name))
 
