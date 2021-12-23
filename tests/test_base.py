@@ -2,7 +2,7 @@ import os
 from copy import copy
 from datetime import date
 from unittest import TestCase
-
+from typing import Iterator
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import (
     Column,
@@ -588,6 +588,19 @@ class RecipeTestCase(TestCase):
         """Recipe data returns the supplied csv content"""
         self.assertTrue(str_dedent(contains_sql_text) in str_dedent(recipe.to_sql()))
 
+    def assertRecipeSQLNotContains(self, recipe: Recipe, contains_sql_text: str):
+        """Recipe data returns the supplied csv content"""
+        self.assertTrue(
+            str_dedent(contains_sql_text) not in str_dedent(recipe.to_sql())
+        )
+
+    def recipe_list(self, *args, **kwargs) -> Iterator[Recipe]:
+        for potential_recipe in args:
+            if isinstance(potential_recipe, Recipe):
+                yield potential_recipe
+            elif isinstance(potential_recipe, dict):
+                yield self.recipe_from_config(potential_recipe, **kwargs)
+
     def recipe(self, **kwargs):
         """Construct a recipe."""
         recipe_args = {
@@ -621,7 +634,7 @@ class RecipeTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up tables using a connection_string to define an oven.
-        
+
         Tables are loaded using data in data/{tablename}.yml
         """
         super(RecipeTestCase, cls).setUpClass()
@@ -847,10 +860,10 @@ class RecipeTestCase(TestCase):
             (self.datetester_table, 100),
         ]
 
-        for table, count in values:
+        for table, expected_count in values:
             self.assertEqual(
                 self.session.execute(
                     select([func.count()]).select_from(table)
                 ).scalar(),
-                count,
+                expected_count,
             )
