@@ -811,6 +811,7 @@ class PaginateTestCase(RecipeTestCase):
             {"pagination_search_keys": [25]},
             {"pagination_page_size": "a"},
             {"pagination_page_size": []},
+            {"pagination_page_size": -5},
             {"pagination_page": ["foo"]},
             {"pagination_page": 900.0},
         ]

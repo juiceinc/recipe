@@ -1,5 +1,6 @@
 import inspect
 from json import loads, JSONDecodeError
+from typing import Union
 from sqlalchemy import and_, func, text, or_, String
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -428,6 +429,7 @@ class AutomaticFilters(RecipeExtension):
         """
         self.include_keys = keys
 
+
 class SummarizeOver(RecipeExtension):
 
     recipe_schema = {"summarize_over": {"type": "string"}}
@@ -670,7 +672,7 @@ class Paginate(RecipeExtension):
         "pagination_default_order_by": {"type": "list", "elements": {"type": "string"}},
         "pagination_q": {"type": "string"},
         "pagination_search_keys": {"type": "list", "elements": {"type": "string"}},
-        "pagination_page_size": {"type": "integer"},
+        "pagination_page_size": {"type": "integer", "min": 0},
         "pagination_page": {"type": "integer"},
     }
 
@@ -705,7 +707,7 @@ class Paginate(RecipeExtension):
         )
 
     @recipe_arg()
-    def apply_pagination(self, value):
+    def apply_pagination(self, value: bool):
         """Should this recipe be paginated.
 
         :param value: Enable or disable pagination for this recipe, default True
@@ -715,7 +717,7 @@ class Paginate(RecipeExtension):
         self._apply_pagination = value
 
     @recipe_arg()
-    def apply_pagination_filters(self, value):
+    def apply_pagination_filters(self, value: bool):
         """Should this recipe apply the paginations query filtering.
 
         Should paginate_q be used to apply a search on paginate_search_keys or
@@ -728,7 +730,7 @@ class Paginate(RecipeExtension):
         self._apply_pagination_filters = value
 
     @recipe_arg()
-    def pagination_order_by(self, *value):
+    def pagination_order_by(self, *value: Union[list, tuple]):
         """Sort this pagination by these keys. Pagination ordering is applied
         before any other order_bys defined in the recipe.
 
@@ -739,7 +741,7 @@ class Paginate(RecipeExtension):
         self._pagination_order_by = value
 
     @recipe_arg()
-    def pagination_default_order_by(self, *value):
+    def pagination_default_order_by(self, *value: Union[list, tuple]):
         """Paginated queries must be ordered. This ordering is applied if
         the recipe has no order_by and no pagination_order_by has been set.
 
@@ -751,7 +753,7 @@ class Paginate(RecipeExtension):
         self._pagination_default_order_by = value
 
     @recipe_arg()
-    def pagination_q(self, value):
+    def pagination_q(self, value: str):
         """Search this recipe for this string. The search is an case
         insensitive like that ORs all dimensions in the recipe by default.
 
@@ -770,7 +772,7 @@ class Paginate(RecipeExtension):
         self._pagination_q = value
 
     @recipe_arg()
-    def pagination_search_keys(self, *value):
+    def pagination_search_keys(self, *value: Union[list, tuple]):
         """When querying this recipe with a `pagination_q`, search these keys
 
         pagination_search_keys do not have to be used in the recipe.
@@ -782,7 +784,7 @@ class Paginate(RecipeExtension):
         self._paginate_search_keys = value
 
     @recipe_arg()
-    def pagination_page_size(self, value):
+    def pagination_page_size(self, value: int):
         """Paginate recipe responses into pages of this size.
 
         A page size of zero disables pagination.
@@ -795,7 +797,7 @@ class Paginate(RecipeExtension):
         self._pagination_page_size = value
 
     @recipe_arg()
-    def pagination_page(self, value):
+    def pagination_page(self, value: int):
         """Fetch this page.
 
         :param value: A positive integer page number to fetch
