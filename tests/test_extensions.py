@@ -770,9 +770,6 @@ class PaginateTestCase(RecipeTestCase):
             self.assertEqual(ext._validated_pagination, None)
 
             # After the recipe runs, validated pagination is available
-            print(recipe.to_sql())
-            print(recipe.all())
-            print(recipe.validated_pagination())
             self.assertRecipeCSV(
                 recipe,
                 """
@@ -986,7 +983,6 @@ class PaginateTestCase(RecipeTestCase):
             """,
         )
 
-        print(recipe.dataset.csv)
         self.assertRecipeCSV(
             recipe,
             """

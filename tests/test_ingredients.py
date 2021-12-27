@@ -2,8 +2,7 @@
 
 import pytest
 from sqlalchemy import case, distinct, func, cast, Float
-from tests.test_base import MyTable, mytable_shelf
-
+from .test_base import RecipeTestCase
 from recipe import (
     BadIngredient,
     InvalidColumnError,
@@ -25,9 +24,9 @@ from recipe.schemas.config_constructors import SAFE_DIVISON_EPSILON
 from recipe.utils import filter_to_string
 
 
-class TestIngredients(object):
+class TestIngredients(RecipeTestCase):
     def setup(self):
-        self.shelf = mytable_shelf
+        self.shelf = self.mytable_shelf
 
     def test_ingredient_init(self):
         ingr = Ingredient()
@@ -42,44 +41,46 @@ class TestIngredients(object):
         assert ingr.meta.foo == 2
         assert ingr.meta["foo"] == 2
 
-        with pytest.raises(BadIngredient):
+        with self.assertRaises(BadIngredient):
             # Formatters must be list
             ingr = Ingredient(formatters="moo")
 
-        with pytest.raises(BadIngredient):
+        with self.assertRaises(BadIngredient):
             # Formatters must be list
             ingr = Ingredient(formatters=2)
 
-        with pytest.raises(BadIngredient):
-            # There must be the same number of column suffixes as columns
-            ingr = Ingredient(columns=[MyTable.first, MyTable.last])
-            ingr.make_column_suffixes()
-
-        with pytest.raises(BadIngredient):
+        with self.assertRaises(BadIngredient):
             # There must be the same number of column suffixes as columns
             ingr = Ingredient(
-                column_suffixes=("foo",), columns=[MyTable.first, MyTable.last]
+                columns=[self.basic_table.c.first, self.basic_table.c.last]
+            )
+            ingr.make_column_suffixes()
+
+        with self.assertRaises(BadIngredient):
+            # There must be the same number of column suffixes as columns
+            ingr = Ingredient(
+                column_suffixes=("foo",),
+                columns=[self.basic_table.c.first, self.basic_table.c.last],
             )
             ingr.make_column_suffixes()
 
     def test_repr(self):
         ingr = Ingredient(
-            column_suffixes=("_foo", "_moo"), columns=[MyTable.first, MyTable.last]
+            column_suffixes=("_foo", "_moo"),
+            columns=[self.basic_table.c.first, self.basic_table.c.last],
         )
         s = ingr.__repr__()
-        assert s.startswith("(Ingredient)") and s.endswith(
-            "MyTable.first " "MyTable.last"
-        )
+        assert s.startswith("(Ingredient)") and s.endswith("foo.first " "foo.last")
 
     def test_comparisons(self):
         """Items sort in a fixed order"""
-        ingr = Ingredient(columns=[MyTable.first], id=1)
-        ingr2 = Ingredient(columns=[MyTable.first], id=2)
-        dim = Dimension(MyTable.first, id=3)
-        met = Metric(func.sum(MyTable.first), id=4)
-        met2 = Metric(func.sum(MyTable.first), id=2)
-        filt = Filter(MyTable.first < "h", id=92)
-        hav = Having(func.sum(MyTable.first) < 3, id=2)
+        ingr = Ingredient(columns=[self.basic_table.c.first], id=1)
+        ingr2 = Ingredient(columns=[self.basic_table.c.first], id=2)
+        dim = Dimension(self.basic_table.c.first, id=3)
+        met = Metric(func.sum(self.basic_table.c.first), id=4)
+        met2 = Metric(func.sum(self.basic_table.c.first), id=2)
+        filt = Filter(self.basic_table.c.first < "h", id=92)
+        hav = Having(func.sum(self.basic_table.c.first) < 3, id=2)
 
         items = [filt, hav, met2, met, ingr, dim, ingr2]
         assert ingr != ingr2
@@ -95,11 +96,12 @@ class TestIngredients(object):
         # make_column_suffixes
         # There must be the same number of column suffixes as columns
         ingr = Ingredient(
-            column_suffixes=("_foo", "_moo"), columns=[MyTable.first, MyTable.last]
+            column_suffixes=("_foo", "_moo"),
+            columns=[self.basic_table.c.first, self.basic_table.c.last],
         )
         assert ingr.make_column_suffixes() == ("_foo", "_moo")
 
-        ingr = Dimension(MyTable.first, formatters=[lambda x: x + "foo"])
+        ingr = Dimension(self.basic_table.c.first, formatters=[lambda x: x + "foo"])
         assert ingr.make_column_suffixes() == ("_raw",)
 
     def test_cache_context(self):
@@ -109,33 +111,39 @@ class TestIngredients(object):
 
     def test_ingredient_describe(self):
         # .describe()
-        ingr = Ingredient(id="foo", columns=[MyTable.first, MyTable.last])
-        assert ingr.describe() == "(Ingredient)foo MyTable.first MyTable.last"
+        ingr = Ingredient(
+            id="foo", columns=[self.basic_table.c.first, self.basic_table.c.last]
+        )
+        assert ingr.describe() == "(Ingredient)foo foo.first foo.last"
 
-        ingr = Dimension(MyTable.first, id="foo")
-        assert ingr.describe() == "(Dimension)foo MyTable.first"
+        ingr = Dimension(self.basic_table.c.first, id="foo")
+        assert ingr.describe() == "(Dimension)foo foo.first"
 
     def test_ingredient_cauldron_extras(self):
-        ingr = Ingredient(id="foo", columns=[MyTable.first, MyTable.last])
+        ingr = Ingredient(
+            id="foo", columns=[self.basic_table.c.first, self.basic_table.c.last]
+        )
         extras = list(ingr.cauldron_extras)
         assert len(extras) == 0
 
-        ingr = Metric(MyTable.first, id="foo", formatters=[lambda x: x + "foo"])
+        ingr = Metric(
+            self.basic_table.c.first, id="foo", formatters=[lambda x: x + "foo"]
+        )
         extras = list(ingr.cauldron_extras)
         assert extras[0][0] == "foo"
         assert len(extras) == 1
 
     def test_ingredient_cmp(self):
         """Ingredients are sorted by id"""
-        ingra = Ingredient(id="b", columns=[MyTable.first])
-        ingrb = Ingredient(id="a", columns=[MyTable.last])
+        ingra = Ingredient(id="b", columns=[self.basic_table.c.first])
+        ingrb = Ingredient(id="a", columns=[self.basic_table.c.last])
         assert ingrb < ingra
 
 
-class TestIngredientBuildFilter(object):
+class TestIngredientBuildFilter(RecipeTestCase):
     def test_scalar_filter(self):
         """Test scalar filters on a string dimension"""
-        d = Dimension(MyTable.first)
+        d = Dimension(self.basic_table.c.first)
 
         # Test building scalar filters
         filt = d.build_filter("moo")
@@ -172,18 +180,18 @@ class TestIngredientBuildFilter(object):
         assert filter_to_string(filt) == "foo.first = 'Τη γλώσ'"
 
         # operator must agree with value
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             filt = d.build_filter(["moo"], "eq")
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             filt = d.build_filter(["moo"], "lt")
 
         # Unknown operator
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             filt = d.build_filter(["moo"], "cows")
 
     def test_scalar_filter_on_int(self):
         """Test scalar filters on an integer dimension"""
-        d = Dimension(MyTable.age)
+        d = Dimension(self.basic_table.c.age)
 
         # Test building scalar filters
         filt = d.build_filter("moo")
@@ -220,18 +228,18 @@ class TestIngredientBuildFilter(object):
         assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) = 'Τη γλώσ'"
 
         # operator must agree with value
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             d.build_filter(["moo"], "eq")
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             d.build_filter(["moo"], "lt")
 
         # Unknown operator
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             d.build_filter(["moo"], "cows")
 
     def test_scalar_filter_on_int_dim_int_value(self):
         """Test scalar filters on an integer dimension passing an integer value"""
-        d = Dimension(MyTable.age)
+        d = Dimension(self.basic_table.c.age)
 
         # Test building scalar filters
         filt = d.build_filter(5)
@@ -261,17 +269,17 @@ class TestIngredientBuildFilter(object):
         assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) = 'Τη γλώσ'"
 
         # operator must agree with value
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             d.build_filter(["moo"], "eq")
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             d.build_filter(["moo"], "lt")
 
         # Unknown operator
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             d.build_filter(["moo"], "cows")
 
     def test_vector_filter(self):
-        d = Dimension(MyTable.first)
+        d = Dimension(self.basic_table.c.first)
 
         # Test building scalar filters
         filt = d.build_filter(["moo"])
@@ -305,16 +313,16 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter(["moo", "foo"], operator="between")
         assert filter_to_string(filt) == "foo.first BETWEEN 'moo' AND 'foo'"
 
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             d.build_filter("moo", "in")
         # Between must have 2 values
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             d.build_filter(["moo", "foo", "tru"], operator="between")
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             d.build_filter(["moo"], operator="between")
 
     def test_scalar_filter_date(self):
-        d = Dimension(MyTable.birth_date)
+        d = Dimension(self.basic_table.c.birth_date)
         # Test building scalar filters
         filt = d.build_filter("2020-01-01")
         assert filter_to_string(filt) == "foo.birth_date = '2020-01-01'"
@@ -334,7 +342,7 @@ class TestIngredientBuildFilter(object):
         assert filter_to_string(filt) == "foo.birth_date = '1970-01-01'"
 
     def test_scalar_filter_datetime(self):
-        d = Dimension(MyTable.dt)
+        d = Dimension(self.basic_table.c.dt)
         # Test building scalar filters
         filt = d.build_filter("2020-01-01")
         assert filter_to_string(filt) == "foo.dt = '2020-01-01 00:00:00'"
@@ -365,7 +373,7 @@ class TestIngredientBuildFilter(object):
         assert filter_to_string(filt) == "foo.dt = '1970-01-01 00:00:00'"
 
     def test_vector_filter_date(self):
-        d = Dimension(MyTable.birth_date)
+        d = Dimension(self.basic_table.c.birth_date)
         # Test building scalar filters
         filt = d.build_filter(["2020-01-01", None, "2020-10-25"])
         assert (
@@ -387,10 +395,10 @@ class TestIngredientBuildFilter(object):
 
     def test_quickselects(self):
         d = Dimension(
-            MyTable.first,
+            self.basic_table.c.first,
             quickselects=[
-                {"name": "a", "condition": MyTable.first == "a"},
-                {"name": "b", "condition": MyTable.last == "b"},
+                {"name": "a", "condition": self.basic_table.c.first == "a"},
+                {"name": "b", "condition": self.basic_table.c.last == "b"},
             ],
         )
 
@@ -400,14 +408,14 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter("b", operator="quickselect")
         assert filter_to_string(filt) == "foo.last = 'b'"
 
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             filt = d.build_filter("c", operator="quickselect")
 
         d = Dimension(
-            MyTable.first,
+            self.basic_table.c.first,
             quickselects=[
-                {"name": "a", "condition": MyTable.first == "a"},
-                {"name": "b", "condition": MyTable.last == "b"},
+                {"name": "a", "condition": self.basic_table.c.first == "a"},
+                {"name": "b", "condition": self.basic_table.c.last == "b"},
             ],
         )
 
@@ -421,22 +429,22 @@ class TestIngredientBuildFilter(object):
         filt = d.build_filter(["b", "a"], operator="quickselect")
         assert filter_to_string(filt) == "foo.last = 'b' OR foo.first = 'a'"
 
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             filt = d.build_filter(["c"], operator="quickselect")
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             filt = d.build_filter([[]], operator="quickselect")
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             filt = d.build_filter([2], operator="quickselect")
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             filt = d.build_filter(["a", "b", "c"], operator="quickselect")
 
 
-class TestFilter(object):
+class TestFilter(RecipeTestCase):
     def test_filter_cmp(self):
         """Filters are compared on their filter expression"""
         filters = set()
-        f1 = Filter(MyTable.first == "moo", id="f1")
-        f2 = Filter(MyTable.first == "foo", id="f2")
+        f1 = Filter(self.basic_table.c.first == "moo", id="f1")
+        f2 = Filter(self.basic_table.c.first == "foo", id="f2")
 
         filters.add(f1)
         filters.add(f2)
@@ -445,7 +453,7 @@ class TestFilter(object):
         assert str(f1) == "(Filter)f1 foo.first = 'moo'"
 
     def test_expression(self):
-        f = Filter(MyTable.first == "foo")
+        f = Filter(self.basic_table.c.first == "foo")
         assert f.expression is not None
 
         f.columns = []
@@ -454,16 +462,16 @@ class TestFilter(object):
         assert f.expression is None
 
     def test_filter_describe(self):
-        f1 = Filter(MyTable.first == "moo", id="moo")
+        f1 = Filter(self.basic_table.c.first == "moo", id="moo")
         assert f1.describe() == "(Filter)moo foo.first = 'moo'"
 
 
-class TestHaving(object):
+class TestHaving(RecipeTestCase):
     def test_having_cmp(self):
         """Filters are compared on their filter expression"""
         havings = set()
-        f1 = Having(func.sum(MyTable.age) > 2, id="h1")
-        f2 = Having(func.sum(MyTable.age) > 3, id="h2")
+        f1 = Having(func.sum(self.basic_table.c.age) > 2, id="h1")
+        f2 = Having(func.sum(self.basic_table.c.age) > 3, id="h2")
 
         havings.add(f1)
         havings.add(f2)
@@ -472,7 +480,7 @@ class TestHaving(object):
         assert str(f1) == "(Having)h1 sum(foo.age) > :sum_1"
 
     def test_expression(self):
-        h = Having(func.sum(MyTable.age) > 2)
+        h = Having(func.sum(self.basic_table.c.age) > 2)
         assert h.expression is not None
 
         h.columns = []
@@ -483,36 +491,36 @@ class TestHaving(object):
         assert h.expression is None
 
     def test_having_describe(self):
-        f1 = Having(func.sum(MyTable.age) > 2, id="moo")
+        f1 = Having(func.sum(self.basic_table.c.age) > 2, id="moo")
         assert f1.describe() == "(Having)moo sum(foo.age) > :sum_1"
 
 
-class TestDimension(object):
+class TestDimension(RecipeTestCase):
     def test_init(self):
-        d = Dimension(MyTable.first)
+        d = Dimension(self.basic_table.c.first)
         assert len(d.columns) == 1
         assert len(d.group_by) == 1
 
         # Dimension with different id and value expressions
-        d = Dimension(MyTable.first, id_expression=MyTable.last)
+        d = Dimension(self.basic_table.c.first, id_expression=self.basic_table.c.last)
         assert len(d.columns) == 2
         assert len(d.group_by) == 2
 
     def test_dimension_order_by(self):
-        d = Dimension(MyTable.first)
+        d = Dimension(self.basic_table.c.first)
         assert len(list(d.order_by_columns)) == 1
 
         # Dimension with different id and value expressions
-        d = Dimension(MyTable.first, id_expression=MyTable.last)
+        d = Dimension(self.basic_table.c.first, id_expression=self.basic_table.c.last)
         assert len(list(d.order_by_columns)) == 2
         # Order by value expression then id expression
         assert list(map(str, d.order_by_columns)) == [d.id, d.id + "_id"]
 
         # Extra roles DO participate in ordering
         d = Dimension(
-            MyTable.first,
-            id_expression=MyTable.last,
-            age_expression=MyTable.age,
+            self.basic_table.c.first,
+            id_expression=self.basic_table.c.last,
+            age_expression=self.basic_table.c.age,
             id="moo",
         )
         assert len(list(d.order_by_columns)) == 3
@@ -520,10 +528,10 @@ class TestDimension(object):
 
         # Extra roles DO participate in ordering, order_by_expression is always first
         d = Dimension(
-            MyTable.first,
-            id_expression=MyTable.last,
-            age_expression=MyTable.age,
-            order_by_expression=MyTable.age,
+            self.basic_table.c.first,
+            id_expression=self.basic_table.c.last,
+            age_expression=self.basic_table.c.age,
+            order_by_expression=self.basic_table.c.age,
             id="moo",
         )
         assert len(list(d.order_by_columns)) == 4
@@ -535,10 +543,10 @@ class TestDimension(object):
         ]
 
         d = Dimension(
-            MyTable.first,
-            id_expression=MyTable.last,
-            zed_expression=MyTable.age,
-            order_by_expression=MyTable.age,
+            self.basic_table.c.first,
+            id_expression=self.basic_table.c.last,
+            zed_expression=self.basic_table.c.age,
+            order_by_expression=self.basic_table.c.age,
             id="moo",
         )
         assert len(list(d.order_by_columns)) == 4
@@ -551,10 +559,10 @@ class TestDimension(object):
 
         # Default ordering can be set to descending
         d = Dimension(
-            MyTable.first,
-            id_expression=MyTable.last,
-            zed_expression=MyTable.age,
-            order_by_expression=MyTable.age,
+            self.basic_table.c.first,
+            id_expression=self.basic_table.c.last,
+            zed_expression=self.basic_table.c.age,
+            order_by_expression=self.basic_table.c.age,
             ordering="desc",
             id="moo",
         )
@@ -567,13 +575,15 @@ class TestDimension(object):
         ]
 
     def test_dimension_cauldron_extras(self):
-        d = Dimension(MyTable.first, id="moo")
+        d = Dimension(self.basic_table.c.first, id="moo")
         extras = list(d.cauldron_extras)
         assert len(extras) == 1
         # id gets injected in the response
         assert extras[0][0] == "moo_id"
 
-        d = Dimension(MyTable.first, id="moo", formatters=[lambda x: x + "moo"])
+        d = Dimension(
+            self.basic_table.c.first, id="moo", formatters=[lambda x: x + "moo"]
+        )
         extras = list(d.cauldron_extras)
         assert len(extras) == 2
         # formatted value and id gets injected in the response
@@ -583,9 +593,9 @@ class TestDimension(object):
     def test_dimension_extra_roles(self):
         """Creating a dimension with extra roles"""
         d = Dimension(
-            MyTable.first,
-            id_expression=MyTable.last,
-            age_expression=MyTable.age,
+            self.basic_table.c.first,
+            id_expression=self.basic_table.c.last,
+            age_expression=self.basic_table.c.age,
             id="moo",
         )
         extras = list(d.cauldron_extras)
@@ -600,17 +610,17 @@ class TestDimension(object):
     def test_dimension_with_lookup(self):
         """Creating a dimension with extra roles"""
         # Dimension lookup should be a dict
-        with pytest.raises(BadIngredient):
-            d = Dimension(MyTable.first, lookup="mouse", id="moo")
+        with self.assertRaises(BadIngredient):
+            d = Dimension(self.basic_table.c.first, lookup="mouse", id="moo")
 
-        d = Dimension(MyTable.first, lookup={"man": "mouse"}, id="moo")
+        d = Dimension(self.basic_table.c.first, lookup={"man": "mouse"}, id="moo")
         assert len(d.columns) == 1
         assert len(d.group_by) == 1
         assert len(d.formatters) == 1
 
         # Existing formatters are preserved
         d = Dimension(
-            MyTable.first,
+            self.basic_table.c.first,
             lookup={"man": "mouse"},
             id="moo",
             formatters=[lambda x: x + "moo"],
@@ -620,25 +630,30 @@ class TestDimension(object):
         assert len(d.formatters) == 2
 
 
-class TestIdValueDimension(object):
+class TestIdValueDimension(RecipeTestCase):
     def test_init(self):
         # IdValueDimension should have two params
-        with pytest.raises(TypeError):
-            d = IdValueDimension(MyTable.first)
+        with self.assertRaises(TypeError):
+            d = IdValueDimension(self.basic_table.c.first)
 
-        d = IdValueDimension(MyTable.first, MyTable.last)
+        d = IdValueDimension(self.basic_table.c.first, self.basic_table.c.last)
         assert len(d.columns) == 2
         assert len(d.group_by) == 2
 
     def test_dimension_cauldron_extras(self):
-        d = IdValueDimension(MyTable.first, MyTable.last, id="moo")
+        d = IdValueDimension(
+            self.basic_table.c.first, self.basic_table.c.last, id="moo"
+        )
         extras = list(d.cauldron_extras)
         assert len(extras) == 1
         # id gets injected in the response
         assert extras[0][0] == "moo_id"
 
         d = IdValueDimension(
-            MyTable.first, MyTable.last, id="moo", formatters=[lambda x: x + "moo"]
+            self.basic_table.c.first,
+            self.basic_table.c.last,
+            id="moo",
+            formatters=[lambda x: x + "moo"],
         )
         extras = list(d.cauldron_extras)
         assert len(extras) == 2
@@ -649,15 +664,17 @@ class TestIdValueDimension(object):
     def test_dimension_roles_cauldron_extras(self):
         """Creating a dimension with roles performs the same as
         IdValueDimension"""
-        d = Dimension(MyTable.first, id_expression=MyTable.last, id="moo")
+        d = Dimension(
+            self.basic_table.c.first, id_expression=self.basic_table.c.last, id="moo"
+        )
         extras = list(d.cauldron_extras)
         assert len(extras) == 1
         # id gets injected in the response
         assert extras[0][0] == "moo_id"
 
         d = Dimension(
-            MyTable.first,
-            id_expression=MyTable.last,
+            self.basic_table.c.first,
+            id_expression=self.basic_table.c.last,
             id="moo",
             formatters=[lambda x: x + "moo"],
         )
@@ -668,29 +685,31 @@ class TestIdValueDimension(object):
         assert extras[1][0] == "moo_id"
 
 
-class TestLookupDimension(object):
+class TestLookupDimension(RecipeTestCase):
     """LookupDimension is deprecated and this feature is available in
     Dimension. See TestDimension.test_dimension_with_lookup for equivalent
     test on Dimension."""
 
     def test_init(self):
         # IdValueDimension should have two params
-        with pytest.raises(TypeError):
-            d = LookupDimension(MyTable.first)
+        with self.assertRaises(TypeError):
+            d = LookupDimension(self.basic_table.c.first)
 
         # Dimension lookup should be a dict
-        with pytest.raises(BadIngredient):
-            d = LookupDimension(MyTable.first, lookup="mouse")
+        with self.assertRaises(BadIngredient):
+            d = LookupDimension(self.basic_table.c.first, lookup="mouse")
 
         # Lookup dimension injects a formatter in the first position
-        d = LookupDimension(MyTable.first, lookup={"hi": "there"})
+        d = LookupDimension(self.basic_table.c.first, lookup={"hi": "there"})
         assert len(d.columns) == 1
         assert len(d.group_by) == 1
         assert len(d.formatters) == 1
 
         # Existing formatters are preserved
         d = LookupDimension(
-            MyTable.first, lookup={"hi": "there"}, formatters=[lambda x: x + "moo"]
+            self.basic_table.c.first,
+            lookup={"hi": "there"},
+            formatters=[lambda x: x + "moo"],
         )
         assert len(d.columns) == 1
         assert len(d.group_by) == 1
@@ -700,42 +719,46 @@ class TestLookupDimension(object):
         def fmt(value):
             return value + "moo"
 
-        d = LookupDimension(MyTable.first, lookup={"hi": "there"}, formatters=[fmt])
+        d = LookupDimension(
+            self.basic_table.c.first, lookup={"hi": "there"}, formatters=[fmt]
+        )
         assert len(d.columns) == 1
         assert len(d.group_by) == 1
         assert len(d.formatters) == 2
         assert d.formatters[-1] is fmt
 
 
-class TestMetric(object):
+class TestMetric(RecipeTestCase):
     def test_init(self):
         # Metric should have an expression
-        with pytest.raises(TypeError):
+        with self.assertRaises(TypeError):
             d = Metric()
 
-        d = Metric(func.sum(MyTable.age))
+        d = Metric(func.sum(self.basic_table.c.age))
         assert len(d.columns) == 1
         assert len(d.group_by) == 0
         assert len(d.filters) == 0
 
     def test_expression(self):
-        d = Metric(func.sum(MyTable.age))
+        d = Metric(func.sum(self.basic_table.c.age))
         assert d.expression is not None
 
         d.columns = []
         assert d.expression is None
 
 
-class TestDivideMetric(object):
+class TestDivideMetric(RecipeTestCase):
     def test_init(self):
         # DivideMetric should have a two expressions
-        with pytest.raises(TypeError):
+        with self.assertRaises(TypeError):
             d = DivideMetric()
 
-        with pytest.raises(TypeError):
-            d = DivideMetric(func.sum(MyTable.age))
+        with self.assertRaises(TypeError):
+            d = DivideMetric(func.sum(self.basic_table.c.age))
 
-        d = DivideMetric(func.sum(MyTable.age), func.sum(MyTable.age))
+        d = DivideMetric(
+            func.sum(self.basic_table.c.age), func.sum(self.basic_table.c.age)
+        )
         assert len(d.columns) == 1
         assert len(d.group_by) == 0
         assert len(d.filters) == 0
@@ -749,7 +772,11 @@ class TestDivideMetric(object):
         )
 
         # Generate if denominator == 0 then 'zero' else numerator / denominator
-        d = DivideMetric(func.sum(MyTable.age), func.sum(MyTable.age), ifzero="zero")
+        d = DivideMetric(
+            func.sum(self.basic_table.c.age),
+            func.sum(self.basic_table.c.age),
+            ifzero="zero",
+        )
         assert (
             str(d.columns[0])
             == "CASE WHEN (CAST(sum(foo.age) AS FLOAT) = :param_1) THEN "
@@ -758,16 +785,16 @@ class TestDivideMetric(object):
         )
 
 
-class TestWtdAvgMetric(object):
+class TestWtdAvgMetric(RecipeTestCase):
     def test_init(self):
         # WtdAvgMetric should have a two expressions
-        with pytest.raises(TypeError):
+        with self.assertRaises(TypeError):
             d = WtdAvgMetric()
 
-        with pytest.raises(TypeError):
-            d = WtdAvgMetric(MyTable.age)
+        with self.assertRaises(TypeError):
+            d = WtdAvgMetric(self.basic_table.c.age)
 
-        d = WtdAvgMetric(MyTable.age, MyTable.age)
+        d = WtdAvgMetric(self.basic_table.c.age, self.basic_table.c.age)
         assert len(d.columns) == 1
         assert len(d.group_by) == 0
         assert len(d.filters) == 0
@@ -780,33 +807,35 @@ class TestWtdAvgMetric(object):
         )
 
 
-class TestIngredientFromObj(object):
+class TestIngredientFromObj(RecipeTestCase):
     def test_ingredient_from_obj(self):
-        m = ingredient_from_dict({"kind": "Metric", "field": "age"}, MyTable)
+        m = ingredient_from_dict({"kind": "Metric", "field": "age"}, self.basic_table)
         assert isinstance(m, Metric)
 
-        d = ingredient_from_dict({"kind": "Dimension", "field": "last"}, MyTable)
+        d = ingredient_from_dict(
+            {"kind": "Dimension", "field": "last"}, self.basic_table
+        )
         assert isinstance(d, Dimension)
 
     def test_ingredient_from_dict(self):
         data = [
             ({"kind": "Metric", "field": "age"}, "(Metric)1 sum(foo.age)"),
-            ({"kind": "Dimension", "field": "age"}, "(Dimension)1 MyTable.age"),
+            ({"kind": "Dimension", "field": "age"}, "(Dimension)1 foo.age"),
             (
                 {"kind": "IdValueDimension", "field": "age", "id_field": "age"},
-                "(Dimension)1 MyTable.age MyTable.age",
+                "(Dimension)1 foo.age foo.age",
             ),
             (
                 {
                     "kind": "Metric",
                     "field": {"value": "age", "condition": {"field": "age", "gt": 22}},
                 },
-                "(Metric)1 sum(CASE WHEN (foo.age > ?) THEN foo.age END)",
+                "(Metric)1 sum(CASE WHEN (foo.age > :age_1) THEN foo.age END)",
             ),
         ]
 
         for d, expected_result in data:
-            m = ingredient_from_dict(d, MyTable)
+            m = ingredient_from_dict(d, self.basic_table)
             m.id = 1
             assert str(m) == expected_result
 
@@ -818,82 +847,111 @@ class TestIngredientFromObj(object):
             {"kind": "MooCow", "field": "last"},
         ]
         for d in bad_data:
-            with pytest.raises(BadIngredient):
-                ingredient_from_dict(d, MyTable)
+            with self.assertRaises(BadIngredient):
+                ingredient_from_dict(d, self.basic_table)
 
     def test_ingredient_from_obj_with_meta(self):
         m = ingredient_from_dict(
-            {"kind": "Metric", "field": "age", "format": "comma"}, MyTable
+            {"kind": "Metric", "field": "age", "format": "comma"}, self.basic_table
         )
         assert isinstance(m, Metric)
         assert m.meta.format == ",.0f"
 
     def test_ingredient_from_obj_with_missing_format_meta(self):
         m = ingredient_from_dict(
-            {"kind": "Metric", "field": "age", "format": "foo"}, MyTable
+            {"kind": "Metric", "field": "age", "format": "foo"}, self.basic_table
         )
         assert isinstance(m, Metric)
         assert m.meta.format == "foo"
 
 
-class TestParse(object):
+class TestParse(RecipeTestCase):
     def test_parse_field_aggregation(self):
         data = [
             # Basic fields
-            ("age", func.sum(MyTable.age)),
-            ({"value": "age"}, func.sum(MyTable.age)),
+            ("age", func.sum(self.basic_table.c.age)),
+            ({"value": "age"}, func.sum(self.basic_table.c.age)),
             # Aggregations
-            ({"value": "age", "aggregation": "max"}, func.max(MyTable.age)),
-            ({"value": "age", "aggregation": "sum"}, func.sum(MyTable.age)),
-            ({"value": "age", "aggregation": "min"}, func.min(MyTable.age)),
-            ({"value": "age", "aggregation": "avg"}, func.avg(MyTable.age)),
+            ({"value": "age", "aggregation": "max"}, func.max(self.basic_table.c.age)),
+            ({"value": "age", "aggregation": "sum"}, func.sum(self.basic_table.c.age)),
+            ({"value": "age", "aggregation": "min"}, func.min(self.basic_table.c.age)),
+            ({"value": "age", "aggregation": "avg"}, func.avg(self.basic_table.c.age)),
             (
                 {"value": "age", "aggregation": "count_distinct"},
-                func.count(distinct(MyTable.age)),
+                func.count(distinct(self.basic_table.c.age)),
             ),
         ]
         for input_field, expected_result in data:
-            result = parse_field(input_field, MyTable)
+            result = parse_field(input_field, self.basic_table)
             assert str(result) == str(expected_result)
 
     def test_parse_field_add_subtract(self):
         data = [
             # Basic fields
-            ("first+last", func.sum(MyTable.first + MyTable.last)),
-            ("first-last", func.sum(MyTable.first - MyTable.last)),
+            (
+                "first+last",
+                func.sum(self.basic_table.c.first + self.basic_table.c.last),
+            ),
+            (
+                "first-last",
+                func.sum(self.basic_table.c.first - self.basic_table.c.last),
+            ),
             (
                 "first-last-first",
-                func.sum(MyTable.first - MyTable.last - MyTable.first),
+                func.sum(
+                    self.basic_table.c.first
+                    - self.basic_table.c.last
+                    - self.basic_table.c.first
+                ),
             ),
-            ("first*last", func.sum(MyTable.first * MyTable.last)),
+            (
+                "first*last",
+                func.sum(self.basic_table.c.first * self.basic_table.c.last),
+            ),
             (
                 "first/last",
                 func.sum(
-                    MyTable.first
+                    self.basic_table.c.first
                     / (
-                        func.coalesce(cast(MyTable.last, Float), 0.0)
+                        func.coalesce(cast(self.basic_table.c.last, Float), 0.0)
                         + SAFE_DIVISON_EPSILON
                     )
                 ),
             ),
             (
                 "first*last-first",
-                func.sum(MyTable.first * MyTable.last - MyTable.first),
+                func.sum(
+                    self.basic_table.c.first * self.basic_table.c.last
+                    - self.basic_table.c.first
+                ),
             ),
             # Spacing doesn't matter
-            ("first + last", func.sum(MyTable.first + MyTable.last)),
-            ("first -last", func.sum(MyTable.first - MyTable.last)),
+            (
+                "first + last",
+                func.sum(self.basic_table.c.first + self.basic_table.c.last),
+            ),
+            (
+                "first -last",
+                func.sum(self.basic_table.c.first - self.basic_table.c.last),
+            ),
             (
                 "first - last   -  first",
-                func.sum(MyTable.first - MyTable.last - MyTable.first),
+                func.sum(
+                    self.basic_table.c.first
+                    - self.basic_table.c.last
+                    - self.basic_table.c.first
+                ),
             ),
-            ("first  *last", func.sum(MyTable.first * MyTable.last)),
+            (
+                "first  *last",
+                func.sum(self.basic_table.c.first * self.basic_table.c.last),
+            ),
             (
                 "first/  last",
                 func.sum(
-                    MyTable.first
+                    self.basic_table.c.first
                     / (
-                        func.coalesce(cast(MyTable.last, Float), 0.0)
+                        func.coalesce(cast(self.basic_table.c.last, Float), 0.0)
                         + SAFE_DIVISON_EPSILON
                     )
                 ),
@@ -901,48 +959,55 @@ class TestParse(object):
             (
                 "first*  last /first",
                 func.sum(
-                    MyTable.first
-                    * MyTable.last
+                    self.basic_table.c.first
+                    * self.basic_table.c.last
                     / (
-                        func.coalesce(cast(MyTable.first, Float), 0.0)
+                        func.coalesce(cast(self.basic_table.c.first, Float), 0.0)
                         + SAFE_DIVISON_EPSILON
                     )
                 ),
             ),
         ]
         for input_field, expected_result in data:
-            result = parse_field(input_field, MyTable)
+            result = parse_field(input_field, self.basic_table)
             assert str(result) == str(expected_result)
 
     def test_parse_field_no_aggregations(self):
         data = [
             # Basic fields
-            ("age", MyTable.age),
-            ({"value": "age"}, MyTable.age),
+            ("age", self.basic_table.c.age),
+            ({"value": "age"}, self.basic_table.c.age),
             # Conditions
             (
                 {
                     "value": "age",
                     "condition": {"field": "last", "in": ["Jones", "Punjabi"]},
                 },
-                case([(MyTable.last.in_(["Jones", "Punjabi"]), MyTable.age)]),
+                case(
+                    [
+                        (
+                            self.basic_table.c.last.in_(["Jones", "Punjabi"]),
+                            self.basic_table.c.age,
+                        )
+                    ]
+                ),
             ),
             # # Date trunc
             # (
             #     {"value": "age", "aggregation": "month"},
-            #     func.date_trunc("month", MyTable.age),
+            #     func.date_trunc("month", self.basic_table.c.age),
             # ),
             # (
             #     {"value": "age", "aggregation": "week"},
-            #     func.date_trunc("week", MyTable.age),
+            #     func.date_trunc("week", self.basic_table.c.age),
             # ),
             # (
             #     {"value": "age", "aggregation": "year"},
-            #     func.date_trunc("year", MyTable.age),
+            #     func.date_trunc("year", self.basic_table.c.age),
             # ),
             # (
             #     {"value": "age", "aggregation": "age"},
-            #     func.date_part("year", func.age(MyTable.age)),
+            #     func.date_part("year", func.age(self.basic_table.c.age)),
             # ),
             # # Conditions
             # (
@@ -950,31 +1015,36 @@ class TestParse(object):
             #         "value": "age",
             #         "condition": {"field": "last", "in": ["Jones", "Punjabi"]},
             #     },
-            #     func.sum(case([(MyTable.last.in_(["Jones", "Punjabi"]), MyTable.age)])),
+            #     func.sum(case([(self.basic_table.c.last.in_(["Jones", "Punjabi"]), self.basic_table.c.age)])),
             # ),
         ]
         for input_field, expected_result in data:
-            result = parse_field(input_field, selectable=MyTable, aggregated=False)
+            result = parse_field(
+                input_field, selectable=self.basic_table, aggregated=False
+            )
             assert str(result) == str(expected_result)
 
     def test_weird_field_string_definitions(self):
         data = [
-            ("first+", MyTable.first),
-            ("first-", MyTable.first),
-            ("fir st-", MyTable.first),
-            ("fir st", MyTable.first),
+            ("first+", self.basic_table.c.first),
+            ("first-", self.basic_table.c.first),
+            ("fir st-", self.basic_table.c.first),
+            ("fir st", self.basic_table.c.first),
             ("first+last-", "foo.first || foo.last"),
-            ("fir st*", MyTable.first),
+            ("fir st*", self.basic_table.c.first),
             (
                 "first/last-",
-                MyTable.first
+                self.basic_table.c.first
                 / (
-                    func.coalesce(cast(MyTable.last, Float), 0.0) + SAFE_DIVISON_EPSILON
+                    func.coalesce(cast(self.basic_table.c.last, Float), 0.0)
+                    + SAFE_DIVISON_EPSILON
                 ),
             ),
         ]
         for input_field, expected_result in data:
-            result = parse_field(input_field, selectable=MyTable, aggregated=False)
+            result = parse_field(
+                input_field, selectable=self.basic_table, aggregated=False
+            )
             assert str(result) == str(expected_result)
 
     def test_bad_field_definitions(self):
@@ -989,11 +1059,11 @@ class TestParse(object):
             {"condition": []},
         ]
         for input_field in bad_data:
-            with pytest.raises(BadIngredient):
-                parse_field(input_field, MyTable)
+            with self.assertRaises(BadIngredient):
+                parse_field(input_field, self.basic_table)
 
     def test_field_with_invalid_column(self):
         bad_data = ["abb", {"value": "abb"}]
         for input_field in bad_data:
-            with pytest.raises(InvalidColumnError):
-                field = parse_field(input_field, MyTable)
+            with self.assertRaises(InvalidColumnError):
+                field = parse_field(input_field, self.basic_table)
