@@ -30,16 +30,17 @@ class TestIngredients(RecipeTestCase):
 
     def test_ingredient_init(self):
         ingr = Ingredient()
-        assert len(ingr.id) == 12
-        assert isinstance(ingr.columns, list)
+        self.assertEqual(len(ingr.id), 12)
+        self.assertIsInstance(ingr.columns, list)
 
         # Ids can be str
-        ingr = Ingredient(id=u"ვეპხის")
+        ingr = Ingredient(id="ვეპხის")
+        self.assertEqual(ingr.id, "ვეპხის")
 
         # Extra properties are stored in a AttrDict
         ingr = Ingredient(foo=2)
-        assert ingr.meta.foo == 2
-        assert ingr.meta["foo"] == 2
+        self.assertEqual(ingr.meta.foo, 2)
+        self.assertEqual(ingr.meta["foo"], 2)
 
         with self.assertRaises(BadIngredient):
             # Formatters must be list
@@ -70,7 +71,9 @@ class TestIngredients(RecipeTestCase):
             columns=[self.basic_table.c.first, self.basic_table.c.last],
         )
         s = ingr.__repr__()
-        assert s.startswith("(Ingredient)") and s.endswith("foo.first " "foo.last")
+        self.assertTrue(
+            s.startswith("(Ingredient)") and s.endswith("foo.first foo.last")
+        )
 
     def test_comparisons(self):
         """Items sort in a fixed order"""
@@ -83,14 +86,12 @@ class TestIngredients(RecipeTestCase):
         hav = Having(func.sum(self.basic_table.c.first) < 3, id=2)
 
         items = [filt, hav, met2, met, ingr, dim, ingr2]
-        assert ingr != ingr2
-        assert not ingr == ingr2
-        assert dim < met
-        assert met < filt
-        assert filt < hav
-        assert dim < hav
-        items.sort()
-        assert items == [dim, met2, met, filt, hav, ingr, ingr2]
+        self.assertNotEqual(ingr, ingr2)
+        self.assertLess(dim, met)
+        self.assertLess(met, filt)
+        self.assertLess(filt, hav)
+        self.assertLess(dim, hav)
+        self.assertEqual(sorted(items), [dim, met2, met, filt, hav, ingr, ingr2])
 
     def test_ingredient_make_column_suffixes(self):
         # make_column_suffixes
@@ -99,39 +100,39 @@ class TestIngredients(RecipeTestCase):
             column_suffixes=("_foo", "_moo"),
             columns=[self.basic_table.c.first, self.basic_table.c.last],
         )
-        assert ingr.make_column_suffixes() == ("_foo", "_moo")
+        self.assertEqual(ingr.make_column_suffixes(), ("_foo", "_moo"))
 
         ingr = Dimension(self.basic_table.c.first, formatters=[lambda x: x + "foo"])
-        assert ingr.make_column_suffixes() == ("_raw",)
+        self.assertEqual(ingr.make_column_suffixes(), ("_raw",))
 
     def test_cache_context(self):
         # Cache context is saved
         ingr = Ingredient(cache_context="foo")
-        assert ingr.cache_context == "foo"
+        self.assertEqual(ingr.cache_context, "foo")
 
     def test_ingredient_describe(self):
         # .describe()
         ingr = Ingredient(
             id="foo", columns=[self.basic_table.c.first, self.basic_table.c.last]
         )
-        assert ingr.describe() == "(Ingredient)foo foo.first foo.last"
+        self.assertEqual(ingr.describe(), "(Ingredient)foo foo.first foo.last")
 
         ingr = Dimension(self.basic_table.c.first, id="foo")
-        assert ingr.describe() == "(Dimension)foo foo.first"
+        self.assertEqual(ingr.describe(), "(Dimension)foo foo.first")
 
     def test_ingredient_cauldron_extras(self):
         ingr = Ingredient(
             id="foo", columns=[self.basic_table.c.first, self.basic_table.c.last]
         )
         extras = list(ingr.cauldron_extras)
-        assert len(extras) == 0
+        self.assertEqual(len(extras), 0)
 
         ingr = Metric(
             self.basic_table.c.first, id="foo", formatters=[lambda x: x + "foo"]
         )
         extras = list(ingr.cauldron_extras)
-        assert extras[0][0] == "foo"
-        assert len(extras) == 1
+        self.assertEqual(extras[0][0], "foo")
+        self.assertEqual(len(extras), 1)
 
     def test_ingredient_cmp(self):
         """Ingredients are sorted by id"""
@@ -147,37 +148,37 @@ class TestIngredientBuildFilter(RecipeTestCase):
 
         # Test building scalar filters
         filt = d.build_filter("moo")
-        assert filter_to_string(filt) == "foo.first = 'moo'"
+        self.assertEqual(filter_to_string(filt), "foo.first = 'moo'")
         filt = d.build_filter("moo", "eq")
-        assert filter_to_string(filt) == "foo.first = 'moo'"
+        self.assertEqual(filter_to_string(filt), "foo.first = 'moo'")
         filt = d.build_filter("moo", "ne")
-        assert filter_to_string(filt) == "foo.first != 'moo'"
+        self.assertEqual(filter_to_string(filt), "foo.first != 'moo'")
         filt = d.build_filter("moo", "lt")
-        assert filter_to_string(filt) == "foo.first < 'moo'"
+        self.assertEqual(filter_to_string(filt), "foo.first < 'moo'")
         filt = d.build_filter("moo", "lte")
-        assert filter_to_string(filt) == "foo.first <= 'moo'"
+        self.assertEqual(filter_to_string(filt), "foo.first <= 'moo'")
         filt = d.build_filter("moo", "gt")
-        assert filter_to_string(filt) == "foo.first > 'moo'"
+        self.assertEqual(filter_to_string(filt), "foo.first > 'moo'")
         filt = d.build_filter("moo", "gte")
-        assert filter_to_string(filt) == "foo.first >= 'moo'"
+        self.assertEqual(filter_to_string(filt), "foo.first >= 'moo'")
         filt = d.build_filter("moo", "is")
-        assert filter_to_string(filt) == "foo.first IS 'moo'"
+        self.assertEqual(filter_to_string(filt), "foo.first IS 'moo'")
         filt = d.build_filter("moo", "isnot")
-        assert filter_to_string(filt) == "foo.first IS NOT 'moo'"
+        self.assertEqual(filter_to_string(filt), "foo.first IS NOT 'moo'")
         filt = d.build_filter("moo", "like")
-        assert filter_to_string(filt) == "foo.first LIKE 'moo'"
+        self.assertEqual(filter_to_string(filt), "foo.first LIKE 'moo'")
         filt = d.build_filter("moo", "ilike")
-        assert filter_to_string(filt) == "lower(foo.first) LIKE lower('moo')"
+        self.assertEqual(filter_to_string(filt), "lower(foo.first) LIKE lower('moo')")
         # Numbers get stringified
         filt = d.build_filter(5, "ilike")
-        assert filter_to_string(filt) == "lower(foo.first) LIKE lower('5')"
+        self.assertEqual(filter_to_string(filt), "lower(foo.first) LIKE lower('5')")
         # None values get converted to IS
         filt = d.build_filter(None, "eq")
-        assert filter_to_string(filt) == "foo.first IS NULL"
+        self.assertEqual(filter_to_string(filt), "foo.first IS NULL")
 
         # str filter values are acceptable
         filt = d.build_filter(u"Τη γλώσ")
-        assert filter_to_string(filt) == "foo.first = 'Τη γλώσ'"
+        self.assertEqual(filter_to_string(filt), "foo.first = 'Τη γλώσ'")
 
         # operator must agree with value
         with self.assertRaises(ValueError):
@@ -195,25 +196,27 @@ class TestIngredientBuildFilter(RecipeTestCase):
 
         # Test building scalar filters
         filt = d.build_filter("moo")
-        assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) = 'moo'"
+        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) = 'moo'")
         filt = d.build_filter("moo", "eq")
-        assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) = 'moo'"
+        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) = 'moo'")
         filt = d.build_filter("moo", "ne")
-        assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) != 'moo'"
+        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) != 'moo'")
         filt = d.build_filter("moo", "lt")
-        assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) < 'moo'"
+        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) < 'moo'")
         filt = d.build_filter("moo", "lte")
-        assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) <= 'moo'"
+        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) <= 'moo'")
         filt = d.build_filter("moo", "gt")
-        assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) > 'moo'"
+        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) > 'moo'")
         filt = d.build_filter("moo", "gte")
-        assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) >= 'moo'"
+        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) >= 'moo'")
         filt = d.build_filter("moo", "is")
-        assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) IS 'moo'"
+        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) IS 'moo'")
         filt = d.build_filter("moo", "isnot")
-        assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) IS NOT 'moo'"
+        self.assertEqual(
+            filter_to_string(filt), "CAST(foo.age AS VARCHAR) IS NOT 'moo'"
+        )
         filt = d.build_filter("moo", "like")
-        assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) LIKE 'moo'"
+        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) LIKE 'moo'")
         filt = d.build_filter("moo", "ilike")
         assert (
             filter_to_string(filt)
@@ -221,11 +224,11 @@ class TestIngredientBuildFilter(RecipeTestCase):
         )
         # None values get converted to IS
         filt = d.build_filter(None, "eq")
-        assert filter_to_string(filt) == "foo.age IS NULL"
+        self.assertEqual(filter_to_string(filt), "foo.age IS NULL")
 
         # str filter values are acceptable
         filt = d.build_filter(u"Τη γλώσ")
-        assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) = 'Τη γλώσ'"
+        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) = 'Τη γλώσ'")
 
         # operator must agree with value
         with self.assertRaises(ValueError):
@@ -243,30 +246,30 @@ class TestIngredientBuildFilter(RecipeTestCase):
 
         # Test building scalar filters
         filt = d.build_filter(5)
-        assert filter_to_string(filt) == "foo.age = 5"
+        self.assertEqual(filter_to_string(filt), "foo.age = 5")
         filt = d.build_filter(5, "eq")
-        assert filter_to_string(filt) == "foo.age = 5"
+        self.assertEqual(filter_to_string(filt), "foo.age = 5")
         filt = d.build_filter(5, "ne")
-        assert filter_to_string(filt) == "foo.age != 5"
+        self.assertEqual(filter_to_string(filt), "foo.age != 5")
         filt = d.build_filter(5, "lt")
-        assert filter_to_string(filt) == "foo.age < 5"
+        self.assertEqual(filter_to_string(filt), "foo.age < 5")
         filt = d.build_filter(5, "lte")
-        assert filter_to_string(filt) == "foo.age <= 5"
+        self.assertEqual(filter_to_string(filt), "foo.age <= 5")
         filt = d.build_filter(5, "gt")
-        assert filter_to_string(filt) == "foo.age > 5"
+        self.assertEqual(filter_to_string(filt), "foo.age > 5")
         filt = d.build_filter(5, "gte")
-        assert filter_to_string(filt) == "foo.age >= 5"
+        self.assertEqual(filter_to_string(filt), "foo.age >= 5")
         filt = d.build_filter(5, "is")
-        assert filter_to_string(filt) == "foo.age IS 5"
+        self.assertEqual(filter_to_string(filt), "foo.age IS 5")
         filt = d.build_filter(5, "isnot")
-        assert filter_to_string(filt) == "foo.age IS NOT 5"
+        self.assertEqual(filter_to_string(filt), "foo.age IS NOT 5")
         # None values get converted to IS
         filt = d.build_filter(None, "eq")
-        assert filter_to_string(filt) == "foo.age IS NULL"
+        self.assertEqual(filter_to_string(filt), "foo.age IS NULL")
 
         # str filter values are acceptable
         filt = d.build_filter(u"Τη γλώσ")
-        assert filter_to_string(filt) == "CAST(foo.age AS VARCHAR) = 'Τη γλώσ'"
+        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) = 'Τη γλώσ'")
 
         # operator must agree with value
         with self.assertRaises(ValueError):
@@ -283,21 +286,25 @@ class TestIngredientBuildFilter(RecipeTestCase):
 
         # Test building scalar filters
         filt = d.build_filter(["moo"])
-        assert filter_to_string(filt) == "foo.first IN ('moo')"
+        self.assertEqual(filter_to_string(filt), "foo.first IN ('moo')")
         filt = d.build_filter(["moo", None])
-        assert filter_to_string(filt) == "foo.first IS NULL OR foo.first IN ('moo')"
+        self.assertEqual(
+            filter_to_string(filt), "foo.first IS NULL OR foo.first IN ('moo')"
+        )
         filt = d.build_filter([None, "moo", None, None])
-        assert filter_to_string(filt) == "foo.first IS NULL OR foo.first IN ('moo')"
+        self.assertEqual(
+            filter_to_string(filt), "foo.first IS NULL OR foo.first IN ('moo')"
+        )
         filt = d.build_filter([None, None])
-        assert filter_to_string(filt) == "foo.first IS NULL"
+        self.assertEqual(filter_to_string(filt), "foo.first IS NULL")
 
         filt = d.build_filter(["moo", "foo"])
         # Values are sorted
-        assert filter_to_string(filt) == "foo.first IN ('foo', 'moo')"
+        self.assertEqual(filter_to_string(filt), "foo.first IN ('foo', 'moo')")
         filt = d.build_filter(["moo"], operator="in")
-        assert filter_to_string(filt) == "foo.first IN ('moo')"
+        self.assertEqual(filter_to_string(filt), "foo.first IN ('moo')")
         filt = d.build_filter(["moo"], operator="notin")
-        assert filter_to_string(filt) == "foo.first NOT IN ('moo')"
+        self.assertEqual(filter_to_string(filt), "foo.first NOT IN ('moo')")
         filt = d.build_filter(["moo", None], operator="notin")
         assert (
             filter_to_string(filt)
@@ -309,9 +316,9 @@ class TestIngredientBuildFilter(RecipeTestCase):
             == "foo.first IS NOT NULL AND foo.first NOT IN ('moo')"
         )
         filt = d.build_filter([None, None], operator="notin")
-        assert filter_to_string(filt) == "foo.first IS NOT NULL"
+        self.assertEqual(filter_to_string(filt), "foo.first IS NOT NULL")
         filt = d.build_filter(["moo", "foo"], operator="between")
-        assert filter_to_string(filt) == "foo.first BETWEEN 'moo' AND 'foo'"
+        self.assertEqual(filter_to_string(filt), "foo.first BETWEEN 'moo' AND 'foo'")
 
         with self.assertRaises(ValueError):
             d.build_filter("moo", "in")
@@ -325,10 +332,10 @@ class TestIngredientBuildFilter(RecipeTestCase):
         d = Dimension(self.basic_table.c.birth_date)
         # Test building scalar filters
         filt = d.build_filter("2020-01-01")
-        assert filter_to_string(filt) == "foo.birth_date = '2020-01-01'"
+        self.assertEqual(filter_to_string(filt), "foo.birth_date = '2020-01-01'")
 
         filt = d.build_filter("2020-01-01T03:05")
-        assert filter_to_string(filt) == "foo.birth_date = '2020-01-01'"
+        self.assertEqual(filter_to_string(filt), "foo.birth_date = '2020-01-01'")
 
         # An unparsable date will be treated as a string
         filt = d.build_filter("2020-01-01T03:05X523")
@@ -339,28 +346,30 @@ class TestIngredientBuildFilter(RecipeTestCase):
 
         # Evaluated as timestamp=0
         filt = d.build_filter(0)
-        assert filter_to_string(filt) == "foo.birth_date = '1970-01-01'"
+        self.assertEqual(filter_to_string(filt), "foo.birth_date = '1970-01-01'")
 
     def test_scalar_filter_datetime(self):
         d = Dimension(self.basic_table.c.dt)
         # Test building scalar filters
         filt = d.build_filter("2020-01-01")
-        assert filter_to_string(filt) == "foo.dt = '2020-01-01 00:00:00'"
+        self.assertEqual(filter_to_string(filt), "foo.dt = '2020-01-01 00:00:00'")
 
         filt = d.build_filter("2020-01-01T03:05")
-        assert filter_to_string(filt) == "foo.dt = '2020-01-01 03:05:00'"
+        self.assertEqual(filter_to_string(filt), "foo.dt = '2020-01-01 03:05:00'")
 
         filt = d.build_filter("2020-01-01T03:05 UTC")
-        assert filter_to_string(filt) == "foo.dt = '2020-01-01 03:05:00+00:00'"
+        self.assertEqual(filter_to_string(filt), "foo.dt = '2020-01-01 03:05:00+00:00'")
 
         filt = d.build_filter("2020-01-01T04:06:01Z")
-        assert filter_to_string(filt) == "foo.dt = '2020-01-01 04:06:01+00:00'"
+        self.assertEqual(filter_to_string(filt), "foo.dt = '2020-01-01 04:06:01+00:00'")
 
         filt = d.build_filter("2020-01-01T03:05 EST")
-        assert filter_to_string(filt) == "foo.dt = '2020-01-01 03:05:00-05:00'"
+        self.assertEqual(filter_to_string(filt), "foo.dt = '2020-01-01 03:05:00-05:00'")
 
         filt = d.build_filter("2020-01-01T06:07:04.123456")
-        assert filter_to_string(filt) == "foo.dt = '2020-01-01 06:07:04.123456'"
+        self.assertEqual(
+            filter_to_string(filt), "foo.dt = '2020-01-01 06:07:04.123456'"
+        )
 
         # An unparsable date will be treated as a string
         filt = d.build_filter("2020-01-01T03:05X523")
@@ -370,7 +379,7 @@ class TestIngredientBuildFilter(RecipeTestCase):
 
         # Evaluated as timestamp=0
         filt = d.build_filter(0)
-        assert filter_to_string(filt) == "foo.dt = '1970-01-01 00:00:00'"
+        self.assertEqual(filter_to_string(filt), "foo.dt = '1970-01-01 00:00:00'")
 
     def test_vector_filter_date(self):
         d = Dimension(self.basic_table.c.birth_date)
@@ -382,7 +391,7 @@ class TestIngredientBuildFilter(RecipeTestCase):
         )
 
         filt = d.build_filter([0])
-        assert filter_to_string(filt) == "foo.birth_date IN ('1970-01-01')"
+        self.assertEqual(filter_to_string(filt), "foo.birth_date IN ('1970-01-01')")
 
         seconds_in_day = 24 * 60 * 60
         filt = d.build_filter([seconds_in_day + 0.123565, None, 0])
@@ -391,7 +400,7 @@ class TestIngredientBuildFilter(RecipeTestCase):
             == "foo.birth_date IS NULL OR foo.birth_date IN ('1970-01-01', '1970-01-02')"
         )
         filt = d.build_filter([seconds_in_day * 3], operator="notin")
-        assert filter_to_string(filt) == "foo.birth_date NOT IN ('1970-01-04')"
+        self.assertEqual(filter_to_string(filt), "foo.birth_date NOT IN ('1970-01-04')")
 
     def test_quickselects(self):
         d = Dimension(
@@ -404,9 +413,9 @@ class TestIngredientBuildFilter(RecipeTestCase):
 
         # Test building scalar filters
         filt = d.build_filter("a", operator="quickselect")
-        assert filter_to_string(filt) == "foo.first = 'a'"
+        self.assertEqual(filter_to_string(filt), "foo.first = 'a'")
         filt = d.build_filter("b", operator="quickselect")
-        assert filter_to_string(filt) == "foo.last = 'b'"
+        self.assertEqual(filter_to_string(filt), "foo.last = 'b'")
 
         with self.assertRaises(ValueError):
             filt = d.build_filter("c", operator="quickselect")
@@ -421,13 +430,13 @@ class TestIngredientBuildFilter(RecipeTestCase):
 
         # Test building vector filters
         filt = d.build_filter(["a"], operator="quickselect")
-        assert filter_to_string(filt) == "foo.first = 'a'"
+        self.assertEqual(filter_to_string(filt), "foo.first = 'a'")
         filt = d.build_filter(["b"], operator="quickselect")
-        assert filter_to_string(filt) == "foo.last = 'b'"
+        self.assertEqual(filter_to_string(filt), "foo.last = 'b'")
         filt = d.build_filter(["a", "b"], operator="quickselect")
-        assert filter_to_string(filt) == "foo.first = 'a' OR foo.last = 'b'"
+        self.assertEqual(filter_to_string(filt), "foo.first = 'a' OR foo.last = 'b'")
         filt = d.build_filter(["b", "a"], operator="quickselect")
-        assert filter_to_string(filt) == "foo.last = 'b' OR foo.first = 'a'"
+        self.assertEqual(filter_to_string(filt), "foo.last = 'b' OR foo.first = 'a'")
 
         with self.assertRaises(ValueError):
             filt = d.build_filter(["c"], operator="quickselect")
@@ -448,9 +457,8 @@ class TestFilter(RecipeTestCase):
 
         filters.add(f1)
         filters.add(f2)
-        assert len(filters) == 2
-
-        assert str(f1) == "(Filter)f1 foo.first = 'moo'"
+        self.assertEqual(len(filters), 2)
+        self.assertEqual(str(f1), "(Filter)f1 foo.first = 'moo'")
 
     def test_expression(self):
         f = Filter(self.basic_table.c.first == "foo")
@@ -463,7 +471,7 @@ class TestFilter(RecipeTestCase):
 
     def test_filter_describe(self):
         f1 = Filter(self.basic_table.c.first == "moo", id="moo")
-        assert f1.describe() == "(Filter)moo foo.first = 'moo'"
+        self.assertEqual(f1.describe(), "(Filter)moo foo.first = 'moo'")
 
 
 class TestHaving(RecipeTestCase):
@@ -475,9 +483,9 @@ class TestHaving(RecipeTestCase):
 
         havings.add(f1)
         havings.add(f2)
-        assert len(havings) == 2
+        self.assertEqual(len(havings), 2)
 
-        assert str(f1) == "(Having)h1 sum(foo.age) > :sum_1"
+        self.assertEqual(str(f1), "(Having)h1 sum(foo.age) > :sum_1")
 
     def test_expression(self):
         h = Having(func.sum(self.basic_table.c.age) > 2)
@@ -492,29 +500,29 @@ class TestHaving(RecipeTestCase):
 
     def test_having_describe(self):
         f1 = Having(func.sum(self.basic_table.c.age) > 2, id="moo")
-        assert f1.describe() == "(Having)moo sum(foo.age) > :sum_1"
+        self.assertEqual(f1.describe(), "(Having)moo sum(foo.age) > :sum_1")
 
 
 class TestDimension(RecipeTestCase):
     def test_init(self):
         d = Dimension(self.basic_table.c.first)
-        assert len(d.columns) == 1
-        assert len(d.group_by) == 1
+        self.assertEqual(len(d.columns), 1)
+        self.assertEqual(len(d.group_by), 1)
 
         # Dimension with different id and value expressions
         d = Dimension(self.basic_table.c.first, id_expression=self.basic_table.c.last)
-        assert len(d.columns) == 2
-        assert len(d.group_by) == 2
+        self.assertEqual(len(d.columns), 2)
+        self.assertEqual(len(d.group_by), 2)
 
     def test_dimension_order_by(self):
         d = Dimension(self.basic_table.c.first)
-        assert len(list(d.order_by_columns)) == 1
+        self.assertEqual(len(list(d.order_by_columns)), 1)
 
         # Dimension with different id and value expressions
         d = Dimension(self.basic_table.c.first, id_expression=self.basic_table.c.last)
-        assert len(list(d.order_by_columns)) == 2
+        self.assertEqual(len(list(d.order_by_columns)), 2)
         # Order by value expression then id expression
-        assert list(map(str, d.order_by_columns)) == [d.id, d.id + "_id"]
+        self.assertEqual(list(map(str, d.order_by_columns)), [d.id, d.id + "_id"])
 
         # Extra roles DO participate in ordering
         d = Dimension(
@@ -523,8 +531,10 @@ class TestDimension(RecipeTestCase):
             age_expression=self.basic_table.c.age,
             id="moo",
         )
-        assert len(list(d.order_by_columns)) == 3
-        assert list(map(str, d.order_by_columns)) == ["moo_age", "moo", "moo_id"]
+        self.assertEqual(len(list(d.order_by_columns)), 3)
+        self.assertEqual(
+            list(map(str, d.order_by_columns)), ["moo_age", "moo", "moo_id"]
+        )
 
         # Extra roles DO participate in ordering, order_by_expression is always first
         d = Dimension(
@@ -534,13 +544,11 @@ class TestDimension(RecipeTestCase):
             order_by_expression=self.basic_table.c.age,
             id="moo",
         )
-        assert len(list(d.order_by_columns)) == 4
-        assert list(map(str, d.order_by_columns)) == [
-            "moo_order_by",
-            "moo_age",
-            "moo",
-            "moo_id",
-        ]
+        self.assertEqual(len(list(d.order_by_columns)), 4)
+        self.assertEqual(
+            list(map(str, d.order_by_columns)),
+            ["moo_order_by", "moo_age", "moo", "moo_id"],
+        )
 
         d = Dimension(
             self.basic_table.c.first,
@@ -549,13 +557,11 @@ class TestDimension(RecipeTestCase):
             order_by_expression=self.basic_table.c.age,
             id="moo",
         )
-        assert len(list(d.order_by_columns)) == 4
-        assert list(map(str, d.order_by_columns)) == [
-            "moo_order_by",
-            "moo_zed",
-            "moo",
-            "moo_id",
-        ]
+        self.assertEqual(len(list(d.order_by_columns)), 4)
+        self.assertEqual(
+            list(map(str, d.order_by_columns)),
+            ["moo_order_by", "moo_zed", "moo", "moo_id"],
+        )
 
         # Default ordering can be set to descending
         d = Dimension(
@@ -566,29 +572,27 @@ class TestDimension(RecipeTestCase):
             ordering="desc",
             id="moo",
         )
-        assert len(list(d.order_by_columns)) == 4
-        assert list(map(str, d.order_by_columns)) == [
-            "moo_order_by DESC",
-            "moo_zed DESC",
-            "moo DESC",
-            "moo_id DESC",
-        ]
+        self.assertEqual(len(list(d.order_by_columns)), 4)
+        self.assertEqual(
+            list(map(str, d.order_by_columns)),
+            ["moo_order_by DESC", "moo_zed DESC", "moo DESC", "moo_id DESC"],
+        )
 
     def test_dimension_cauldron_extras(self):
         d = Dimension(self.basic_table.c.first, id="moo")
         extras = list(d.cauldron_extras)
-        assert len(extras) == 1
+        self.assertEqual(len(extras), 1)
         # id gets injected in the response
-        assert extras[0][0] == "moo_id"
+        self.assertEqual(extras[0][0], "moo_id")
 
         d = Dimension(
             self.basic_table.c.first, id="moo", formatters=[lambda x: x + "moo"]
         )
         extras = list(d.cauldron_extras)
-        assert len(extras) == 2
+        self.assertEqual(len(extras), 2)
         # formatted value and id gets injected in the response
-        assert extras[0][0] == "moo"
-        assert extras[1][0] == "moo_id"
+        self.assertEqual(extras[0][0], "moo")
+        self.assertEqual(extras[1][0], "moo_id")
 
     def test_dimension_extra_roles(self):
         """Creating a dimension with extra roles"""
@@ -599,13 +603,13 @@ class TestDimension(RecipeTestCase):
             id="moo",
         )
         extras = list(d.cauldron_extras)
-        assert len(extras) == 1
+        self.assertEqual(len(extras), 1)
         # id gets injected in the response
-        assert extras[0][0] == "moo_id"
-        assert d.role_keys == ["id", "value", "age"]
-        assert len(d.group_by) == 3
-        assert len(d.columns) == 3
-        assert d.make_column_suffixes() == ("_id", "", "_age")
+        self.assertEqual(extras[0][0], "moo_id")
+        self.assertEqual(d.role_keys, ["id", "value", "age"])
+        self.assertEqual(len(d.group_by), 3)
+        self.assertEqual(len(d.columns), 3)
+        self.assertEqual(d.make_column_suffixes(), ("_id", "", "_age"))
 
     def test_dimension_with_lookup(self):
         """Creating a dimension with extra roles"""
@@ -614,9 +618,9 @@ class TestDimension(RecipeTestCase):
             d = Dimension(self.basic_table.c.first, lookup="mouse", id="moo")
 
         d = Dimension(self.basic_table.c.first, lookup={"man": "mouse"}, id="moo")
-        assert len(d.columns) == 1
-        assert len(d.group_by) == 1
-        assert len(d.formatters) == 1
+        self.assertEqual(len(d.columns), 1)
+        self.assertEqual(len(d.group_by), 1)
+        self.assertEqual(len(d.formatters), 1)
 
         # Existing formatters are preserved
         d = Dimension(
@@ -625,9 +629,9 @@ class TestDimension(RecipeTestCase):
             id="moo",
             formatters=[lambda x: x + "moo"],
         )
-        assert len(d.columns) == 1
-        assert len(d.group_by) == 1
-        assert len(d.formatters) == 2
+        self.assertEqual(len(d.columns), 1)
+        self.assertEqual(len(d.group_by), 1)
+        self.assertEqual(len(d.formatters), 2)
 
 
 class TestIdValueDimension(RecipeTestCase):
@@ -637,17 +641,17 @@ class TestIdValueDimension(RecipeTestCase):
             d = IdValueDimension(self.basic_table.c.first)
 
         d = IdValueDimension(self.basic_table.c.first, self.basic_table.c.last)
-        assert len(d.columns) == 2
-        assert len(d.group_by) == 2
+        self.assertEqual(len(d.columns), 2)
+        self.assertEqual(len(d.group_by), 2)
 
     def test_dimension_cauldron_extras(self):
         d = IdValueDimension(
             self.basic_table.c.first, self.basic_table.c.last, id="moo"
         )
         extras = list(d.cauldron_extras)
-        assert len(extras) == 1
+        self.assertEqual(len(extras), 1)
         # id gets injected in the response
-        assert extras[0][0] == "moo_id"
+        self.assertEqual(extras[0][0], "moo_id")
 
         d = IdValueDimension(
             self.basic_table.c.first,
@@ -656,10 +660,10 @@ class TestIdValueDimension(RecipeTestCase):
             formatters=[lambda x: x + "moo"],
         )
         extras = list(d.cauldron_extras)
-        assert len(extras) == 2
+        self.assertEqual(len(extras), 2)
         # formatted value and id gets injected in the response
-        assert extras[0][0] == "moo"
-        assert extras[1][0] == "moo_id"
+        self.assertEqual(extras[0][0], "moo")
+        self.assertEqual(extras[1][0], "moo_id")
 
     def test_dimension_roles_cauldron_extras(self):
         """Creating a dimension with roles performs the same as
@@ -668,9 +672,9 @@ class TestIdValueDimension(RecipeTestCase):
             self.basic_table.c.first, id_expression=self.basic_table.c.last, id="moo"
         )
         extras = list(d.cauldron_extras)
-        assert len(extras) == 1
+        self.assertEqual(len(extras), 1)
         # id gets injected in the response
-        assert extras[0][0] == "moo_id"
+        self.assertEqual(extras[0][0], "moo_id")
 
         d = Dimension(
             self.basic_table.c.first,
@@ -679,10 +683,10 @@ class TestIdValueDimension(RecipeTestCase):
             formatters=[lambda x: x + "moo"],
         )
         extras = list(d.cauldron_extras)
-        assert len(extras) == 2
+        self.assertEqual(len(extras), 2)
         # formatted value and id gets injected in the response
-        assert extras[0][0] == "moo"
-        assert extras[1][0] == "moo_id"
+        self.assertEqual(extras[0][0], "moo")
+        self.assertEqual(extras[1][0], "moo_id")
 
 
 class TestLookupDimension(RecipeTestCase):
@@ -701,9 +705,9 @@ class TestLookupDimension(RecipeTestCase):
 
         # Lookup dimension injects a formatter in the first position
         d = LookupDimension(self.basic_table.c.first, lookup={"hi": "there"})
-        assert len(d.columns) == 1
-        assert len(d.group_by) == 1
-        assert len(d.formatters) == 1
+        self.assertEqual(len(d.columns), 1)
+        self.assertEqual(len(d.group_by), 1)
+        self.assertEqual(len(d.formatters), 1)
 
         # Existing formatters are preserved
         d = LookupDimension(
@@ -711,9 +715,9 @@ class TestLookupDimension(RecipeTestCase):
             lookup={"hi": "there"},
             formatters=[lambda x: x + "moo"],
         )
-        assert len(d.columns) == 1
-        assert len(d.group_by) == 1
-        assert len(d.formatters) == 2
+        self.assertEqual(len(d.columns), 1)
+        self.assertEqual(len(d.group_by), 1)
+        self.assertEqual(len(d.formatters), 2)
 
         # The lookup formatter is injected before any existing formatters
         def fmt(value):
@@ -722,9 +726,9 @@ class TestLookupDimension(RecipeTestCase):
         d = LookupDimension(
             self.basic_table.c.first, lookup={"hi": "there"}, formatters=[fmt]
         )
-        assert len(d.columns) == 1
-        assert len(d.group_by) == 1
-        assert len(d.formatters) == 2
+        self.assertEqual(len(d.columns), 1)
+        self.assertEqual(len(d.group_by), 1)
+        self.assertEqual(len(d.formatters), 2)
         assert d.formatters[-1] is fmt
 
 
@@ -735,9 +739,9 @@ class TestMetric(RecipeTestCase):
             d = Metric()
 
         d = Metric(func.sum(self.basic_table.c.age))
-        assert len(d.columns) == 1
-        assert len(d.group_by) == 0
-        assert len(d.filters) == 0
+        self.assertEqual(len(d.columns), 1)
+        self.assertEqual(len(d.group_by), 0)
+        self.assertEqual(len(d.filters), 0)
 
     def test_expression(self):
         d = Metric(func.sum(self.basic_table.c.age))
@@ -759,9 +763,9 @@ class TestDivideMetric(RecipeTestCase):
         d = DivideMetric(
             func.sum(self.basic_table.c.age), func.sum(self.basic_table.c.age)
         )
-        assert len(d.columns) == 1
-        assert len(d.group_by) == 0
-        assert len(d.filters) == 0
+        self.assertEqual(len(d.columns), 1)
+        self.assertEqual(len(d.group_by), 0)
+        self.assertEqual(len(d.filters), 0)
 
         # Generate numerator / (denominator+epsilon) by default
         assert (
@@ -795,9 +799,9 @@ class TestWtdAvgMetric(RecipeTestCase):
             d = WtdAvgMetric(self.basic_table.c.age)
 
         d = WtdAvgMetric(self.basic_table.c.age, self.basic_table.c.age)
-        assert len(d.columns) == 1
-        assert len(d.group_by) == 0
-        assert len(d.filters) == 0
+        self.assertEqual(len(d.columns), 1)
+        self.assertEqual(len(d.group_by), 0)
+        self.assertEqual(len(d.filters), 0)
 
         # Generate numerator / (denominator+epsilon) by default
         assert (
@@ -837,7 +841,7 @@ class TestIngredientFromObj(RecipeTestCase):
         for d, expected_result in data:
             m = ingredient_from_dict(d, self.basic_table)
             m.id = 1
-            assert str(m) == expected_result
+            self.assertEqual(str(m), expected_result)
 
     def test_ingredient_from_bad_dict(self):
         bad_data = [
@@ -855,14 +859,14 @@ class TestIngredientFromObj(RecipeTestCase):
             {"kind": "Metric", "field": "age", "format": "comma"}, self.basic_table
         )
         assert isinstance(m, Metric)
-        assert m.meta.format == ",.0f"
+        self.assertEqual(m.meta.format, ",.0f")
 
     def test_ingredient_from_obj_with_missing_format_meta(self):
         m = ingredient_from_dict(
             {"kind": "Metric", "field": "age", "format": "foo"}, self.basic_table
         )
         assert isinstance(m, Metric)
-        assert m.meta.format == "foo"
+        self.assertEqual(m.meta.format, "foo")
 
 
 class TestParse(RecipeTestCase):
@@ -883,7 +887,7 @@ class TestParse(RecipeTestCase):
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, self.basic_table)
-            assert str(result) == str(expected_result)
+            self.assertEqual(str(result), str(expected_result))
 
     def test_parse_field_add_subtract(self):
         data = [
@@ -970,7 +974,7 @@ class TestParse(RecipeTestCase):
         ]
         for input_field, expected_result in data:
             result = parse_field(input_field, self.basic_table)
-            assert str(result) == str(expected_result)
+            self.assertEqual(str(result), str(expected_result))
 
     def test_parse_field_no_aggregations(self):
         data = [
@@ -1022,7 +1026,7 @@ class TestParse(RecipeTestCase):
             result = parse_field(
                 input_field, selectable=self.basic_table, aggregated=False
             )
-            assert str(result) == str(expected_result)
+            self.assertEqual(str(result), str(expected_result))
 
     def test_weird_field_string_definitions(self):
         data = [
@@ -1045,7 +1049,7 @@ class TestParse(RecipeTestCase):
             result = parse_field(
                 input_field, selectable=self.basic_table, aggregated=False
             )
-            assert str(result) == str(expected_result)
+            self.assertEqual(str(result), str(expected_result))
 
     def test_bad_field_definitions(self):
         bad_data = [
