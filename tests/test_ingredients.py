@@ -20,7 +20,6 @@ from .test_base import RecipeTestCase
 
 
 class TestIngredients(RecipeTestCase):
-
     def test_ingredient_init(self):
         ingr = Ingredient()
         self.assertEqual(len(ingr.id), 12)
