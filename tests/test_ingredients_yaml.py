@@ -4,42 +4,20 @@ Test recipes built from yaml files in the ingredients directory.
 """
 
 import os
-
 from datetime import date
-from dateutil.relativedelta import relativedelta
-import pytest
-from tests.test_base import (
-    Census,
-    IdTestsTable,
-    MyTable,
-    RecipeTestCase,
-    oven,
-    ScoresWithNulls,
-    DateTester,
-    WeirdTableWithColumnNamedTrue,
-)
 
-from recipe import (
-    AutomaticFilters,
-    BadIngredient,
-    InvalidIngredient,
-    Recipe,
-    Shelf,
-    BadRecipe,
-    InvalidColumnError,
-)
+from dateutil.relativedelta import relativedelta
+
+from recipe import AutomaticFilters, BadIngredient, InvalidIngredient, Shelf
+from tests.test_base import RecipeTestCase
 
 
 class ConfigTestBase(RecipeTestCase):
     """A base class for testing shelves built from v1 or v2 config."""
 
     # The directory to look for yaml config files
-    yaml_location = "ingredients"
+    yaml_location = "shelf_config_yaml"
     shelf_cache = {}
-
-    def setUp(self):
-        super().setUp()
-        self.session = oven.Session()
 
     def shelf_from_filename(self, shelf_name, selectable=None):
         """Load a file from the sample ingredients.yaml files."""
@@ -53,12 +31,288 @@ class ConfigTestBase(RecipeTestCase):
         return Shelf.from_validated_yaml(yaml_config, selectable)
 
 
-class TestRecipeIngredientsYaml(ConfigTestBase):
-    def test_ingredients1_from_validated_yaml(self):
-        shelf = self.shelf_from_filename("ingredients1.yaml", MyTable)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session).metrics("age").dimensions("first")
+class TestNullHandling(ConfigTestBase):
+    def test_dimension_null_handling(self):
+        """Test different ways of handling nulls in dimensions"""
+        shelf = self.shelf_from_filename(
+            "scores_with_nulls.yaml", self.scores_with_nulls_table
         )
+
+        recipe = (
+            self.recipe(shelf=shelf)
+            .dimensions("department")
+            .metrics("score")
+            .order_by("department")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT scores_with_nulls.department AS department,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department
+            ORDER BY department""",
+        )
+
+        self.assertRecipeCSV(
+            recipe,
+            """
+            department,score,department_id
+            ,80.0,
+            ops,90.0,ops
+            sales,,sales
+            """,
+        )
+
+    def test_dimension_null_handling_with_lookup_default(self):
+        """Test different ways of handling nulls in dimensions"""
+
+        # This uses the lookup_default to replace items that aren't found in lookup
+        # department_lookup:
+        #     kind: Dimension
+        #     field: department
+        #     lookup:
+        #         sales: Sales
+        #         ops: Operations
+        #     lookup_default: c
+
+        shelf = self.shelf_from_filename(
+            "scores_with_nulls.yaml", self.scores_with_nulls_table
+        )
+        recipe = (
+            self.recipe(shelf=shelf)
+            .dimensions("department_lookup")
+            .metrics("score")
+            .order_by("department_lookup")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT scores_with_nulls.department AS department_lookup_raw,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department_lookup_raw
+            ORDER BY department_lookup_raw""",
+        )
+
+        self.assertRecipeCSV(
+            recipe,
+            """
+            department_lookup_raw,score,department_lookup,department_lookup_id
+            ,80.0,Unknown,
+            ops,90.0,Operations,ops
+            sales,,Sales,sales
+            """,
+        )
+
+    def test_dimension_null_handling_with_null_in_lookup(self):
+        """Test different ways of handling nulls in dimensions"""
+
+        # This uses a null in the lookup
+        # department_lookup_with_null:
+        #     kind: Dimension
+        #     field: department
+        #     lookup:
+        #         sales: Sales
+        #         ops: Operations
+        #         null: 'can not find department'
+
+        shelf = self.shelf_from_filename(
+            "scores_with_nulls.yaml", self.scores_with_nulls_table
+        )
+        recipe = (
+            self.recipe(shelf=shelf)
+            .dimensions("department_lookup_with_null")
+            .metrics("score")
+            .order_by("department_lookup_with_null")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT scores_with_nulls.department AS department_lookup_with_null_raw,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department_lookup_with_null_raw
+            ORDER BY department_lookup_with_null_raw""",
+        )
+
+        self.assertRecipeCSV(
+            recipe,
+            """
+            department_lookup_with_null_raw,score,department_lookup_with_null,department_lookup_with_null_id
+            ,80.0,can not find department,
+            ops,90.0,Operations,ops
+            sales,,Sales,sales
+            """,
+        )
+
+    def test_dimension_null_handling_with_default(self):
+        """Test different ways of handling nulls in dimensions"""
+
+        # This uses default which will coalesce missing values to a defined value
+        # department_default:
+        #     kind: Dimension
+        #     field:
+        #         value: department
+        #         default: 'N/A'
+        shelf = self.shelf_from_filename(
+            "scores_with_nulls.yaml", self.scores_with_nulls_table
+        )
+        recipe = (
+            self.recipe(shelf=shelf)
+            .dimensions("department_default")
+            .metrics("score")
+            .order_by("department_default")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_default,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department_default
+            ORDER BY department_default""",
+        )
+
+        self.assertRecipeCSV(
+            recipe,
+            """
+            department_default,score,department_default_id
+            N/A,80.0,N/A
+            ops,90.0,ops
+            sales,,sales
+            """,
+        )
+
+    def test_dimension_null_handling_with_buckets(self):
+        """Test different ways of handling nulls in dimensions"""
+
+        # This uses default which will coalesce missing values to a defined value
+        # department_default:
+        #     kind: Dimension
+        #     field:
+        #         value: department
+        #         default: 'N/A'
+        shelf = self.shelf_from_filename(
+            "scores_with_nulls.yaml", self.scores_with_nulls_table
+        )
+        recipe = (
+            self.recipe(shelf=shelf)
+            .dimensions("department_buckets")
+            .metrics("score")
+            .order_by("department_buckets")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT CASE
+                    WHEN (scores_with_nulls.department = 'sales') THEN 'Sales'
+                    WHEN (scores_with_nulls.department = 'ops') THEN 'Operations'
+                    ELSE 'Other'
+                END AS department_buckets,
+                CASE
+                    WHEN (scores_with_nulls.department = 'sales') THEN 0
+                    WHEN (scores_with_nulls.department = 'ops') THEN 1
+                    ELSE 9999
+                END AS department_buckets_order_by,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department_buckets,
+                    department_buckets_order_by
+            ORDER BY department_buckets_order_by,
+                    department_buckets""",
+        )
+
+        self.assertRecipeCSV(
+            recipe,
+            """
+            department_buckets,department_buckets_order_by,score,department_buckets_id
+            Sales,0,,Sales
+            Operations,1,90.0,Operations
+            Other,9999,80.0,Other
+            """,
+        )
+
+    def test_dimension_null_handling_multi_approaches(self):
+        """Test different ways of handling nulls in dimensions"""
+
+        # This uses all null handling together (coalesce with default wins and
+        # is then turned into "Unknown")
+        # department_lookup_with_everything:
+        #     kind: Dimension
+        #     field:
+        #         value: department
+        #         default: 'N/A'
+        #     lookup:
+        #         sales: Sales
+        #         ops: Operations
+        #         null: 'can not find department'
+        #     lookup_default: Unknown
+        shelf = self.shelf_from_filename(
+            "scores_with_nulls.yaml", self.scores_with_nulls_table
+        )
+        recipe = (
+            self.recipe(shelf=shelf)
+            .dimensions("department_lookup_with_everything")
+            .metrics("score")
+            .order_by("-department_lookup_with_everything")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_lookup_with_everything_raw,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department_lookup_with_everything_raw
+            ORDER BY department_lookup_with_everything_raw DESC""",
+        )
+
+        self.assertRecipeCSV(
+            recipe,
+            """
+            department_lookup_with_everything_raw,score,department_lookup_with_everything,department_lookup_with_everything_id
+            sales,,Sales,sales
+            ops,90.0,Operations,ops
+            N/A,80.0,Unknown,N/A
+            """,
+        )
+
+    def test_metric_null_handling(self):
+        """Test handling nulls in metrics"""
+        shelf = self.shelf_from_filename(
+            "scores_with_nulls.yaml", self.scores_with_nulls_table
+        )
+
+        # score_with_default:
+        #     kind: Metric
+        #     field:
+        #         aggregation: avg
+        #         value: score
+        #         default: -1.0
+        recipe = (
+            self.recipe(shelf=shelf)
+            .dimensions("department")
+            .metrics("score_with_default")
+            .order_by("department")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT scores_with_nulls.department AS department,
+                avg(coalesce(scores_with_nulls.score, -1.0)) AS score_with_default
+            FROM scores_with_nulls
+            GROUP BY department
+            ORDER BY department""",
+        )
+
+        self.assertRecipeCSV(
+            recipe,
+            """
+            department,score_with_default,department_id
+            ,39.5,
+            ops,59.666666666666664,ops
+            sales,-1.0,sales
+            """,
+        )
+
+
+class TestRecipeIngredientsYamlParsed(ConfigTestBase):
+    def test_ingredients1_from_validated_yaml(self):
+        shelf = self.shelf_from_filename("ingredients1.yaml", self.basic_table)
+        recipe = self.recipe(shelf=shelf).metrics("age").dimensions("first")
         self.assertRecipeCSV(
             recipe,
             """
@@ -68,10 +322,8 @@ class TestRecipeIngredientsYaml(ConfigTestBase):
         )
 
     def test_ingredients1_from_yaml(self):
-        shelf = self.shelf_from_filename("ingredients1.yaml", MyTable)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session).metrics("age").dimensions("first")
-        )
+        shelf = self.shelf_from_filename("ingredients1.yaml", self.basic_table)
+        recipe = self.recipe(shelf=shelf).metrics("age").dimensions("first")
         self.assertRecipeCSV(
             recipe,
             """
@@ -81,8 +333,8 @@ class TestRecipeIngredientsYaml(ConfigTestBase):
         )
 
     def test_ingredients1_between_dates(self):
-        shelf = self.shelf_from_filename("ingredients1.yaml", MyTable)
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("date_between")
+        shelf = self.shelf_from_filename("ingredients1.yaml", self.basic_table)
+        recipe = self.recipe(shelf=shelf).metrics("date_between")
         today = date.today()
         self.assertRecipeSQL(
             recipe,
@@ -107,7 +359,7 @@ class TestRecipeIngredientsYaml(ConfigTestBase):
         #                   AND '2019-06-23 12:13:01.820635') THEN foo.age
         #            END) AS dt_between
         # FROM foo
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("dt_between")
+        recipe = self.recipe(shelf=shelf).metrics("dt_between")
         assert (
             recipe.to_sql()
             != """SELECT sum(CASE
@@ -127,9 +379,9 @@ FROM foo""".format(
         )
 
     def test_census_from_validated_yaml(self):
-        shelf = self.shelf_from_filename("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", self.census_table)
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("state")
             .metrics("pop2000", "ttlpop")
             .order_by("state")
@@ -144,9 +396,9 @@ FROM foo""".format(
         )
 
     def test_census_from_yaml(self):
-        shelf = self.shelf_from_filename("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", self.census_table)
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("state")
             .metrics("pop2000", "ttlpop")
             .order_by("state")
@@ -162,17 +414,15 @@ FROM foo""".format(
 
     def test_nested_census_from_validated_yaml(self):
         """Build a recipe that depends on the results of another recipe"""
-        shelf = self.shelf_from_filename("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", self.census_table)
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("state")
             .metrics("pop2000", "ttlpop")
             .order_by("state")
         )
         nested_shelf = self.shelf_from_filename("census_nested.yaml", recipe)
-        nested_recipe = Recipe(shelf=nested_shelf, session=self.session).metrics(
-            "ttlpop", "num_states"
-        )
+        nested_recipe = self.recipe(shelf=nested_shelf).metrics("ttlpop", "num_states")
         self.assertRecipeSQL(
             nested_recipe,
             """SELECT count(anon_1.state) AS num_states,
@@ -195,17 +445,15 @@ FROM foo""".format(
         )
 
     def test_nested_census_from_yaml(self):
-        shelf = self.shelf_from_filename("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", self.census_table)
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("state")
             .metrics("pop2000", "ttlpop")
             .order_by("state")
         )
         nested_shelf = self.shelf_from_filename("census_nested.yaml", recipe)
-        nested_recipe = Recipe(shelf=nested_shelf, session=self.session).metrics(
-            "ttlpop", "num_states"
-        )
+        nested_recipe = self.recipe(shelf=nested_shelf).metrics("ttlpop", "num_states")
         self.assertRecipeCSV(
             nested_recipe,
             """
@@ -214,48 +462,9 @@ FROM foo""".format(
             """,
         )
 
-    def test_census_buckets(self):
-        shelf = self.shelf_from_filename("census.yaml", Census)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("age_buckets")
-            .metrics("pop2000")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT CASE
-                    WHEN (census.age < 2) THEN 'babies'
-                    WHEN (census.age < 13) THEN 'children'
-                    WHEN (census.age < 20) THEN 'teens'
-                    ELSE 'oldsters'
-                END AS age_buckets,
-                CASE
-                    WHEN (census.age < 2) THEN 0
-                    WHEN (census.age < 13) THEN 1
-                    WHEN (census.age < 20) THEN 2
-                    ELSE 9999
-                END AS age_buckets_order_by,
-                sum(census.pop2000) AS pop2000
-            FROM census
-            GROUP BY age_buckets,
-                    age_buckets_order_by
-            ORDER BY age_buckets_order_by,
-                    age_buckets""",
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            age_buckets,age_buckets_order_by,pop2000,age_buckets_id
-            babies,0,164043,babies
-            children,1,948240,children
-            teens,2,614548,teens
-            oldsters,9999,4567879,oldsters
-            """,
-        )
-
     def test_census_condition_between(self):
-        shelf = self.shelf_from_filename("census.yaml", Census)
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("teenagers")
+        shelf = self.shelf_from_filename("census.yaml", self.census_table)
+        recipe = self.recipe(shelf=shelf).metrics("teenagers")
         self.assertRecipeSQL(
             recipe,
             """SELECT sum(CASE
@@ -272,8 +481,8 @@ FROM foo""".format(
         )
 
     def test_census_condition_between_dates(self):
-        shelf = self.shelf_from_filename("census.yaml", Census)
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("teenagers")
+        shelf = self.shelf_from_filename("census.yaml", self.census_table)
+        recipe = self.recipe(shelf=shelf).metrics("teenagers")
         self.assertRecipeSQL(
             recipe,
             """SELECT sum(CASE
@@ -290,9 +499,9 @@ FROM foo""".format(
         )
 
     def test_census_mixed_buckets(self):
-        shelf = self.shelf_from_filename("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", self.census_table)
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("mixed_buckets")
             .metrics("pop2000")
             .order_by("-mixed_buckets")
@@ -356,9 +565,9 @@ ORDER BY mixed_buckets_order_by DESC,
         )
 
     def test_census_buckets_ordering(self):
-        shelf = self.shelf_from_filename("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", self.census_table)
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("age_buckets")
             .metrics("pop2000")
             .order_by("age_buckets")
@@ -395,7 +604,7 @@ ORDER BY age_buckets_order_by,
             """,
         )
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("age_buckets")
             .metrics("pop2000")
             .order_by("-age_buckets")
@@ -434,9 +643,9 @@ ORDER BY age_buckets_order_by DESC,
 
     def test_census_buckets_nolabel(self):
         """If not default label is provided, buckets default to "Not found" """
-        shelf = self.shelf_from_filename("census.yaml", Census)
+        shelf = self.shelf_from_filename("census.yaml", self.census_table)
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("age_buckets_nolabel")
             .metrics("pop2000")
             .order_by("age_buckets_nolabel")
@@ -476,9 +685,9 @@ ORDER BY age_buckets_nolabel_order_by,
     def test_complex_census_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
         metrics"""
-        shelf = self.shelf_from_filename("census_complex.yaml", Census)
+        shelf = self.shelf_from_filename("census_complex.yaml", self.census_table)
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("state")
             .metrics("pop2000")
             .order_by("state")
@@ -502,39 +711,12 @@ ORDER BY state_raw""",
             """,
         )
 
-    def test_complex_census_from_validated_yaml_math(self):
-        """Build a recipe that uses complex definitions dimensions and
-        metrics"""
-        shelf = self.shelf_from_filename("census_complex.yaml", Census)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("state")
-            .metrics("allthemath")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state_raw,
-                sum((((census.pop2000 + census.pop2008) - census.pop2000) * census.pop2008) / (coalesce(CAST(census.pop2000 AS FLOAT), 0.0) + 1e-09)) AS allthemath
-            FROM census
-            GROUP BY state_raw""",
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            state_raw,allthemath,state,state_id
-            Tennessee,6873286.452931551,The Volunteer State,Tennessee
-            Vermont,660135.4074068918,The Green Mountain State,Vermont
-            """,
-        )
-
     def test_complex_census_quickselect_from_validated_yaml(self):
         """Build a recipe that uses complex definitions dimensions and
         metrics and quickselects"""
-        shelf = self.shelf_from_filename("census_complex.yaml", Census)
+        shelf = self.shelf_from_filename("census_complex.yaml", self.census_table)
         recipe = (
-            Recipe(
-                shelf=shelf, session=self.session, extension_classes=(AutomaticFilters,)
-            )
+            self.recipe(shelf=shelf, extension_classes=(AutomaticFilters,))
             .dimensions("state")
             .metrics("pop2008")
             .order_by("state")
@@ -558,9 +740,7 @@ ORDER BY state_raw""",
             """,
         )
         recipe = (
-            Recipe(
-                shelf=shelf, session=self.session, extension_classes=(AutomaticFilters,)
-            )
+            self.recipe(shelf=shelf, extension_classes=(AutomaticFilters,))
             .dimensions("state")
             .metrics("pop2008")
             .order_by("state")
@@ -583,51 +763,11 @@ ORDER BY state_raw""",
             """,
         )
 
-    def test_shelf_with_references(self):
-        """Build a recipe using a shelf that uses field references"""
-        shelf = self.shelf_from_filename("census_references.yaml", Census)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("state")
-            .metrics("popdivide")
-            .order_by("state")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state_raw,
-                CAST(sum(CASE
-                                WHEN (census.age > 40) THEN census.pop2000
-                            END) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS popdivide
-            FROM census
-            GROUP BY state_raw
-            ORDER BY state_raw""",
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            state_raw,popdivide,state,state_id
-            Tennessee,0.3856763995010324,The Volunteer State,Tennessee
-            Vermont,0.4374284968466095,The Green Mountain State,Vermont
-            """,
-        )
-
-    def test_shelf_with_invalidcolumn(self):
-        """Build a recipe using a shelf that uses field references"""
-        shelf = self.shelf_from_filename("census_references.yaml", Census)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("state")
-            .metrics("badfield")
-            .order_by("state")
-        )
-        with pytest.raises(InvalidColumnError):
-            recipe.to_sql()
-
     def test_shelf_with_condition_references(self):
         """Build a recipe using a shelf that uses condition references"""
-        shelf = self.shelf_from_filename("census_references.yaml", Census)
+        shelf = self.shelf_from_filename("census_references.yaml", self.census_table)
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("state")
             .metrics("pop2008oldsters")
             .order_by("state")
@@ -651,472 +791,52 @@ ORDER BY state_raw""",
             """,
         )
 
-    def test_bad_census(self):
-        """Test a bad yaml file"""
-        with pytest.raises(Exception):
-            self.shelf_from_filename("census_bad.yaml", Census)
-
-    def test_bad_census_in(self):
-        """Test a bad yaml file"""
-        with pytest.raises(Exception):
-            self.shelf_from_filename("census_bad_in.yaml", Census)
-
-    def test_deprecated_ingredients_dividemetric(self):
+    def test_deprecated_ingredients_idvaluedim2(self):
         """Test deprecated ingredient kinds in a yaml file"""
-        shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
-
-        # We can DivideMetric
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("state")
-            .metrics("popchg")
-            .order_by("state")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state,
-                CAST(sum(census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2008) AS FLOAT), 0.0) + 1e-09) AS popchg
-            FROM census
-            GROUP BY state
-            ORDER BY state""",
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            state,popchg,state_id
-            Tennessee,0.9166167263773563,Tennessee
-            Vermont,0.9820786913351858,Vermont
-            """,
-        )
-
-    def test_deprecated_ingredients_lookupdimension(self):
-        """Test deprecated ingredient kinds in a yaml file"""
-        shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
-
-        # We can LookupDimension
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("state_characteristic")
-            .metrics("pop2000")
-            .order_by("state_characteristic")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.state AS state_characteristic_raw,
-                sum(census.pop2000) AS pop2000
-            FROM census
-            GROUP BY state_characteristic_raw
-            ORDER BY state_characteristic_raw""",
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            state_characteristic_raw,pop2000,state_characteristic,state_characteristic_id
-            Tennessee,5685230,Volunteery,Tennessee
-            Vermont,609480,Taciturny,Vermont
-            """,
-        )
-
-        """ Test deprecated ingredient kinds in a yaml file """
-        shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
+        shelf = self.shelf_from_filename("census_deprecated.yaml", self.census_table)
 
         # We can IdValueDimension
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("state_idval")
-            .metrics("pop2000")
-            .order_by("state_idval")
-            .limit(5)
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.pop2000 AS state_idval_id,
-                census.state AS state_idval,
-                sum(census.pop2000) AS pop2000
-            FROM census
-            GROUP BY state_idval_id,
-                    state_idval
-            ORDER BY state_idval,
-                    state_idval_id
-            LIMIT 5
-            OFFSET 0""",
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            state_idval_id,state_idval,pop2000,state_idval_id
-            5033,Tennessee,5033,5033
-            5562,Tennessee,5562,5562
-            6452,Tennessee,6452,6452
-            7322,Tennessee,7322,7322
-            8598,Tennessee,8598,8598
-            """,
-        )
-
-    def test_deprecated_ingredients_idvaluedim(self):
-        """Test deprecated ingredient kinds in a yaml file"""
-        shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
-
-        # We can IdValueDimension
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("state")
             .metrics("avgage")
             .order_by("state_idval")
         )
-        # Can't order_by something that isn't used as a dimension or metric
-        with pytest.raises(BadRecipe):
-            recipe.to_sql()
-
-    def test_deprecated_ingredients_idvaluedim(self):
-        """Test deprecated ingredient kinds in a yaml file"""
-        shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
-
-        # We can IdValueDimension
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("state_idval")
-            .metrics("avgage")
-            .order_by("state_idval")
-            .limit(10)
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT census.pop2000 AS state_idval_id,
-                census.state AS state_idval,
-                CAST(sum(census.age * census.pop2000) AS FLOAT) / (coalesce(CAST(sum(census.pop2000) AS FLOAT), 0.0) + 1e-09) AS avgage
-            FROM census
-            GROUP BY state_idval_id,
-                    state_idval
-            ORDER BY state_idval,
-                    state_idval_id
-            LIMIT 10
-            OFFSET 0""",
-        )
-
-        self.assertRecipeCSV(
-            recipe,
-            """
-            state_idval_id,state_idval,avgage,state_idval_id
-            5033,Tennessee,83.9999999999833,5033
-            5562,Tennessee,82.99999999998506,5562
-            6452,Tennessee,81.99999999998728,6452
-            7322,Tennessee,80.99999999998893,7322
-            8598,Tennessee,79.99999999999069,8598
-            9583,Tennessee,78.99999999999176,9583
-            10501,Tennessee,83.999999999992,10501
-            10672,Tennessee,77.99999999999268,10672
-            11141,Tennessee,82.99999999999255,11141
-            11168,Tennessee,76.99999999999311,11168
-            """,
-        )
-
-
-class TestNullHandling(ConfigTestBase):
-    yaml_location = "parsed_ingredients"
-
-    def test_dimension_null_handling(self):
-        """Test different ways of handling nulls in dimensions"""
-        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
-
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("department")
-            .metrics("score")
-            .order_by("department")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT scores_with_nulls.department AS department,
-                avg(scores_with_nulls.score) AS score
-            FROM scores_with_nulls
-            GROUP BY department
-            ORDER BY department""",
-        )
-
-        self.assertRecipeCSV(
-            recipe,
-            """
-            department,score,department_id
-            ,80.0,
-            ops,90.0,ops
-            sales,,sales
-            """,
-        )
-
-    def test_dimension_null_handling_with_lookup_default(self):
-        """Test different ways of handling nulls in dimensions"""
-
-        # This uses the lookup_default to replace items that aren't found in lookup
-        # department_lookup:
-        #     kind: Dimension
-        #     field: department
-        #     lookup:
-        #         sales: Sales
-        #         ops: Operations
-        #     lookup_default: c
-
-        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("department_lookup")
-            .metrics("score")
-            .order_by("department_lookup")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT scores_with_nulls.department AS department_lookup_raw,
-                avg(scores_with_nulls.score) AS score
-            FROM scores_with_nulls
-            GROUP BY department_lookup_raw
-            ORDER BY department_lookup_raw""",
-        )
-
-        self.assertRecipeCSV(
-            recipe,
-            """
-            department_lookup_raw,score,department_lookup,department_lookup_id
-            ,80.0,Unknown,
-            ops,90.0,Operations,ops
-            sales,,Sales,sales
-            """,
-        )
-
-    def test_dimension_null_handling_with_null_in_lookup(self):
-        """Test different ways of handling nulls in dimensions"""
-
-        # This uses a null in the lookup
-        # department_lookup_with_null:
-        #     kind: Dimension
-        #     field: department
-        #     lookup:
-        #         sales: Sales
-        #         ops: Operations
-        #         null: 'can not find department'
-
-        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("department_lookup_with_null")
-            .metrics("score")
-            .order_by("department_lookup_with_null")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT scores_with_nulls.department AS department_lookup_with_null_raw,
-                avg(scores_with_nulls.score) AS score
-            FROM scores_with_nulls
-            GROUP BY department_lookup_with_null_raw
-            ORDER BY department_lookup_with_null_raw""",
-        )
-
-        self.assertRecipeCSV(
-            recipe,
-            """
-            department_lookup_with_null_raw,score,department_lookup_with_null,department_lookup_with_null_id
-            ,80.0,can not find department,
-            ops,90.0,Operations,ops
-            sales,,Sales,sales
-            """,
-        )
-
-    def test_dimension_null_handling_with_default(self):
-        """Test different ways of handling nulls in dimensions"""
-
-        # This uses default which will coalesce missing values to a defined value
-        # department_default:
-        #     kind: Dimension
-        #     field:
-        #         value: department
-        #         default: 'N/A'
-        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("department_default")
-            .metrics("score")
-            .order_by("department_default")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_default,
-                avg(scores_with_nulls.score) AS score
-            FROM scores_with_nulls
-            GROUP BY department_default
-            ORDER BY department_default""",
-        )
-
-        self.assertRecipeCSV(
-            recipe,
-            """
-            department_default,score,department_default_id
-            N/A,80.0,N/A
-            ops,90.0,ops
-            sales,,sales
-            """,
-        )
-
-    def test_dimension_null_handling_with_buckets(self):
-        """Test different ways of handling nulls in dimensions"""
-
-        # This uses default which will coalesce missing values to a defined value
-        # department_default:
-        #     kind: Dimension
-        #     field:
-        #         value: department
-        #         default: 'N/A'
-        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("department_buckets")
-            .metrics("score")
-            .order_by("department_buckets")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT CASE
-                    WHEN (scores_with_nulls.department = 'sales') THEN 'Sales'
-                    WHEN (scores_with_nulls.department = 'ops') THEN 'Operations'
-                    ELSE 'Other'
-                END AS department_buckets,
-                CASE
-                    WHEN (scores_with_nulls.department = 'sales') THEN 0
-                    WHEN (scores_with_nulls.department = 'ops') THEN 1
-                    ELSE 9999
-                END AS department_buckets_order_by,
-                avg(scores_with_nulls.score) AS score
-            FROM scores_with_nulls
-            GROUP BY department_buckets,
-                    department_buckets_order_by
-            ORDER BY department_buckets_order_by,
-                    department_buckets""",
-        )
-
-        self.assertRecipeCSV(
-            recipe,
-            """
-            department_buckets,department_buckets_order_by,score,department_buckets_id
-            Sales,0,,Sales
-            Operations,1,90.0,Operations
-            Other,9999,80.0,Other
-            """,
-        )
-
-    def test_dimension_null_handling_multi_approaches(self):
-        """Test different ways of handling nulls in dimensions"""
-
-        # This uses all null handling together (coalesce with default wins and
-        # is then turned into "Unknown")
-        # department_lookup_with_everything:
-        #     kind: Dimension
-        #     field:
-        #         value: department
-        #         default: 'N/A'
-        #     lookup:
-        #         sales: Sales
-        #         ops: Operations
-        #         null: 'can not find department'
-        #     lookup_default: Unknown
-        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("department_lookup_with_everything")
-            .metrics("score")
-            .order_by("-department_lookup_with_everything")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT coalesce(scores_with_nulls.department, 'N/A') AS department_lookup_with_everything_raw,
-                avg(scores_with_nulls.score) AS score
-            FROM scores_with_nulls
-            GROUP BY department_lookup_with_everything_raw
-            ORDER BY department_lookup_with_everything_raw DESC""",
-        )
-
-        self.assertRecipeCSV(
-            recipe,
-            """
-            department_lookup_with_everything_raw,score,department_lookup_with_everything,department_lookup_with_everything_id
-            sales,,Sales,sales
-            ops,90.0,Operations,ops
-            N/A,80.0,Unknown,N/A
-            """,
-        )
-
-    def test_metric_null_handling(self):
-        """Test handling nulls in metrics"""
-        shelf = self.shelf_from_filename("scores_with_nulls.yaml", ScoresWithNulls)
-
-        # score_with_default:
-        #     kind: Metric
-        #     field:
-        #         aggregation: avg
-        #         value: score
-        #         default: -1.0
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("department")
-            .metrics("score_with_default")
-            .order_by("department")
-        )
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT scores_with_nulls.department AS department,
-                avg(coalesce(scores_with_nulls.score, -1.0)) AS score_with_default
-            FROM scores_with_nulls
-            GROUP BY department
-            ORDER BY department""",
-        )
-
-        self.assertRecipeCSV(
-            recipe,
-            """
-            department,score_with_default,department_id
-            ,39.5,
-            ops,59.666666666666664,ops
-            sales,-1.0,sales
-            """,
-        )
-
-
-class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
-    yaml_location = "parsed_ingredients"
+        # If the order_by isn't used in the recipe, it is ignored
+        self.assertRecipeSQLNotContains(recipe, "state_idval")
 
     def test_bad_census(self):
         """Test a bad yaml file"""
-        shelf = self.shelf_from_filename("census_bad.yaml", Census)
-        assert isinstance(shelf["pop2000"], InvalidIngredient)
+        shelf = self.shelf_from_filename("census_bad.yaml", self.census_table)
+        self.assertIsInstance(shelf["pop2000"], InvalidIngredient)
         assert (
             "No terminal defined for '>'" in shelf["pop2000"].error["extra"]["details"]
         )
 
     def test_bad_census_in(self):
         """Test a bad yaml file"""
-        shelf = self.shelf_from_filename("census_bad_in.yaml", Census)
-        assert isinstance(shelf["pop2000"], InvalidIngredient)
+        shelf = self.shelf_from_filename("census_bad_in.yaml", self.census_table)
+        self.assertIsInstance(shelf["pop2000"], InvalidIngredient)
         assert (
             "No terminal defined for 'c'" in shelf["pop2000"].error["extra"]["details"]
         )
 
     def test_shelf_with_invalidcolumn(self):
         """Build a recipe using a shelf that uses field references"""
-        shelf = self.shelf_from_filename("census_references.yaml", Census)
-        assert isinstance(shelf["badfield"], InvalidIngredient)
+        shelf = self.shelf_from_filename("census_references.yaml", self.census_table)
+        self.assertIsInstance(shelf["badfield"], InvalidIngredient)
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("state")
             .metrics("badfield")
             .order_by("state")
         )
-        with pytest.raises(BadIngredient):
+        with self.assertRaises(BadIngredient):
             recipe.to_sql()
 
     def test_census_buckets(self):
-        shelf = self.shelf_from_filename("census.yaml", Census)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("age_buckets")
-            .metrics("pop2000")
-        )
+        shelf = self.shelf_from_filename("census.yaml", self.census_table)
+        recipe = self.recipe(shelf=shelf).dimensions("age_buckets").metrics("pop2000")
         self.assertRecipeSQL(
             recipe,
             """SELECT CASE
@@ -1167,9 +887,9 @@ class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
 
     def test_shelf_with_references(self):
         """Parsed shelves do division slighly differently"""
-        shelf = self.shelf_from_filename("census_references.yaml", Census)
+        shelf = self.shelf_from_filename("census_references.yaml", self.census_table)
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("state")
             .metrics("popdivide")
             .order_by("state")
@@ -1198,26 +918,18 @@ class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
 
     def test_shelf_with_invalidingredient(self):
         """Build a recipe using a shelf that uses field references"""
-        shelf = self.shelf_from_filename("census.yaml", Census)
-        assert isinstance(shelf["baddim"], InvalidIngredient)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("baddim")
-            .metrics("pop2000")
-        )
+        shelf = self.shelf_from_filename("census.yaml", self.census_table)
+        self.assertIsInstance(shelf["baddim"], InvalidIngredient)
+        recipe = self.recipe(shelf=shelf).dimensions("baddim").metrics("pop2000")
         # Trying to run the recipe raises an exception with the bad ingredient details
-        with pytest.raises(BadIngredient):
+        with self.assertRaises(BadIngredient):
             recipe.to_sql()
 
     def test_complex_census_from_validated_yaml_math(self):
         """Build a recipe that uses complex definitions dimensions and
         metrics"""
-        shelf = self.shelf_from_filename("census_complex.yaml", Census)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("state")
-            .metrics("allthemath")
-        )
+        shelf = self.shelf_from_filename("census_complex.yaml", self.census_table)
+        recipe = self.recipe(shelf=shelf).dimensions("state").metrics("allthemath")
         self.assertRecipeSQL(
             recipe,
             """SELECT census.state AS state_raw,
@@ -1239,11 +951,11 @@ class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
 
     def test_deprecated_ingredients_idvaluedim(self):
         """Test deprecated ingredient kinds in a yaml file"""
-        shelf = self.shelf_from_filename("census_deprecated.yaml", Census)
+        shelf = self.shelf_from_filename("census_deprecated.yaml", self.census_table)
 
         # We can IdValueDimension
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .dimensions("state_idval")
             .metrics("avgage")
             .order_by("state_idval")
@@ -1286,12 +998,8 @@ class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
 
     def test_is(self):
         """Test fields using is"""
-        shelf = self.shelf_from_filename("ingredients1.yaml", MyTable)
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .metrics("dt_test")
-            .dimensions("first")
-        )
+        shelf = self.shelf_from_filename("ingredients1.yaml", self.basic_table)
+        recipe = self.recipe(shelf=shelf).metrics("dt_test").dimensions("first")
         self.assertRecipeSQL(
             recipe,
             """SELECT foo.first AS first,
@@ -1312,13 +1020,14 @@ class TestRecipeIngredientsYamlParsed(TestRecipeIngredientsYaml):
 
     def test_intelligent_date(self):
         """Test intelligent dates like `date is last year`"""
-        shelf = self.shelf_from_filename("ingredients1.yaml", MyTable)
+        shelf = self.shelf_from_filename("ingredients1.yaml", self.basic_table)
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
+            self.recipe(shelf=shelf)
             .metrics("intelligent_date_test")
             .dimensions("first")
         )
         from datetime import date
+
         from dateutil.relativedelta import relativedelta
 
         today = date.today()
@@ -1354,10 +1063,10 @@ _version: 2
     kind: Dimension
     field: "[true]"
             """,
-            WeirdTableWithColumnNamedTrue,
+            self.weird_table_with_column_named_true_table,
         )
 
-        recipe = Recipe(shelf=shelf, session=self.session).dimensions("true")
+        recipe = self.recipe(shelf=shelf).dimensions("true")
         self.assertRecipeSQL(
             recipe,
             """SELECT weird_table_with_column_named_true."true" AS "true"
@@ -1411,9 +1120,9 @@ parentheses:
     kind: Metric
     field: "@count_star / (@count_star + (12.0 / 2.0))"
 """,
-            ScoresWithNulls,
+            self.scores_with_nulls_table,
         )
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("count_star")
+        recipe = self.recipe(shelf=shelf).metrics("count_star")
         self.assertRecipeSQL(
             recipe,
             """SELECT count(*) AS count_star
@@ -1427,7 +1136,7 @@ parentheses:
         """,
         )
 
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("total_nulls")
+        recipe = self.recipe(shelf=shelf).metrics("total_nulls")
         self.assertRecipeSQL(
             recipe,
             """SELECT count(DISTINCT CASE
@@ -1443,7 +1152,7 @@ parentheses:
         """,
         )
 
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("chip_nulls")
+        recipe = self.recipe(shelf=shelf).metrics("chip_nulls")
         self.assertRecipeSQL(
             recipe,
             """SELECT sum(CASE
@@ -1461,7 +1170,7 @@ FROM scores_with_nulls""",
         """,
         )
 
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("chip_or_nulls")
+        recipe = self.recipe(shelf=shelf).metrics("chip_or_nulls")
         self.assertRecipeSQL(
             recipe,
             """SELECT sum(CASE
@@ -1479,7 +1188,7 @@ FROM scores_with_nulls""",
             """,
         )
 
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("user_null_counter")
+        recipe = self.recipe(shelf=shelf).metrics("user_null_counter")
         self.assertRecipeSQL(
             recipe,
             """SELECT sum(CASE
@@ -1497,7 +1206,7 @@ FROM scores_with_nulls""",
             """,
         )
 
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("simple_math")
+        recipe = self.recipe(shelf=shelf).metrics("simple_math")
         self.assertRecipeSQL(
             recipe,
             """SELECT count(*) + count(DISTINCT CASE
@@ -1511,7 +1220,7 @@ FROM scores_with_nulls""",
         )
         self.assertRecipeCSV(recipe, "simple_math\n10\n")
 
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("refs_division")
+        recipe = self.recipe(shelf=shelf).metrics("refs_division")
         self.assertRecipeSQL(
             recipe,
             """SELECT CAST(count(*) AS FLOAT) / 100.0 AS refs_division
@@ -1525,7 +1234,7 @@ FROM scores_with_nulls""",
         """,
         )
 
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("refs_as_denom")
+        recipe = self.recipe(shelf=shelf).metrics("refs_as_denom")
         self.assertRecipeSQL(
             recipe,
             """SELECT CASE
@@ -1536,7 +1245,7 @@ FROM scores_with_nulls""",
         )
         self.assertRecipeCSV(recipe, "refs_as_denom\n2.0\n")
 
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("math")
+        recipe = self.recipe(shelf=shelf).metrics("math")
         self.assertRecipeSQL(
             recipe,
             """SELECT CASE
@@ -1547,7 +1256,7 @@ FROM scores_with_nulls""",
         )
         self.assertRecipeCSV(recipe, "math\n3.5\n")
 
-        recipe = Recipe(shelf=shelf, session=self.session).metrics("parentheses")
+        recipe = self.recipe(shelf=shelf).metrics("parentheses")
         self.assertRecipeSQL(
             recipe,
             """SELECT CASE
@@ -1559,9 +1268,7 @@ FROM scores_with_nulls""",
         self.assertRecipeCSV(recipe, "parentheses\n0.5\n")
 
         recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("convertdate")
-            .metrics("count_star")
+            self.recipe(shelf=shelf).dimensions("convertdate").metrics("count_star")
         )
         self.assertRecipeSQL(
             recipe,
@@ -1572,7 +1279,7 @@ FROM scores_with_nulls""",
         )
         # Can't run this against sqlite so we don't test csv
 
-        recipe = Recipe(shelf=shelf, session=self.session).dimensions("strings")
+        recipe = self.recipe(shelf=shelf).dimensions("strings")
         self.assertRecipeSQL(
             recipe,
             """SELECT CAST(scores_with_nulls.test_date AS VARCHAR) || CAST(scores_with_nulls.score AS VARCHAR) AS strings
@@ -1602,13 +1309,9 @@ count_star:
     kind: Metric
     field: "count(*)"
 """,
-            ScoresWithNulls,
+            self.scores_with_nulls_table,
         )
-        recipe = (
-            Recipe(shelf=shelf, session=self.session)
-            .dimensions("username")
-            .metrics("count_star")
-        )
+        recipe = self.recipe(shelf=shelf).dimensions("username").metrics("count_star")
         self.assertRecipeSQL(
             recipe,
             """SELECT scores_with_nulls.username AS username,
@@ -1639,9 +1342,7 @@ count_username:
 """,
             recipe,
         )
-        recipe2 = Recipe(shelf=shelf2, session=self.session).metrics(
-            "count_star", "count_username"
-        )
+        recipe2 = self.recipe(shelf=shelf2).metrics("count_star", "count_username")
         self.assertRecipeSQL(
             recipe2,
             """SELECT count(*) AS count_star,
@@ -1656,8 +1357,6 @@ count_username:
 
 
 class TestParsedIntellligentDates(ConfigTestBase):
-    default_selectable = DateTester
-
     def test_is_current_year(self):
         """Test current year with a variety of spacing and capitalization"""
 
@@ -1678,9 +1377,9 @@ test:
 """.format(
                     is_current_year
                 ),
-                DateTester,
+                self.datetester_table,
             )
-            recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
+            recipe = self.recipe(shelf=shelf).metrics("test")
             today = date.today()
             start_dt = date(today.year, 1, 1)
             end_dt = start_dt + relativedelta(years=1, days=-1)
@@ -1707,9 +1406,9 @@ test:
     kind: Metric
     field: "if(dt {is_prior_year}, count, 0)"
 """,
-                DateTester,
+                self.datetester_table,
             )
-            recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
+            recipe = self.recipe(shelf=shelf).metrics("test")
             today = date.today()
             start_dt = date(today.year - 1, 1, 1)
             end_dt = start_dt + relativedelta(years=1, days=-1)
@@ -1745,9 +1444,9 @@ test:
     kind: Metric
     field: "if(dt {ytd}, count, 0)"
 """,
-                DateTester,
+                self.datetester_table,
             )
-            recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
+            recipe = self.recipe(shelf=shelf).metrics("test")
             self.assertRecipeCSV(recipe, "test\n{}\n".format(today.month))
             unique_sql.add(recipe.to_sql())
         assert len(unique_sql) == 3
@@ -1774,9 +1473,9 @@ test:
     kind: Metric
     field: "if(not(dt {ytd}), count, 0)"
 """,
-                DateTester,
+                self.datetester_table,
             )
-            recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
+            recipe = self.recipe(shelf=shelf).metrics("test")
             self.assertRecipeCSV(recipe, f"test\n{100-today.month}\n")
             unique_sql.add(recipe.to_sql())
         assert len(unique_sql) == 3
@@ -1796,9 +1495,9 @@ test:
     kind: Metric
     field: "if(dt {ytd}, count, 0)"
 """,
-                DateTester,
+                self.datetester_table,
             )
-            recipe = Recipe(shelf=shelf, session=self.session).metrics("test")
+            recipe = self.recipe(shelf=shelf).metrics("test")
             self.assertRecipeCSV(recipe, "test\n3\n")
             unique_sql.add(recipe.to_sql())
         assert len(unique_sql) == 3
@@ -1830,9 +1529,9 @@ test5:
     field: dt
     format: ".2f"
 """,
-            DateTester,
+            self.datetester_table,
         )
-        recipe = Recipe(shelf=shelf, session=self.session).dimensions(
+        recipe = self.recipe(shelf=shelf).dimensions(
             "test", "test2", "test3", "test4", "test5"
         )
         self.assertRecipeSQL(
@@ -1866,16 +1565,16 @@ student_id:
     kind: Dimension
     field: student_id
 """,
-            IdTestsTable,
+            self.id_tests_table,
         )
-        recipe = Recipe(shelf=shelf, session=self.session).dimensions("student")
+        recipe = self.recipe(shelf=shelf).dimensions("student")
         self.assertRecipeSQL(
             recipe,
             """SELECT id_tests.student AS student
             FROM id_tests
             GROUP BY student""",
         )
-        recipe = Recipe(shelf=shelf, session=self.session).dimensions("student_id")
+        recipe = self.recipe(shelf=shelf).dimensions("student_id")
         self.assertRecipeSQL(
             recipe,
             """SELECT id_tests.student_id AS student_id
@@ -1883,9 +1582,7 @@ student_id:
             GROUP BY student_id""",
         )
 
-        recipe = Recipe(shelf=shelf, session=self.session).dimensions(
-            "student", "student_id"
-        )
+        recipe = self.recipe(shelf=shelf).dimensions("student", "student_id")
         self.assertRecipeSQL(
             recipe,
             """SELECT id_tests.student AS student,
@@ -1903,14 +1600,8 @@ student_id:
             chris,1,chris,1
             """,
         )
-        firstrow = recipe.all()[0]
-        assert firstrow.student == "annika"
-        assert firstrow.student_id == "annika"
-        assert firstrow.student_id_id == 2
 
-        recipe = Recipe(shelf=shelf, session=self.session).dimensions(
-            "student_id", "student"
-        )
+        recipe = self.recipe(shelf=shelf).dimensions("student_id", "student")
         self.assertRecipeSQL(
             recipe,
             """SELECT id_tests.student AS student,
@@ -1928,10 +1619,6 @@ student_id:
             chris,1,chris,1
             """,
         )
-        firstrow = recipe.all()[0]
-        assert firstrow.student == "annika"
-        assert firstrow.student_id == "annika"
-        assert firstrow.student_id_id == 2
 
 
 class TestParsedFieldConfig(ConfigTestBase):
@@ -1959,7 +1646,7 @@ department_buckets:
       condition: '="moo"'
     buckets_default_label: 'others'
 """,
-            ScoresWithNulls,
+            self.scores_with_nulls_table,
         )
         assert shelf["convertdate"].meta["_config"]["field"] == "month(test_date)"
         assert (
