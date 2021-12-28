@@ -26,7 +26,7 @@ class TestDateUtils(object):
         assert convert_to_end_datetime("foo") == "foo"
 
     def test_convert_to_eod_datetime(self):
-        """Only onvert datetimes that are first moment of day """
+        """Only onvert datetimes that are first moment of day"""
         assert convert_to_eod_datetime(date(2020, 1, 1)) == datetime(
             2020, 1, 1, 23, 59, 59, 999999
         )
