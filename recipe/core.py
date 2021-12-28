@@ -15,7 +15,6 @@ from recipe.dynamic_extensions import run_hooks
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Filter, Having, Ingredient, Metric
 from recipe.schemas import recipe_schema
-from recipe.schemas.config_constructors import parse_unvalidated_condition
 from recipe.shelf import Shelf
 from recipe.utils import prettyprintable_sql, recipe_arg
 

@@ -423,28 +423,6 @@ GROUP BY first""",
         self.assertEqual(recipe.all()[0].age, 15)
         self.assertEqual(recipe.stats.rows, 1)
 
-    def test_from_config_filter_object(self):
-        config = {
-            "dimensions": ["last"],
-            "metrics": ["age"],
-            "filters": [{"field": "age", "gt": 13}],
-        }
-
-        shelf = copy(self.mytable_shelf)
-        # The shelf must have an accurate `select_from` in order to allow
-        # passing in full ingredient structures, instead of just names. That's
-        # because we need to be able to map a field name to an actual column.
-        shelf.Meta.select_from = self.basic_table
-        recipe = Recipe.from_config(shelf, config).session(self.session)
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT foo.last AS last,
-       sum(foo.age) AS age
-FROM foo
-WHERE foo.age > 13
-GROUP BY last""",
-        )
-
     def test_from_config_extra_kwargs(self):
         config = {"dimensions": ["last"], "metrics": ["age"]}
         recipe = Recipe.from_config(self.shelf, config, order_by=["last"]).session(

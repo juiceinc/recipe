@@ -463,36 +463,11 @@ class ShelfFromValidatedYamlTestCase(ShelfFromYamlTestCase):
         self.shelf = Shelf.from_validated_yaml(content, table)
         self.shelf.Meta.anonymize = False
 
-    def test_null_condition(self):
-        """sureberus validated shelf doesn't accept null."""
-        content = """
-oldage:
-    kind: Metric
-    field:
-        value: age
-        condition: null
-"""
-        with self.assertRaises(Exception):
-            self.make_shelf(content)
-
-    def test_null_aggregation(self):
-        content = """
-oldage:
-    kind: Metric
-    field:
-        value: age
-        aggregation: null
-"""
-        self.make_shelf(content)
-        # Explicit null aggregations are respected, even in metrics
-        self.assertEqual(str(self.shelf["oldage"]), "(Metric)oldage foo.age")
-
     def test_invalid_definition(self):
         content = """
 oldage:
     kind: Metric
-    field:
-        value: age
+    field: age
 invalid:
     kind: Dimension
     field: age
