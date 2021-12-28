@@ -1,3 +1,5 @@
+"""Test the lark grammar used to define field expressions."""
+
 import time
 from unittest import TestCase
 from sqlalchemy.ext.serializer import loads, dumps
@@ -6,7 +8,7 @@ from freezegun import freeze_time
 
 from recipe import Recipe
 from recipe.schemas.lark_grammar import SQLAlchemyBuilder
-from tests.test_base import DataTypesTable, mytable_shelf, oven
+from tests.test_base import RecipeTestCase
 
 utc_offset = -1 * time.localtime().tm_gmtoff / 3600.0 + time.localtime().tm_isdst
 
@@ -16,11 +18,12 @@ def to_sql(expr):
     return str(expr.compile(compile_kwargs={"literal_binds": True}))
 
 
-class TestBase(TestCase):
+class GrammarTestCase(RecipeTestCase):
     maxDiff = None
 
     def setUp(self):
-        self.builder = SQLAlchemyBuilder.get_builder(DataTypesTable)
+        super().setUp()
+        self.builder = SQLAlchemyBuilder.get_builder(self.datatypes_table)
 
     def examples(self, input_rows):
         """Take input where each line looks like
@@ -69,7 +72,7 @@ class TestBase(TestCase):
             yield field, expected_error
 
 
-class TestSQLAlchemyBuilder(TestBase):
+class TestSQLAlchemyBuilder(GrammarTestCase):
     def test_drivername(self):
         self.assertEqual(self.builder.drivername, "sqlite")
 
@@ -112,9 +115,7 @@ class TestSQLAlchemyBuilder(TestBase):
     def test_selectable_recipe(self):
         """Test a selectable that is a recipe"""
         recipe = (
-            Recipe(shelf=mytable_shelf, session=oven.Session())
-            .metrics("age")
-            .dimensions("first")
+            self.recipe(shelf=self.mytable_shelf).metrics("age").dimensions("first")
         )
         b = SQLAlchemyBuilder(selectable=recipe)
         type_examples = """
@@ -140,9 +141,7 @@ class TestSQLAlchemyBuilder(TestBase):
 
     def test_selectable_orm(self):
         """Test a selectable that is a orm class"""
-        from tests.test_base import DataTypeser
-
-        b = SQLAlchemyBuilder(selectable=DataTypeser)
+        b = SQLAlchemyBuilder(selectable=self.datatypes_table)
         type_examples = """
         [score]                         -> num
         score                           -> num
@@ -169,9 +168,7 @@ class TestSQLAlchemyBuilder(TestBase):
 
     def test_selectable_census(self):
         """Test a selectable that is a orm class"""
-        from tests.test_base import Census
-
-        b = SQLAlchemyBuilder(selectable=Census)
+        b = SQLAlchemyBuilder(selectable=self.census_table)
         type_examples = """
         age                             -> num
         state                           -> str
@@ -196,7 +193,7 @@ class TestSQLAlchemyBuilder(TestBase):
             self.assertEqual(to_sql(expr), expected_sql)
 
 
-class TestSQLAlchemyBuilderConvertDates(TestBase):
+class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
     def test_enforce_convert_dates(self):
         """Enforce aggregation will wrap the function in a sum if no aggregation was seen"""
 
@@ -244,7 +241,7 @@ class TestSQLAlchemyBuilderConvertDates(TestBase):
             self.assertEqual(to_sql(expr), expected_sql)
 
 
-class TestDataTypesTable(TestBase):
+class TestDataTypesTable(GrammarTestCase):
     def test_fields_and_addition(self):
         """These examples should all succeed"""
 
@@ -543,7 +540,7 @@ avg(test_date)
             self.assertEqual(str(e.exception).strip(), expected_error.strip())
 
 
-class TestDataTypesTableDates(TestBase):
+class TestDataTypesTableDates(GrammarTestCase):
     @freeze_time("2020-01-14 09:21:34", tz_offset=utc_offset)
     def test_dates(self):
         good_examples = f"""
@@ -626,7 +623,7 @@ class TestDataTypesTableDatesInBigquery(TestDataTypesTableDates):
 
     def setUp(self):
         SQLAlchemyBuilder.clear_builder_cache()
-        self.builder = SQLAlchemyBuilder.get_builder(DataTypesTable)
+        self.builder = SQLAlchemyBuilder.get_builder(self.datatypes_table)
         self.builder.drivername = "bigquery"
         self.builder.transformer.drivername = "bigquery"
 
@@ -653,7 +650,7 @@ class TestDataTypesTableDatesInBigquery(TestDataTypesTableDates):
             self.assertEqual(to_sql(expr), expected_sql)
 
 
-class TestAggregations(TestBase):
+class TestAggregations(GrammarTestCase):
     def test_allow_aggregation(self):
         # Can't tests with date conversions and freeze time :/
         good_examples = f"""
@@ -799,7 +796,7 @@ percentile13([score])
             self.assertEqual(to_sql(expr), expected_sql)
 
 
-class TestIf(TestBase):
+class TestIf(GrammarTestCase):
     def test_if(self):
         good_examples = f"""
         # Number if statements
@@ -899,7 +896,7 @@ if(department = "foo", department, valid_score, score)
             self.assertEqual(str(e.exception).strip(), expected_error.strip())
 
 
-class TestSQLAlchemySerialize(TestBase):
+class TestSQLAlchemySerialize(GrammarTestCase):
     """Test we can serialize and deserialize parsed results using
     sqlalchemy.ext.serialize. This is important because parsing is
     costly."""
@@ -919,5 +916,5 @@ class TestSQLAlchemySerialize(TestBase):
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, forbid_aggregation=False, debug=True)
             ser = dumps(expr)
-            expr = loads(ser, self.builder.selectable.metadata, oven.Session())
+            expr = loads(ser, self.builder.selectable.metadata, self.oven.Session())
             self.assertEqual(to_sql(expr), expected_sql)

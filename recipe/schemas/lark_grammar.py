@@ -24,6 +24,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative.api import DeclarativeMeta
 from sqlalchemy.sql.base import ImmutableColumnCollection
+from sqlalchemy.sql.expression import select
 from sqlalchemy.sql.sqltypes import Numeric
 
 from . import engine_support
@@ -1023,6 +1024,9 @@ BUILDER_CACHE = {}
 class SQLAlchemyBuilder(object):
     @classmethod
     def get_builder(cls, selectable):
+        print("Getting builder for", selectable, type(selectable))
+        from pprint import pprint
+
         if selectable not in BUILDER_CACHE:
             BUILDER_CACHE[selectable] = cls(selectable)
         return BUILDER_CACHE[selectable]
@@ -1039,6 +1043,7 @@ class SQLAlchemyBuilder(object):
         Args:
             selectable (Table): A SQLAlchemy selectable
         """
+        print(selectable, type(selectable))
         self.selectable = selectable
         # Database driver
         try:

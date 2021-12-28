@@ -663,8 +663,8 @@ class RecipeTestCase(TestCase):
         Tables are loaded using data in data/{tablename}.yml
         """
         super(RecipeTestCase, cls).setUpClass()
-        cls.meta = MetaData()
         cls.oven = get_oven(cls.connection_string)
+        cls.meta = MetaData(bind=cls.oven.engine)
         cls.session = cls.oven.Session()
 
         cls.root_dir = os.path.abspath(os.path.dirname(__file__))
