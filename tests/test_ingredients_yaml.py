@@ -1917,7 +1917,7 @@ student_id:
                 id_tests.student_id AS student_id
             FROM id_tests
             GROUP BY student,
-                    student_id"""
+                    student_id""",
         )
         self.assertRecipeCSV(
             recipe,
