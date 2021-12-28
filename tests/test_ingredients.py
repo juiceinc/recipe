@@ -19,7 +19,7 @@ from recipe.utils import filter_to_string
 from .test_base import RecipeTestCase
 
 
-class TestIngredients(RecipeTestCase):
+class IngredientsTestCase(RecipeTestCase):
     def test_ingredient_init(self):
         ingr = Ingredient()
         self.assertEqual(len(ingr.id), 12)
@@ -689,7 +689,7 @@ class TestDimension(RecipeTestCase):
         self.assertEqual(len(d.formatters), 2)
 
 
-class TestIdValueDimension(RecipeTestCase):
+class IdValueDimensionTestCase(RecipeTestCase):
     def test_init(self):
         # IdValueDimension should have two params
         with self.assertRaises(TypeError):
@@ -806,7 +806,7 @@ class TestMetric(RecipeTestCase):
         assert d.expression is None
 
 
-class TestDivideMetric(RecipeTestCase):
+class DivideMetricTestCase(RecipeTestCase):
     def test_init(self):
         # DivideMetric should have a two expressions
         with self.assertRaises(TypeError):
