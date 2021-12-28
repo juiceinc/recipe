@@ -150,7 +150,7 @@ class Ingredient(object):
 
     def describe(self):
         """A string representation of the ingredient."""
-        return u"({}){} {}".format(self.__class__.__name__, self.id, self._stringify())
+        return "({}){} {}".format(self.__class__.__name__, self.id, self._stringify())
 
     def _format_value(self, value):
         """Formats value using any stored formatters."""
@@ -179,7 +179,7 @@ class Ingredient(object):
                 return ("",)
         else:
             raise BadIngredient(
-                "column_suffixes must be supplied if there is " "more than one column"
+                "column_suffixes must be supplied if there is more than one column"
             )
 
     @property
@@ -193,7 +193,10 @@ class Ingredient(object):
     @property
     def order_by_columns(self):
         """Yield columns to be used in an order by using this ingredient. Column
-        ordering is in reverse order of columns
+        ordering is in reverse order of columns. When grouping, recipe supports
+        two strategies. group_by_strategy == "labels" uses the labels added to columns.
+        This is preferable and is supported by some databases. SQL Server requires
+        grouping by the original column expressions
         """
         # Ensure the labels are generated
         if not self._labels:
@@ -206,8 +209,8 @@ class Ingredient(object):
                 suffix = ""
 
             return [
-                text(lbl + suffix)
-                for col, lbl in reversed(list(zip(self.columns, self._labels)))
+                text(f"{lbl}{suffix}")
+                for _, lbl in reversed(list(zip(self.columns, self._labels)))
             ]
         else:
             if self.ordering == "desc":
@@ -221,8 +224,9 @@ class Ingredient(object):
         a row.
         """
         if self.formatters:
-            raw_property = self.id + "_raw"
-            yield self.id, lambda row: self._format_value(getattr(row, raw_property))
+            yield self.id, lambda row: self._format_value(
+                getattr(row, f"{self.id}_raw")
+            )
 
     def _order(self):
         """Ingredients are sorted by subclass then by id."""
@@ -629,7 +633,7 @@ class Dimension(Ingredient):
             list(self.query_columns)
 
         if self.group_by_strategy == "labels":
-            return [lbl for gb, lbl in zip(self._group_by, self._labels)]
+            return [lbl for _, lbl in zip(self._group_by, self._labels)]
         else:
             return self._group_by
 

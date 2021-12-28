@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import pytest
-from sqlalchemy import case, distinct, func, cast, Float
-from .test_base import RecipeTestCase
+from sqlalchemy import func
+
 from recipe import (
     BadIngredient,
-    InvalidColumnError,
     Dimension,
     DivideMetric,
     Filter,
@@ -16,12 +14,9 @@ from recipe import (
     Metric,
     WtdAvgMetric,
 )
-from recipe.schemas.config_constructors import (
-    ingredient_from_unvalidated_dict as ingredient_from_dict,
-)
-from recipe.schemas.config_constructors import parse_unvalidated_field as parse_field
-from recipe.schemas.config_constructors import SAFE_DIVISON_EPSILON
 from recipe.utils import filter_to_string
+
+from .test_base import RecipeTestCase
 
 
 class TestIngredients(RecipeTestCase):
@@ -65,6 +60,79 @@ class TestIngredients(RecipeTestCase):
             )
             ingr.make_column_suffixes()
 
+    def test_formatters(self):
+        def make_cow(value):
+            return f"{value} says moo"
+
+        with self.assertRaises(BadIngredient):
+            bad_ingr = Ingredient(formatters=make_cow)
+
+        cookie_ingr = Ingredient(id="cookie")
+        self.assertEqual(cookie_ingr._format_value("a cookie"), "a cookie")
+        extras = list(cookie_ingr.cauldron_extras)
+        self.assertEqual(len(extras), 0)
+
+        cow_ingr = Ingredient(id="cow", formatters=[make_cow])
+        self.assertEqual(cow_ingr._format_value("a cow"), "a cow says moo")
+        extras = list(cow_ingr.cauldron_extras)
+        self.assertEqual(len(extras), 1)
+        # If there are formatters, the original value will be available at {ingr.id}_raw
+        # And the {ingr.id} property will have the formatter applied to it
+        self.assertEqual(extras[0][0], "cow")
+
+    def test_order_by_columns(self):
+        multi_column_ingr_with_suffixes = Ingredient(
+            id="foo",
+            columns=[self.basic_table.c.first, self.basic_table.c.last],
+            column_suffixes=("_a", "_b"),
+        )
+        self.assertEqual(
+            [str(tc) for tc in multi_column_ingr_with_suffixes.order_by_columns],
+            ["foo_b", "foo_a"],
+        )
+        multi_column_ingr_with_suffixes.ordering = "desc"
+        self.assertEqual(
+            [str(tc) for tc in multi_column_ingr_with_suffixes.order_by_columns],
+            ["foo_b DESC", "foo_a DESC"],
+        )
+        multi_column_ingr_with_suffixes.ordering = ""
+        multi_column_ingr_with_suffixes.group_by_strategy = "none"
+        self.assertEqual(
+            [str(tc) for tc in multi_column_ingr_with_suffixes.order_by_columns],
+            ["foo.last", "foo.first"],
+        )
+        multi_column_ingr_with_suffixes.ordering = "desc"
+        self.assertEqual(
+            [str(tc) for tc in multi_column_ingr_with_suffixes.order_by_columns],
+            ["foo.last DESC", "foo.first DESC"],
+        )
+
+    def test_column_suffixes(self):
+        empty_ingr = Ingredient()
+        ingr = Ingredient(columns=[self.basic_table.c.first])
+        formatted_ingr = Ingredient(
+            columns=[self.basic_table.c.first],
+            formatters=[lambda value: f"{value} says moo"],
+        )
+        # This will raise an error when used.
+        multi_column_ingr = Ingredient(
+            columns=[self.basic_table.c.first, self.basic_table.c.last]
+        )
+        # If multiple columns are present they must each have an explicit suffix provided.
+        multi_column_ingr_with_suffixes = Ingredient(
+            columns=[self.basic_table.c.first, self.basic_table.c.last],
+            column_suffixes=("_a", "_b"),
+        )
+
+        self.assertEqual(empty_ingr.make_column_suffixes(), tuple())
+        self.assertEqual(ingr.make_column_suffixes(), ("",))
+        self.assertEqual(formatted_ingr.make_column_suffixes(), ("_raw",))
+        self.assertEqual(
+            multi_column_ingr_with_suffixes.make_column_suffixes(), ("_a", "_b")
+        )
+        with self.assertRaises(BadIngredient):
+            multi_column_ingr.make_column_suffixes()
+
     def test_repr(self):
         ingr = Ingredient(
             column_suffixes=("_foo", "_moo"),
@@ -79,6 +147,7 @@ class TestIngredients(RecipeTestCase):
         """Items sort in a fixed order"""
         ingr = Ingredient(columns=[self.basic_table.c.first], id=1)
         ingr2 = Ingredient(columns=[self.basic_table.c.first], id=2)
+        ingr2copy = Ingredient(columns=[self.basic_table.c.first], id=2)
         dim = Dimension(self.basic_table.c.first, id=3)
         met = Metric(func.sum(self.basic_table.c.first), id=4)
         met2 = Metric(func.sum(self.basic_table.c.first), id=2)
@@ -87,6 +156,7 @@ class TestIngredients(RecipeTestCase):
 
         items = [filt, hav, met2, met, ingr, dim, ingr2]
         self.assertNotEqual(ingr, ingr2)
+        self.assertEqual(ingr2, ingr2copy)
         self.assertLess(dim, met)
         self.assertLess(met, filt)
         self.assertLess(filt, hav)
@@ -294,13 +364,17 @@ class TestIngredientBuildFilter(RecipeTestCase):
         self.eval_invalid_filters(baddata)
 
     def test_vector_filter(self):
+        """Vector filters are created with in, notin, and between"""
+
         strdim = Dimension(self.basic_table.c.first)
         numdim = Dimension(self.basic_table.c.age)
         datedim = Dimension(self.basic_table.c.birth_date)
+        dtdim = Dimension(self.basic_table.c.dt)
 
         self.assertEqual(strdim.datatype, "str")
         self.assertEqual(numdim.datatype, "num")
         self.assertEqual(datedim.datatype, "date")
+        self.assertEqual(dtdim.datatype, "datetime")
 
         seconds_in_day = 24 * 60 * 60
         data = [
@@ -345,6 +419,12 @@ class TestIngredientBuildFilter(RecipeTestCase):
                 [seconds_in_day * 3],
                 "notin",
                 "foo.birth_date NOT IN ('1970-01-04')",
+            ),
+            (
+                dtdim,
+                [seconds_in_day * 2, seconds_in_day * 5],
+                "between",
+                "foo.dt BETWEEN '1970-01-03 00:00:00' AND '1970-01-06 00:00:00'",
             ),
         ]
 
@@ -567,6 +647,14 @@ class TestDimension(RecipeTestCase):
         self.assertEqual(len(d.columns), 3)
         self.assertEqual(d.make_column_suffixes(), ("_id", "", "_age"))
 
+        # Dimension roles can't use reserved names
+        with self.assertRaises(BadIngredient):
+            d = Dimension(
+                self.basic_table.c.first,
+                raw_expression=self.basic_table.c.last,
+                id="moo",
+            )
+
     def test_dimension_with_lookup(self):
         """Creating a dimension with extra roles"""
         # Dimension lookup should be a dict
@@ -577,6 +665,20 @@ class TestDimension(RecipeTestCase):
         self.assertEqual(len(d.columns), 1)
         self.assertEqual(len(d.group_by), 1)
         self.assertEqual(len(d.formatters), 1)
+        self.assertEqual(d._format_value("man"), "mouse")
+        self.assertEqual(d._format_value("woman"), "woman")
+
+        d = Dimension(
+            self.basic_table.c.first,
+            lookup={"man": "mouse"},
+            lookup_default="cookie",
+            id="moo",
+        )
+        self.assertEqual(len(d.columns), 1)
+        self.assertEqual(len(d.group_by), 1)
+        self.assertEqual(len(d.formatters), 1)
+        self.assertEqual(d._format_value("man"), "mouse")
+        self.assertEqual(d._format_value("woman"), "cookie")
 
         # Existing formatters are preserved
         d = Dimension(
