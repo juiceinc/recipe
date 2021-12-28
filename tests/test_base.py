@@ -588,6 +588,11 @@ class RecipeTestCase(TestCase):
     connection_string = "sqlite://"
     create_table_kwargs = {}
 
+    def setUp(self):
+        super().setUp()
+        # Set up a default shelf to use
+        self.shelf = self.mytable_shelf
+
     def assertRecipeCSV(self, recipe: Recipe, csv_text: str, ignore_columns=None):
         """Recipe data returns the supplied csv content"""
         actual = recipe.dataset.export("csv", lineterminator=str("\n")).strip("\n")

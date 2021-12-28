@@ -56,10 +56,6 @@ class DummyExtension(RecipeExtension):
 class ExtensionAttributesTestCase(RecipeTestCase):
     """Test that extensions expose attributes that are available for chaining on recipe"""
 
-    def setUp(self):
-        super().setUp()
-        self.shelf = self.mytable_shelf
-
     def test_call_extension_method(self):
         self.extension_classes = []
         recipe = self.recipe().metrics("age").dimensions("first")
@@ -119,7 +115,6 @@ class SimpleExtensionTestCase(RecipeTestCase):
 
     def setUp(self):
         super().setUp()
-        self.shelf = self.mytable_shelf
 
         class AddFilter(RecipeExtension):
             """A simple extension that adds a filter to every query."""
@@ -157,10 +152,6 @@ class AutomaticFiltersTestCase(RecipeTestCase):
     """The AutomaticFilters extension."""
 
     extension_classes = [AutomaticFilters]
-
-    def setUp(self) -> None:
-        super().setUp()
-        self.shelf = self.mytable_shelf
 
     def test_from_config(self):
         """Check the internal state of an extension after configuration"""
@@ -1086,10 +1077,11 @@ class PaginateInlineTestCase(PaginateTestCase):
 
 
 class TestCompareRecipeExtension(RecipeTestCase):
+    extension_classes = [CompareRecipe]
+
     def setUp(self):
         super().setUp()
-        self.shelf = copy(self.census_shelf)
-        self.extension_classes = [CompareRecipe]
+        self.shelf = self.census_shelf
 
     def test_compare(self):
         """A basic comparison recipe. The base recipe looks at all data, the
@@ -1272,9 +1264,10 @@ ORDER BY census.sex,
 
 
 class TestSummarizeOverExtension(RecipeTestCase):
+    extension_classes = [SummarizeOver, Anonymize, AutomaticFilters]
+
     def setUp(self):
         super().setUp()
-        self.extension_classes = [SummarizeOver, Anonymize, AutomaticFilters]
         self.anonymized_foo_shelf = Shelf(
             {
                 "first": Dimension(
@@ -1634,9 +1627,10 @@ GROUP BY summarize.department""",
 
 
 class TestBlendRecipeExtension(RecipeTestCase):
+    extension_classes = [BlendRecipe]
+
     def setUp(self):
-        self.shelf = copy(self.census_shelf)
-        self.extension_classes = [BlendRecipe]
+        self.shelf = self.census_shelf
 
     def test_self_blend(self):
         """A basic comparison recipe. The base recipe looks at all data, the

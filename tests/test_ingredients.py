@@ -20,8 +20,6 @@ from .test_base import RecipeTestCase
 
 
 class TestIngredients(RecipeTestCase):
-    def setup(self):
-        self.shelf = self.mytable_shelf
 
     def test_ingredient_init(self):
         ingr = Ingredient()

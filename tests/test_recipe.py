@@ -8,10 +8,6 @@ from recipe import BadRecipe, Dimension, Filter, Having, Metric, Recipe, Shelf
 
 
 class TestRecipeIngredients(RecipeTestCase):
-    def setUp(self):
-        super().setUp()
-        self.shelf = self.mytable_shelf
-
     def test_dimension(self):
         recipe = self.recipe().metrics("age").dimensions("first")
         self.assertRecipeSQL(
@@ -28,9 +24,6 @@ GROUP BY first""",
             hi,15,hi
             """,
         )
-        self.assertEqual(recipe.all()[0].first, "hi")
-        self.assertEqual(recipe.all()[0].age, 15)
-        self.assertEqual(recipe.stats.rows, 1)
 
     def test_raw_metrics_raw_dimensions(self):
         """Metric_ids and dimension_ids hold unique used metrics and dimensions.
@@ -47,9 +40,13 @@ GROUP BY first""",
 FROM foo
 GROUP BY first"""
         )
-        self.assertEqual(recipe.all()[0].first, "hi")
-        self.assertEqual(recipe.all()[0].age, 15)
-        self.assertEqual(recipe.stats.rows, 1)
+        self.assertRecipeCSV(
+            recipe,
+            """
+            first,age,first_id
+            hi,15,hi
+            """,
+        )
         self.assertEqual(recipe.metric_ids, ("age",))
         self.assertEqual(recipe.dimension_ids, ("first",))
         self.assertEqual(recipe.raw_dimensions, ("first", "first"))
@@ -66,13 +63,14 @@ FROM foo
 GROUP BY firstlast_id,
          firstlast"""
         )
-        self.assertEqual(recipe.all()[0].firstlast, "fred")
-        self.assertEqual(recipe.all()[0].firstlast_id, "hi")
-        self.assertEqual(recipe.all()[0].age, 10)
-        self.assertEqual(recipe.all()[1].firstlast, "there")
-        self.assertEqual(recipe.all()[1].firstlast_id, "hi")
-        self.assertEqual(recipe.all()[1].age, 5)
-        self.assertEqual(recipe.stats.rows, 2)
+        self.assertRecipeCSV(
+            recipe,
+            """
+            firstlast_id,firstlast,age,firstlast_id
+            hi,fred,10,hi
+            hi,there,5,hi
+            """,
+        )
 
     def test_multirole_dimension(self):
         """Create a dimension with extra roles and lookup"""
@@ -94,15 +92,14 @@ GROUP BY d_id,
          d,
          d_age"""
         )
-        self.assertEqual(recipe.all()[0].d, "fred")
-        self.assertEqual(recipe.all()[0].d_id, "hi")
-        self.assertEqual(recipe.all()[0].d_age, 10)
-        self.assertEqual(recipe.all()[0].age, 10)
-        self.assertEqual(recipe.all()[1].d, "there")
-        self.assertEqual(recipe.all()[1].d_id, "hi")
-        self.assertEqual(recipe.all()[1].d_age, 5)
-        self.assertEqual(recipe.all()[1].age, 5)
-        self.assertEqual(recipe.stats.rows, 2)
+        self.assertRecipeCSV(
+            recipe,
+            """
+            d_id,d,d_age,age,d_id
+            hi,fred,10,10,hi
+            hi,there,5,5,hi
+            """,
+        )
 
     def test_multirole_dimension_with_lookup(self):
         """Create a dimension with extra roles and lookup"""
@@ -127,18 +124,14 @@ GROUP BY d_id,
          d_raw,
          d_age"""
         )
-
-        self.assertEqual(recipe.all()[0].d_raw, "fred")
-        self.assertEqual(recipe.all()[0].d, "DEFAULT")
-        self.assertEqual(recipe.all()[0].d_id, "hi")
-        self.assertEqual(recipe.all()[0].d_age, 10)
-        self.assertEqual(recipe.all()[0].age, 10)
-        self.assertEqual(recipe.all()[1].d_raw, "there")
-        self.assertEqual(recipe.all()[1].d, "DEFAULT")
-        self.assertEqual(recipe.all()[1].d_id, "hi")
-        self.assertEqual(recipe.all()[1].d_age, 5)
-        self.assertEqual(recipe.all()[1].age, 5)
-        self.assertEqual(recipe.stats.rows, 2)
+        self.assertRecipeCSV(
+            recipe,
+            """
+            d_id,d_raw,d_age,age,d,d_id
+            hi,fred,10,10,DEFAULT,hi
+            hi,there,5,5,DEFAULT,hi
+            """,
+        )
 
     def test_offset(self):
         recipe = self.recipe().metrics("age").dimensions("first").offset(1)
@@ -154,7 +147,6 @@ OFFSET 1"""
         self.assertEqual(len(recipe.all()), 0)
         self.assertEqual(recipe.stats.rows, 0)
         self.assertEqual(recipe.one(), [])
-        self.assertEqual(recipe.dataset.csv, "\r\n")
 
     def test_is_postgres(self):
         recipe = self.recipe().metrics("age")
@@ -236,10 +228,14 @@ FROM foo
 GROUP BY last
 ORDER BY last"""
         )
-        self.assertEqual(recipe.all()[0].last, "fred")
-        self.assertEqual(recipe.all()[0].last_id, "fred")
-        self.assertEqual(recipe.all()[0].age, 10)
-        self.assertEqual(recipe.stats.rows, 2)
+        self.assertRecipeCSV(
+            recipe,
+            """
+            last,age,last_id
+            fred,10,fred
+            there,5,there
+            """,
+        )
 
     def test_order_bys(self):
         recipe = self.recipe().metrics("age").dimensions("last").order_by("last")
@@ -251,9 +247,14 @@ FROM foo
 GROUP BY last
 ORDER BY last"""
         )
-        self.assertEqual(recipe.all()[0].last, "fred")
-        self.assertEqual(recipe.all()[0].age, 10)
-        self.assertEqual(recipe.stats.rows, 2)
+        self.assertRecipeCSV(
+            recipe,
+            """
+            last,age,last_id
+            fred,10,fred
+            there,5,there
+            """,
+        )
 
         recipe = self.recipe().metrics("age").dimensions("last").order_by("age")
         assert (
@@ -264,9 +265,14 @@ FROM foo
 GROUP BY last
 ORDER BY age"""
         )
-        self.assertEqual(recipe.all()[0].last, "there")
-        self.assertEqual(recipe.all()[0].age, 5)
-        self.assertEqual(recipe.stats.rows, 2)
+        self.assertRecipeCSV(
+            recipe,
+            """
+            last,age,last_id
+            there,5,there
+            fred,10,fred
+            """,
+        )
 
         recipe = self.recipe().metrics("age").dimensions("last").order_by("-age")
         assert (
@@ -277,38 +283,43 @@ FROM foo
 GROUP BY last
 ORDER BY age DESC"""
         )
-        self.assertEqual(recipe.all()[0].last, "fred")
-        self.assertEqual(recipe.all()[0].age, 10)
-        self.assertEqual(recipe.stats.rows, 2)
+        self.assertRecipeCSV(
+            recipe,
+            """
+            last,age,last_id
+            fred,10,fred
+            there,5,there
+            """,
+        )
 
         # Idvalue dimension
         recipe = (
             self.recipe().metrics("age").dimensions("firstlast").order_by("firstlast")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS firstlast_id,
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS firstlast_id,
        foo.last AS firstlast,
        sum(foo.age) AS age
 FROM foo
 GROUP BY firstlast_id,
          firstlast
 ORDER BY firstlast,
-         firstlast_id"""
+         firstlast_id""",
         )
         recipe = (
             self.recipe().metrics("age").dimensions("firstlast").order_by("-firstlast")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS firstlast_id,
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS firstlast_id,
        foo.last AS firstlast,
        sum(foo.age) AS age
 FROM foo
 GROUP BY firstlast_id,
          firstlast
 ORDER BY firstlast DESC,
-         firstlast_id DESC"""
+         firstlast_id DESC""",
         )
 
         # Dimensions can define their own ordering
@@ -319,9 +330,9 @@ ORDER BY firstlast DESC,
             order_by_expression=func.upper(self.basic_table.c.last),
         )
         recipe = self.recipe().metrics("age").dimensions(d).order_by(d)
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS d_id,
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS d_id,
        foo.last AS d,
        upper(foo.last) AS d_order_by,
        sum(foo.age) AS age
@@ -331,41 +342,51 @@ GROUP BY d_id,
          d_order_by
 ORDER BY d_order_by,
          d,
-         d_id"""
+         d_id""",
         )
 
     def test_recipe_init(self):
         """Test that all options can be passed in the init"""
         recipe = self.recipe(metrics=("age",), dimensions=("last",)).order_by("last")
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.last AS last,
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
 GROUP BY last
-ORDER BY last"""
+ORDER BY last""",
         )
-        self.assertEqual(recipe.all()[0].last, "fred")
-        self.assertEqual(recipe.all()[0].age, 10)
-        self.assertEqual(recipe.stats.rows, 2)
+        self.assertRecipeCSV(
+            recipe,
+            """
+            last,age,last_id
+            fred,10,fred
+            there,5,there
+            """,
+        )
+
         recipe = self.recipe(
             metrics=["age"],
             dimensions=["first"],
             filters=[self.basic_table.c.age > 4],
             order_by=["first"],
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS first,
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
 WHERE foo.age > 4
 GROUP BY first
-ORDER BY first"""
+ORDER BY first""",
         )
-        self.assertEqual(recipe.all()[0].first, "hi")
-        self.assertEqual(recipe.all()[0].age, 15)
-        self.assertEqual(recipe.stats.rows, 1)
+        self.assertRecipeCSV(
+            recipe,
+            """
+            first,age,first_id
+            hi,15,hi
+            """,
+        )
 
     def test_from_config(self):
         shelf = copy(self.mytable_shelf)
@@ -376,28 +397,28 @@ ORDER BY first"""
             "filters": ["ageover4"],
         }
         recipe = self.recipe_from_config(config, shelf=shelf)
-        assert (
-            recipe.to_sql()
-            == """\
-SELECT foo.first AS first,
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS first,
        foo.last AS last,
        sum(foo.age) AS age
 FROM foo
 WHERE foo.age > 4
 GROUP BY first,
-         last"""
+         last""",
         )
 
     def test_order_bys_not_matching_ingredients(self):
         """If an order_by is not found in dimensions+metrics, we ignore it"""
         recipe = self.recipe().metrics("age").dimensions("first").order_by("last")
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS first,
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY first"""
+GROUP BY first""",
         )
+        self.assertRecipeSQLNotContains(recipe, "last")
         self.assertEqual(recipe.all()[0].first, "hi")
         self.assertEqual(recipe.all()[0].age, 15)
         self.assertEqual(recipe.stats.rows, 1)
@@ -415,14 +436,13 @@ GROUP BY first"""
         # because we need to be able to map a field name to an actual column.
         shelf.Meta.select_from = self.basic_table
         recipe = Recipe.from_config(shelf, config).session(self.session)
-        assert (
-            recipe.to_sql()
-            == """\
-SELECT foo.last AS last,
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
 WHERE foo.age > 13
-GROUP BY last"""
+GROUP BY last""",
         )
 
     def test_from_config_extra_kwargs(self):
@@ -430,14 +450,13 @@ GROUP BY last"""
         recipe = Recipe.from_config(self.shelf, config, order_by=["last"]).session(
             self.session
         )
-        assert (
-            recipe.to_sql()
-            == """\
-SELECT foo.last AS last,
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
 GROUP BY last
-ORDER BY last"""
+ORDER BY last""",
         )
 
     def test_recipe_empty(self):
@@ -446,6 +465,7 @@ ORDER BY last"""
             recipe.all()
 
     def test_recipe_multi_tables(self):
+        """All ingredients in the recipe must use the same table"""
         dim = Dimension(self.scores_table.c.username)
         recipe = self.recipe().dimensions("last", dim).metrics("age")
         with self.assertRaises(BadRecipe):
@@ -467,19 +487,23 @@ ORDER BY last"""
             .filters(self.basic_table.c.age > 2)
             .order_by("last")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.last AS last,
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
 WHERE foo.age > 2
 GROUP BY last
-ORDER BY last"""
+ORDER BY last""",
         )
-        self.assertEqual(recipe.all()[0].last, "fred")
-        self.assertEqual(recipe.all()[0].age, 10)
-        self.assertEqual(recipe.stats.rows, 2)
-        self.assertEqual(len(list(recipe.filter_ids)), 1)
+        self.assertRecipeCSV(
+            recipe,
+            """
+            last,age,last_id
+            fred,10,fred
+            there,5,there
+            """,
+        )
 
     def test_having(self):
         hv = Having(func.sum(self.basic_table.c.age) < 10)
@@ -491,46 +515,38 @@ ORDER BY last"""
             .filters(hv)
             .order_by("last")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.last AS last,
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.last AS last,
        sum(foo.age) AS age
 FROM foo
 WHERE foo.age > 2
 GROUP BY last
 HAVING sum(foo.age) < 10
-ORDER BY last"""
+ORDER BY last""",
         )
-
-        assert (
-            recipe.dataset.csv.replace("\r\n", "\n")
-            == """last,age,last_id
-there,5,there
-"""
+        self.assertRecipeCSV(
+            recipe,
+            """
+            last,age,last_id
+            there,5,there
+            """,
         )
 
 
 class StatsTestCase(RecipeTestCase):
-    def setUp(self):
-        super().setUp()
-        self.shelf = self.mytable_shelf
-
     def test_stats(self):
         recipe = self.recipe().metrics("age").dimensions("last")
         recipe.all()
 
         # Stats are ready after the recipe is run
         self.assertEqual(recipe.stats.rows, 2)
-        assert recipe.stats.dbtime < 1.0
-        assert recipe.stats.enchanttime < 1.0
-        assert recipe.stats.from_cache is False
+        self.assertLess(recipe.stats.dbtime, 1.0)
+        self.assertLess(recipe.stats.enchanttime, 1.0)
+        self.assertFalse(recipe.stats.from_cache)
 
 
 class NestedRecipeTestCase(RecipeTestCase):
-    def setUp(self):
-        super().setUp()
-        self.shelf = self.mytable_shelf
-
     def test_nested_recipe(self):
         recipe = self.recipe().metrics("age").dimensions("last")
         from recipe import Metric, Dimension
@@ -539,31 +555,22 @@ class NestedRecipeTestCase(RecipeTestCase):
         nested_shelf = Shelf(
             {"age": Metric(func.sum(subq.c.age)), "last": Dimension(subq.c.last)}
         )
-
-        r = (
-            Recipe(shelf=nested_shelf, session=self.session)
-            .dimensions("last")
-            .metrics("age")
-        )
-        assert (
-            r.to_sql()
-            == """SELECT anon.last AS last,
+        r = self.recipe(shelf=nested_shelf).dimensions("last").metrics("age")
+        self.assertRecipeSQL(
+            r,
+            """SELECT anon.last AS last,
        sum(anon.age) AS age
 FROM
   (SELECT foo.last AS last,
           sum(foo.age) AS age
    FROM foo
    GROUP BY last) AS anon
-GROUP BY last"""
+GROUP BY last""",
         )
         self.assertEqual(len(r.all()), 2)
 
 
 class SelectFromTestCase(RecipeTestCase):
-    def setUp(self):
-        super().setUp()
-        self.shelf = self.mytable_shelf
-
     def test_recipe_with_select_from(self):
         j = join(
             self.census_table,
@@ -587,29 +594,25 @@ class SelectFromTestCase(RecipeTestCase):
             .select_from(j)
         )
 
-        assert (
-            r.to_sql()
-            == """SELECT state_fact.census_region_name AS region,
+        self.assertRecipeSQL(
+            r,
+            """SELECT state_fact.census_region_name AS region,
        sum(census.pop2000) AS pop
 FROM census
 JOIN state_fact ON census.state = state_fact.name
-GROUP BY region"""
+GROUP BY region""",
         )
-        assert (
-            r.dataset.tsv
-            == """region\tpop\tregion_id\r
-Northeast\t609480\tNortheast\r
-South\t5685230\tSouth\r
-"""
+        self.assertRecipeCSV(
+            r,
+            """
+            region,pop,region_id
+            Northeast,609480,Northeast
+            South,5685230,South
+            """,
         )
-        self.assertEqual(len(r.all()), 2)
 
 
 class ShelfSelectFromTestCase(RecipeTestCase):
-    def setUp(self):
-        super().setUp()
-        self.shelf = self.mytable_shelf
-
     def test_recipe_with_select_from(self):
         from recipe import Dimension, Metric
 
@@ -625,32 +628,31 @@ class ShelfSelectFromTestCase(RecipeTestCase):
             ),
         )
 
-        assert shelf.Meta.select_from is not None
+        self.assertTrue(shelf.Meta.select_from is not None)
 
         r = (
             Recipe(shelf=shelf, session=self.session)
             .dimensions("region")
             .metrics("pop")
         )
+        self.assertTrue(r._select_from is not None)
 
-        assert r._select_from is not None
-
-        assert (
-            r.to_sql()
-            == """SELECT state_fact.census_region_name AS region,
+        self.assertRecipeSQL(
+            r,
+            """SELECT state_fact.census_region_name AS region,
        sum(census.pop2000) AS pop
 FROM census
 JOIN state_fact ON census.state = state_fact.name
-GROUP BY region"""
+GROUP BY region""",
         )
-        assert (
-            r.dataset.tsv
-            == """region\tpop\tregion_id\r
-Northeast\t609480\tNortheast\r
-South\t5685230\tSouth\r
-"""
+        self.assertRecipeCSV(
+            r,
+            """
+            region,pop,region_id
+            Northeast,609480,Northeast
+            South,5685230,South
+            """,
         )
-        self.assertEqual(len(r.all()), 2)
 
     def test_recipe_as_subquery(self):
         """Use a recipe subquery as a source for generating a new shelf."""
@@ -665,23 +667,19 @@ South\t5685230\tSouth\r
         subq = recipe.subquery()
         recipe_subquery_shelf = Shelf({"pop": Metric(func.avg(subq.c.pop2000))})
         r2 = Recipe(shelf=recipe_subquery_shelf, session=self.session).metrics("pop")
-        assert (
-            r2.to_sql()
-            == """SELECT avg(anon_1.pop2000) AS pop
+        self.assertRecipeSQL(
+            r2,
+            """SELECT avg(anon_1.pop2000) AS pop
 FROM
   (SELECT census.state AS state,
           sum(census.pop2000) AS pop2000
    FROM census
-   GROUP BY state) AS anon_1"""
+   GROUP BY state) AS anon_1""",
         )
-        self.assertEqual(r2.dataset.tsv, """pop\r\n3147355.0\r\n""")
+        self.assertRecipeCSV(r2, "pop\n3147355.0")
 
 
 class CacheContextTestCase(RecipeTestCase):
-    def setUp(self):
-        super().setUp()
-        self.shelf = self.mytable_shelf
-
     def test_cache_context(self):
         recipe = self.recipe().metrics("age").dimensions("last")
         recipe.cache_context = "foo"
