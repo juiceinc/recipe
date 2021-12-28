@@ -876,7 +876,7 @@ ORDER BY state_raw""",
     def test_deprecated_ingredients_lookupdimension(self):
         """Skip this Deprecated ingredient kinds are not supperted in version 2"""
         pass
-
+ 
     def test_deprecated_ingredients_idvaluedimension(self):
         """Skip this Deprecated ingredient kinds are not supperted in version 2"""
         pass
