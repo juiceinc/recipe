@@ -16,7 +16,7 @@ class ConfigTestBase(RecipeTestCase):
     """A base class for testing shelves built from v1 or v2 config."""
 
     # The directory to look for yaml config files
-    yaml_location = "shelf_config_yaml"
+    yaml_location = "shelf_config"
     shelf_cache = {}
 
     def shelf_from_filename(self, shelf_name, selectable=None):
