@@ -142,265 +142,223 @@ class TestIngredients(RecipeTestCase):
 
 
 class TestIngredientBuildFilter(RecipeTestCase):
+    def eval_valid_filters(self, data):
+        for dim, value, operator, expected_sql in data:
+            filt = dim.build_filter(value, operator=operator)
+            self.assertEqual(filter_to_string(filt), expected_sql)
+
+    def eval_invalid_filters(self, data):
+        for dim, value, operator in data:
+            with self.assertRaises(ValueError):
+                dim.build_filter(value, operator=operator)
+
     def test_scalar_filter(self):
         """Test scalar filters on a string dimension"""
-        d = Dimension(self.basic_table.c.first)
+        strdim = Dimension(self.basic_table.c.first)
+        numdim = Dimension(self.basic_table.c.age)
+        datedim = Dimension(self.basic_table.c.birth_date)
+        dtdim = Dimension(self.basic_table.c.dt)
+
+        self.assertEqual(strdim.datatype, "str")
+        self.assertEqual(numdim.datatype, "num")
+        self.assertEqual(datedim.datatype, "date")
+        self.assertEqual(dtdim.datatype, "datetime")
 
         # Test building scalar filters
-        filt = d.build_filter("moo")
-        self.assertEqual(filter_to_string(filt), "foo.first = 'moo'")
-        filt = d.build_filter("moo", "eq")
-        self.assertEqual(filter_to_string(filt), "foo.first = 'moo'")
-        filt = d.build_filter("moo", "ne")
-        self.assertEqual(filter_to_string(filt), "foo.first != 'moo'")
-        filt = d.build_filter("moo", "lt")
-        self.assertEqual(filter_to_string(filt), "foo.first < 'moo'")
-        filt = d.build_filter("moo", "lte")
-        self.assertEqual(filter_to_string(filt), "foo.first <= 'moo'")
-        filt = d.build_filter("moo", "gt")
-        self.assertEqual(filter_to_string(filt), "foo.first > 'moo'")
-        filt = d.build_filter("moo", "gte")
-        self.assertEqual(filter_to_string(filt), "foo.first >= 'moo'")
-        filt = d.build_filter("moo", "is")
-        self.assertEqual(filter_to_string(filt), "foo.first IS 'moo'")
-        filt = d.build_filter("moo", "isnot")
-        self.assertEqual(filter_to_string(filt), "foo.first IS NOT 'moo'")
-        filt = d.build_filter("moo", "like")
-        self.assertEqual(filter_to_string(filt), "foo.first LIKE 'moo'")
-        filt = d.build_filter("moo", "ilike")
-        self.assertEqual(filter_to_string(filt), "lower(foo.first) LIKE lower('moo')")
-        # Numbers get stringified
-        filt = d.build_filter(5, "ilike")
-        self.assertEqual(filter_to_string(filt), "lower(foo.first) LIKE lower('5')")
-        # None values get converted to IS
-        filt = d.build_filter(None, "eq")
-        self.assertEqual(filter_to_string(filt), "foo.first IS NULL")
+        data = [
+            (strdim, "moo", None, "foo.first = 'moo'"),
+            (strdim, "moo", "eq", "foo.first = 'moo'"),
+            (strdim, "moo", "ne", "foo.first != 'moo'"),
+            (strdim, "moo", "lt", "foo.first < 'moo'"),
+            (strdim, "moo", "lte", "foo.first <= 'moo'"),
+            (strdim, "moo", "gt", "foo.first > 'moo'"),
+            (strdim, "moo", "gte", "foo.first >= 'moo'"),
+            (strdim, "moo", "is", "foo.first IS 'moo'"),
+            (strdim, "moo", "isnot", "foo.first IS NOT 'moo'"),
+            (strdim, "moo", "like", "foo.first LIKE 'moo'"),
+            (strdim, "moo", "ilike", "lower(foo.first) LIKE lower('moo')"),
+            # Numbers get converted to strings
+            (strdim, 5, "ilike", "lower(foo.first) LIKE lower('5')"),
+            # Nones get converted to IS
+            (strdim, None, None, "foo.first IS NULL"),
+            (strdim, None, "eq", "foo.first IS NULL"),
+            (strdim, "Τη γλώσ", "eq", "foo.first = 'Τη γλώσ'"),
+            # Numeric dimension
+            (numdim, "moo", None, "CAST(foo.age AS VARCHAR) = 'moo'"),
+            (numdim, "moo", "eq", "CAST(foo.age AS VARCHAR) = 'moo'"),
+            (numdim, "moo", "ne", "CAST(foo.age AS VARCHAR) != 'moo'"),
+            (numdim, "moo", "lt", "CAST(foo.age AS VARCHAR) < 'moo'"),
+            (numdim, "moo", "lte", "CAST(foo.age AS VARCHAR) <= 'moo'"),
+            (numdim, "moo", "gt", "CAST(foo.age AS VARCHAR) > 'moo'"),
+            (numdim, "moo", "gte", "CAST(foo.age AS VARCHAR) >= 'moo'"),
+            (numdim, "moo", "is", "CAST(foo.age AS VARCHAR) IS 'moo'"),
+            (numdim, "moo", "isnot", "CAST(foo.age AS VARCHAR) IS NOT 'moo'"),
+            (numdim, "moo", "like", "CAST(foo.age AS VARCHAR) LIKE 'moo'"),
+            (
+                numdim,
+                "moo",
+                "ilike",
+                "lower(CAST(foo.age AS VARCHAR)) LIKE lower('moo')",
+            ),
+            # Nones get converted to IS
+            (numdim, None, None, "foo.age IS NULL"),
+            (numdim, None, "eq", "foo.age IS NULL"),
+            (numdim, "Τη γλώσ", "eq", "CAST(foo.age AS VARCHAR) = 'Τη γλώσ'"),
+            # Numeric dimension with number value
+            (numdim, 5, None, "foo.age = 5"),
+            (numdim, 5, "eq", "foo.age = 5"),
+            (numdim, 5, "ne", "foo.age != 5"),
+            (numdim, 5, "lt", "foo.age < 5"),
+            (numdim, 5, "lte", "foo.age <= 5"),
+            (numdim, 5, "gt", "foo.age > 5"),
+            (numdim, 5, "gte", "foo.age >= 5"),
+            (numdim, 5, "is", "foo.age IS 5"),
+            (numdim, 5, "isnot", "foo.age IS NOT 5"),
+            (numdim, 5, "like", "foo.age LIKE '5'"),
+            (numdim, 5, "ilike", "lower(foo.age) LIKE lower('5')"),
+            # numdim,  Nones get converted to IS
+            (numdim, None, None, "foo.age IS NULL"),
+            (numdim, None, "eq", "foo.age IS NULL"),
+            (numdim, "Τη γλώσ", None, "CAST(foo.age AS VARCHAR) = 'Τη γλώσ'"),
+            # Dates
+            (datedim, "2020-01-01", None, "foo.birth_date = '2020-01-01'"),
+            (datedim, "2020-01-01", "eq", "foo.birth_date = '2020-01-01'"),
+            (datedim, "2020-01-01T03:05", None, "foo.birth_date = '2020-01-01'"),
+            (datedim, "2020-01-01T03:05", "eq", "foo.birth_date = '2020-01-01'"),
+            # An unparsable date will be treated as a string
+            (
+                datedim,
+                "2020-01-01T03:05X523",
+                None,
+                "CAST(foo.birth_date AS VARCHAR) = '2020-01-01T03:05X523'",
+            ),
+            (
+                datedim,
+                "2020-01-01T03:05X523",
+                "eq",
+                "CAST(foo.birth_date AS VARCHAR) = '2020-01-01T03:05X523'",
+            ),
+            # Evaluated as timestamp=0
+            (datedim, 0, None, "foo.birth_date = '1970-01-01'"),
+            # Datetimes
+            (dtdim, "2020-01-01", None, "foo.dt = '2020-01-01 00:00:00'"),
+            (dtdim, "2020-01-01T03:05", None, "foo.dt = '2020-01-01 03:05:00'"),
+            (
+                dtdim,
+                "2020-01-01T03:05 UTC",
+                None,
+                "foo.dt = '2020-01-01 03:05:00+00:00'",
+            ),
+            (dtdim, "2020-01-01T03:05Z", None, "foo.dt = '2020-01-01 03:05:00+00:00'"),
+            (
+                dtdim,
+                "2020-01-01T03:05 EST",
+                None,
+                "foo.dt = '2020-01-01 03:05:00-05:00'",
+            ),
+            (
+                dtdim,
+                "2020-01-01T03:05:01.123456 EST",
+                None,
+                "foo.dt = '2020-01-01 03:05:01.123456-05:00'",
+            ),
+            # Unparsable date will be treated as a string
+            (
+                dtdim,
+                "2020-01-01T03:05X523",
+                "eq",
+                "CAST(foo.dt AS VARCHAR) = '2020-01-01T03:05X523'",
+            ),
+            (dtdim, 0, None, "foo.dt = '1970-01-01 00:00:00'"),
+        ]
 
-        # str filter values are acceptable
-        filt = d.build_filter(u"Τη γλώσ")
-        self.assertEqual(filter_to_string(filt), "foo.first = 'Τη γλώσ'")
+        baddata = [
+            # Scalar operators must have scalar values
+            (strdim, ["moo"], "eq"),
+            (strdim, ["moo"], "lt"),
+            # Unknown operator
+            (strdim, "moo", "cows"),
+            # Numeric dimension
+            (numdim, ["moo"], "eq"),
+            (numdim, ["moo"], "lt"),
+            # Unknown operator
+            (numdim, "moo", "cows"),
+            # Scalar operators must have scalar values
+            (numdim, [5], "eq"),
+            (numdim, [5], "lt"),
+            # Unknown operator
+            (numdim, 5, "cows"),
+        ]
 
-        # operator must agree with value
-        with self.assertRaises(ValueError):
-            filt = d.build_filter(["moo"], "eq")
-        with self.assertRaises(ValueError):
-            filt = d.build_filter(["moo"], "lt")
-
-        # Unknown operator
-        with self.assertRaises(ValueError):
-            filt = d.build_filter(["moo"], "cows")
-
-    def test_scalar_filter_on_int(self):
-        """Test scalar filters on an integer dimension"""
-        d = Dimension(self.basic_table.c.age)
-
-        # Test building scalar filters
-        filt = d.build_filter("moo")
-        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) = 'moo'")
-        filt = d.build_filter("moo", "eq")
-        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) = 'moo'")
-        filt = d.build_filter("moo", "ne")
-        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) != 'moo'")
-        filt = d.build_filter("moo", "lt")
-        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) < 'moo'")
-        filt = d.build_filter("moo", "lte")
-        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) <= 'moo'")
-        filt = d.build_filter("moo", "gt")
-        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) > 'moo'")
-        filt = d.build_filter("moo", "gte")
-        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) >= 'moo'")
-        filt = d.build_filter("moo", "is")
-        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) IS 'moo'")
-        filt = d.build_filter("moo", "isnot")
-        self.assertEqual(
-            filter_to_string(filt), "CAST(foo.age AS VARCHAR) IS NOT 'moo'"
-        )
-        filt = d.build_filter("moo", "like")
-        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) LIKE 'moo'")
-        filt = d.build_filter("moo", "ilike")
-        assert (
-            filter_to_string(filt)
-            == "lower(CAST(foo.age AS VARCHAR)) LIKE lower('moo')"
-        )
-        # None values get converted to IS
-        filt = d.build_filter(None, "eq")
-        self.assertEqual(filter_to_string(filt), "foo.age IS NULL")
-
-        # str filter values are acceptable
-        filt = d.build_filter(u"Τη γλώσ")
-        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) = 'Τη γλώσ'")
-
-        # operator must agree with value
-        with self.assertRaises(ValueError):
-            d.build_filter(["moo"], "eq")
-        with self.assertRaises(ValueError):
-            d.build_filter(["moo"], "lt")
-
-        # Unknown operator
-        with self.assertRaises(ValueError):
-            d.build_filter(["moo"], "cows")
-
-    def test_scalar_filter_on_int_dim_int_value(self):
-        """Test scalar filters on an integer dimension passing an integer value"""
-        d = Dimension(self.basic_table.c.age)
-
-        # Test building scalar filters
-        filt = d.build_filter(5)
-        self.assertEqual(filter_to_string(filt), "foo.age = 5")
-        filt = d.build_filter(5, "eq")
-        self.assertEqual(filter_to_string(filt), "foo.age = 5")
-        filt = d.build_filter(5, "ne")
-        self.assertEqual(filter_to_string(filt), "foo.age != 5")
-        filt = d.build_filter(5, "lt")
-        self.assertEqual(filter_to_string(filt), "foo.age < 5")
-        filt = d.build_filter(5, "lte")
-        self.assertEqual(filter_to_string(filt), "foo.age <= 5")
-        filt = d.build_filter(5, "gt")
-        self.assertEqual(filter_to_string(filt), "foo.age > 5")
-        filt = d.build_filter(5, "gte")
-        self.assertEqual(filter_to_string(filt), "foo.age >= 5")
-        filt = d.build_filter(5, "is")
-        self.assertEqual(filter_to_string(filt), "foo.age IS 5")
-        filt = d.build_filter(5, "isnot")
-        self.assertEqual(filter_to_string(filt), "foo.age IS NOT 5")
-        # None values get converted to IS
-        filt = d.build_filter(None, "eq")
-        self.assertEqual(filter_to_string(filt), "foo.age IS NULL")
-
-        # str filter values are acceptable
-        filt = d.build_filter(u"Τη γλώσ")
-        self.assertEqual(filter_to_string(filt), "CAST(foo.age AS VARCHAR) = 'Τη γλώσ'")
-
-        # operator must agree with value
-        with self.assertRaises(ValueError):
-            d.build_filter(["moo"], "eq")
-        with self.assertRaises(ValueError):
-            d.build_filter(["moo"], "lt")
-
-        # Unknown operator
-        with self.assertRaises(ValueError):
-            d.build_filter(["moo"], "cows")
+        self.eval_valid_filters(data)
+        self.eval_invalid_filters(baddata)
 
     def test_vector_filter(self):
-        d = Dimension(self.basic_table.c.first)
+        strdim = Dimension(self.basic_table.c.first)
+        numdim = Dimension(self.basic_table.c.age)
+        datedim = Dimension(self.basic_table.c.birth_date)
 
-        # Test building scalar filters
-        filt = d.build_filter(["moo"])
-        self.assertEqual(filter_to_string(filt), "foo.first IN ('moo')")
-        filt = d.build_filter(["moo", None])
-        self.assertEqual(
-            filter_to_string(filt), "foo.first IS NULL OR foo.first IN ('moo')"
-        )
-        filt = d.build_filter([None, "moo", None, None])
-        self.assertEqual(
-            filter_to_string(filt), "foo.first IS NULL OR foo.first IN ('moo')"
-        )
-        filt = d.build_filter([None, None])
-        self.assertEqual(filter_to_string(filt), "foo.first IS NULL")
-
-        filt = d.build_filter(["moo", "foo"])
-        # Values are sorted
-        self.assertEqual(filter_to_string(filt), "foo.first IN ('foo', 'moo')")
-        filt = d.build_filter(["moo"], operator="in")
-        self.assertEqual(filter_to_string(filt), "foo.first IN ('moo')")
-        filt = d.build_filter(["moo"], operator="notin")
-        self.assertEqual(filter_to_string(filt), "foo.first NOT IN ('moo')")
-        filt = d.build_filter(["moo", None], operator="notin")
-        assert (
-            filter_to_string(filt)
-            == "foo.first IS NOT NULL AND foo.first NOT IN ('moo')"
-        )
-        filt = d.build_filter([None, "moo", None], operator="notin")
-        assert (
-            filter_to_string(filt)
-            == "foo.first IS NOT NULL AND foo.first NOT IN ('moo')"
-        )
-        filt = d.build_filter([None, None], operator="notin")
-        self.assertEqual(filter_to_string(filt), "foo.first IS NOT NULL")
-        filt = d.build_filter(["moo", "foo"], operator="between")
-        self.assertEqual(filter_to_string(filt), "foo.first BETWEEN 'moo' AND 'foo'")
-
-        with self.assertRaises(ValueError):
-            d.build_filter("moo", "in")
-        # Between must have 2 values
-        with self.assertRaises(ValueError):
-            d.build_filter(["moo", "foo", "tru"], operator="between")
-        with self.assertRaises(ValueError):
-            d.build_filter(["moo"], operator="between")
-
-    def test_scalar_filter_date(self):
-        d = Dimension(self.basic_table.c.birth_date)
-        # Test building scalar filters
-        filt = d.build_filter("2020-01-01")
-        self.assertEqual(filter_to_string(filt), "foo.birth_date = '2020-01-01'")
-
-        filt = d.build_filter("2020-01-01T03:05")
-        self.assertEqual(filter_to_string(filt), "foo.birth_date = '2020-01-01'")
-
-        # An unparsable date will be treated as a string
-        filt = d.build_filter("2020-01-01T03:05X523")
-        assert (
-            filter_to_string(filt)
-            == "CAST(foo.birth_date AS VARCHAR) = '2020-01-01T03:05X523'"
-        )
-
-        # Evaluated as timestamp=0
-        filt = d.build_filter(0)
-        self.assertEqual(filter_to_string(filt), "foo.birth_date = '1970-01-01'")
-
-    def test_scalar_filter_datetime(self):
-        d = Dimension(self.basic_table.c.dt)
-        # Test building scalar filters
-        filt = d.build_filter("2020-01-01")
-        self.assertEqual(filter_to_string(filt), "foo.dt = '2020-01-01 00:00:00'")
-
-        filt = d.build_filter("2020-01-01T03:05")
-        self.assertEqual(filter_to_string(filt), "foo.dt = '2020-01-01 03:05:00'")
-
-        filt = d.build_filter("2020-01-01T03:05 UTC")
-        self.assertEqual(filter_to_string(filt), "foo.dt = '2020-01-01 03:05:00+00:00'")
-
-        filt = d.build_filter("2020-01-01T04:06:01Z")
-        self.assertEqual(filter_to_string(filt), "foo.dt = '2020-01-01 04:06:01+00:00'")
-
-        filt = d.build_filter("2020-01-01T03:05 EST")
-        self.assertEqual(filter_to_string(filt), "foo.dt = '2020-01-01 03:05:00-05:00'")
-
-        filt = d.build_filter("2020-01-01T06:07:04.123456")
-        self.assertEqual(
-            filter_to_string(filt), "foo.dt = '2020-01-01 06:07:04.123456'"
-        )
-
-        # An unparsable date will be treated as a string
-        filt = d.build_filter("2020-01-01T03:05X523")
-        assert (
-            filter_to_string(filt) == "CAST(foo.dt AS VARCHAR) = '2020-01-01T03:05X523'"
-        )
-
-        # Evaluated as timestamp=0
-        filt = d.build_filter(0)
-        self.assertEqual(filter_to_string(filt), "foo.dt = '1970-01-01 00:00:00'")
-
-    def test_vector_filter_date(self):
-        d = Dimension(self.basic_table.c.birth_date)
-        # Test building scalar filters
-        filt = d.build_filter(["2020-01-01", None, "2020-10-25"])
-        assert (
-            filter_to_string(filt)
-            == "foo.birth_date IS NULL OR foo.birth_date IN ('2020-01-01', '2020-10-25')"
-        )
-
-        filt = d.build_filter([0])
-        self.assertEqual(filter_to_string(filt), "foo.birth_date IN ('1970-01-01')")
+        self.assertEqual(strdim.datatype, "str")
+        self.assertEqual(numdim.datatype, "num")
+        self.assertEqual(datedim.datatype, "date")
 
         seconds_in_day = 24 * 60 * 60
-        filt = d.build_filter([seconds_in_day + 0.123565, None, 0])
-        assert (
-            filter_to_string(filt)
-            == "foo.birth_date IS NULL OR foo.birth_date IN ('1970-01-01', '1970-01-02')"
-        )
-        filt = d.build_filter([seconds_in_day * 3], operator="notin")
-        self.assertEqual(filter_to_string(filt), "foo.birth_date NOT IN ('1970-01-04')")
+        data = [
+            (strdim, ["moo"], None, "foo.first IN ('moo')"),
+            (strdim, ["moo", None], None, "foo.first IS NULL OR foo.first IN ('moo')"),
+            (
+                strdim,
+                [None, "moo", None, None],
+                None,
+                "foo.first IS NULL OR foo.first IN ('moo')",
+            ),
+            (strdim, [None, None], None, "foo.first IS NULL"),
+            # Values are sorted because recipe produces deterministic SQL
+            (strdim, ["moo", "foo"], None, "foo.first IN ('foo', 'moo')"),
+            (strdim, ["moo", "foo"], "in", "foo.first IN ('foo', 'moo')"),
+            # Not in
+            (strdim, ["moo", "foo"], "notin", "foo.first NOT IN ('foo', 'moo')"),
+            (
+                strdim,
+                ["moo", None],
+                "notin",
+                "foo.first IS NOT NULL AND foo.first NOT IN ('moo')",
+            ),
+            (strdim, [None, None], "notin", "foo.first IS NOT NULL"),
+            # Between values are not sorted
+            (strdim, ["moo", "foo"], "between", "foo.first BETWEEN 'moo' AND 'foo'"),
+            (
+                datedim,
+                ["2020-01-01", None, "2020-10-25"],
+                None,
+                "foo.birth_date IS NULL OR foo.birth_date IN ('2020-01-01', '2020-10-25')",
+            ),
+            (datedim, [0], None, "foo.birth_date IN ('1970-01-01')"),
+            (
+                datedim,
+                [seconds_in_day + 0.123565, None, 0],
+                None,
+                "foo.birth_date IS NULL OR foo.birth_date IN ('1970-01-01', '1970-01-02')",
+            ),
+            (
+                datedim,
+                [seconds_in_day * 3],
+                "notin",
+                "foo.birth_date NOT IN ('1970-01-04')",
+            ),
+        ]
+
+        baddata = [
+            # Vector operators must have list values that match required length
+            (strdim, "moo", "in"),
+            (strdim, ["moo", "foo", "tru"], "between"),
+            (strdim, ["moo"], "between"),
+            # Unknown operator
+            (strdim, ["moo"], "cows"),
+        ]
+
+        self.eval_valid_filters(data)
+        self.eval_invalid_filters(baddata)
 
     def test_quickselects(self):
         d = Dimension(
@@ -462,12 +420,11 @@ class TestFilter(RecipeTestCase):
 
     def test_expression(self):
         f = Filter(self.basic_table.c.first == "foo")
-        assert f.expression is not None
-
+        self.assertIsNotNone(f.expression)
         f.columns = []
-        assert f.expression is not None
+        self.assertIsNotNone(f.expression)
         f.filters = []
-        assert f.expression is None
+        self.assertIsNone(f.expression)
 
     def test_filter_describe(self):
         f1 = Filter(self.basic_table.c.first == "moo", id="moo")
@@ -489,14 +446,13 @@ class TestHaving(RecipeTestCase):
 
     def test_expression(self):
         h = Having(func.sum(self.basic_table.c.age) > 2)
-        assert h.expression is not None
-
+        self.assertIsNotNone(h.expression)
         h.columns = []
-        assert h.expression is not None
+        self.assertIsNotNone(h.expression)
         h.filters = []
-        assert h.expression is not None
+        self.assertIsNotNone(h.expression)
         h.havings = []
-        assert h.expression is None
+        self.assertIsNone(h.expression)
 
     def test_having_describe(self):
         f1 = Having(func.sum(self.basic_table.c.age) > 2, id="moo")
@@ -809,265 +765,3 @@ class TestWtdAvgMetric(RecipeTestCase):
             "(coalesce(CAST(sum(foo.age) AS FLOAT), :coalesce_1) "
             "+ :coalesce_2)"
         )
-
-
-class TestIngredientFromObj(RecipeTestCase):
-    def test_ingredient_from_obj(self):
-        m = ingredient_from_dict({"kind": "Metric", "field": "age"}, self.basic_table)
-        assert isinstance(m, Metric)
-
-        d = ingredient_from_dict(
-            {"kind": "Dimension", "field": "last"}, self.basic_table
-        )
-        assert isinstance(d, Dimension)
-
-    def test_ingredient_from_dict(self):
-        data = [
-            ({"kind": "Metric", "field": "age"}, "(Metric)1 sum(foo.age)"),
-            ({"kind": "Dimension", "field": "age"}, "(Dimension)1 foo.age"),
-            (
-                {"kind": "IdValueDimension", "field": "age", "id_field": "age"},
-                "(Dimension)1 foo.age foo.age",
-            ),
-            (
-                {
-                    "kind": "Metric",
-                    "field": {"value": "age", "condition": {"field": "age", "gt": 22}},
-                },
-                "(Metric)1 sum(CASE WHEN (foo.age > :age_1) THEN foo.age END)",
-            ),
-        ]
-
-        for d, expected_result in data:
-            m = ingredient_from_dict(d, self.basic_table)
-            m.id = 1
-            self.assertEqual(str(m), expected_result)
-
-    def test_ingredient_from_bad_dict(self):
-        bad_data = [
-            # Missing required fields
-            {"kind": "Metric"},
-            # Bad kind
-            {"kind": "MooCow", "field": "last"},
-        ]
-        for d in bad_data:
-            with self.assertRaises(BadIngredient):
-                ingredient_from_dict(d, self.basic_table)
-
-    def test_ingredient_from_obj_with_meta(self):
-        m = ingredient_from_dict(
-            {"kind": "Metric", "field": "age", "format": "comma"}, self.basic_table
-        )
-        assert isinstance(m, Metric)
-        self.assertEqual(m.meta.format, ",.0f")
-
-    def test_ingredient_from_obj_with_missing_format_meta(self):
-        m = ingredient_from_dict(
-            {"kind": "Metric", "field": "age", "format": "foo"}, self.basic_table
-        )
-        assert isinstance(m, Metric)
-        self.assertEqual(m.meta.format, "foo")
-
-
-class TestParse(RecipeTestCase):
-    def test_parse_field_aggregation(self):
-        data = [
-            # Basic fields
-            ("age", func.sum(self.basic_table.c.age)),
-            ({"value": "age"}, func.sum(self.basic_table.c.age)),
-            # Aggregations
-            ({"value": "age", "aggregation": "max"}, func.max(self.basic_table.c.age)),
-            ({"value": "age", "aggregation": "sum"}, func.sum(self.basic_table.c.age)),
-            ({"value": "age", "aggregation": "min"}, func.min(self.basic_table.c.age)),
-            ({"value": "age", "aggregation": "avg"}, func.avg(self.basic_table.c.age)),
-            (
-                {"value": "age", "aggregation": "count_distinct"},
-                func.count(distinct(self.basic_table.c.age)),
-            ),
-        ]
-        for input_field, expected_result in data:
-            result = parse_field(input_field, self.basic_table)
-            self.assertEqual(str(result), str(expected_result))
-
-    def test_parse_field_add_subtract(self):
-        data = [
-            # Basic fields
-            (
-                "first+last",
-                func.sum(self.basic_table.c.first + self.basic_table.c.last),
-            ),
-            (
-                "first-last",
-                func.sum(self.basic_table.c.first - self.basic_table.c.last),
-            ),
-            (
-                "first-last-first",
-                func.sum(
-                    self.basic_table.c.first
-                    - self.basic_table.c.last
-                    - self.basic_table.c.first
-                ),
-            ),
-            (
-                "first*last",
-                func.sum(self.basic_table.c.first * self.basic_table.c.last),
-            ),
-            (
-                "first/last",
-                func.sum(
-                    self.basic_table.c.first
-                    / (
-                        func.coalesce(cast(self.basic_table.c.last, Float), 0.0)
-                        + SAFE_DIVISON_EPSILON
-                    )
-                ),
-            ),
-            (
-                "first*last-first",
-                func.sum(
-                    self.basic_table.c.first * self.basic_table.c.last
-                    - self.basic_table.c.first
-                ),
-            ),
-            # Spacing doesn't matter
-            (
-                "first + last",
-                func.sum(self.basic_table.c.first + self.basic_table.c.last),
-            ),
-            (
-                "first -last",
-                func.sum(self.basic_table.c.first - self.basic_table.c.last),
-            ),
-            (
-                "first - last   -  first",
-                func.sum(
-                    self.basic_table.c.first
-                    - self.basic_table.c.last
-                    - self.basic_table.c.first
-                ),
-            ),
-            (
-                "first  *last",
-                func.sum(self.basic_table.c.first * self.basic_table.c.last),
-            ),
-            (
-                "first/  last",
-                func.sum(
-                    self.basic_table.c.first
-                    / (
-                        func.coalesce(cast(self.basic_table.c.last, Float), 0.0)
-                        + SAFE_DIVISON_EPSILON
-                    )
-                ),
-            ),
-            (
-                "first*  last /first",
-                func.sum(
-                    self.basic_table.c.first
-                    * self.basic_table.c.last
-                    / (
-                        func.coalesce(cast(self.basic_table.c.first, Float), 0.0)
-                        + SAFE_DIVISON_EPSILON
-                    )
-                ),
-            ),
-        ]
-        for input_field, expected_result in data:
-            result = parse_field(input_field, self.basic_table)
-            self.assertEqual(str(result), str(expected_result))
-
-    def test_parse_field_no_aggregations(self):
-        data = [
-            # Basic fields
-            ("age", self.basic_table.c.age),
-            ({"value": "age"}, self.basic_table.c.age),
-            # Conditions
-            (
-                {
-                    "value": "age",
-                    "condition": {"field": "last", "in": ["Jones", "Punjabi"]},
-                },
-                case(
-                    [
-                        (
-                            self.basic_table.c.last.in_(["Jones", "Punjabi"]),
-                            self.basic_table.c.age,
-                        )
-                    ]
-                ),
-            ),
-            # # Date trunc
-            # (
-            #     {"value": "age", "aggregation": "month"},
-            #     func.date_trunc("month", self.basic_table.c.age),
-            # ),
-            # (
-            #     {"value": "age", "aggregation": "week"},
-            #     func.date_trunc("week", self.basic_table.c.age),
-            # ),
-            # (
-            #     {"value": "age", "aggregation": "year"},
-            #     func.date_trunc("year", self.basic_table.c.age),
-            # ),
-            # (
-            #     {"value": "age", "aggregation": "age"},
-            #     func.date_part("year", func.age(self.basic_table.c.age)),
-            # ),
-            # # Conditions
-            # (
-            #     {
-            #         "value": "age",
-            #         "condition": {"field": "last", "in": ["Jones", "Punjabi"]},
-            #     },
-            #     func.sum(case([(self.basic_table.c.last.in_(["Jones", "Punjabi"]), self.basic_table.c.age)])),
-            # ),
-        ]
-        for input_field, expected_result in data:
-            result = parse_field(
-                input_field, selectable=self.basic_table, aggregated=False
-            )
-            self.assertEqual(str(result), str(expected_result))
-
-    def test_weird_field_string_definitions(self):
-        data = [
-            ("first+", self.basic_table.c.first),
-            ("first-", self.basic_table.c.first),
-            ("fir st-", self.basic_table.c.first),
-            ("fir st", self.basic_table.c.first),
-            ("first+last-", "foo.first || foo.last"),
-            ("fir st*", self.basic_table.c.first),
-            (
-                "first/last-",
-                self.basic_table.c.first
-                / (
-                    func.coalesce(cast(self.basic_table.c.last, Float), 0.0)
-                    + SAFE_DIVISON_EPSILON
-                ),
-            ),
-        ]
-        for input_field, expected_result in data:
-            result = parse_field(
-                input_field, selectable=self.basic_table, aggregated=False
-            )
-            self.assertEqual(str(result), str(expected_result))
-
-    def test_bad_field_definitions(self):
-        bad_data = [
-            {},
-            [],
-            ["abb"],
-            ["age"],
-            {"value": ["age"]},
-            {"condition": ["age"]},
-            {"condition": "foo"},
-            {"condition": []},
-        ]
-        for input_field in bad_data:
-            with self.assertRaises(BadIngredient):
-                parse_field(input_field, self.basic_table)
-
-    def test_field_with_invalid_column(self):
-        bad_data = ["abb", {"value": "abb"}]
-        for input_field in bad_data:
-            with self.assertRaises(InvalidColumnError):
-                field = parse_field(input_field, self.basic_table)
