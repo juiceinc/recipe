@@ -80,6 +80,11 @@ class BuildGrammarTestCase(RecipeTestCase):
             c = make_columns_for_selectable(selectable)
             self.assertEqual(sorted(list(c.keys())), expected_column_keys)
 
+        with self.assertRaises(Exception):
+            make_columns_for_selectable(None)
+        with self.assertRaises(Exception):
+            make_columns_for_selectable("foo")
+
     def test_make_columns_grammar(self):
         expected_grammars = [
             """
@@ -185,7 +190,7 @@ class BuildGrammarTestCase(RecipeTestCase):
         ):
             columns = make_columns_for_selectable(selectable)
             gathered_columns = f"""
-            {gather_columns("unusable_col", columns, "unusable", [])}
+            {gather_columns("unusable_col", columns, "unusable")}
             {gather_columns("date.1", columns, "date", ["extra_date_rule"])}
             {gather_columns("datetime.2", columns, "datetime", ["extra_datetime_rule"])}
             {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
@@ -277,7 +282,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         [ScORE]                         -> num
         [ScORE] + [ScORE]               -> num
         max([ScORE] + [ScORE])          -> num
-    max(score) - min(score)         -> num
+        max(score) - min(score)         -> num
         department                      -> str
         department > "foo"              -> bool
         day(test_date)                  -> date
@@ -639,6 +644,24 @@ foo_b is not a valid column name
 string and num can not be added together
 
 [username] + [score]
+ ^
+===
+[username]-[score] ->
+string and num can not be subtracted
+
+[username]-[score]
+ ^
+===
+[username] * [score] ->
+string and num can not be multiplied together
+
+[username] * [score]
+ ^
+===
+[score] * [username] ->
+num and string can not be multiplied together
+
+[score] * [username]
  ^
 ===
 [score]   + [department] ->
