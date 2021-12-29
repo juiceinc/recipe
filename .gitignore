@@ -69,3 +69,4 @@ docs/_build
 *.ipynb
 tests/test_parsed_engines.py
 tests/test_engines.py
+cov.xml

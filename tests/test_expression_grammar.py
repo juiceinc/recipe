@@ -1,21 +1,201 @@
 """Test the lark grammar used to define field expressions."""
 
 import time
-from unittest import TestCase
-from sqlalchemy.ext.serializer import loads, dumps
+from unittest.case import skip
 
 from freezegun import freeze_time
+from sqlalchemy import Table, Column, String, Integer
+from sqlalchemy.ext.serializer import dumps, loads
+from sqlalchemy.ext.declarative import declarative_base
 
-from recipe import Recipe
-from recipe.schemas.lark_grammar import SQLAlchemyBuilder
+from recipe.schemas.expression_grammar import (
+    SQLAlchemyBuilder,
+    make_columns_for_selectable,
+    make_columns_grammar,
+    gather_columns,
+)
+from recipe.utils.formatting import expr_to_str
 from tests.test_base import RecipeTestCase
 
 utc_offset = -1 * time.localtime().tm_gmtoff / 3600.0 + time.localtime().tm_isdst
+from tests.test_base import str_dedent
 
 
-def to_sql(expr):
-    """Utility to print sql for a expression"""
-    return str(expr.compile(compile_kwargs={"literal_binds": True}))
+class BuildGrammarTestCase(RecipeTestCase):
+    def setUp(self):
+        super().setUp()
+
+        # We can even use the orm
+        Base = declarative_base()
+
+        class BasicData(Base):
+            __table__ = Table(
+                "foo",
+                Base.metadata,
+                Column("first", String, primary_key=True),
+                autoload=True,
+                autoload_with=self.oven.engine,
+                extend_existing=True,
+            )
+
+        # Only mapping some columns
+        class DateTesterData(Base):
+            __table__ = Table(
+                "datetester", Base.metadata, Column("count", Integer, primary_key=True)
+            )
+
+        self.selectables = [
+            self.basic_table,
+            self.datatypes_table,
+            self.recipe_from_config(
+                {"dimensions": ["first", "last"], "metrics": ["age"]}
+            ),
+            self.recipe_from_config({"dimensions": ["firstlast"], "metrics": ["age"]}),
+            BasicData,
+            DateTesterData,
+        ]
+
+    def assertSelectableGrammar(self, selectable, grammar_text: str):
+        grammar = make_columns_grammar(make_columns_for_selectable(selectable))
+
+        if str_dedent(grammar) != str_dedent(grammar_text):
+            print(
+                f"Actual:\n{str_dedent(grammar)}\n\nExpected:\n{str_dedent(grammar_text)}"
+            )
+        self.assertEqual(str_dedent(grammar), str_dedent(grammar_text))
+
+    def test_make_columns_for_table(self):
+        expected_column_keys = [
+            ["date_0", "datetime_0", "num_0", "str_0", "str_1"],
+            ["bool_0", "date_0", "datetime_0", "num_0", "str_0", "str_1", "str_2"],
+            ["num_0", "str_0", "str_1"],
+            ["num_0", "str_0", "str_1"],
+            ["date_0", "datetime_0", "num_0", "str_0", "str_1"],
+            ["num_0"],
+        ]
+
+        for selectable, expected_column_keys in zip(
+            self.selectables, expected_column_keys
+        ):
+            c = make_columns_for_selectable(selectable)
+            self.assertEqual(sorted(list(c.keys())), expected_column_keys)
+
+    def test_make_columns_grammar(self):
+        expected_grammars = [
+            """
+            date_0: "[" + /birth_date/i + "]" | /birth_date/i
+            datetime_0: "[" + /dt/i + "]" | /dt/i
+            num_0: "[" + /age/i + "]" | /age/i
+            str_0: "[" + /first/i + "]" | /first/i
+            str_1: "[" + /last/i + "]" | /last/i
+            """,
+            """
+            bool_0: "[" + /valid_score/i + "]" | /valid_score/i
+            date_0: "[" + /test_date/i + "]" | /test_date/i
+            datetime_0: "[" + /test_datetime/i + "]" | /test_datetime/i
+            num_0: "[" + /score/i + "]" | /score/i
+            str_0: "[" + /username/i + "]" | /username/i
+            str_1: "[" + /department/i + "]" | /department/i
+            str_2: "[" + /testid/i + "]" | /testid/i
+            """,
+            """
+            num_0: "[" + /age/i + "]" | /age/i
+            str_0: "[" + /first/i + "]" | /first/i
+            str_1: "[" + /last/i + "]" | /last/i
+            """,
+            """
+            num_0: "[" + /age/i + "]" | /age/i
+            str_0: "[" + /firstlast_id/i + "]" | /firstlast_id/i
+            str_1: "[" + /firstlast/i + "]" | /firstlast/i
+            """,
+            """
+            date_0: "[" + /birth_date/i + "]" | /birth_date/i
+            datetime_0: "[" + /dt/i + "]" | /dt/i
+            num_0: "[" + /age/i + "]" | /age/i
+            str_0: "[" + /first/i + "]" | /first/i
+            str_1: "[" + /last/i + "]" | /last/i
+            """,
+            """
+            num_0: "[" + /count/i + "]" | /count/i
+            """,
+        ]
+        for selectable, expected_grammar in zip(self.selectables, expected_grammars):
+            self.assertSelectableGrammar(selectable, expected_grammar)
+
+    def test_gather_columns(self):
+        """Gathered columns collects all the rules for column types into a single rule"""
+        expected_gathered_columns = [
+            """
+            unusable_col: "DUMMYVALUNUSABLECOL"
+            date.1: date_0 | extra_date_rule | "(" + date + ")"
+            datetime.2: datetime_0 | extra_datetime_rule | "(" + datetime + ")"
+            datetime_end.1: datetime_0 | datetime_end_conv | datetime_aggr | "(" + datetime_end + ")"
+            boolean.1: TRUE | FALSE | extra_bool_rule | "(" + boolean + ")"
+            string.1: str_0 | str_1 | ESCAPED_STRING | extra_string_rule | "(" + string + ")"
+            num.1: num_0 | NUMBER | extra_num_rule | "(" + num + ")"
+            """,
+            """
+            unusable_col: "DUMMYVALUNUSABLECOL"
+            date.1: date_0 | extra_date_rule | "(" + date + ")"
+            datetime.2: datetime_0 | extra_datetime_rule | "(" + datetime + ")"
+            datetime_end.1: datetime_0 | datetime_end_conv | datetime_aggr | "(" + datetime_end + ")"
+            boolean.1: bool_0 | TRUE | FALSE | extra_bool_rule | "(" + boolean + ")"
+            string.1: str_0 | str_1 | str_2 | ESCAPED_STRING | extra_string_rule | "(" + string + ")"
+            num.1: num_0 | NUMBER | extra_num_rule | "(" + num + ")"
+            """,
+            """
+            unusable_col: "DUMMYVALUNUSABLECOL"
+            date.1: extra_date_rule | "(" + date + ")"
+            datetime.2: extra_datetime_rule | "(" + datetime + ")"
+            datetime_end.1: datetime_end_conv | datetime_aggr | "(" + datetime_end + ")"
+            boolean.1: TRUE | FALSE | extra_bool_rule | "(" + boolean + ")"
+            string.1: str_0 | str_1 | ESCAPED_STRING | extra_string_rule | "(" + string + ")"
+            num.1: num_0 | NUMBER | extra_num_rule | "(" + num + ")"
+            """,
+            """
+            unusable_col: "DUMMYVALUNUSABLECOL"
+            date.1: extra_date_rule | "(" + date + ")"
+            datetime.2: extra_datetime_rule | "(" + datetime + ")"
+            datetime_end.1: datetime_end_conv | datetime_aggr | "(" + datetime_end + ")"
+            boolean.1: TRUE | FALSE | extra_bool_rule | "(" + boolean + ")"
+            string.1: str_0 | str_1 | ESCAPED_STRING | extra_string_rule | "(" + string + ")"
+            num.1: num_0 | NUMBER | extra_num_rule | "(" + num + ")"
+            """,
+            """
+            unusable_col: "DUMMYVALUNUSABLECOL"
+            date.1: date_0 | extra_date_rule | "(" + date + ")"
+            datetime.2: datetime_0 | extra_datetime_rule | "(" + datetime + ")"
+            datetime_end.1: datetime_0 | datetime_end_conv | datetime_aggr | "(" + datetime_end + ")"
+            boolean.1: TRUE | FALSE | extra_bool_rule | "(" + boolean + ")"
+            string.1: str_0 | str_1 | ESCAPED_STRING | extra_string_rule | "(" + string + ")"
+            num.1: num_0 | NUMBER | extra_num_rule | "(" + num + ")"
+            """,
+            """
+            unusable_col: "DUMMYVALUNUSABLECOL"
+            date.1: extra_date_rule | "(" + date + ")"
+            datetime.2: extra_datetime_rule | "(" + datetime + ")"
+            datetime_end.1: datetime_end_conv | datetime_aggr | "(" + datetime_end + ")"
+            boolean.1: TRUE | FALSE | extra_bool_rule | "(" + boolean + ")"
+            string.1: ESCAPED_STRING | extra_string_rule | "(" + string + ")"
+            num.1: num_0 | NUMBER | extra_num_rule | "(" + num + ")"
+            """,
+        ]
+        for selectable, expected_gathered in zip(
+            self.selectables, expected_gathered_columns
+        ):
+            columns = make_columns_for_selectable(selectable)
+            gathered_columns = f"""
+            {gather_columns("unusable_col", columns, "unusable", [])}
+            {gather_columns("date.1", columns, "date", ["extra_date_rule"])}
+            {gather_columns("datetime.2", columns, "datetime", ["extra_datetime_rule"])}
+            {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
+            {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "extra_bool_rule"])}
+            {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "extra_string_rule"])}
+            {gather_columns("num.1", columns, "num", ["NUMBER", "extra_num_rule"])}
+            """
+            self.assertEqual(
+                str_dedent(gathered_columns), str_dedent(expected_gathered)
+            )
 
 
 class GrammarTestCase(RecipeTestCase):
@@ -89,7 +269,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
 
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, enforce_aggregation=True, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
     def test_data_type(self):
         good_examples = """
@@ -97,7 +277,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         [ScORE]                         -> num
         [ScORE] + [ScORE]               -> num
         max([ScORE] + [ScORE])          -> num
-        max(score) - min(score)         -> num
+    max(score) - min(score)         -> num
         department                      -> str
         department > "foo"              -> bool
         day(test_date)                  -> date
@@ -137,7 +317,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         """
         for field, expected_sql in self.examples(sql_examples):
             expr, _ = b.parse(field, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
     def test_selectable_orm(self):
         """Test a selectable that is a orm class"""
@@ -164,7 +344,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         """
         for field, expected_sql in self.examples(sql_examples):
             expr, _ = b.parse(field, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
     def test_selectable_census(self):
         """Test a selectable that is a orm class"""
@@ -190,7 +370,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         """
         for field, expected_sql in self.examples(sql_examples):
             expr, _ = b.parse(field, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
 
 class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
@@ -209,7 +389,7 @@ class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
                 debug=True,
                 convert_dates_with="year_conv",
             )
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
         good_examples = """
         [test_date]                       -> date_trunc('month', datatypes.test_date)
@@ -223,7 +403,7 @@ class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
                 debug=True,
                 convert_dates_with="month_conv",
             )
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
         # If the date conversion doesn't exist, don't convert
         good_examples = """
@@ -238,7 +418,7 @@ class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
                 debug=True,
                 convert_dates_with="a_potato",
             )
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
 
 class TestDataTypesTable(GrammarTestCase):
@@ -286,7 +466,7 @@ class TestDataTypesTable(GrammarTestCase):
 
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
     def test_division_and_math(self):
         """These examples should all succeed"""
@@ -317,7 +497,7 @@ class TestDataTypesTable(GrammarTestCase):
 
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
     def test_no_brackets(self):
         """Brackets are optional around field names"""
@@ -355,7 +535,7 @@ class TestDataTypesTable(GrammarTestCase):
 
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
     def test_arrays(self):
         good_examples = """
@@ -374,7 +554,7 @@ class TestDataTypesTable(GrammarTestCase):
 
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, debug=False)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
     def test_boolean(self):
         good_examples = """
@@ -404,14 +584,14 @@ class TestDataTypesTable(GrammarTestCase):
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, debug=True)
 
-            if to_sql(expr) != expected_sql:
+            if expr_to_str(expr) != expected_sql:
                 print("===" * 10)
-                print(to_sql(expr))
+                print(expr_to_str(expr))
                 print("vs")
                 print(expected_sql)
                 print("===" * 10)
 
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
     def test_failure(self):
         """These examples should all fail"""
@@ -567,7 +747,7 @@ class TestDataTypesTableDates(GrammarTestCase):
 
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
     def test_dates_without_freetime(self):
         # Can't tests with date conversions and freeze time :/
@@ -586,7 +766,7 @@ class TestDataTypesTableDates(GrammarTestCase):
 
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
     def test_failure(self):
         """These examples should all fail"""
@@ -647,7 +827,7 @@ class TestDataTypesTableDatesInBigquery(TestDataTypesTableDates):
         for field, expected_sql in self.examples(good_examples):
             print("Parsing field", field, self.builder.drivername)
             expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
 
 class TestAggregations(GrammarTestCase):
@@ -672,7 +852,7 @@ class TestAggregations(GrammarTestCase):
 
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, forbid_aggregation=False, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
     def test_forbid_aggregation(self):
         """These examples should all fail"""
@@ -793,7 +973,7 @@ percentile13([score])
 
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
 
 class TestIf(GrammarTestCase):
@@ -835,7 +1015,7 @@ class TestIf(GrammarTestCase):
 
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)
 
     def test_failing_if(self):
         """These examples should all fail"""
@@ -917,4 +1097,4 @@ class TestSQLAlchemySerialize(GrammarTestCase):
             expr, _ = self.builder.parse(field, forbid_aggregation=False, debug=True)
             ser = dumps(expr)
             expr = loads(ser, self.builder.selectable.metadata, self.oven.Session())
-            self.assertEqual(to_sql(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), expected_sql)

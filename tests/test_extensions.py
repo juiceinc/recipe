@@ -1044,6 +1044,12 @@ class PaginateTestCase(RecipeTestCase):
 
 
 class PaginateInlineTestCase(PaginateTestCase):
+    """Run all the paginate tests with a different paginator
+
+    PaginateInline will add a "_total_count" column to each returned row.
+    Be sure to ignore this when evaluating results.
+    """
+
     extension_classes = [PaginateInline]
 
     def assertRecipeCSV(self, recipe: Recipe, csv_text: str):
@@ -1076,7 +1082,7 @@ class PaginateInlineTestCase(PaginateTestCase):
         )
 
 
-class TestCompareRecipeExtension(RecipeTestCase):
+class CompareRecipeTestCase(RecipeTestCase):
     extension_classes = [CompareRecipe]
 
     def setUp(self):
@@ -1263,7 +1269,7 @@ ORDER BY census.sex,
             r.all()
 
 
-class TestSummarizeOverExtension(RecipeTestCase):
+class SummarizeOverTestCase(RecipeTestCase):
     extension_classes = [SummarizeOver, Anonymize, AutomaticFilters]
 
     def setUp(self):
@@ -1277,19 +1283,19 @@ class TestSummarizeOverExtension(RecipeTestCase):
                     self.basic_table.c.last, anonymizer=lambda value: value[::-1]
                 ),
                 "age": Metric(func.sum(self.basic_table.c.age)),
+                # SummarizeOver doesn't know how to aggregate over this aggregation
+                "agettl": Metric(func.total(self.basic_table.c.age)),
             }
         )
+        self.shelf = self.anonymized_foo_shelf
 
     def test_from_config(self):
-        recipe = Recipe.from_config(
-            self.anonymized_foo_shelf,
+        recipe = self.recipe_from_config(
             {
                 "metrics": ["age"],
                 "dimensions": ["first", "last"],
                 "summarize_over": "last",
-            },
-            session=self.session,
-            extension_classes=self.extension_classes,
+            }
         )
         self.assertRecipeSQL(
             recipe,
@@ -1304,10 +1310,32 @@ FROM
             last) AS summarize
 GROUP BY summarize.first""",
         )
+        # Disabled
+        recipe = self.recipe_from_config(
+            {"metrics": ["age"], "dimensions": ["first", "last"]}
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS first,
+       foo.last AS last,
+       sum(foo.age) AS age
+FROM foo
+GROUP BY first,
+         last""",
+        )
+        # Use an aggregation that summarizeover doesn't know how to handle
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["agettl"],
+                "dimensions": ["first", "last"],
+                "summarize_over": "last",
+            }
+        )
+        with self.assertRaises(BadRecipe):
+            recipe.all()
 
     def test_summarize_over(self):
         """Anonymize requires ingredients to have an anonymizer"""
-        self.shelf = self.anonymized_foo_shelf
         recipe = (
             self.recipe()
             .metrics("age")
@@ -1333,7 +1361,6 @@ GROUP BY summarize.first""",
 
     def test_summarize_over_anonymize(self):
         """Anonymize requires ingredients to have an anonymizer"""
-        self.shelf = self.anonymized_foo_shelf
         recipe = (
             self.recipe()
             .metrics("age")
@@ -1403,18 +1430,8 @@ GROUP BY summarize.department""",
             .limit(2)
         )
 
-        assert recipe.to_sql() in (
-            """SELECT summarize.department,
-       avg(summarize.score) AS score
-FROM
-  (SELECT scores.department AS department,
-          scores.username AS username,
-          avg(scores.score) AS score
-   FROM scores
-   GROUP BY department,
-            username) AS summarize
-GROUP BY summarize.department LIMIT 2
-OFFSET 0""",
+        self.assertRecipeSQL(
+            recipe,
             """SELECT summarize.department,
        avg(summarize.score) AS score
 FROM
@@ -1428,11 +1445,14 @@ GROUP BY summarize.department
 LIMIT 2
 OFFSET 0""",
         )
-        ops_row, sales_row = recipe.all()
-        assert ops_row.department == "ops"
-        assert ops_row.score == 87.5
-        assert sales_row.department == "sales"
-        assert sales_row.score == 80.0
+        self.assertRecipeCSV(
+            recipe,
+            """
+            department,score,department_id
+            ops,87.5,ops
+            sales,80.0,sales
+        """,
+        )
 
     def test_summarize_over_scores_order(self):
         """Order bys are hoisted to the outer query"""
@@ -1626,10 +1646,11 @@ GROUP BY summarize.department""",
         assert sales_row.test_cnt == 1
 
 
-class TestBlendRecipeExtension(RecipeTestCase):
+class BlendRecipeTestCase(RecipeTestCase):
     extension_classes = [BlendRecipe]
 
     def setUp(self):
+        super().setUp()
         self.shelf = self.census_shelf
 
     def test_self_blend(self):
