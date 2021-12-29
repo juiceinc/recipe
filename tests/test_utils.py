@@ -24,6 +24,7 @@ uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 # recipe/utils/formatting.py                 42      6     18      6    80.00%   16, 21-22, 33, 38, 53->59, 54->56, 62
 # recipe/utils/utils.py                      33      3     10      0    88.37%   33-36
 
+
 class TestUtils(object):
     def test_replace_whitespace_with_space(self):
         assert replace_whitespace_with_space("fooo    moo") == "fooo moo"
