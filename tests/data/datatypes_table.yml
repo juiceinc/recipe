@@ -1,0 +1,42 @@
+- username: chris
+  department: sales
+  testid: '1'
+  score: 80.0
+  test_date: 2005-01-02
+  test_datetime: 2005-01-02 12:15:00
+  valid_score: 0
+- username: chip
+  department: ops
+  testid: '2'
+  score: 80.0
+  test_date: 2005-01-03
+  test_datetime: 2005-01-03 12:20:00
+  valid_score: 1
+- username: chip
+  department: ops
+  testid: '3'
+  score: 90.0
+  test_date: 2005-01-04
+  test_datetime: 2005-01-04 1:00:05
+  valid_score: 0
+- username: chip
+  department: ops
+  testid: '4'
+  score: 100.0
+  test_date: 2005-02-05
+  test_datetime: 2005-02-05 16:20:33
+  valid_score: 1
+- username: annika
+  department: ops
+  testid: '5'
+  score: 80.0
+  test_date: 2005-02-06
+  test_datetime: 2005-02-06 12:20:00
+  valid_score: 0
+- username: annika
+  department: ops
+  testid: '6'
+  score: 90.0
+  test_date: 2005-02-07
+  test_datetime: 2005-02-07 6:44:12
+  valid_score: 1

@@ -1,8 +1,8 @@
+import functools
 from collections import defaultdict
 from datetime import date, datetime
 
 import dateparser
-import functools
 from lark import GrammarError, Lark, Transformer, Tree, Visitor, v_args
 from lark.lexer import Token
 from sqlalchemy import (
@@ -24,6 +24,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative.api import DeclarativeMeta
 from sqlalchemy.sql.base import ColumnCollection
+from sqlalchemy.sql.expression import select
 from sqlalchemy.sql.sqltypes import Numeric
 
 from . import engine_support
@@ -34,7 +35,6 @@ from .utils import (
     convert_to_start_datetime,
 )
 
-
 # SQL server can not support parameters in queries that are used for grouping
 # https://github.com/mkleehammer/pyodbc/issues/479
 # To avoid parameterization, we pass literals
@@ -42,7 +42,7 @@ literal_1 = text("1")
 literal_0 = text("0")
 
 
-def make_columns_grammar(columns):
+def make_columns_grammar(columns: dict) -> str:
     """Return a lark rule that looks like
 
     // These are my raw columns
@@ -57,11 +57,12 @@ def make_columns_grammar(columns):
     return "\n".join(items).lstrip()
 
 
-def gather_columns(rule_name, columns, prefix, additions=None):
+def gather_columns(rule_name: str, columns: dict, prefix: str, additions=None) -> str:
     """Build a list of all columns matching a prefix allong with potential additional rules."""
-    raw_rule_name = rule_name.split(".")[0]
     if additions is None:
         additions = []
+
+    raw_rule_name = rule_name.split(".")[0]
 
     # Reduce a pair of parens around a type back to itself.
     paren_rule = f'"(" + {raw_rule_name} + ")"'
@@ -73,9 +74,9 @@ def gather_columns(rule_name, columns, prefix, additions=None):
         return f'{rule_name}: "DUMMYVALUNUSABLECOL"'
 
 
-def make_columns_for_table(selectable):
+def make_columns_for_selectable(selectable) -> dict:
     """Return a dictionary of columns. The keys
-    are unique lark rules prefixed by the column type
+    are unique lark rule names prefixed by the column type
     like num_0, num_1, string_0, etc.
 
     The values are the selectable column reference
@@ -118,7 +119,7 @@ def make_columns_for_table(selectable):
     return columns
 
 
-def make_lark_grammar(columns):
+def make_grammar(columns):
     """Build a grammar for this selectable using columns"""
     grammar = f"""
     col: boolean | string | num | date | datetime_end | datetime | unusable_col | unknown_col | error_math | error_vector_expr | error_not_nonboolean | error_between_expr | error_aggr | error_if_statement
@@ -1021,6 +1022,9 @@ BUILDER_CACHE = {}
 class SQLAlchemyBuilder(object):
     @classmethod
     def get_builder(cls, selectable):
+        print("Getting builder for", selectable, type(selectable))
+        from pprint import pprint
+
         if selectable not in BUILDER_CACHE:
             BUILDER_CACHE[selectable] = cls(selectable)
         return BUILDER_CACHE[selectable]
@@ -1037,6 +1041,7 @@ class SQLAlchemyBuilder(object):
         Args:
             selectable (Table): A SQLAlchemy selectable
         """
+        print(selectable, type(selectable))
         self.selectable = selectable
         # Database driver
         try:
@@ -1044,8 +1049,8 @@ class SQLAlchemyBuilder(object):
         except Exception:
             self.drivername = "unknown"
 
-        self.columns = make_columns_for_table(selectable)
-        self.grammar = make_lark_grammar(self.columns)
+        self.columns = make_columns_for_selectable(selectable)
+        self.grammar = make_grammar(self.columns)
         self.parser = Lark(
             self.grammar,
             parser="earley",
