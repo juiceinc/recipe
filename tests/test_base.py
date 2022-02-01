@@ -4,7 +4,7 @@ import os
 from datetime import date
 from typing import Iterator
 from unittest import TestCase
-
+from typing import Union
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import (
     Boolean,
@@ -111,29 +111,44 @@ class RecipeTestCase(TestCase):
     """Test cases that can build and test a recipe"""
 
     maxDiff = None
-    connection_string = "sqlite://"
-    create_table_kwargs = {}
+    # connection_string = "sqlite://"
+    connection_string = "mssql+pyodbc://juiceboxtest:CTZvwmhB348YCggcudpk@juicebox-sql.c6aiaphlgbzn.us-east-1.rds.amazonaws.com:1433/juiceboxtest?driver=ODBC+Driver+17+for+SQL+Server"
+    create_table_kwargs = {"schema": "demo"}
+    create_tables = False
 
     def setUp(self):
         super().setUp()
         # Set up a default shelf to use
         self.shelf = self.mytable_shelf
 
-    def assertRecipeCSV(self, recipe: Recipe, csv_text: str, ignore_columns=None):
+    def assertRecipeCSV(
+        self, recipe: Recipe, csv_text: Union[str, list], ignore_columns=None
+    ):
         """Recipe data returns the supplied csv content"""
-        actual = recipe.dataset.export("csv", lineterminator=str("\n")).strip("\n")
-        actual = strip_columns_from_csv(actual, ignore_columns=ignore_columns)
-        expected = str_dedent(csv_text).strip("\n")
-        if actual != expected:
-            print(f"Actual:\n{actual}\n\nExpected:\n{expected}")
+        actual = strip_columns_from_csv(
+            recipe.dataset.export("csv", lineterminator=str("\n")).strip("\n"),
+            ignore_columns=ignore_columns,
+        )
+        if isinstance(csv_text, str):
+            expected = str_dedent(csv_text).strip("\n")
+        else:
+            expected = [str_dedent(_).strip("\n") for _ in csv_text]
 
-        self.assertEqual(actual, expected)
+        if isinstance(expected, str):
+            if actual != expected:
+                print(f"Actual:\n{actual}\n\nExpected:\n{expected}")
+            self.assertEqual(actual, expected)
+        else:
+            if actual not in expected:
+                print(f"Actual:\n{actual}\n\nExpected:\n{expected}")
+            self.assertTrue(actual in expected)
 
     def assertRecipeSQL(self, recipe: Recipe, sql_text: str):
         """Recipe data returns the supplied csv content"""
         if str_dedent(recipe.to_sql()) != str_dedent(sql_text):
             print(f"Actual:\n{recipe.to_sql()}\n\nExpected:\n{sql_text}")
-        self.assertEqual(str_dedent(recipe.to_sql()), str_dedent(sql_text))
+        if self.connection_string.startswith("sqlite"):
+            self.assertEqual(str_dedent(recipe.to_sql()), str_dedent(sql_text))
 
     def assertRecipeSQLContains(self, recipe: Recipe, contains_sql_text: str):
         """Recipe data returns the supplied csv content"""
@@ -176,9 +191,8 @@ class RecipeTestCase(TestCase):
 
     @classmethod
     def load_data(cls, table_name):
-        """Load data from the data/ directory"""
+        """Load data from the data/ directory if the table doesn't already have data"""
         table = getattr(cls, table_name)
-
         data = safe_load(open(os.path.join(cls.root_dir, "data", f"{table_name}.yml")))
         cls.oven.engine.execute(table.insert(), data)
 
@@ -303,32 +317,46 @@ class RecipeTestCase(TestCase):
             **cls.create_table_kwargs,
         )
 
-        cls.meta.drop_all(cls.oven.engine)
-        cls.meta.create_all(cls.oven.engine)
-        cls.load_data("weird_table_with_column_named_true_table")
-        cls.load_data("basic_table")
-        cls.load_data("scores_table")
-        cls.load_data("datatypes_table")
-        cls.load_data("scores_with_nulls_table")
-        cls.load_data("tagscores_table")
-        cls.load_data("id_tests_table")
-        cls.load_data("census_table")
-        cls.load_data("state_fact_table")
+        if getattr(cls, "create_tables", True):
+            cls.meta.drop_all(cls.oven.engine)
+            cls.meta.create_all(cls.oven.engine)
+            cls.load_data("weird_table_with_column_named_true_table")
+            cls.load_data("basic_table")
+            cls.load_data("scores_table")
+            cls.load_data("datatypes_table")
+            cls.load_data("scores_with_nulls_table")
+            cls.load_data("tagscores_table")
+            cls.load_data("id_tests_table")
+            cls.load_data("census_table")
+            cls.load_data("state_fact_table")
 
-        # Load the datetester_table with dynamic date data
-        start_dt = date(date.today().year, date.today().month, 1)
-        data = [
-            {"dt": start_dt + relativedelta(months=offset_month), "count": 1}
-            for offset_month in range(-50, 50)
-        ]
-        cls.oven.engine.execute(cls.datetester_table.insert(), data)
+            # Load the datetester_table with dynamic date data
+            start_dt = date(date.today().year, date.today().month, 1)
+            data = [
+                {"dt": start_dt + relativedelta(months=offset_month), "count": 1}
+                for offset_month in range(-50, 50)
+            ]
+            cls.oven.engine.execute(cls.datetester_table.insert(), data)
+
+        if cls.connection_string.startswith("mssql"):
+            # SQLServer can not use aliases in group bys and also
+            # does not support date/time conversions due to an issue with pyodbc
+            # parameters in queries
+            # https://github.com/mkleehammer/pyodbc/issues/479
+            default_group_by_strategy = "direct"
+        else:
+            default_group_by_strategy = "labels"
+        dim_kwargs = {"group_by_strategy": default_group_by_strategy}
+        cls.dim_kwargs = dim_kwargs
 
         cls.mytable_shelf = Shelf(
             {
-                "first": Dimension(cls.basic_table.c.first),
-                "last": Dimension(cls.basic_table.c.last),
+                "first": Dimension(cls.basic_table.c.first, **dim_kwargs),
+                "last": Dimension(cls.basic_table.c.last, **dim_kwargs),
                 "firstlast": Dimension(
-                    cls.basic_table.c.last, id_expression=cls.basic_table.c.first
+                    cls.basic_table.c.last,
+                    id_expression=cls.basic_table.c.first,
+                    **dim_kwargs,
                 ),
                 "age": Metric(func.sum(cls.basic_table.c.age)),
             }
@@ -336,12 +364,13 @@ class RecipeTestCase(TestCase):
 
         cls.mytable_extrarole_shelf = Shelf(
             {
-                "first": Dimension(cls.basic_table.c.first),
-                "last": Dimension(cls.basic_table.c.last),
+                "first": Dimension(cls.basic_table.c.first, **dim_kwargs),
+                "last": Dimension(cls.basic_table.c.last, **dim_kwargs),
                 "firstlastage": Dimension(
                     cls.basic_table.c.last,
                     id_expression=cls.basic_table.c.first,
                     age_expression=cls.basic_table.c.age,
+                    **dim_kwargs,
                 ),
                 "age": Metric(func.sum(cls.basic_table.c.age)),
             }
@@ -349,12 +378,13 @@ class RecipeTestCase(TestCase):
 
         cls.scores_shelf = Shelf(
             {
-                "username": Dimension(cls.scores_table.c.username),
+                "username": Dimension(cls.scores_table.c.username, **dim_kwargs),
                 "department": Dimension(
                     cls.scores_table.c.department,
                     anonymizer=lambda value: value[::-1] if value else "None",
+                    **dim_kwargs,
                 ),
-                "testid": Dimension(cls.scores_table.c.testid),
+                "testid": Dimension(cls.scores_table.c.testid, **dim_kwargs),
                 "test_cnt": Metric(func.count(distinct(cls.tagscores_table.c.testid))),
                 "score": Metric(func.avg(cls.scores_table.c.score)),
             }
@@ -362,10 +392,10 @@ class RecipeTestCase(TestCase):
 
         cls.tagscores_shelf = Shelf(
             {
-                "username": Dimension(cls.tagscores_table.c.username),
-                "department": Dimension(cls.tagscores_table.c.department),
-                "testid": Dimension(cls.tagscores_table.c.testid),
-                "tag": Dimension(cls.tagscores_table.c.tag),
+                "username": Dimension(cls.tagscores_table.c.username, **dim_kwargs),
+                "department": Dimension(cls.tagscores_table.c.department, **dim_kwargs),
+                "testid": Dimension(cls.tagscores_table.c.testid, **dim_kwargs),
+                "tag": Dimension(cls.tagscores_table.c.tag, **dim_kwargs),
                 "test_cnt": Metric(func.count(distinct(cls.tagscores_table.c.testid))),
                 "score": Metric(
                     func.avg(cls.tagscores_table.c.score), summary_aggregation=func.sum
@@ -375,12 +405,14 @@ class RecipeTestCase(TestCase):
 
         cls.census_shelf = Shelf(
             {
-                "state": Dimension(cls.census_table.c.state),
+                "state": Dimension(cls.census_table.c.state, **dim_kwargs),
                 "idvalue_state": IdValueDimension(
-                    cls.census_table.c.state, "State:" + cls.census_table.c.state
+                    cls.census_table.c.state,
+                    "State:" + cls.census_table.c.state,
+                    **dim_kwargs,
                 ),
-                "sex": Dimension(cls.census_table.c.sex),
-                "age": Dimension(cls.census_table.c.age),
+                "sex": Dimension(cls.census_table.c.sex, **dim_kwargs),
+                "age": Dimension(cls.census_table.c.age, **dim_kwargs),
                 "pop2000": Metric(func.sum(cls.census_table.c.pop2000)),
                 "pop2000_sum": Metric(
                     func.sum(cls.census_table.c.pop2000), summary_aggregation=func.sum
@@ -392,7 +424,7 @@ class RecipeTestCase(TestCase):
 
         cls.statefact_shelf = Shelf(
             {
-                "state": Dimension(cls.state_fact_table.c.name),
+                "state": Dimension(cls.state_fact_table.c.name, **dim_kwargs),
                 "abbreviation": Dimension(cls.state_fact_table.c.abbreviation),
             }
         )
@@ -418,8 +450,3 @@ class RecipeTestCase(TestCase):
                 ).scalar(),
                 expected_count,
             )
-
-    def test_strip_columns_from_csv(self):
-        content = """a,b,c\n1,2,3"""
-        c2 = strip_columns_from_csv(content, ignore_columns=["b"])
-        self.assertEqual(c2, "a,c\n1,3")

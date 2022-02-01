@@ -433,6 +433,8 @@ class Recipe(object):
         #             "order_bys": list(order_bys)
         #         }
         recipe_parts = self._cauldron.brew_query_parts(self._order_bys)
+        if self._limit or self._offset and not recipe_parts["order_bys"]:
+            recipe_parts["order_bys"] = copy(recipe_parts["group_bys"])
 
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_recipe_parts(recipe_parts)
