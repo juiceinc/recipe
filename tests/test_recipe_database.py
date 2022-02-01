@@ -10,9 +10,12 @@ from recipe import Recipe, Shelf, get_oven
 from tests.test_base import RecipeTestCase
 
 
-# @pytest.mark.skip("Can't run this witout connection")
+SQL_SERVER_CONNECTION_STR = os.environ.get("SQL_SERVER_CONNECTION_STR")
+
+
+@pytest.mark.skip("Can't run this witout connection")
 class TestRecipeSQLServer(RecipeTestCase):
-    connection_string = "mssql+pyodbc://juiceboxtest:CTZvwmhB348YCggcudpk@juicebox-sql.c6aiaphlgbzn.us-east-1.rds.amazonaws.com:1433/juiceboxtest?driver=ODBC+Driver+17+for+SQL+Server"
+    connection_string = SQL_SERVER_CONNECTION_STR
 
     def setUp(self):
         self.shelf = self.shelf_from_yaml(

@@ -1430,6 +1430,7 @@ GROUP BY summarize.department""",
             .limit(2)
         )
 
+        print(recipe.to_sql())
         self.assertRecipeSQL(
             recipe,
             """SELECT summarize.department,

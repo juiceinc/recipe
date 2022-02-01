@@ -111,10 +111,11 @@ class RecipeTestCase(TestCase):
     """Test cases that can build and test a recipe"""
 
     maxDiff = None
-    # connection_string = "sqlite://"
-    connection_string = "mssql+pyodbc://juiceboxtest:CTZvwmhB348YCggcudpk@juicebox-sql.c6aiaphlgbzn.us-east-1.rds.amazonaws.com:1433/juiceboxtest?driver=ODBC+Driver+17+for+SQL+Server"
-    create_table_kwargs = {"schema": "demo"}
-    create_tables = False
+    connection_string = "sqlite://"
+    create_table_kwargs = {}
+    # When testing SQL server, we need to use these two options
+    # create_table_kwargs = {"schema": "demo"}
+    # create_tables = False
 
     def setUp(self):
         super().setUp()
