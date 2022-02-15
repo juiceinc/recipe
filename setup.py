@@ -42,7 +42,7 @@ install = [
 
 setup(
     name="recipe",
-    version="0.29.3",
+    version="0.30.0",
     description="A construction kit for SQL",
     long_description=(open("README.rst").read()),
     author="Chris Gemignani",

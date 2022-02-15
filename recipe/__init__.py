@@ -49,7 +49,7 @@ class NullHandler(logging.Handler):
 
 logging.getLogger(__name__).addHandler(NullHandler())
 
-__version__ = "0.29.3"
+__version__ = "0.30.0"
 
 __all__ = [
     "BadIngredient",
