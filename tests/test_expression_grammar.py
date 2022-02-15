@@ -291,6 +291,8 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         min(department)                 -> str
         min(test_date)                  -> date
         count(*)                        -> num
+        substr(department, 5)           -> str
+        substr(department, 5, 5)        -> str
         """
 
         for field, expected_data_type in self.examples(good_examples):
@@ -435,6 +437,8 @@ class TestDataTypesTable(GrammarTestCase):
         [ScORE]                         -> datatypes.score
         [ScORE] + [ScORE]               -> datatypes.score + datatypes.score
         [score] + 2.0                   -> datatypes.score + 2.0
+        substr(department, 5)           -> substr(datatypes.department, 5)
+        substr(department, 5, 2)        -> substr(datatypes.department, 5, 2)
         #([score] + 2.0) / [score]                   -> datatypes.score + 2.0
         [username] + [department]       -> datatypes.username || datatypes.department
         "foo" + [department]            -> 'foo' || datatypes.department

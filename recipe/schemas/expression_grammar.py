@@ -134,7 +134,7 @@ def make_grammar(columns):
     // Datetimes that are converted to the end of day
     {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
     {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "date_bool_expr", "datetime_bool_expr", "str_like_expr", "vector_expr", "between_expr", "date_between_expr", "datetime_between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
-    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast", "string_coalesce", "string_if_statement", "string_aggr"])}
+    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast", "string_coalesce", "string_substr", "string_if_statement", "string_aggr"])}
     {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "num_coalesce", "aggr", "error_aggr", "num_if_statement", "age_conv"])}
     string_add: string "+" string
     num_add.1: num "+" num | "(" num "+" num ")"
@@ -210,6 +210,7 @@ def make_grammar(columns):
     dt_year_conv: /year/i "(" datetime ")"
     // col->string
     string_cast: /string/i "(" col ")"
+    string_substr: /substr/i "(" string "," [num ("," num)?] ")"
     // col->int
     int_cast: /int/i "(" col ")"
     // date->int
@@ -538,6 +539,17 @@ class TransformToSQLAlchemyExpression(Transformer):
         """Cast a field to a string"""
         return cast(fld, String())
 
+    def string_substr(self, _, fld, *args):
+        """Substring a string. This can take one or two args."""
+        if self.drivername.startswith("mssql"):
+            if len(args) != 2:
+                raise GrammarError("mssql requires a starting number and a length")
+            return func.substring(fld, *args)
+
+        # Sqlite, postgres, bigquery, snowflake all accept an
+        # optional second argument for length
+        return func.substr(fld, *args)
+
     def num(self, v):
         if isinstance(v, Tree):
             return self.columns[v.data]
@@ -808,10 +820,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def vector_comparator(self, *args):
         """Can be one token "IN" or two "NOT IN" """
-        if len(args) == 1:
-            return "in_"
-        else:
-            return "notin_"
+        return "in_" if len(args) == 1 else "notin_"
 
     def comparator(self, comp):
         """A comparator like =, !=, >, >="""
