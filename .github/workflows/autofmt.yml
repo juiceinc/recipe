@@ -44,7 +44,7 @@ jobs:
         MODIFIED_FILES=$(git diff $(git merge-base $BRANCH $BASE) $BRANCH --diff-filter=d --name-only | grep '\.py$')
         echo "modified files are $MODIFIED_FILES"
         echo "### Running black"
-        black --target-version=py27 $MODIFIED_FILES
+        black --target-version=py39 $MODIFIED_FILES
 
     - name: Commit changes back to PR
       run: |
