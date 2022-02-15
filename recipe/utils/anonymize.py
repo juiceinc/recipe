@@ -74,12 +74,11 @@ class FakerFormatter(string.Formatter):
 
 
 @attr.s
-class FakerAnonymizer(object):
+class FakerAnonymizer:
     """Returns a deterministically generated fake value that depends on the
     input value."""
 
     format_str = attr.ib()
-    postprocessor = attr.ib()
     locale = attr.ib(default="en_US")
     postprocessor = attr.ib(default=None)
     providers = attr.ib(default=None)

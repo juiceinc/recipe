@@ -1,8 +1,8 @@
+import functools
 from collections import defaultdict
 from datetime import date, datetime
 
 import dateparser
-import functools
 from lark import GrammarError, Lark, Transformer, Tree, Visitor, v_args
 from lark.lexer import Token
 from sqlalchemy import (
@@ -23,7 +23,8 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.ext.declarative.api import DeclarativeMeta
-from sqlalchemy.sql.base import ImmutableColumnCollection
+from sqlalchemy.sql.base import ColumnCollection
+from sqlalchemy.sql.expression import select
 from sqlalchemy.sql.sqltypes import Numeric
 
 from . import engine_support
@@ -34,7 +35,6 @@ from .utils import (
     convert_to_start_datetime,
 )
 
-
 # SQL server can not support parameters in queries that are used for grouping
 # https://github.com/mkleehammer/pyodbc/issues/479
 # To avoid parameterization, we pass literals
@@ -42,7 +42,7 @@ literal_1 = text("1")
 literal_0 = text("0")
 
 
-def make_columns_grammar(columns):
+def make_columns_grammar(columns: dict) -> str:
     """Return a lark rule that looks like
 
     // These are my raw columns
@@ -57,11 +57,12 @@ def make_columns_grammar(columns):
     return "\n".join(items).lstrip()
 
 
-def gather_columns(rule_name, columns, prefix, additions=None):
+def gather_columns(rule_name: str, columns: dict, prefix: str, additions=None) -> str:
     """Build a list of all columns matching a prefix allong with potential additional rules."""
-    raw_rule_name = rule_name.split(".")[0]
     if additions is None:
         additions = []
+
+    raw_rule_name = rule_name.split(".")[0]
 
     # Reduce a pair of parens around a type back to itself.
     paren_rule = f'"(" + {raw_rule_name} + ")"'
@@ -73,9 +74,9 @@ def gather_columns(rule_name, columns, prefix, additions=None):
         return f'{rule_name}: "DUMMYVALUNUSABLECOL"'
 
 
-def make_columns_for_table(selectable):
+def make_columns_for_selectable(selectable) -> dict:
     """Return a dictionary of columns. The keys
-    are unique lark rules prefixed by the column type
+    are unique lark rule names prefixed by the column type
     like num_0, num_1, string_0, etc.
 
     The values are the selectable column reference
@@ -88,9 +89,7 @@ def make_columns_for_table(selectable):
     if isinstance(selectable, DeclarativeMeta):
         column_iterable = selectable.__table__.columns
     # Selectable is a sqlalchemy subquery
-    elif hasattr(selectable, "c") and isinstance(
-        selectable.c, ImmutableColumnCollection
-    ):
+    elif hasattr(selectable, "c") and isinstance(selectable.c, ColumnCollection):
         column_iterable = selectable.c
     else:
         raise Exception("Selectable does not have columns")
@@ -120,7 +119,7 @@ def make_columns_for_table(selectable):
     return columns
 
 
-def make_lark_grammar(columns):
+def make_grammar(columns):
     """Build a grammar for this selectable using columns"""
     grammar = f"""
     col: boolean | string | num | date | datetime_end | datetime | unusable_col | unknown_col | error_math | error_vector_expr | error_not_nonboolean | error_between_expr | error_aggr | error_if_statement
@@ -135,7 +134,7 @@ def make_lark_grammar(columns):
     // Datetimes that are converted to the end of day
     {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
     {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "date_bool_expr", "datetime_bool_expr", "str_like_expr", "vector_expr", "between_expr", "date_between_expr", "datetime_between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
-    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast", "string_coalesce", "string_if_statement", "string_aggr"])}
+    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast", "string_coalesce", "string_substr", "string_if_statement", "string_aggr"])}
     {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "num_coalesce", "aggr", "error_aggr", "num_if_statement", "age_conv"])}
     string_add: string "+" string
     num_add.1: num "+" num | "(" num "+" num ")"
@@ -211,6 +210,7 @@ def make_lark_grammar(columns):
     dt_year_conv: /year/i "(" datetime ")"
     // col->string
     string_cast: /string/i "(" col ")"
+    string_substr: /substr/i "(" string "," [num ("," num)?] ")"
     // col->int
     int_cast: /int/i "(" col ")"
     // date->int
@@ -539,6 +539,17 @@ class TransformToSQLAlchemyExpression(Transformer):
         """Cast a field to a string"""
         return cast(fld, String())
 
+    def string_substr(self, _, fld, *args):
+        """Substring a string. This can take one or two args."""
+        if self.drivername.startswith("mssql"):
+            if len(args) != 2:
+                raise GrammarError("mssql requires a starting number and a length")
+            return func.substring(fld, *args)
+
+        # Sqlite, postgres, bigquery, snowflake all accept an
+        # optional second argument for length
+        return func.substr(fld, *args)
+
     def num(self, v):
         if isinstance(v, Tree):
             return self.columns[v.data]
@@ -809,10 +820,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def vector_comparator(self, *args):
         """Can be one token "IN" or two "NOT IN" """
-        if len(args) == 1:
-            return "in_"
-        else:
-            return "notin_"
+        return "in_" if len(args) == 1 else "notin_"
 
     def comparator(self, comp):
         """A comparator like =, !=, >, >="""
@@ -1023,6 +1031,9 @@ BUILDER_CACHE = {}
 class SQLAlchemyBuilder(object):
     @classmethod
     def get_builder(cls, selectable):
+        print("Getting builder for", selectable, type(selectable))
+        from pprint import pprint
+
         if selectable not in BUILDER_CACHE:
             BUILDER_CACHE[selectable] = cls(selectable)
         return BUILDER_CACHE[selectable]
@@ -1039,6 +1050,7 @@ class SQLAlchemyBuilder(object):
         Args:
             selectable (Table): A SQLAlchemy selectable
         """
+        print(selectable, type(selectable))
         self.selectable = selectable
         # Database driver
         try:
@@ -1046,8 +1058,8 @@ class SQLAlchemyBuilder(object):
         except Exception:
             self.drivername = "unknown"
 
-        self.columns = make_columns_for_table(selectable)
-        self.grammar = make_lark_grammar(self.columns)
+        self.columns = make_columns_for_selectable(selectable)
+        self.grammar = make_grammar(self.columns)
         self.parser = Lark(
             self.grammar,
             parser="earley",

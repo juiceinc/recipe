@@ -7,17 +7,22 @@ from sqlalchemy.orm import Query
 from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
 
 
+def expr_to_str(expr):
+    """Utility to print sql for a expression"""
+    return str(expr.compile(compile_kwargs={"literal_binds": True}))
+
+
 def filter_to_string(filt):
     """Compile a filter object to a literal string"""
     try:
         if hasattr(filt, "filters") and filt.filters:
-            return str(filt.filters[0].compile(compile_kwargs={"literal_binds": True}))
+            return expr_to_str(filt.filters[0])
         elif hasattr(filt, "havings") and filt.havings:
-            return str(filt.havings[0].compile(compile_kwargs={"literal_binds": True}))
+            return expr_to_str(filt.havings[0])
         elif isinstance(filt, bool):
             return str(filt)
         else:
-            return str(filt.compile(compile_kwargs={"literal_binds": True}))
+            return expr_to_str(filt)
     except UnsupportedCompilationError:
         return uuid4()
 

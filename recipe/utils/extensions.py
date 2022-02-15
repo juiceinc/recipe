@@ -4,7 +4,7 @@ from functools import wraps
 def recipe_arg(*args):
     """Decorator for recipe builder arguments.
 
-    Promotes builder pattern by returning self.
+    Promotes builder pattern by returning a recipe.
     """
 
     def decorator(func):

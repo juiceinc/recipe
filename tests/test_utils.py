@@ -4,7 +4,7 @@ from datetime import date
 import pytest
 from faker import Faker
 from faker.providers import BaseProvider
-
+from tests.test_base import RecipeTestCase
 from recipe.utils import (
     AttrDict,
     FakerAnonymizer,
@@ -15,6 +15,14 @@ from recipe.utils import (
 )
 
 uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+
+# recipe/utils/__init__.py                    4      0      0      0   100.00%
+# recipe/utils/anonymize.py                  93     11     44      9    85.40%   46, 52, 55-58, 61->71, 69, 100, 107->103, 115, 118, 122-124, 130
+# recipe/utils/datatype.py                   65     16     40      8    73.33%   20-21, 27, 33, 41-42, 47, 54->69, 65-67, 72, 74, 91-94
+# recipe/utils/extensions.py                 17      1      6      1    91.30%   20
+# recipe/utils/formatting.py                 42      6     18      6    80.00%   16, 21-22, 33, 38, 53->59, 54->56, 62
+# recipe/utils/utils.py                      33      3     10      0    88.37%   33-36
 
 
 class TestUtils(object):
@@ -29,10 +37,10 @@ class TestUtils(object):
         assert generate_faker_seed([]) == 15515306683186839187
 
 
-class TestPadValues(object):
+class PadValuesTestCase(RecipeTestCase):
     def test_pad_values(self):
         """A list or tuple of values are padded to a multiple of bin size"""
-        with pytest.raises(Exception):
+        with self.assertRaises(Exception):
             pad_values("rocket")
 
         v = pad_values([])
@@ -55,11 +63,7 @@ class TestPadValues(object):
             "RECIPE-DUMMY-VAL-9",
             "RECIPE-DUMMY-VAL-10",
         ) == v
-        v = pad_values(
-            [
-                "hi",
-            ]
-        )
+        v = pad_values(["hi"])
         assert [
             "hi",
             "RECIPE-DUMMY-VAL-1",
@@ -104,7 +108,7 @@ class TestPadValues(object):
         ]
 
 
-class TestAttrDict(object):
+class AttrDictTestCase(RecipeTestCase):
     def test_attr_dict(self):
         d = AttrDict()
         assert isinstance(d, dict)
@@ -114,7 +118,7 @@ class TestAttrDict(object):
         assert d.bar == 3
 
 
-class TestFakerFormatter(object):
+class FakerFormatterTestCase(RecipeTestCase):
     def test_formatter(self):
         formatter = FakerFormatter()
         # Faker providers can be accessed by attribute if they take no
@@ -122,11 +126,11 @@ class TestFakerFormatter(object):
         assert len(formatter.format("{fake:name}", fake=Faker())) > 0
 
         # They can no longer be accessed as callables
-        with pytest.raises(AttributeError):
+        with self.assertRaises(AttributeError):
             formatter.format("{fake:name()}", fake=Faker())
 
         # Some attributes can't be found
-        with pytest.raises(AttributeError):
+        with self.assertRaises(AttributeError):
             formatter.format("{fake:nm}", fake=Faker())
 
         # Parameterized values still work
@@ -138,7 +142,7 @@ class CowProvider(BaseProvider):
         return "moo"
 
 
-class TestFakerAnonymizer(object):
+class FakerAnonymizerTestCase(RecipeTestCase):
     def test_anonymizer_with_NO_params(self):
         a = FakerAnonymizer("{fake:random_uppercase_letter}")
 

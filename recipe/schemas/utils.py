@@ -4,7 +4,9 @@ from dateutil.relativedelta import relativedelta
 import dateparser
 import inspect
 from sqlalchemy.ext.declarative import DeclarativeMeta
-from sqlalchemy.sql.base import ImmutableColumnCollection
+from sqlalchemy.sql.base import ColumnCollection
+
+ColumnCollection
 from sureberus import schema as S
 from recipe.exceptions import InvalidColumnError
 
@@ -23,7 +25,7 @@ def _chain(*args):
 
 
 def _make_sqlalchemy_datatype_lookup():
-    """ Build a dictionary of the allowed sqlalchemy casts """
+    """Build a dictionary of the allowed sqlalchemy casts"""
     from sqlalchemy.sql import sqltypes
 
     d = {}
@@ -69,7 +71,7 @@ def generate_lookup_by_engine(lookup_by_engine, engine):
 
 
 def convert_by_engine_keys_to_regex(lookup_by_engine):
-    """ Convert all the keys in a lookup_by_engine to a regex """
+    """Convert all the keys in a lookup_by_engine to a regex"""
     keys = set()
     for d in lookup_by_engine.values():
         for k in d.keys():
@@ -87,7 +89,7 @@ def coerce_pop_version(shelf):
 
 
 def coerce_shelf_meta(shelf):
-    """Move shelf meta from the shelf to all ingredients """
+    """Move shelf meta from the shelf to all ingredients"""
     shelf_meta = shelf.pop("_meta", None)
     for k, v in shelf.items():
         # Add shelf meta to all ingredient definitions
@@ -150,7 +152,7 @@ def convert_value(field, value):
 
 
 def _find_in_columncollection(columns, name):
-    """ Find a column in a column collection by name or _label"""
+    """Find a column in a column collection by name or _label"""
     for col in columns:
         if col.name == name or getattr(col, "_label", None) == name:
             return col
@@ -181,9 +183,7 @@ def find_column(selectable, name):
             return col
 
     # Selectable is a sqlalchemy subquery
-    elif hasattr(selectable, "c") and isinstance(
-        selectable.c, ImmutableColumnCollection
-    ):
+    elif hasattr(selectable, "c") and isinstance(selectable.c, ColumnCollection):
         col = getattr(selectable.c, name, None)
         if col is not None:
             return col
@@ -216,7 +216,7 @@ def date_offset(dt, offset, **offset_params):
 
 
 def convert_to_start_datetime(dt):
-    """Convert a date or datetime to the first moment of the day """
+    """Convert a date or datetime to the first moment of the day"""
     # Convert a date or datetime to the first moment of the day
     # only if the datetime is the first moment of the day
     if isinstance(dt, (date, datetime)):
@@ -225,7 +225,7 @@ def convert_to_start_datetime(dt):
 
 
 def convert_to_end_datetime(dt):
-    """Convert a date or datetime to the last moment of the day """
+    """Convert a date or datetime to the last moment of the day"""
     if isinstance(dt, (date, datetime)):
         dt = datetime(dt.year, dt.month, dt.day)
         dt += relativedelta(days=1, microseconds=-1)
