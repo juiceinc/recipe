@@ -2,6 +2,13 @@
 Changelog
 =========
 
+v0.30.0 (2021-02-15)
+-----------------------------------------
+* Breaking chagne: removed support for v1 ingredient configuration.
+* Refactor tests to use unittests
+* Add type annotations
+* Add substr function
+
 v0.29.3 (2021-12-07)
 -----------------------------------------
 * Add support for like and ilike in parsed expressions
