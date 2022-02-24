@@ -1,6 +1,7 @@
+from dataclasses import dataclass
 import inspect
 from json import loads, JSONDecodeError
-from typing import Union
+from typing import Union, List
 from sqlalchemy import and_, func, text, or_, String
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -139,6 +140,25 @@ def handle_directives(directives, handlers):
         method(v)
 
 
+def is_compound_filter(key: str) -> bool:
+    """Is this key a compound filter key?"""
+    if "," in key and "||" in key:
+        raise BadRecipe(
+            "Automatic filters may only contain one compound filter separator"
+        )
+    return "," in key or "||" in key
+
+
+def parse_compound_filter_key(key: str):
+    """Generate compound filter keys and join strategy."""
+    if "," in key:
+        return [k for k in key.split(",") if k], and_
+    elif "||" in key:
+        return [k for k in key.split("||") if k], or_
+    else:
+        raise BadRecipe("No compound filter key found")
+
+
 class AutomaticFilters(RecipeExtension):
     """Automatic generation and addition of Filters to a recipe.
 
@@ -179,7 +199,8 @@ class AutomaticFilters(RecipeExtension):
         )
 
     def _build_compound_filter(self, key, values):
-        """Build a filter using a compound key. Compound keys are comma delimited.
+        """Build a filter using a compound key. Compound keys may be comma delimited
+        or double bar '||' delimited.
         Compound values may either be a list of lists or a list of json encoded lists
 
         For instance::
@@ -190,7 +211,17 @@ class AutomaticFilters(RecipeExtension):
         will generate a filter equal to the following::
 
             WHERE (state='California' AND age=22) OR
-                  (state='Iowa' and age=24)
+                  (state='Iowa' AND age=24)
+
+        Using double bars will make the inner clause an OR. For instance::
+
+            key="state||age"
+            values=[["California",22],["Iowa", 24]]
+
+        will generate a filter equal to the following::
+
+            WHERE (state='California' OR age=22) OR
+                  (state='Iowa' OR age=24)
 
         Optionally, the values can be a json encoded list.
 
@@ -198,35 +229,32 @@ class AutomaticFilters(RecipeExtension):
             values=['["California", 22]', '["Iowa", 24]']
 
         Args:
-            key (str): A string containing a comma separated list of ids.
+            key (str): A string containing a comma or double bar separated list of ids.
             values (list): A list of lists containing that will be matched to the ids
 
         Returns:
             A SQLAlchemy boolean expression
         """
-        keys = key.split(",")
+        keys, joiner = parse_compound_filter_key(key)
         or_items = []
         for val in values:
             if isinstance(val, str):
                 try:
                     val = loads(val)
-                except JSONDecodeError:
-                    raise ValueError("Compound filter values must be valid json")
+                except JSONDecodeError as e:
+                    raise ValueError("Compound filter values must be valid json") from e
                 if not isinstance(val, list):
                     raise ValueError(
                         "Compound filter values must be json encoded lists"
                     )
-            and_items = []
+            inner_items = []
             for d, v in zip(keys, val):
                 filt = self._build_automatic_filter(d, v)
                 if filt is not None:
-                    and_items.append(filt)
-            if and_items:
-                or_items.append(and_(*and_items))
-        if or_items:
-            return or_(*or_items)
-        else:
-            return None
+                    inner_items.append(filt)
+            if inner_items:
+                or_items.append(joiner(*inner_items))
+        return or_(*or_items) if or_items else None
 
     def _build_automatic_filter(self, dim, values):
         """Build an automatic filter given a dim and a value.
@@ -272,7 +300,7 @@ class AutomaticFilters(RecipeExtension):
     def add_ingredients(self):
         if self.apply:
             for dim, values in self._automatic_filters.items():
-                if "," in dim:
+                if is_compound_filter(dim):
                     self.recipe.filters(self._build_compound_filter(dim, values))
                 else:
                     filt = self._build_automatic_filter(dim, values)
