@@ -316,6 +316,43 @@ class AutomaticFiltersTestCase(RecipeTestCase):
             GROUP BY first""",
             )
 
+    def test_automatic_filters_with_unknown_dim(self):
+        """Test filters built using an unknown dimension"""
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {"first": ["foo"], "potato": ["pancake"]},
+            },
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {"first": ["foo"], "potato__in": ["pancake"]},
+            },
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {"first": [None], "potato": "pancake"},
+            },
+            # Compound filters with unknown key
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {
+                    "first,potato": [["foo", "moo"], ["chicken", "cluck"]]
+                },
+            },
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {
+                    "potato,first": [["foo", "moo"], ["chicken", "cluck"]]
+                },
+            },
+        ):
+            with self.assertRaises(BadRecipe):
+                recipe.to_sql()
+
     def test_apply_automatic_filters(self):
         recipe = (
             self.recipe()
