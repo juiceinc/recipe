@@ -1,8 +1,5 @@
 from json import dumps
 from copy import copy
-from csv import DictReader
-
-import pytest
 from faker import Faker
 from sqlalchemy import func, and_, or_
 from sureberus.errors import BadType, SureError
