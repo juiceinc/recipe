@@ -393,7 +393,7 @@ class TestIngredientBuildFilter(RecipeTestCase):
                 strdim,
                 ["moo", None],
                 "notin",
-                "foo.first IS NOT NULL AND foo.first NOT IN ('moo')",
+                "NOT (foo.first IS NULL OR foo.first IN ('moo'))",
             ),
             (strdim, [None, None], "notin", "foo.first IS NOT NULL"),
             # Between values are not sorted
