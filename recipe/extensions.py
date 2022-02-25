@@ -159,6 +159,39 @@ def parse_compound_filter_key(key: str):
         raise BadRecipe("No compound filter key found")
 
 
+def clean_filtering_values(values, ingr, operator=None, optimize_for_redshift=False):
+    """
+    Redshift performs best when string in operators are padded out to 11 items
+    This will prevent excessive query compilation.
+    This means that any filtering of string dimensions in values will get
+    dummy values added.
+
+    Rather than generating
+        state in ('Vermont', 'New York')
+
+    Generate
+        state in ('Vermont', 'New York', 'DUMMY-VAl-1', ... until 11 total items)
+
+    This means the next query that uses three items in the in-list
+    can use the cached query.
+    """
+    if (
+        optimize_for_redshift
+        and ingr is not None
+        and operator is None
+        and isinstance(values, (list, tuple))
+        # The first column is the one that will be filtered
+        # limit filtering padding to columns that identify as String
+        and (
+            ingr.datatype == "str"
+            or (ingr.columns and isinstance(ingr.columns[0].type, String))
+        )
+    ):
+        values = pad_values(values)
+
+    return values
+
+
 class AutomaticFilters(RecipeExtension):
     """Automatic generation and addition of Filters to a recipe.
 
@@ -281,20 +314,9 @@ class AutomaticFilters(RecipeExtension):
 
         # TODO: If dim can't be found, optionally raise a warning
         dimension = self.recipe._shelf.find(dim, Dimension)
-        if (
-            self._optimize_redshift
-            and dimension is not None
-            and operator is None
-            and isinstance(values, (list, tuple))
-            # The first column is the one that will be filtered
-            # limit filtering padding to columns that identify as String
-            and (
-                isinstance(dimension.columns[0].type, String)
-                or dimension.datatype == "str"
-            )
-        ):
-            values = pad_values(values)
-
+        values = clean_filtering_values(
+            values, dimension, operator, self._optimize_redshift
+        )
         return dimension.build_filter(values, operator)
 
     def add_ingredients(self):
