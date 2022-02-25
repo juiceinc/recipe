@@ -1,7 +1,6 @@
-from dataclasses import dataclass
 import inspect
 from json import loads, JSONDecodeError
-from typing import Union, List
+from typing import Union
 from sqlalchemy import and_, func, text, or_, String
 from sqlalchemy.ext.declarative import declarative_base
 
