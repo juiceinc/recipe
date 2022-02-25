@@ -1,7 +1,6 @@
-import attr
 from functools import total_ordering
 from uuid import uuid4
-from sqlalchemy import Float, String, and_, between, case, cast, func, or_, text
+from sqlalchemy import Float, String, and_, between, case, cast, func, or_, text, not_
 from recipe.exceptions import BadIngredient
 from recipe.utils import AttrDict, filter_to_string
 from recipe.utils.datatype import (
@@ -10,6 +9,7 @@ from recipe.utils.datatype import (
     determine_datatype,
     datatype_from_column_expression,
 )
+from typing import List
 
 ALLOWED_OPERATORS = set(
     [
@@ -29,6 +29,15 @@ ALLOWED_OPERATORS = set(
         "between",
     ]
 )
+
+
+def is_nested_condition(v) -> bool:
+    return isinstance(v, dict) and "operator" in v and "value" in v
+
+
+def contains_complex_values(v: List) -> bool:
+    """Check if any of the values in a list requires special handling to filter on"""
+    return None in v or any(map(is_nested_condition, v))
 
 
 @total_ordering
@@ -173,10 +182,7 @@ class Ingredient(object):
             return ()
 
         elif len(self.columns) == 1:
-            if self.formatters:
-                return ("_raw",)
-            else:
-                return ("",)
+            return ("_raw",) if self.formatters else ("",)
         else:
             raise BadIngredient(
                 "column_suffixes must be supplied if there is more than one column"
@@ -363,37 +369,37 @@ class Ingredient(object):
         elif datatype == "datetime":
             value = list(map(convert_datetime, value))
 
-        if operator == "in":
-            # Default operator is 'in' so if no operator is provided, handle
-            # like an 'in'
-            if None in value:
-                # filter out the Nones
-                non_none_value = sorted([v for v in value if v is not None])
-                if non_none_value:
-                    return or_(
-                        filter_column.is_(None), filter_column.in_(non_none_value)
-                    )
-                else:
-                    return filter_column.is_(None)
-            else:
-                # Sort to generate deterministic query sql for caching
-                value = sorted(value)
-                return filter_column.in_(value)
+        if operator in ("in", "notin"):
+            if contains_complex_values(value):
+                # A list may contain additional operators or nones
+                # Convert from:
+                # department__in: [None, "A", 'B"]
+                #
+                # to the SQL
+                #
+                # department in ("A", "B") OR department is null
+                simple_values = sorted(
+                    [v for v in value if v is not None and not is_nested_condition(v)]
+                )
+                nested_conditions = [v for v in value if is_nested_condition(v)]
+                conditions = []
+                if None in value:
+                    conditions.append(filter_column.is_(None))
+                if simple_values:
+                    conditions.append(filter_column.in_(simple_values))
+                conditions.extend(
+                    self.build_filter(cond["value"], operator=cond["operator"])
+                    for cond in nested_conditions
+                )
+                print("Conditions is\n", conditions)
+                cond = or_(*conditions)
 
-        elif operator == "notin":
-            if None in value:
-                # filter out the Nones
-                non_none_value = sorted([v for v in value if v is not None])
-                if non_none_value:
-                    return and_(
-                        filter_column.isnot(None), filter_column.notin_(non_none_value)
-                    )
-                else:
-                    return filter_column.isnot(None)
             else:
                 # Sort to generate deterministic query sql for caching
-                value = sorted(value)
-                return filter_column.notin_(value)
+                cond = filter_column.in_(sorted(value))
+
+            return not_(cond) if operator == "notin" else cond
+
         elif operator == "between":
             if len(value) != 2:
                 ValueError(
