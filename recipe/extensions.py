@@ -1111,25 +1111,26 @@ class PaginateInline(Paginate):
         """Return pagination validated against the actual number of items in the
         response.
         """
-        if self.do_pagination():
-            validated_pagination = {
-                "requestedPage": self._pagination_page,
-                "page": self._pagination_page,
-                "pageSize": self._pagination_page_size,
-                "totalItems": 0,
-            }
-            rows = self.recipe.all()
-            if rows:
-                row = rows[0]
-                validated_pagination["totalItems"] = row._total_count
-            else:
-                if self._pagination_page != 1:
-                    # Go to the first page and rerun the query
-                    self.pagination_page(1)
-                    self.recipe.reset()
-                    return self.validated_pagination()
+        if not self.do_pagination():
+            return
 
-            return validated_pagination
+        validated_pagination = {
+            "requestedPage": self._pagination_page,
+            "page": self._pagination_page,
+            "pageSize": self._pagination_page_size,
+            "totalItems": 0,
+        }
+        rows = self.recipe.all()
+        if rows:
+            row = rows[0]
+            validated_pagination["totalItems"] = row._total_count
+        elif self._pagination_page != 1:
+            # Go to the first page and rerun the query
+            self.pagination_page(1)
+            self.recipe.reset()
+            return self.validated_pagination()
+
+        return validated_pagination
 
 
 class BlendRecipe(RecipeExtension):

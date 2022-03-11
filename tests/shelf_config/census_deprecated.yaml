@@ -1,4 +1,3 @@
-_version: "2"
 # Test deprecated ingredient kinds
 # These all get turned into regular dimensions and metrics
 popchg:

@@ -1,4 +1,3 @@
-_version: "2"
 # A bad metric definition
 pop2000:
     kind: Metric
