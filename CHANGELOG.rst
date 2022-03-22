@@ -2,6 +2,13 @@
 Changelog
 =========
 
+v0.30.1 (2021-03-22)
+-----------------------------------------
+* Fix an error in ordering with mixed case columns/labels when using snowflake
+* Update requirements to use lark
+* Update requirements for dateparser past a broken version (See issue https://github.com/scrapinghub/dateparser/issues/1045)
+* Don't create expression grammar for columns with invalid names
+
 v0.30.0 (2021-02-15)
 -----------------------------------------
 * Breaking chagne: removed support for v1 ingredient configuration.
