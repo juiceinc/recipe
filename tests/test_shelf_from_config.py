@@ -809,17 +809,13 @@ ORDER BY state_raw""",
         """Test a bad yaml file"""
         shelf = self.shelf_from_filename("census_bad.yaml", self.census_table)
         self.assertIsInstance(shelf["pop2000"], InvalidIngredient)
-        assert (
-            "No terminal defined for '>'" in shelf["pop2000"].error["extra"]["details"]
-        )
+        assert "No terminal" in shelf["pop2000"].error["extra"]["details"]
 
     def test_bad_census_in(self):
         """Test a bad yaml file"""
         shelf = self.shelf_from_filename("census_bad_in.yaml", self.census_table)
         self.assertIsInstance(shelf["pop2000"], InvalidIngredient)
-        assert (
-            "No terminal defined for 'c'" in shelf["pop2000"].error["extra"]["details"]
-        )
+        assert "No terminal" in shelf["pop2000"].error["extra"]["details"]
 
     def test_shelf_with_invalidcolumn(self):
         """Build a recipe using a shelf that uses field references"""

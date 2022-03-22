@@ -34,9 +34,9 @@ install = [
     'stevedore',
     'sureberus',
     'faker',
-    'dateparser',
+    'dateparser>=1.1.1',
     'attrs',
-    'lark-parser',
+    'lark',
 ]
 # yapf: enable
 
