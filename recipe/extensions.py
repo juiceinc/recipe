@@ -262,7 +262,7 @@ class AutomaticFilters(RecipeExtension):
                 if filt is not None:
                     and_items.append(filt)
             if and_items:
-                or_items.append(joiner(*and_items))
+                or_items.append(and_(*and_items))
         return or_(*or_items) if or_items else None
 
     def _build_automatic_filter(self, dim, values):

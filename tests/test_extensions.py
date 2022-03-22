@@ -16,7 +16,6 @@ from recipe.extensions import (
     SummarizeOver,
     handle_directives,
     is_compound_filter,
-    parse_compound_filter_key,
 )
 from recipe.utils import generate_faker_seed, recipe_arg
 from tests.test_base import RecipeTestCase
@@ -420,27 +419,6 @@ class AutomaticFiltersTestCase(RecipeTestCase):
         for k in invalid_compound_keys:
             self.assertFalse(is_compound_filter(k))
 
-        error_compound_keys = [",||,", "a,b||c"]
-        for k in error_compound_keys:
-            with self.assertRaises(BadRecipe):
-                is_compound_filter(k)
-
-    def test_parse_compound_filter_key(self):
-        valid_compound_keys = [
-            ("a,b", ["a", "b"], and_),
-            ("a,b,c", ["a", "b", "c"], and_),
-            ("a,b,,c", ["a", "b", "c"], and_),
-            (",a,bb,aac", ["a", "bb", "aac"], and_),
-            (",", [], and_),
-            ("a||b", ["a", "b"], or_),
-            ("a||b||c", ["a", "b", "c"], or_),
-            ("||", [], or_),
-        ]
-        for k, expected_keys, expected_joiner in valid_compound_keys:
-            keys, joiner = parse_compound_filter_key(k)
-            self.assertEqual(keys, expected_keys)
-            self.assertEqual(joiner, expected_joiner)
-
     def test_operators_and_compound_filters(self):
         """Test operators and compound filters. Filter values may be json encoded"""
         # Testing operators
@@ -496,18 +474,6 @@ class AutomaticFiltersTestCase(RecipeTestCase):
                 """foo.first IN ('foo')
   AND foo.first NOT IN ('cow',
                         'moo')""",
-            ),
-            (
-                {"first__in||first__notin": ['[["foo"], ["moo","cow"]]']},
-                """foo.first IN ('foo')
-  OR foo.first NOT IN ('cow',
-                       'moo')""",
-            ),
-            (
-                {"first||first__notin": ['[["foo"], ["moo","cow"]]']},
-                """foo.first IN ('foo')
-  OR foo.first NOT IN ('cow',
-                       'moo')""",
             ),
         )
         for af, expected_sql in values:
