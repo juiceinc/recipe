@@ -113,7 +113,6 @@ class TestRecipeSQLServer(object):
 
         self.shelf = self.shelf_from_yaml(
             """
-_version: 2
 first:
     kind: Dimension
     field: first

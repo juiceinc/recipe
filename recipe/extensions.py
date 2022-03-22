@@ -1,6 +1,6 @@
 import inspect
 from json import loads, JSONDecodeError
-from typing import List, Union
+from typing import Union
 from sqlalchemy import and_, func, text, or_, String
 from sqlalchemy.ext.declarative import declarative_base
 
