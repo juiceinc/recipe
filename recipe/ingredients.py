@@ -391,7 +391,6 @@ class Ingredient(object):
                     self.build_filter(cond["value"], operator=cond["operator"])
                     for cond in nested_conditions
                 )
-                print("Conditions is\n", conditions)
                 cond = or_(*conditions)
 
             else:

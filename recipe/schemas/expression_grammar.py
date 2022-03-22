@@ -36,12 +36,6 @@ from .utils import (
     convert_to_start_datetime,
 )
 
-#          dimension, N, measure,  descending, global (no automatic filters)/local (use automatic filters in sub query)
-# top_n_by(browser, 3, sum(sales), true, true)
-#    null = Other
-# if(browser={p1}, {p1}, browser={p2}, {p2}, browser={p3}, {p3}, NONE)
-#
-# sum(sales)/calc(sum(sales))
 
 # SQL server can not support parameters in queries that are used for grouping
 # https://github.com/mkleehammer/pyodbc/issues/479
