@@ -1,7 +1,6 @@
 """Test Recipe against multiple database engines"""
 
 import os
-from unittest import skip
 import pytest
 from datetime import date, datetime
 

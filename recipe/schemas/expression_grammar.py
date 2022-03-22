@@ -199,7 +199,7 @@ def make_grammar(columns):
     numarray.1: "(" [NUMBER ("," NUMBER)*] ","?  ")"                    -> consistent_array
 
     // Date
-    date_conv.3: /date/i "(" string ")"
+    date_conv.3: /date/i "(" ESCAPED_STRING ")"
     date_fn.3: /date/i "(" num "," num "," num ")"
     datetime_to_date_conv.3: /date/i "(" datetime ")"  -> dt_day_conv
     datetime_conv.2: /date/i "(" ESCAPED_STRING ")"
@@ -287,9 +287,9 @@ def make_grammar(columns):
     INTELLIGENT_DATE_UNITS: /ytd/i | /year/i | /qtr/i | /month/i | /mtd/i | /day/i
     COMMENT: /#.*/
 
-    %import common.ESCAPED_STRING
     %import common.CNAME                       -> NAME
     %import common.SIGNED_NUMBER               -> NUMBER
+    %import common.ESCAPED_STRING
     %import common.WS_INLINE
     %ignore COMMENT
     %ignore WS_INLINE
@@ -660,14 +660,10 @@ class TransformToSQLAlchemyExpression(Transformer):
             return v
 
     def date_conv(self, _, datestr):
-        print("Processing date_conv")
-        print(_, type(_))
-        print(datestr, type(datestr))
         try:
             dt = dateparser.parse(datestr)
         except Exception as e:
-            print(e)
-            raise e
+            raise e from e
         if dt:
             dt = dt.date()
         else:
@@ -1048,14 +1044,8 @@ BUILDER_CACHE = {}
 class SQLAlchemyBuilder(object):
     @classmethod
     def get_builder(cls, selectable):
-        # print("Getting builder for", selectable, type(selectable))
-        # from pprint import pprint
-
         if selectable not in BUILDER_CACHE:
-            print("Making builder", selectable)
             BUILDER_CACHE[selectable] = cls(selectable)
-        else:
-            print("Builder was in cache")
         return BUILDER_CACHE[selectable]
 
     @classmethod
