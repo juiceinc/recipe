@@ -1,6 +1,6 @@
 import inspect
 from json import loads, JSONDecodeError
-from typing import Union
+from typing import List, Union
 from sqlalchemy import and_, func, text, or_, String
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -141,19 +141,13 @@ def handle_directives(directives, handlers):
 
 def is_compound_filter(key: str) -> bool:
     """Is this key a compound filter key?"""
-    if "," in key and "||" in key:
-        raise BadRecipe(
-            "Automatic filters may only contain one compound filter separator"
-        )
-    return "," in key or "||" in key
+    return bool("," in key)
 
 
 def parse_compound_filter_key(key: str):
     """Generate compound filter keys and join strategy."""
     if "," in key:
         return [k for k in key.split(",") if k], and_
-    elif "||" in key:
-        return [k for k in key.split("||") if k], or_
     else:
         raise BadRecipe("No compound filter key found")
 
@@ -230,9 +224,9 @@ class AutomaticFilters(RecipeExtension):
             },
         )
 
-    def _build_compound_filter(self, key, values):
-        """Build a filter using a compound key. Compound keys may be comma delimited
-        or double bar '||' delimited.
+    def _build_compound_filter(self, key:str, values):
+        """Build a filter using a compound key.
+
         Compound values may either be a list of lists or a list of json encoded lists
 
         For instance::
@@ -245,17 +239,8 @@ class AutomaticFilters(RecipeExtension):
             WHERE (state='California' AND age=22) OR
                   (state='Iowa' AND age=24)
 
-        Using double bars will make the inner clause an OR. For instance::
-
-            key="state||age"
-            values=[["California",22],["Iowa", 24]]
-
-        will generate a filter equal to the following::
-
-            WHERE (state='California' OR age=22) OR
-                  (state='Iowa' OR age=24)
-
-        Optionally, the values can be a json encoded list.
+        Optionally, the values can be a json encoded list. This value generates the same
+        filtering as the example above:
 
             key="state,age"
             values=['["California", 22]', '["Iowa", 24]']
