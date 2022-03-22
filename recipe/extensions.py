@@ -144,14 +144,6 @@ def is_compound_filter(key: str) -> bool:
     return bool("," in key)
 
 
-def parse_compound_filter_key(key: str):
-    """Generate compound filter keys and join strategy."""
-    if "," in key:
-        return [k for k in key.split(",") if k], and_
-    else:
-        raise BadRecipe("No compound filter key found")
-
-
 def clean_filtering_values(values, ingr, operator=None, optimize_for_redshift=False):
     """
     Redshift performs best when string in operators are padded out to 11 items
@@ -224,7 +216,7 @@ class AutomaticFilters(RecipeExtension):
             },
         )
 
-    def _build_compound_filter(self, key:str, values):
+    def _build_compound_filter(self, key: str, values):
         """Build a filter using a compound key.
 
         Compound values may either be a list of lists or a list of json encoded lists
@@ -246,13 +238,13 @@ class AutomaticFilters(RecipeExtension):
             values=['["California", 22]', '["Iowa", 24]']
 
         Args:
-            key (str): A string containing a comma or double bar separated list of ids.
+            key (str): A string containing a comma separated list of ids.
             values (list): A list of lists containing that will be matched to the ids
 
         Returns:
             A SQLAlchemy boolean expression
         """
-        keys, joiner = parse_compound_filter_key(key)
+        keys = key.split(",")
         or_items = []
         for val in values:
             if isinstance(val, str):
@@ -264,13 +256,13 @@ class AutomaticFilters(RecipeExtension):
                     raise ValueError(
                         "Compound filter values must be json encoded lists"
                     )
-            inner_items = []
+            and_items = []
             for d, v in zip(keys, val):
                 filt = self._build_automatic_filter(d, v)
                 if filt is not None:
-                    inner_items.append(filt)
-            if inner_items:
-                or_items.append(joiner(*inner_items))
+                    and_items.append(filt)
+            if and_items:
+                or_items.append(joiner(*and_items))
         return or_(*or_items) if or_items else None
 
     def _build_automatic_filter(self, dim, values):
