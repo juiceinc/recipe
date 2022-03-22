@@ -423,6 +423,19 @@ class TestIngredientBuildFilter(RecipeTestCase):
                 "between",
                 "foo.dt BETWEEN '1970-01-03 00:00:00' AND '1970-01-06 00:00:00'",
             ),
+            # Nested filters
+            (
+                strdim,
+                ["moo", {"operator": "like", "value": "%o"}],
+                None,
+                "foo.first IN ('moo') OR foo.first LIKE '%o'",
+            ),
+            (
+                strdim,
+                ["moo", {"operator": "notin", "value": ["cow", "pig"]}, "horse"],
+                None,
+                "foo.first IN ('horse', 'moo') OR foo.first NOT IN ('cow', 'pig')",
+            ),
         ]
 
         baddata = [
