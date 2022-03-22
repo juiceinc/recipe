@@ -5,6 +5,6 @@ stevedore==1.31.0
 tablib==3.0.0
 pyyaml>=5
 sureberus==0.14.0
-dateparser==1.0.0
+dateparser==1.1.1
 attrs==19.3.0
 lark-parser==0.11.1
