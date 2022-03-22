@@ -1,10 +1,10 @@
 faker==2.0.4
 SQLAlchemy>=1.2.2,<1.4
-sqlparse==0.3.0
+sqlparse==0.4.2
 stevedore==1.31.0
-tablib==3.0.0
+tablib==3.2.0
 pyyaml>=5
 sureberus==0.14.0
 dateparser==1.1.1
 attrs==19.3.0
-lark-parser==0.11.1
+lark==1.1.2
