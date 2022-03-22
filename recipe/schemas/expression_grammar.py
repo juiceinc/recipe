@@ -1,4 +1,5 @@
 import functools
+import regex as re
 from collections import defaultdict
 from datetime import date, datetime
 
@@ -41,6 +42,13 @@ from .utils import (
 literal_1 = text("1")
 literal_0 = text("0")
 
+VALID_COLUMN_RE = re.compile("^\w+$")
+
+
+def is_valid_column(c: str) -> bool:
+    """We can only build columns on field names that are alphanumeric"""
+    return bool(VALID_COLUMN_RE.match(c))
+
 
 def make_columns_grammar(columns: dict) -> str:
     """Return a lark rule that looks like
@@ -53,7 +61,8 @@ def make_columns_grammar(columns: dict) -> str:
     items = []
     for k in sorted(columns.keys()):
         c = columns[k]
-        items.append(f'    {k}: "[" + /{c.name}/i + "]" | /{c.name}/i')
+        if is_valid_column(c.name):
+            items.append(f'    {k}: "[" + /{c.name}/i + "]" | /{c.name}/i')
     return "\n".join(items).lstrip()
 
 
@@ -98,24 +107,25 @@ def make_columns_for_selectable(selectable) -> dict:
     type_counter = defaultdict(int)
 
     for c in column_iterable:
-        # Check supported column types
-        if isinstance(c.type, String):
-            prefix = "str"
-        elif isinstance(c.type, Date):
-            prefix = "date"
-        elif isinstance(c.type, DateTime):
-            prefix = "datetime"
-        elif isinstance(c.type, Integer):
-            prefix = "num"
-        elif isinstance(c.type, Numeric):
-            prefix = "num"
-        elif isinstance(c.type, Boolean):
-            prefix = "bool"
-        else:
-            prefix = "unusable"
-        cnt = type_counter[prefix]
-        type_counter[prefix] += 1
-        columns[f"{prefix}_{cnt}"] = c
+        if is_valid_column(c.name):
+            # Check supported column types
+            if isinstance(c.type, String):
+                prefix = "str"
+            elif isinstance(c.type, Date):
+                prefix = "date"
+            elif isinstance(c.type, DateTime):
+                prefix = "datetime"
+            elif isinstance(c.type, Integer):
+                prefix = "num"
+            elif isinstance(c.type, Numeric):
+                prefix = "num"
+            elif isinstance(c.type, Boolean):
+                prefix = "bool"
+            else:
+                prefix = "unusable"
+            cnt = type_counter[prefix]
+            type_counter[prefix] += 1
+            columns[f"{prefix}_{cnt}"] = c
     return columns
 
 
@@ -189,7 +199,7 @@ def make_grammar(columns):
     numarray.1: "(" [NUMBER ("," NUMBER)*] ","?  ")"                    -> consistent_array
 
     // Date
-    date_conv.3: /date/i "(" ESCAPED_STRING ")"
+    date_conv.3: /date/i "(" string ")"
     date_fn.3: /date/i "(" num "," num "," num ")"
     datetime_to_date_conv.3: /date/i "(" datetime ")"  -> dt_day_conv
     datetime_conv.2: /date/i "(" ESCAPED_STRING ")"
@@ -277,9 +287,9 @@ def make_grammar(columns):
     INTELLIGENT_DATE_UNITS: /ytd/i | /year/i | /qtr/i | /month/i | /mtd/i | /day/i
     COMMENT: /#.*/
 
+    %import common.ESCAPED_STRING
     %import common.CNAME                       -> NAME
     %import common.SIGNED_NUMBER               -> NUMBER
-    %import common.ESCAPED_STRING
     %import common.WS_INLINE
     %ignore COMMENT
     %ignore WS_INLINE
@@ -340,7 +350,7 @@ class SQLALchemyValidator(Visitor):
         self.errors.append(message)
 
     def _get_context_for_token(self, tok, span=40):
-        pos = tok.pos_in_stream
+        pos = tok.start_pos
         start = max(pos - span, 0)
         end = pos + span
         before = self.text[start:pos].rsplit("\n", 1)[-1]
@@ -519,7 +529,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         raise GrammarError(message)
 
     def _get_context_for_token(self, tok, span=40):
-        pos = tok.pos_in_stream
+        pos = tok.start_pos
         start = max(pos - span, 0)
         end = pos + span
         before = self.text[start:pos].rsplit("\n", 1)[-1]
@@ -650,7 +660,14 @@ class TransformToSQLAlchemyExpression(Transformer):
             return v
 
     def date_conv(self, _, datestr):
-        dt = dateparser.parse(datestr)
+        print("Processing date_conv")
+        print(_, type(_))
+        print(datestr, type(datestr))
+        try:
+            dt = dateparser.parse(datestr)
+        except Exception as e:
+            print(e)
+            raise e
         if dt:
             dt = dt.date()
         else:
@@ -1031,11 +1048,14 @@ BUILDER_CACHE = {}
 class SQLAlchemyBuilder(object):
     @classmethod
     def get_builder(cls, selectable):
-        print("Getting builder for", selectable, type(selectable))
-        from pprint import pprint
+        # print("Getting builder for", selectable, type(selectable))
+        # from pprint import pprint
 
         if selectable not in BUILDER_CACHE:
+            print("Making builder", selectable)
             BUILDER_CACHE[selectable] = cls(selectable)
+        else:
+            print("Builder was in cache")
         return BUILDER_CACHE[selectable]
 
     @classmethod
