@@ -2,10 +2,6 @@
 Changelog
 =========
 
-v0.30.1 (2021-03-16)
------------------------------------------
-* Fix an error in ordering with mixed case columns/labels when using snowflake
-
 v0.30.0 (2021-02-15)
 -----------------------------------------
 * Breaking chagne: removed support for v1 ingredient configuration.
