@@ -301,9 +301,7 @@ class AutomaticFilters(RecipeExtension):
                 if is_compound_filter(dim):
                     self.recipe.filters(self._build_compound_filter(dim, values))
                 else:
-                    filt = self._build_automatic_filter(dim, values)
-                    if filt is not None:
-                        self.recipe.filters(filt)
+                    self.recipe.filters(self._build_automatic_filter(dim, values))
 
     @recipe_arg()
     def optimize_redshift(self, value):
