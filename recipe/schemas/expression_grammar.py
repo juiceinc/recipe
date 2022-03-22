@@ -1,5 +1,4 @@
 import functools
-import regex as re
 from collections import defaultdict
 from datetime import date, datetime
 

@@ -1,7 +1,6 @@
 """Test the lark grammar used to define field expressions."""
 
 import time
-from unittest.case import skip
 
 from freezegun import freeze_time
 from sqlalchemy import Table, Column, String, Integer
