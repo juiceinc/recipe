@@ -84,7 +84,9 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
     }
     convert_datetimes_with = convert_datetimes_lookup.get(format)
 
-    if builder.drivername.startswith("mssql"):
+    if builder.drivername.startswith("mssql") or builder.drivername.startswith(
+        "snowflake"
+    ):
         # SQLServer can not use aliases in group bys and also
         # does not support date/time conversions due to an issue with pyodbc
         # parameters in queries
@@ -95,6 +97,10 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
 
     try:
         if kind in ("metric", "dimension"):
+            ingr_dict["group_by_strategy"] = ingr_dict.get(
+                "group_by_strategy", default_group_by_strategy
+            )
+
             if kind == "metric":
                 fld_defn = ingr_dict.pop("field", None)
                 # SQLAlchemy ingredient with required aggregation
@@ -115,9 +121,6 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                     return InvalidIngredient(error=error)
                 args = [expr]
             else:
-                ingr_dict["group_by_strategy"] = ingr_dict.get(
-                    "group_by_strategy", default_group_by_strategy
-                )
                 fld_defn = ingr_dict.pop("field", None)
                 buckets = ingr_dict.pop("buckets", None)
                 buckets_default_label = ingr_dict.pop("buckets_default_label", None)
