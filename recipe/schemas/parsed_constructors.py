@@ -97,11 +97,11 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
 
     try:
         if kind in ("metric", "dimension"):
-            if kind == "metric":
+            ingr_dict["group_by_strategy"] = ingr_dict.get(
+                "group_by_strategy", default_group_by_strategy
+            )
 
-                ingr_dict["group_by_strategy"] = ingr_dict.get(
-                    "group_by_strategy", default_group_by_strategy
-                )
+            if kind == "metric":
                 fld_defn = ingr_dict.pop("field", None)
                 # SQLAlchemy ingredient with required aggregation
                 expr, datatype = builder.parse(
@@ -121,9 +121,6 @@ def create_ingredient_from_parsed(ingr_dict, builder, debug=False):
                     return InvalidIngredient(error=error)
                 args = [expr]
             else:
-                ingr_dict["group_by_strategy"] = ingr_dict.get(
-                    "group_by_strategy", default_group_by_strategy
-                )
                 fld_defn = ingr_dict.pop("field", None)
                 buckets = ingr_dict.pop("buckets", None)
                 buckets_default_label = ingr_dict.pop("buckets_default_label", None)
