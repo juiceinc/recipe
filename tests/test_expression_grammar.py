@@ -10,6 +10,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from recipe.schemas.expression_grammar import (
     SQLAlchemyBuilder,
+    is_valid_column,
     make_columns_for_selectable,
     make_columns_grammar,
     gather_columns,
@@ -1125,3 +1126,28 @@ class TestSQLAlchemySerialize(GrammarTestCase):
             ser = dumps(expr)
             expr = loads(ser, self.builder.selectable.metadata, self.oven.Session())
             self.assertEqual(expr_to_str(expr), expected_sql)
+
+
+class TestIsValidColumn(GrammarTestCase):
+    def test_is_valid_column(self):
+        good_values = [
+            "this",
+            "that",
+            "THIS",
+            "THAT",
+            "this_that_and_other",
+            "_other",
+            "THIS_that_",
+        ]
+        for v in good_values:
+            self.assertTrue(is_valid_column(v))
+
+        bad_values = [
+            " this",
+            "that ",
+            " THIS",
+            "TH AT  ",
+            "for_slackbot}_organization_name",
+        ]
+        for v in bad_values:
+            self.assertFalse(is_valid_column(v))

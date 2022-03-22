@@ -13,6 +13,58 @@ def str_dedent(s):
     return "\n".join([x.lstrip() for x in s.split("\n")]).lstrip("\n")
 
 
+@pytest.mark.skip("Can't run this without connection")
+class TestPostgres(object):
+    def setup(self):
+        connection_string = os.environ.get("POSTGRES_CONNECTION_STR", None)
+        self.skip_tests = False
+        if connection_string is None:
+            self.skip_tests = True
+            return
+
+        self.oven = get_oven(connection_string)
+
+        self.meta = MetaData(bind=self.oven.engine)
+        self.session = self.oven.Session()
+
+        self.table = Table(
+            "brands", self.meta, autoload=True, autoload_with=self.oven.engine
+        )
+        d = {"id": {"icon": "check-square", "kind": "Dimension", "field": "id"}}
+
+        self.shelf = self.shelf_from_yaml(
+            """
+    id:
+        kind: Dimension
+        field: id
+    webflow_brand_profile_id:
+        kind: Dimension
+        field: webflow_brand_profile_id
+    """,
+            self.table,
+        )
+
+    def shelf_from_yaml(self, yaml_config, selectable):
+        """Create a shelf directly from configuration"""
+        return Shelf.from_validated_yaml(yaml_config, selectable)
+
+    def recipe(self, **kwargs):
+        return Recipe(shelf=self.shelf, session=self.session, **kwargs)
+
+    def testit(self):
+
+        tables = {}
+        engine = self.oven.engine
+        with engine.connect() as conn:
+            for schema in engine.dialect.get_schema_names(conn):
+                schema_tables = engine.table_names(schema=schema, connection=conn)
+                if schema_tables:
+                    tables[schema] = sorted(schema_tables)
+
+        r = self.recipe().dimensions("id")
+        assert len(r.all()) == 10
+
+
 @pytest.mark.skip("Can't run this witout connection")
 class TestRecipeSQLServer(object):
     def setup(self):
