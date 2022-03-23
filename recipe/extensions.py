@@ -139,6 +139,44 @@ def handle_directives(directives, handlers):
         method(v)
 
 
+def is_compound_filter(key: str) -> bool:
+    """Is this key a compound filter key?"""
+    return bool("," in key)
+
+
+def clean_filtering_values(values, ingr, operator=None, optimize_for_redshift=False):
+    """
+    Redshift performs best when string in operators are padded out to 11 items
+    This will prevent excessive query compilation.
+    This means that any filtering of string dimensions in values will get
+    dummy values added.
+
+    Rather than generating
+        state in ('Vermont', 'New York')
+
+    Generate
+        state in ('Vermont', 'New York', 'DUMMY-VAl-1', ... until 11 total items)
+
+    This means the next query that uses three items in the in-list
+    can use the cached query.
+    """
+    if (
+        optimize_for_redshift
+        and ingr is not None
+        and operator is None
+        and isinstance(values, (list, tuple))
+        # The first column is the one that will be filtered
+        # limit filtering padding to columns that identify as String
+        and (
+            ingr.datatype == "str"
+            or (ingr.columns and isinstance(ingr.columns[0].type, String))
+        )
+    ):
+        values = pad_values(values)
+
+    return values
+
+
 class AutomaticFilters(RecipeExtension):
     """Automatic generation and addition of Filters to a recipe.
 
@@ -178,8 +216,9 @@ class AutomaticFilters(RecipeExtension):
             },
         )
 
-    def _build_compound_filter(self, key, values):
-        """Build a filter using a compound key. Compound keys are comma delimited.
+    def _build_compound_filter(self, key: str, values):
+        """Build a filter using a compound key.
+
         Compound values may either be a list of lists or a list of json encoded lists
 
         For instance::
@@ -190,9 +229,10 @@ class AutomaticFilters(RecipeExtension):
         will generate a filter equal to the following::
 
             WHERE (state='California' AND age=22) OR
-                  (state='Iowa' and age=24)
+                  (state='Iowa' AND age=24)
 
-        Optionally, the values can be a json encoded list.
+        Optionally, the values can be a json encoded list. This value generates the same
+        filtering as the example above:
 
             key="state,age"
             values=['["California", 22]', '["Iowa", 24]']
@@ -223,10 +263,7 @@ class AutomaticFilters(RecipeExtension):
                     and_items.append(filt)
             if and_items:
                 or_items.append(and_(*and_items))
-        if or_items:
-            return or_(*or_items)
-        else:
-            return None
+        return or_(*or_items) if or_items else None
 
     def _build_automatic_filter(self, dim, values):
         """Build an automatic filter given a dim and a value.
@@ -253,31 +290,18 @@ class AutomaticFilters(RecipeExtension):
 
         # TODO: If dim can't be found, optionally raise a warning
         dimension = self.recipe._shelf.find(dim, Dimension)
-        if (
-            self._optimize_redshift
-            and dimension is not None
-            and operator is None
-            and isinstance(values, (list, tuple))
-            # The first column is the one that will be filtered
-            # limit filtering padding to columns that identify as String
-            and (
-                isinstance(dimension.columns[0].type, String)
-                or dimension.datatype == "str"
-            )
-        ):
-            values = pad_values(values)
-
+        values = clean_filtering_values(
+            values, dimension, operator, self._optimize_redshift
+        )
         return dimension.build_filter(values, operator)
 
     def add_ingredients(self):
         if self.apply:
             for dim, values in self._automatic_filters.items():
-                if "," in dim:
+                if is_compound_filter(dim):
                     self.recipe.filters(self._build_compound_filter(dim, values))
                 else:
-                    filt = self._build_automatic_filter(dim, values)
-                    if filt is not None:
-                        self.recipe.filters(filt)
+                    self.recipe.filters(self._build_automatic_filter(dim, values))
 
     @recipe_arg()
     def optimize_redshift(self, value):
@@ -1062,25 +1086,26 @@ class PaginateInline(Paginate):
         """Return pagination validated against the actual number of items in the
         response.
         """
-        if self.do_pagination():
-            validated_pagination = {
-                "requestedPage": self._pagination_page,
-                "page": self._pagination_page,
-                "pageSize": self._pagination_page_size,
-                "totalItems": 0,
-            }
-            rows = self.recipe.all()
-            if rows:
-                row = rows[0]
-                validated_pagination["totalItems"] = row._total_count
-            else:
-                if self._pagination_page != 1:
-                    # Go to the first page and rerun the query
-                    self.pagination_page(1)
-                    self.recipe.reset()
-                    return self.validated_pagination()
+        if not self.do_pagination():
+            return
 
-            return validated_pagination
+        validated_pagination = {
+            "requestedPage": self._pagination_page,
+            "page": self._pagination_page,
+            "pageSize": self._pagination_page_size,
+            "totalItems": 0,
+        }
+        rows = self.recipe.all()
+        if rows:
+            row = rows[0]
+            validated_pagination["totalItems"] = row._total_count
+        elif self._pagination_page != 1:
+            # Go to the first page and rerun the query
+            self.pagination_page(1)
+            self.recipe.reset()
+            return self.validated_pagination()
+
+        return validated_pagination
 
 
 class BlendRecipe(RecipeExtension):

@@ -36,6 +36,7 @@ from .utils import (
     convert_to_start_datetime,
 )
 
+
 # SQL server can not support parameters in queries that are used for grouping
 # https://github.com/mkleehammer/pyodbc/issues/479
 # To avoid parameterization, we pass literals
@@ -415,7 +416,7 @@ class SQLALchemyValidator(Visitor):
     def aggr(self, tree):
         self.found_aggregation = True
         if self.forbid_aggregation:
-            self._add_error(f"Aggregations are not allowed in this field.", tree)
+            self._add_error("Aggregations are not allowed in this field.", tree)
 
     def unknown_col(self, tree):
         """Column name doesn't exist in the data"""
@@ -432,11 +433,11 @@ class SQLALchemyValidator(Visitor):
 
     def error_not_nonboolean(self, tree):
         """NOT string or NOT num"""
-        self._add_error(f"NOT requires a boolean value", tree)
+        self._add_error("NOT requires a boolean value", tree)
 
     def mixedarray(self, tree):
         """An array containing a mix of strings and numbers"""
-        self._add_error(f"An array may not contain both strings and numbers", tree)
+        self._add_error("An array may not contain both strings and numbers", tree)
 
     def vector_expr(self, tree):
         val, comp, arr = tree.children
@@ -445,7 +446,7 @@ class SQLALchemyValidator(Visitor):
             "NUMBER",
             "ESCAPED_STRING",
         ):
-            self._add_error(f"Must be a column or expression", val)
+            self._add_error("Must be a column or expression", val)
 
     def error_aggr(self, tree):
         """Aggregating a bad data type"""
@@ -510,6 +511,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         self.last_datatype = None
         # Convert all dates with this conversion
         self.convert_dates_with = None
+        self.convert_datetimes_with = None
         self.forbid_aggregation = forbid_aggregation
         self.drivername = drivername
 
@@ -540,10 +542,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return v
 
     def string(self, v):
-        if isinstance(v, Tree):
-            return self.columns[v.data]
-        else:
-            return v
+        return self.columns[v.data] if isinstance(v, Tree) else v
 
     def string_cast(self, _, fld):
         """Cast a field to a string"""
@@ -561,10 +560,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return func.substr(fld, *args)
 
     def num(self, v):
-        if isinstance(v, Tree):
-            return self.columns[v.data]
-        else:
-            return v
+        return self.columns[v.data] if isinstance(v, Tree) else v
 
     def int_cast(self, _, fld):
         """Cast a field to a string"""
@@ -575,10 +571,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return func.coalesce(left, right)
 
     def boolean(self, v):
-        if isinstance(v, Tree):
-            return self.columns[v.data]
-        else:
-            return v
+        return self.columns[v.data] if isinstance(v, Tree) else v
 
     def num_add(self, a, b):
         """Add numbers or strings"""
@@ -590,22 +583,23 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def num_div(self, num, denom):
         """SQL safe division"""
-        if isinstance(denom, (int, float)):
-            if denom == 0:
-                raise GrammarError("When dividing, the denominator can not be zero")
-            elif denom == 1:
-                return num
-            elif isinstance(num, (int, float)):
-                return num / denom
-            else:
-                return cast(num, Float) / denom
-        else:
-            if isinstance(num, (int, float)):
-                return case([(denom == 0, None)], else_=num / cast(denom, Float))
-            else:
-                return case(
+        if not isinstance(denom, (int, float)):
+            return (
+                case([(denom == 0, None)], else_=num / cast(denom, Float))
+                if isinstance(num, (int, float))
+                else case(
                     [(denom == 0, None)], else_=cast(num, Float) / cast(denom, Float)
                 )
+            )
+
+        if denom == 0:
+            raise GrammarError("When dividing, the denominator can not be zero")
+        elif denom == 1:
+            return num
+        elif isinstance(num, (int, float)):
+            return num / denom
+        else:
+            return cast(num, Float) / denom
 
     def num_sub(self, a, b):
         return a - b
@@ -654,10 +648,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return fld
 
     def datetime_end(self, v):
-        if isinstance(v, Tree):
-            return self.columns[v.data]
-        else:
-            return v
+        return self.columns[v.data] if isinstance(v, Tree) else v
 
     def date_conv(self, _, datestr):
         try:
@@ -931,7 +922,7 @@ class TransformToSQLAlchemyExpression(Transformer):
     def str_like_expr(self, left, comparator, right):
         """If right doesn't contain a wildcard, search for right
         anywhere in the string."""
-        if not "_" in right and "%" not in right:
+        if "_" not in right and "%" not in right:
             right = f"%{right}%"
         if comparator.lower() == "like":
             return left.like(right)
@@ -1060,7 +1051,6 @@ class SQLAlchemyBuilder(object):
         Args:
             selectable (Table): A SQLAlchemy selectable
         """
-        print(selectable, type(selectable))
         self.selectable = selectable
         # Database driver
         try:

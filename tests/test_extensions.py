@@ -1,10 +1,7 @@
 from json import dumps
 from copy import copy
-from csv import DictReader
-
-import pytest
 from faker import Faker
-from sqlalchemy import func
+from sqlalchemy import func, and_, or_
 from sureberus.errors import BadType, SureError
 
 from recipe import BadRecipe, Dimension, Metric, Recipe, Shelf
@@ -18,6 +15,7 @@ from recipe.extensions import (
     RecipeExtension,
     SummarizeOver,
     handle_directives,
+    is_compound_filter,
 )
 from recipe.utils import generate_faker_seed, recipe_arg
 from tests.test_base import RecipeTestCase
@@ -411,6 +409,16 @@ class AutomaticFiltersTestCase(RecipeTestCase):
                 GROUP BY first""",
             )
 
+    def test_is_compound_filter(self):
+        valid_compound_keys = ["a,b", "a,b,c", "a,b,,c", ",a,bb,aac", ","]
+        for k in valid_compound_keys:
+            self.assertTrue(is_compound_filter(k))
+
+        # These are not compound filters
+        invalid_compound_keys = ["ab", "", "ab__notin"]
+        for k in invalid_compound_keys:
+            self.assertFalse(is_compound_filter(k))
+
     def test_operators_and_compound_filters(self):
         """Test operators and compound filters. Filter values may be json encoded"""
         # Testing operators
@@ -460,6 +468,12 @@ class AutomaticFiltersTestCase(RecipeTestCase):
   AND foo.last = 'moo'
   OR foo.first = 'chicken'
   AND foo.last = 'cluck'""",
+            ),
+            (
+                {"first__in,first__notin": ['[["foo"], ["moo","cow"]]']},
+                """foo.first IN ('foo')
+  AND foo.first NOT IN ('cow',
+                        'moo')""",
             ),
         )
         for af, expected_sql in values:

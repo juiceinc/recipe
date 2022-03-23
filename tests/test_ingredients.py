@@ -393,7 +393,7 @@ class TestIngredientBuildFilter(RecipeTestCase):
                 strdim,
                 ["moo", None],
                 "notin",
-                "foo.first IS NOT NULL AND foo.first NOT IN ('moo')",
+                "NOT (foo.first IS NULL OR foo.first IN ('moo'))",
             ),
             (strdim, [None, None], "notin", "foo.first IS NOT NULL"),
             # Between values are not sorted
@@ -422,6 +422,19 @@ class TestIngredientBuildFilter(RecipeTestCase):
                 [seconds_in_day * 2, seconds_in_day * 5],
                 "between",
                 "foo.dt BETWEEN '1970-01-03 00:00:00' AND '1970-01-06 00:00:00'",
+            ),
+            # Nested filters
+            (
+                strdim,
+                ["moo", {"operator": "like", "value": "%o"}],
+                None,
+                "foo.first IN ('moo') OR foo.first LIKE '%o'",
+            ),
+            (
+                strdim,
+                ["moo", {"operator": "notin", "value": ["cow", "pig"]}, "horse"],
+                None,
+                "foo.first IN ('horse', 'moo') OR foo.first NOT IN ('cow', 'pig')",
             ),
         ]
 
