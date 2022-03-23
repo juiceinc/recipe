@@ -250,8 +250,8 @@ class AutomaticFilters(RecipeExtension):
             if isinstance(val, str):
                 try:
                     val = loads(val)
-                except JSONDecodeError as e:
-                    raise ValueError("Compound filter values must be valid json") from e
+                except JSONDecodeError:
+                    raise ValueError("Compound filter values must be valid json")
                 if not isinstance(val, list):
                     raise ValueError(
                         "Compound filter values must be json encoded lists"
