@@ -76,6 +76,7 @@ class Recipe(object):
         self._id = str(uuid4())[:8]
         self._query = None
         self._all = None
+        self._total_count = None
 
         self._select_from = None
         self.shelf(shelf)
@@ -125,6 +126,7 @@ class Recipe(object):
 
             query: An optional SQLAlchemy query to calculate total_count for.
               If None, the recipe query will be used.
+              If a query is passed, no caching will be done.
 
         Returns:
             A count of the number of rows that are returned by this query.
@@ -132,25 +134,31 @@ class Recipe(object):
         if query is None:
             query = self.query()
 
-        count_query = self._session.query(func.count().label("count")).select_from(
-            query.limit(None).offset(None).order_by(None).subquery()
-        )
-
-        # If recipe_caching is installed, apply caching to this query.
-        try:
-            from recipe_caching.mappers import FromCache
-
-            count_query = count_query.options(
-                FromCache(self._cache_region, cache_prefix=self._cache_prefix)
+        if self._total_count is None or query is not None:
+            count_query = self._session.query(func.count().label("count")).select_from(
+                query.limit(None).offset(None).order_by(None).subquery()
             )
-        except ImportError:
-            pass
 
-        return count_query.scalar()
+            # If recipe_caching is installed, apply caching to this query.
+            try:
+                from recipe_caching.mappers import FromCache
+
+                count_query = count_query.options(
+                    FromCache(self._cache_region, cache_prefix=self._cache_prefix)
+                )
+            except ImportError:
+                pass
+
+            count = count_query.scalar()
+            if query is not None:
+                return count
+            self._total_count = count
+        return self._total_count
 
     def reset(self):
         self._query = None
         self._all = None
+        self._total_count = None
         return self
 
     @classmethod
