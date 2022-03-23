@@ -1,4 +1,3 @@
-_version: "2"
 first:
     kind: Dimension
     field: first
