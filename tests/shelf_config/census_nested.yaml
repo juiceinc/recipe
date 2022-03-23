@@ -1,4 +1,3 @@
-_version: "2"
 ttlpop:
     kind: Metric
     field: ttlpop

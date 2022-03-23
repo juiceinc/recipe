@@ -2,6 +2,13 @@
 Changelog
 =========
 
+v0.31.0 (2021-03-23)
+-----------------------------------------
+* Allow nested operators and values within an in operator
+* "notin" filter operator is refactored to not use separate code from in. Instead we generate the in code and then
+   wrap it in _not. This will change the sql generated when automatic filtering but the results will be the same.
+* Code cleanups and refactorings
+
 v0.30.1 (2021-03-22)
 -----------------------------------------
 * Fix an error in ordering with mixed case columns/labels when using snowflake

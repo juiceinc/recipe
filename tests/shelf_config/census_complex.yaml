@@ -1,4 +1,3 @@
-_version: "2"
 state:
     kind: Dimension
     field: state

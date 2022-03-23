@@ -13,16 +13,16 @@ def convert_date(v):
     elif isinstance(v, str):
         try:
             dt = dateparser.parse(v)
-            if dt is not None:
-                return dt.date()
-            else:
-                return v
+            return dt.date() if dt is not None else v
         except ValueError:
             return v
     elif isinstance(v, (float, int)):
         # Convert to a date
         tm = gmtime(v)
         return date(tm.tm_year, tm.tm_mon, tm.tm_mday)
+    elif isinstance(v, dict) and "value" in v:
+        v["value"] = convert_date(v["value"])
+        return v
     else:
         return v
 
@@ -34,15 +34,15 @@ def convert_datetime(v):
     elif isinstance(v, str):
         try:
             dt = dateparser.parse(v)
-            if dt is not None:
-                return dt
-            else:
-                return v
+            return dt if dt is not None else v
         except ValueError:
             return v
     elif isinstance(v, (float, int)):
         # Convert to a date
         return datetime.utcfromtimestamp(v)
+    elif isinstance(v, dict) and "value" in v:
+        v["value"] = convert_datetime(v["value"])
+        return v
     else:
         return v
 

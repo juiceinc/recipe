@@ -1,4 +1,3 @@
-_version: "2"
 username:
     kind: Dimension
     field: username
