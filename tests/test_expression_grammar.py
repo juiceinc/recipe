@@ -292,6 +292,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         min(department)                 -> str
         min(test_date)                  -> date
         count(*)                        -> num
+        count(department > "foo")       -> num
         substr(department, 5)           -> str
         substr(department, 5, 5)        -> str
         """
@@ -603,6 +604,8 @@ class TestDataTypesTable(GrammarTestCase):
         [score] between [score] and [score]                   -> datatypes.score BETWEEN datatypes.score AND datatypes.score
         [username] between "a" and "z"                        -> datatypes.username BETWEEN 'a' AND 'z'
         [username] between [department] and "z"               -> datatypes.username BETWEEN datatypes.department AND 'z'
+        count_distinct([score] > 80)                          -> count(DISTINCT (datatypes.score > 80))
+        count([score] > 80)                                   -> count(datatypes.score > 80)
         """
 
         for field, expected_sql in self.examples(good_examples):
