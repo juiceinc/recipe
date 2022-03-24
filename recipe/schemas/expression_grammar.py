@@ -248,7 +248,7 @@ def make_grammar(columns):
     min_aggr.1: /min/i "(" num ")"
     max_aggr.1: /max/i "(" num ")"
     avg_aggr.1: /avg/i "(" num ")" | /average/i "(" num ")"
-    count_aggr.1: /count/i "(" (num | string | date | datetime | star) ")"
+    count_aggr.1: /count/i "(" (num | string | date | datetime | boolean | star) ")"
     count_distinct_aggr.1: /count_distinct/i "(" (num | string | date | datetime | boolean) ")"
     median_aggr.1: /median/i "(" num ")"
     percentile_aggr.1: /percentile\d\d?/i "(" num ")"
