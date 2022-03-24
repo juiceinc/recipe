@@ -1122,6 +1122,13 @@ class SQLAlchemyBuilder(object):
             self.transformer.convert_dates_with = convert_dates_with
             self.transformer.convert_datetimes_with = convert_datetimes_with
             expr = self.transformer.transform(tree)
+
+            # Expressions that return literal values can't be labeled
+            # Possibly we could wrap them in text() but this may be unsafe
+            # instead we will disallow them.
+            if isinstance(expr, (str, float, int, date, datetime)):
+                raise GrammarError("Must return an expression, not a constant value")
+
             if (
                 enforce_aggregation
                 and not validator.found_aggregation

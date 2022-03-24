@@ -6,6 +6,7 @@ from freezegun import freeze_time
 from sqlalchemy import Table, Column, String, Integer
 from sqlalchemy.ext.serializer import dumps, loads
 from sqlalchemy.ext.declarative import declarative_base
+from lark import GrammarError
 
 from recipe.schemas.expression_grammar import (
     SQLAlchemyBuilder,
@@ -299,6 +300,20 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         for field, expected_data_type in self.examples(good_examples):
             _, data_type = self.builder.parse(field)
             self.assertEqual(data_type, expected_data_type)
+
+    def test_disallow_literals(self):
+        examples = """
+        "22"          -> error
+        2.0           -> error
+        2.0 + 1.0     -> error
+        "220" + "foo" -> error
+        5             -> error
+        """
+
+        for field, _ in self.examples(examples):
+
+            with self.assertRaises(GrammarError):
+                self.builder.parse(field)
 
     def test_selectable_recipe(self):
         """Test a selectable that is a recipe"""
