@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.31.1 (2021-03-24)
+-----------------------------------------
+* Add caching for total_count
+
 v0.31.0 (2021-03-23)
 -----------------------------------------
 * Allow nested operators and values within an in operator
