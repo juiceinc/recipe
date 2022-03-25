@@ -2,6 +2,11 @@
 Changelog
 =========
 
+v0.31.2 (2021-03-25)
+-----------------------------------------
+* Disallow literal-only expressions
+* Allow count for boolean expressions
+
 v0.31.1 (2021-03-24)
 -----------------------------------------
 * Add caching for total_count
