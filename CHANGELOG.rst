@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.31.3 (2021-04-04)
+-----------------------------------------
+* Support `and`` operator in complex filters 
+
 v0.31.2 (2021-03-25)
 -----------------------------------------
 * Disallow literal-only expressions
