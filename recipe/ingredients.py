@@ -369,6 +369,10 @@ class Ingredient(object):
         elif datatype == "datetime":
             value = list(map(convert_datetime, value))
 
+        if operator == "and":
+            conditions = [self.build_filter(x["value"], x["operator"]) for x in value]
+            return and_(*conditions)
+
         if operator in ("in", "notin"):
             if contains_complex_values(value):
                 # A list may contain additional operators or nones

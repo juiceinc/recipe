@@ -436,6 +436,15 @@ class TestIngredientBuildFilter(RecipeTestCase):
                 None,
                 "foo.first IN ('horse', 'moo') OR foo.first NOT IN ('cow', 'pig')",
             ),
+            (
+                strdim,
+                [
+                    {"operator": "in", "value": [1, 2, 3]},
+                    {"operator": "notin", "value": [3, 4, 5]},
+                ],
+                "and",
+                "foo.first IN (1, 2, 3) AND foo.first NOT IN (3, 4, 5)",
+            ),
         ]
 
         baddata = [
