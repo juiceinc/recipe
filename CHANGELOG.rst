@@ -2,34 +2,39 @@
 Changelog
 =========
 
-v0.31.3 (2021-04-04)
+v0.31.4 (2022-04-04)
 -----------------------------------------
-* Support `and`` operator in complex filters 
+*  Support `and` operator in complex filters
 
-v0.31.2 (2021-03-25)
+
+v0.31.3 (2022-04-04)
+-----------------------------------------
+* no changes
+
+v0.31.2 (2022-03-25)
 -----------------------------------------
 * Disallow literal-only expressions
 * Allow count for boolean expressions
 
-v0.31.1 (2021-03-24)
+v0.31.1 (2022-03-24)
 -----------------------------------------
 * Add caching for total_count
 
-v0.31.0 (2021-03-23)
+v0.31.0 (2022-03-23)
 -----------------------------------------
 * Allow nested operators and values within an in operator
 * "notin" filter operator is refactored to not use separate code from in. Instead we generate the in code and then
    wrap it in _not. This will change the sql generated when automatic filtering but the results will be the same.
 * Code cleanups and refactorings
 
-v0.30.1 (2021-03-22)
+v0.30.1 (2022-03-22)
 -----------------------------------------
 * Fix an error in ordering with mixed case columns/labels when using snowflake
 * Update requirements to use lark
 * Update requirements for dateparser past a broken version (See issue https://github.com/scrapinghub/dateparser/issues/1045)
 * Don't create expression grammar for columns with invalid names
 
-v0.30.0 (2021-02-15)
+v0.30.0 (2022-02-15)
 -----------------------------------------
 * Breaking chagne: removed support for v1 ingredient configuration.
 * Refactor tests to use unittests
@@ -182,7 +187,7 @@ v0.20.0 (2020-10-02)
 * Fix like/ilike and pagination_q filtering against dimensions that have a non-string ID.
 * Fix parsed sql generation for AND and OR
 * Fix parsed sql generation for division when one of the terms is a constant (like sum(people) / 100.0)
-* Adds IS NULL as a boolean expression 
+* Adds IS NULL as a boolean expression
 * Adds "Intelligent date" calculations to allow more useful date calculations relative to current date
 
 0.15.0 (2020-05-08)
