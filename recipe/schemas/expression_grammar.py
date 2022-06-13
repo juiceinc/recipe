@@ -718,7 +718,17 @@ class TransformToSQLAlchemyExpression(Transformer):
     def dt_day_conv(self, _, fld):
         """Truncate to day"""
         if self.drivername == "bigquery":
-            return func.timestamp_trunc(fld, text("day"))
+            # Developer's note: The timestamp_trunc function in sqlalchemy-bigquery is not
+            # type checked so the function return type is not annotated. This would
+            # generate a type error when running the query like:
+            # sqlalchemy.exc.DatabaseError: (google.cloud.bigquery.dbapi.exceptions.DatabaseError) 400
+            # No matching signature for operator BETWEEN for argument types: TIMESTAMP, DATETIME, DATETIME
+            #
+            # We'll explicitly convert which removes timezone info.
+            #
+            # I tried to create a custom function in engine_support but this kept
+            # creating a recursion error.
+            return func.datetime(func.timestamp_trunc(fld, text("day")))
         elif self.drivername.startswith("mssql"):
             return func.datetimefromparts(
                 func.year(fld),
@@ -736,7 +746,8 @@ class TransformToSQLAlchemyExpression(Transformer):
     def dt_week_conv(self, _, fld):
         """Truncate to mondays"""
         if self.drivername == "bigquery":
-            return func.timestamp_trunc(fld, text("week(monday)"))
+            # See developer's note on dt_day_conv
+            return func.datetime(func.timestamp_trunc(fld, text("week(monday)")))
         elif self.drivername.startswith("mssql"):
             raise GrammarError("week is not supported on mssql")
         else:
@@ -745,7 +756,8 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def dt_month_conv(self, _, fld):
         if self.drivername == "bigquery":
-            return func.timestamp_trunc(fld, text("month"))
+            # See developer's note on dt_day_conv
+            return func.datetime(func.timestamp_trunc(fld, text("month")))
         elif self.drivername.startswith("mssql"):
             return func.datetimefromparts(
                 func.year(fld),
@@ -762,7 +774,8 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def dt_quarter_conv(self, _, fld):
         if self.drivername == "bigquery":
-            return func.timestamp_trunc(fld, text("quarter"))
+            # See developer's note on dt_day_conv
+            return func.datetime(func.timestamp_trunc(fld, text("quarter")))
         elif self.drivername.startswith("mssql"):
             raise GrammarError("quarter is not supported on mssql")
         else:
@@ -771,7 +784,8 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def dt_year_conv(self, _, fld):
         if self.drivername == "bigquery":
-            return func.timestamp_trunc(fld, text("year"))
+            # See developer's note on dt_day_conv
+            return func.datetime(func.datetime(func.timestamp_trunc(fld, text("year"))))
         elif self.drivername.startswith("mssql"):
             # SQL server can not support parameters in queries that are used for grouping
             # https://github.com/mkleehammer/pyodbc/issues/479

@@ -860,13 +860,13 @@ class TestDataTypesTableDatesInBigquery(TestDataTypesTableDates):
         """bigquery generates different sql for date conversions"""
         good_examples = f"""
         month([test_date]) > date("2020-12-30")          -> date_trunc(datatypes.test_date, month) > '2020-12-30'
-        month([test_datetime]) > date("2020-12-30")      -> timestamp_trunc(datatypes.test_datetime, month) > '2020-12-30'
-        date("2020-12-30") < month([test_datetime])      -> timestamp_trunc(datatypes.test_datetime, month) > '2020-12-30'
+        month([test_datetime]) > date("2020-12-30")      -> datetime(timestamp_trunc(datatypes.test_datetime, month)) > '2020-12-30'
+        date("2020-12-30") < month([test_datetime])      -> datetime(timestamp_trunc(datatypes.test_datetime, month)) > '2020-12-30'
         day([test_date]) > date("2020-12-30")            -> date_trunc(datatypes.test_date, day) > '2020-12-30'
         week([test_date]) > date("2020-12-30")           -> date_trunc(datatypes.test_date, week(monday)) > '2020-12-30'
         quarter([test_date]) > date("2020-12-30")        -> date_trunc(datatypes.test_date, quarter) > '2020-12-30'
         year([test_date]) > date("2020-12-30")           -> date_trunc(datatypes.test_date, year) > '2020-12-30'
-        date([test_datetime])                            -> timestamp_trunc(datatypes.test_datetime, day)
+        date([test_datetime])                            -> datetime(timestamp_trunc(datatypes.test_datetime, day))
         """
 
         for field, expected_sql in self.examples(good_examples):
