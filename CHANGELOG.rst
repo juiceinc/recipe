@@ -2,10 +2,13 @@
 Changelog
 =========
 
+v0.31.5 (2022-06-13)
+-----------------------------------------
+* Fix timestamp conversion functions in bigquery
+
 v0.31.4 (2022-04-04)
 -----------------------------------------
-*  Support `and` operator in complex filters
-
+* Support `and` operator in complex filters
 
 v0.31.3 (2022-04-04)
 -----------------------------------------
