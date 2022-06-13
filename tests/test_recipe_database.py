@@ -7,6 +7,10 @@ from datetime import date, datetime
 from sqlalchemy import Column, Date, DateTime, Integer, MetaData, String, Table, insert
 
 from recipe import Recipe, Shelf, get_oven
+from recipe.oven.base import OvenBase
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 
 def str_dedent(s):
@@ -63,6 +67,94 @@ class TestPostgres(object):
 
         r = self.recipe().dimensions("id")
         assert len(r.all()) == 10
+
+
+def get_gcloud_credentials_obj():
+    # FIXME: Load these creds from a file
+    bq_creds = {}
+    return bq_creds
+
+
+def get_bigquery():
+    """Get a BigQuery client authenticated with our credentials."""
+    google_creds = get_gcloud_credentials_obj()
+    return bigquery.Client(credentials=google_creds, project=google_creds.project_id)
+
+
+class BQOven:
+    def __init__(self, connection_string=None):
+        self.engine = self.init_engine()
+        self.Session = sessionmaker(bind=self.engine)
+
+    def init_engine(self, *args, **kwargs):
+        conn_string = "bigquery://juicebox-open-test/juicebox"
+        engine_kwargs = {"credentials_info": get_gcloud_credentials_obj()}
+        return create_engine(conn_string, **engine_kwargs)
+
+
+@pytest.mark.skip("Can't run this witout connection")
+class TestBigQuery(object):
+    def setup(self):
+        self.oven = BQOven()
+        self.meta = MetaData(bind=self.oven.engine)
+        self.session = self.oven.Session()
+
+        self.table = Table(
+            "runningwithtimestamp_8599_b3310438d33748de",
+            self.meta,
+            autoload=True,
+            autoload_with=self.oven.engine,
+        )
+        d = {"id": {"icon": "check-square", "kind": "Dimension", "field": "id"}}
+
+        self.shelf = self.shelf_from_yaml(
+            """
+    date:
+        kind: Dimension
+        field: day(date)
+    name:
+        kind: Dimension
+        field: name
+    distance:
+        kind: Metric
+        field: sum(distance)
+
+    """,
+            self.table,
+        )
+
+    def shelf_from_yaml(self, yaml_config, selectable):
+        """Create a shelf directly from configuration"""
+        return Shelf.from_validated_yaml(yaml_config, selectable)
+
+    def recipe(self, **kwargs):
+        return Recipe(shelf=self.shelf, session=self.session, **kwargs)
+
+    def test_query(self):
+        from datetime import datetime
+
+        d1 = datetime(2020, 1, 1)
+        d2 = datetime(2020, 12, 31)
+        f = self.shelf["date"].build_filter(
+            operator="between", value=["2020-01-01", "2020-12-31"]
+        )
+        f2 = self.shelf["date"].build_filter(operator="between", value=[d1, d2])
+        for c in self.table.columns:
+            print(c, c.type)
+        print(f)
+        print(f2)
+        recipe = self.recipe().dimensions("date").metrics("distance").filters(f2)
+        print(recipe.to_sql())
+
+        for row in recipe.all():
+            print(row)
+        # assert 1 == 2
+
+    def testit(self):
+        print(self.table)
+        for c in self.table.columns:
+            print(c, c.type)
+        assert 1 == 1
 
 
 @pytest.mark.skip("Can't run this witout connection")

@@ -7,6 +7,6 @@ twine==3.4.2
 freezegun
 psycopg2-binary
 sqlalchemy-redshift
-pybigquery
-google-cloud-bigquery-storage
+sqlalchemy-bigquery
+google-api-core
 -e .
