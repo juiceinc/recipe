@@ -12,6 +12,7 @@ from recipe.utils import (
     replace_whitespace_with_space,
     generate_faker_seed,
     pad_values,
+    make_schema,
 )
 
 uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -220,3 +221,87 @@ class FakerAnonymizerTestCase(RecipeTestCase):
 
         assert isinstance(a("Value"), str)
         assert a("Value") == "foo moo"
+
+
+class TestMakeSchema(RecipeTestCase):
+    def test_make_schema(self):
+        s = make_schema([])
+        self.assertIsInstance(s, dict)
+        self.assertEqual(
+            s,
+            {
+                "schema": {
+                    "metrics": {
+                        "schema": {"type": "string", "required": True},
+                        "type": "list",
+                        "required": False,
+                    },
+                    "dimensions": {
+                        "schema": {"type": "string", "required": True},
+                        "type": "list",
+                        "required": False,
+                    },
+                    "filters": {
+                        "schema": {"type": "string", "required": True},
+                        "type": "list",
+                        "required": False,
+                    },
+                    "order_by": {
+                        "schema": {"type": "string", "required": True},
+                        "type": "list",
+                        "required": False,
+                    },
+                },
+                "type": "dict",
+                "required": True,
+            },
+        )
+
+    def test_make_schema_with_recipe_extensions(self):
+        from recipe.extensions import AutomaticFilters
+
+        # We can mixin schemas from extensions to get a combined schema
+        s = make_schema([AutomaticFilters])
+        self.assertIsInstance(s, dict)
+        self.assertEqual(
+            s,
+            {
+                "schema": {
+                    "metrics": {
+                        "schema": {"type": "string", "required": True},
+                        "type": "list",
+                        "required": False,
+                    },
+                    "dimensions": {
+                        "schema": {"type": "string", "required": True},
+                        "type": "list",
+                        "required": False,
+                    },
+                    "filters": {
+                        "schema": {"type": "string", "required": True},
+                        "type": "list",
+                        "required": False,
+                    },
+                    "order_by": {
+                        "schema": {"type": "string", "required": True},
+                        "type": "list",
+                        "required": False,
+                    },
+                    "automatic_filters": {
+                        "type": "dict",
+                        "keyschema": {"type": "string"},
+                    },
+                    "include_automatic_filter_keys": {
+                        "type": "list",
+                        "schema": {"type": "string"},
+                    },
+                    "exclude_automatic_filter_keys": {
+                        "type": "list",
+                        "schema": {"type": "string"},
+                    },
+                    "apply_automatic_filters": {"type": "boolean"},
+                },
+                "type": "dict",
+                "required": True,
+            },
+        )

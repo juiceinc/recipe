@@ -162,7 +162,7 @@ class Recipe(object):
         return self
 
     @classmethod
-    def from_config(cls, shelf, obj, **kwargs):
+    def from_config(cls, shelf, spec, **kwargs):
         """
         Construct a Recipe from a plain Python dictionary.
 
@@ -181,13 +181,13 @@ class Recipe(object):
                     new[k] = d[k]
             return new
 
-        core_kwargs = subdict(obj, recipe_schema["schema"].keys())
+        core_kwargs = subdict(spec, recipe_schema["schema"].keys())
         core_kwargs = normalize_schema(recipe_schema, core_kwargs)
         core_kwargs["filters"] = [
             parse_unvalidated_condition(filter, shelf.Meta.select_from)
             if isinstance(filter, dict)
             else filter
-            for filter in obj.get("filters", [])
+            for filter in spec.get("filters", [])
         ]
         core_kwargs.update(kwargs)
         recipe = cls(shelf=shelf, **core_kwargs)
@@ -196,7 +196,7 @@ class Recipe(object):
         for ext in recipe.recipe_extensions:
             additional_schema = getattr(ext, "recipe_schema", None)
             if additional_schema is not None:
-                ext_data = subdict(obj, additional_schema.keys())
+                ext_data = subdict(spec, additional_schema.keys())
                 ext_data = normalize_dict(additional_schema, ext_data)
                 recipe = ext.from_config(ext_data)
         return recipe
