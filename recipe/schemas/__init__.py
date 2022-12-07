@@ -1,5 +1,4 @@
 from sureberus import schema as S
-
 from .parsed_schemas import shelf_schema
 
 # This schema is used with sureberus

@@ -12,4 +12,5 @@ from .utils import (
     AttrDict,
     disaggregate,
     pad_values,
+    make_schema,
 )

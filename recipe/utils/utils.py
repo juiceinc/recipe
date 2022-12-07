@@ -1,6 +1,8 @@
 import math
 import re
 import unicodedata
+from recipe.schemas import recipe_schema
+from sureberus import schema as S
 
 from sqlalchemy.sql.functions import FunctionElement
 
@@ -58,3 +60,12 @@ def pad_values(values, prefix="RECIPE-DUMMY-VAL-", bin_size=11):
             return values + added_values
     else:
         return values
+
+
+def make_schema(recipe_extensions: list) -> dict:
+    """Make a sureberus schema to validate a recipe.from_config."""
+    schema = recipe_schema["schema"].copy()
+    for ext in recipe_extensions:
+        additional_schema = getattr(ext, "recipe_schema", {})
+        schema.update(additional_schema)
+    return S.Dict(schema=schema)

@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.31.6 (2022-12-07)
+-----------------------------------------
+* Add a utility function make_schema
+
 v0.31.5 (2022-06-13)
 -----------------------------------------
 * Fix timestamp conversion functions in bigquery
