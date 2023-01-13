@@ -2,6 +2,7 @@ from copy import copy
 
 from lark.exceptions import VisitError
 from collections import OrderedDict
+from structlog import get_logger
 from sqlalchemy import Float, Integer, String, Table
 from sqlalchemy.util import lightweight_named_tuple
 from sureberus import errors as E
@@ -10,10 +11,12 @@ from yaml import safe_load
 
 from recipe.exceptions import BadIngredient, BadRecipe, InvalidColumnError
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric, InvalidIngredient
+from recipe.utils.tracing import trace_performance
 from recipe.schemas import shelf_schema
 from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
-
 from recipe.schemas.expression_grammar import SQLAlchemyBuilder
+
+SLOG = get_logger(__name__)
 
 _POP_DEFAULT = object()
 
@@ -251,30 +254,38 @@ class Shelf(object):
                 tablename, metadata, schema=schema, extend_existing=True, autoload=True
             )
 
-        try:
-            validated_shelf = normalize_schema(shelf_schema, obj, allow_unknown=True)
-        except E.SureError as e:
-            raise BadIngredient(str(e))
+        with trace_performance(SLOG, "validate_shelf"):
+            try:
+                validated_shelf = normalize_schema(
+                    shelf_schema, obj, allow_unknown=True
+                )
+            except E.SureError as e:
+                raise BadIngredient(str(e))
         d = {}
         builder = None
 
-        for k, v in validated_shelf.items():
-            if ingredient_constructor == ingredient_from_validated_dict:
-                version = str(v.get("_version", "1"))
-                if version == "1":
-                    d[k] = ingredient_constructor(v, selectable)
-                else:
-                    if builder is None:
-                        builder = SQLAlchemyBuilder.get_builder(selectable=selectable)
-                    d[k] = ingredient_constructor(v, selectable, builder=builder)
-            else:
-                d[k] = ingredient_constructor(v, selectable)
+        with trace_performance(SLOG, "construct_ingredients"):
+            for k, v in validated_shelf.items():
+                with trace_performance(SLOG, "construct_ingredient", ingredient=k):
+                    if ingredient_constructor == ingredient_from_validated_dict:
+                        version = str(v.get("_version", "1"))
+                        if version == "1":
+                            d[k] = ingredient_constructor(v, selectable)
+                        else:
+                            if builder is None:
+                                builder = SQLAlchemyBuilder.get_builder(
+                                    selectable=selectable
+                                )
+                            d[k] = ingredient_constructor(v, selectable, builder=builder)
+                    else:
+                        d[k] = ingredient_constructor(v, selectable)
 
-            if isinstance(d[k], InvalidIngredient):
-                if not d[k].error.get("extra"):
-                    d[k].error["extra"] = {}
-                d[k].error["extra"]["ingredient_name"] = k
-        shelf = cls(d, select_from=selectable)
+                    if isinstance(d[k], InvalidIngredient):
+                        if not d[k].error.get("extra"):
+                            d[k].error["extra"] = {}
+                        d[k].error["extra"]["ingredient_name"] = k
+        with trace_performance(SLOG, "construct_shelf"):
+            shelf = cls(d, select_from=selectable)
 
         return shelf
 
