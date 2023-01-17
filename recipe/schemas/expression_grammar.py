@@ -1,4 +1,5 @@
 import functools
+import hashlib
 import re
 from collections import defaultdict
 from datetime import date, datetime
@@ -1043,20 +1044,17 @@ class TransformToSQLAlchemyExpression(Transformer):
         return None
 
 
-BUILDER_CACHE = {}
+LARK_CACHE = {}
 
 
 class SQLAlchemyBuilder(object):
     @classmethod
     def get_builder(cls, selectable):
-        if selectable not in BUILDER_CACHE:
-            BUILDER_CACHE[selectable] = cls(selectable)
-        return BUILDER_CACHE[selectable]
+        return cls(selectable)
 
     @classmethod
     def clear_builder_cache(cls):
-        global BUILDER_CACHE
-        BUILDER_CACHE = {}
+        LARK_CACHE.clear()
 
     def __init__(self, selectable):
         """Parse a recipe field by building a custom grammar that
@@ -1074,14 +1072,28 @@ class SQLAlchemyBuilder(object):
 
         self.columns = make_columns_for_selectable(selectable)
         self.grammar = make_grammar(self.columns)
-        self.parser = Lark(
-            self.grammar,
-            parser="earley",
-            ambiguity="resolve",
-            start="col",
-            propagate_positions=True,
-            # predict_all=True,
-        )
+        # Constructing this Lark parser can take a significant amount of time (like,
+        # nearly 1 second for some large tables), which is why we cache parsers in
+        # LARK_CACHE. Unfortunately, by using an in-process cache, we are still
+        # computing this redundantly quite often, because Juicebox processes get cycled
+        # often and there are many workers in a given deployment.
+        #
+        # Lark supports serializing parsers to speed up loading, but unfortunately it
+        # only supports this for LALR parsers, and we are using Earley.
+        key = hashlib.sha1(self.grammar.encode("utf-8")).hexdigest()
+        if key in LARK_CACHE:
+            self.parser = LARK_CACHE[key]
+        else:
+            self.parser = Lark(
+                self.grammar,
+                parser="earley",
+                ambiguity="resolve",
+                start="col",
+                propagate_positions=True,
+                # predict_all=True,
+            )
+            LARK_CACHE[key] = self.parser
+
         self.transformer = TransformToSQLAlchemyExpression(
             self.selectable, self.columns, self.drivername
         )
