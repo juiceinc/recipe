@@ -279,6 +279,8 @@ class Shelf(object):
                     d[k].error["extra"] = {}
                 d[k].error["extra"]["ingredient_name"] = k
         shelf = cls(d, select_from=selectable)
+        if builder and ingredient_cache is not None:
+            builder.save_cache()
 
         return shelf
 

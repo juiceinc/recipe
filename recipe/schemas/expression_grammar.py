@@ -1081,9 +1081,12 @@ class SQLAlchemyBuilder(object):
         #
         # Lark supports serializing parsers to speed up loading, but unfortunately it
         # only supports this for LALR parsers, and we are using Earley.
-        key = hashlib.sha1(self.grammar.encode("utf-8")).hexdigest()
-        if key in LARK_CACHE:
-            self.parser = LARK_CACHE[key]
+        self.cache_key = hashlib.sha1(self.grammar.encode("utf-8")).hexdigest()
+        self.cached_exprs = (
+            self.cache.get(self.cache_key, {}) if self.cache is not None else None
+        )
+        if self.cache_key in LARK_CACHE:
+            self.parser = LARK_CACHE[self.cache_key]
         else:
             self.parser = Lark(
                 self.grammar,
@@ -1093,7 +1096,7 @@ class SQLAlchemyBuilder(object):
                 propagate_positions=True,
                 # predict_all=True,
             )
-            LARK_CACHE[key] = self.parser
+            LARK_CACHE[self.cache_key] = self.parser
 
         self.transformer = TransformToSQLAlchemyExpression(
             self.selectable, self.columns, self.drivername
@@ -1132,7 +1135,7 @@ class SQLAlchemyBuilder(object):
                 DataType: The datatype of the expression (bool, date, datetime, num, str)
         """
         key = f"sqlalchemy-expr-{text}-{forbid_aggregation}-{enforce_aggregation}-{convert_dates_with}-{convert_datetimes_with}"
-        result = self.cache and self.cache.get(key)
+        result = self.cached_exprs is not None and self.cached_exprs.get(key)
         if result is not None:
             return (loads(result[0], self.selectable.metadata), result[1])
         tree = self.parser.parse(text, start="col")
@@ -1168,6 +1171,9 @@ class SQLAlchemyBuilder(object):
             else:
                 result = (expr, self.last_datatype)
 
-            if self.cache:
-                self.cache.set(key, (dumps(result[0]), result[1]))
+            if self.cached_exprs is not None:
+                self.cached_exprs[key] = (dumps(result[0]), result[1])
             return result
+
+    def save_cache(self):
+        self.cache.set(self.cache_key, self.cached_exprs)
