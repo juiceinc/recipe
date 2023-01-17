@@ -1,4 +1,3 @@
-import functools
 import hashlib
 import re
 from collections import defaultdict
@@ -25,6 +24,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.ext.declarative.api import DeclarativeMeta
+from sqlalchemy.ext.serializer import loads, dumps
 from sqlalchemy.sql.base import ColumnCollection
 from sqlalchemy.sql.expression import select
 from sqlalchemy.sql.sqltypes import Numeric
@@ -1049,14 +1049,14 @@ LARK_CACHE = {}
 
 class SQLAlchemyBuilder(object):
     @classmethod
-    def get_builder(cls, selectable):
-        return cls(selectable)
+    def get_builder(cls, selectable, *, cache=None):
+        return cls(selectable, cache=cache)
 
     @classmethod
     def clear_builder_cache(cls):
         LARK_CACHE.clear()
 
-    def __init__(self, selectable):
+    def __init__(self, selectable, *, cache=None):
         """Parse a recipe field by building a custom grammar that
         uses the colums in a selectable.
 
@@ -1070,6 +1070,7 @@ class SQLAlchemyBuilder(object):
         except Exception:
             self.drivername = "unknown"
 
+        self.cache = cache
         self.columns = make_columns_for_selectable(selectable)
         self.grammar = make_grammar(self.columns)
         # Constructing this Lark parser can take a significant amount of time (like,
@@ -1101,7 +1102,6 @@ class SQLAlchemyBuilder(object):
         # The data type of the last parsed expression
         self.last_datatype = None
 
-    @functools.lru_cache(maxsize=None)
     def parse(
         self,
         text,
@@ -1131,6 +1131,10 @@ class SQLAlchemyBuilder(object):
                 ColumnElement: A SQLALchemy expression
                 DataType: The datatype of the expression (bool, date, datetime, num, str)
         """
+        key = f"sqlalchemy-expr-{text}-{forbid_aggregation}-{enforce_aggregation}-{convert_dates_with}-{convert_datetimes_with}"
+        result = self.cache and self.cache.get(key)
+        if result is not None:
+            return (loads(result[0], self.selectable.metadata), result[1])
         tree = self.parser.parse(text, start="col")
         validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)
         validator.visit(tree)
@@ -1160,6 +1164,10 @@ class SQLAlchemyBuilder(object):
                 and not validator.found_aggregation
                 and self.last_datatype == "num"
             ):
-                return (func.sum(expr), self.last_datatype)
+                result = (func.sum(expr), self.last_datatype)
             else:
-                return (expr, self.last_datatype)
+                result = (expr, self.last_datatype)
+
+            if self.cache:
+                self.cache.set(key, (dumps(result[0]), result[1]))
+            return result
