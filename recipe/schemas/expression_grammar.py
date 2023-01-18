@@ -1135,7 +1135,7 @@ class SQLAlchemyBuilder(object):
                 DataType: The datatype of the expression (bool, date, datetime, num, str)
         """
         key = f"sqlalchemy-expr-{text}-{forbid_aggregation}-{enforce_aggregation}-{convert_dates_with}-{convert_datetimes_with}"
-        result = self.cached_exprs is not None and self.cached_exprs.get(key)
+        result = self.cached_exprs.get(key) if self.cached_exprs is not None else None
         if result is not None:
             return (loads(result[0], self.selectable.metadata), result[1])
         tree = self.parser.parse(text, start="col")
