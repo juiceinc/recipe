@@ -25,7 +25,6 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.ext.declarative.api import DeclarativeMeta
-from sqlalchemy.ext.serializer import loads, dumps
 from sqlalchemy.sql.base import ColumnCollection
 from sqlalchemy.sql.expression import select
 from sqlalchemy.sql.sqltypes import Numeric
@@ -1082,8 +1081,8 @@ class SQLAlchemyBuilder(object):
         # information about all types and columns in the table. If that ever changes
         # (e.g. we switch to separate steps for parsing and type/variable validation),
         # we'll need to calculate the expression hash key separately.
-        self.cache_key = f"sqlalchemy-key:${grammar_hash}"
-        self.cached_exprs = (
+        self.cache_key = f"recipe-expr:{grammar_hash}"
+        self.cached_trees = (
             self.cache.get(self.cache_key, {}) if self.cache is not None else None
         )
         if self.cache_key in LARK_CACHE:
@@ -1144,30 +1143,23 @@ class SQLAlchemyBuilder(object):
                 DataType: The datatype of the expression (bool, date, datetime, num, str)
         """
         # see "Developer Note: cache key" for info about cache keys.
-        if isinstance(self.selectable, Table):
-            # We only cache expressions when our selectable is a Table, not, e.g.,
-            # another recipe. Mostly because I want to use the table's full name as part
-            # of the key, and I have no idea how sqlalchemy will act if you try to
-            # reload serialized expressions that came from a subquery that is probably
-            # being reconstructed on every call.
-            key = mkkey(
-                self.selectable.fullname,
-                text,
-                forbid_aggregation,
-                enforce_aggregation,
-                convert_dates_with,
-                convert_datetimes_with,
-            )
-            result = (
-                self.cached_exprs.get(key) if self.cached_exprs is not None else None
-            )
-            if result is not None:
-                return (loads(result[0], self.selectable.metadata), result[1])
-        tree = self.parser.parse(text, start="col")
-        validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)
-        validator.visit(tree)
+        key = mkkey(
+            text,
+            forbid_aggregation,
+            enforce_aggregation,
+            convert_dates_with,
+            convert_datetimes_with,
+        )
+        cache_result = (
+            self.cached_trees.get(key) if self.cached_trees is not None else None
+        )
+        if cache_result is None:
+            tree = self.parser.parse(text, start="col")
+            validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)
+            validator.visit(tree)
+        else:
+            (tree, validator) = cache_result
         self.last_datatype = validator.last_datatype
-
         if validator.errors:
             if debug:
                 print("".join(validator.errors))
@@ -1196,13 +1188,13 @@ class SQLAlchemyBuilder(object):
         else:
             result = (expr, self.last_datatype)
 
-        if isinstance(self.selectable, Table) and self.cached_exprs is not None:
-            self.cached_exprs[key] = (dumps(result[0]), result[1])
+        if self.cached_trees is not None:
+            self.cached_trees[key] = (tree, validator)
         return result
 
     def save_cache(self):
         # see "Developer Note: cache key" for info about cache keys.
-        self.cache.set(self.cache_key, self.cached_exprs)
+        self.cache.set(self.cache_key, self.cached_trees)
 
 
 def mkkey(*parts):
