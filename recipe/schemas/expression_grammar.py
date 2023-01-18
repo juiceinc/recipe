@@ -13,6 +13,7 @@ from sqlalchemy import (
     Float,
     Integer,
     String,
+    Table,
     and_,
     between,
     case,
@@ -1073,7 +1074,7 @@ class SQLAlchemyBuilder(object):
         self.cache = cache
         self.columns = make_columns_for_selectable(selectable)
         self.grammar = make_grammar(self.columns)
-        grammar_hash = hashlib.sha1(self.grammar.encode("utf-8")).hexdigest()
+        grammar_hash = mkkey(self.grammar)
         # Developer Note: cache key
         # This cache key is used for both LARK_CACHE as well as the SQLAlchemy
         # expressions that we use in `parse` below. This key must change any time the
@@ -1143,10 +1144,25 @@ class SQLAlchemyBuilder(object):
                 DataType: The datatype of the expression (bool, date, datetime, num, str)
         """
         # see "Developer Note: cache key" for info about cache keys.
-        key = f"sqlalchemy-expr-{text}-{forbid_aggregation}-{enforce_aggregation}-{convert_dates_with}-{convert_datetimes_with}"
-        result = self.cached_exprs.get(key) if self.cached_exprs is not None else None
-        if result is not None:
-            return (loads(result[0], self.selectable.metadata), result[1])
+        if isinstance(self.selectable, Table):
+            # We only cache expressions when our selectable is a Table, not, e.g.,
+            # another recipe. Mostly because I want to use the table's full name as part
+            # of the key, and I have no idea how sqlalchemy will act if you try to
+            # reload serialized expressions that came from a subquery that is probably
+            # being reconstructed on every call.
+            key = mkkey(
+                self.selectable.fullname,
+                text,
+                forbid_aggregation,
+                enforce_aggregation,
+                convert_dates_with,
+                convert_datetimes_with,
+            )
+            result = (
+                self.cached_exprs.get(key) if self.cached_exprs is not None else None
+            )
+            if result is not None:
+                return (loads(result[0], self.selectable.metadata), result[1])
         tree = self.parser.parse(text, start="col")
         validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)
         validator.visit(tree)
@@ -1157,33 +1173,40 @@ class SQLAlchemyBuilder(object):
                 print("".join(validator.errors))
                 print("Tree:\n" + tree.pretty())
             raise GrammarError("".join(validator.errors))
+
+        if debug:
+            print("Tree:\n" + tree.pretty())
+        self.transformer.text = text
+        self.transformer.convert_dates_with = convert_dates_with
+        self.transformer.convert_datetimes_with = convert_datetimes_with
+        expr = self.transformer.transform(tree)
+
+        # Expressions that return literal values can't be labeled
+        # Possibly we could wrap them in text() but this may be unsafe
+        # instead we will disallow them.
+        if isinstance(expr, (str, float, int, date, datetime)):
+            raise GrammarError("Must return an expression, not a constant value")
+
+        if (
+            enforce_aggregation
+            and not validator.found_aggregation
+            and self.last_datatype == "num"
+        ):
+            result = (func.sum(expr), self.last_datatype)
         else:
-            if debug:
-                print("Tree:\n" + tree.pretty())
-            self.transformer.text = text
-            self.transformer.convert_dates_with = convert_dates_with
-            self.transformer.convert_datetimes_with = convert_datetimes_with
-            expr = self.transformer.transform(tree)
+            result = (expr, self.last_datatype)
 
-            # Expressions that return literal values can't be labeled
-            # Possibly we could wrap them in text() but this may be unsafe
-            # instead we will disallow them.
-            if isinstance(expr, (str, float, int, date, datetime)):
-                raise GrammarError("Must return an expression, not a constant value")
-
-            if (
-                enforce_aggregation
-                and not validator.found_aggregation
-                and self.last_datatype == "num"
-            ):
-                result = (func.sum(expr), self.last_datatype)
-            else:
-                result = (expr, self.last_datatype)
-
-            if self.cached_exprs is not None:
-                self.cached_exprs[key] = (dumps(result[0]), result[1])
-            return result
+        if isinstance(self.selectable, Table) and self.cached_exprs is not None:
+            self.cached_exprs[key] = (dumps(result[0]), result[1])
+        return result
 
     def save_cache(self):
         # see "Developer Note: cache key" for info about cache keys.
         self.cache.set(self.cache_key, self.cached_exprs)
+
+
+def mkkey(*parts):
+    hash = hashlib.sha1()
+    for k in parts:
+        hash.update(str(k).encode("utf-8"))
+    return hash.hexdigest()
