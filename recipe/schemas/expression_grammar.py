@@ -1073,21 +1073,29 @@ class SQLAlchemyBuilder(object):
         self.cache = cache
         self.columns = make_columns_for_selectable(selectable)
         self.grammar = make_grammar(self.columns)
-        # Constructing this Lark parser can take a significant amount of time (like,
-        # nearly 1 second for some large tables), which is why we cache parsers in
-        # LARK_CACHE. Unfortunately, by using an in-process cache, we are still
-        # computing this redundantly quite often, because Juicebox processes get cycled
-        # often and there are many workers in a given deployment.
-        #
-        # Lark supports serializing parsers to speed up loading, but unfortunately it
-        # only supports this for LALR parsers, and we are using Earley.
-        self.cache_key = hashlib.sha1(self.grammar.encode("utf-8")).hexdigest()
+        grammar_hash = hashlib.sha1(self.grammar.encode("utf-8")).hexdigest()
+        # Developer Note: cache key
+        # This cache key is used for both LARK_CACHE as well as the SQLAlchemy
+        # expressions that we use in `parse` below. This key must change any time the
+        # table columns change, which it *should* do because the grammar contains
+        # information about all types and columns in the table. If that ever changes
+        # (e.g. we switch to separate steps for parsing and type/variable validation),
+        # we'll need to calculate the expression hash key separately.
+        self.cache_key = f"sqlalchemy-key:${grammar_hash}"
         self.cached_exprs = (
             self.cache.get(self.cache_key, {}) if self.cache is not None else None
         )
         if self.cache_key in LARK_CACHE:
             self.parser = LARK_CACHE[self.cache_key]
         else:
+            # Constructing this Lark parser can take a significant amount of time (like,
+            # nearly 1 second for some large tables), which is why we cache parsers in
+            # LARK_CACHE. Unfortunately, by using an in-process cache, we are still
+            # computing this redundantly quite often, because Juicebox processes get
+            # cycled often and there are many workers in a given deployment.
+            #
+            # Lark supports serializing parsers to speed up loading, but unfortunately
+            # it only supports this for LALR parsers, and we are using Earley.
             self.parser = Lark(
                 self.grammar,
                 parser="earley",
@@ -1134,6 +1142,7 @@ class SQLAlchemyBuilder(object):
                 ColumnElement: A SQLALchemy expression
                 DataType: The datatype of the expression (bool, date, datetime, num, str)
         """
+        # see "Developer Note: cache key" for info about cache keys.
         key = f"sqlalchemy-expr-{text}-{forbid_aggregation}-{enforce_aggregation}-{convert_dates_with}-{convert_datetimes_with}"
         result = self.cached_exprs.get(key) if self.cached_exprs is not None else None
         if result is not None:
@@ -1176,4 +1185,5 @@ class SQLAlchemyBuilder(object):
             return result
 
     def save_cache(self):
+        # see "Developer Note: cache key" for info about cache keys.
         self.cache.set(self.cache_key, self.cached_exprs)
