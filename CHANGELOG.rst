@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.32.0 (2023-01-19)
+-----------------------------------------
+* cache parsed ingredient fields and the result of their validation in the context of a specific grammar
+
 v0.31.6 (2022-12-07)
 -----------------------------------------
 * Add a utility function make_schema
