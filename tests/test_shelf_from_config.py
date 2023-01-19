@@ -4,9 +4,13 @@ Test recipes built from yaml files in the ingredients directory.
 """
 
 import os
+import time
+import warnings
+from copy import deepcopy
 from datetime import date
 
 from dateutil.relativedelta import relativedelta
+import yaml
 
 from recipe import AutomaticFilters, BadIngredient, InvalidIngredient, Shelf
 from tests.test_base import RecipeTestCase
@@ -26,9 +30,9 @@ class ConfigTestBase(RecipeTestCase):
         contents = open(fn).read()
         return self.shelf_from_yaml(contents, selectable)
 
-    def shelf_from_yaml(self, yaml_config, selectable):
+    def shelf_from_yaml(self, yaml_config, selectable, **kwargs):
         """Create a shelf directly from configuration"""
-        return Shelf.from_validated_yaml(yaml_config, selectable)
+        return Shelf.from_validated_yaml(yaml_config, selectable, **kwargs)
 
 
 class TestNullHandling(ConfigTestBase):
@@ -1346,6 +1350,132 @@ count_username:
             GROUP BY username) AS anon_1""",
         )
         self.assertRecipeCSV(recipe2, "count_star,count_username\n3,3\n")
+
+    def test_cache(self):
+        cache = Cache()
+        self.shelf_from_yaml(
+            """
+            username: {kind: Dimension, field: username}
+            count_star: {kind: Metric, field: count(*)}
+            convertdate: {kind: Dimension, field: month(test_date)}
+            """,
+            self.scores_with_nulls_table,
+            ingredient_cache=cache,
+        )
+        self.assertEqual(len(cache), 1)
+        ingredients = cache[list(cache.keys())[0]]
+        self.assertEqual(len(ingredients), 3)
+
+    def test_selectables_cache(self):
+        """Test cache when the selectable is a recipe"""
+        cache = Cache()
+        shelf = self.shelf_from_yaml(
+            """
+            username: {kind: Dimension, field: username}
+            count_star: {kind: Metric, field: 'count(*)'}
+            """,
+            self.scores_with_nulls_table,
+            ingredient_cache=cache,
+        )
+        recipe = self.recipe(shelf=shelf).dimensions("username").metrics("count_star")
+
+        self.assertEqual(len(cache), 1)
+        first_cache_key = list(cache.keys())[0]
+        self.assertEqual(len(cache[first_cache_key]), 2)
+
+        # Build a recipe using the first recipe
+        self.shelf_from_yaml(
+            "count_username: {kind: Metric, field: 'count(username)'}",
+            recipe,
+            ingredient_cache=cache,
+        )
+
+        self.assertEqual(len(cache), 2)
+        second_cache_key = list(cache.keys() - {first_cache_key})[0]
+        self.assertEqual(len(cache[second_cache_key]), 1)
+
+    def test_cache_is_faster(self):
+        yml = """
+        username: {kind: Dimension, field: username}
+        count_star: {kind: Metric, field: "count(*)"}
+        convertdate: {kind: Dimension, field: "month(test_date)"}
+        strings: {kind: Dimension, field: "string(test_date)+string(score)"}
+        total_nulls: {kind: Metric, field: "count_distinct(if(score IS NULL, username))"}
+        chip_nulls: {kind: Metric, field: 'sum(if(score IS NULL and username = "chip",1,0))'}
+        user_null_counter: {kind: Metric, field: 'if(username IS NULL, 1, 0)'}
+        chip_or_nulls: {kind: Metric, field: 'sum(if(score IS NULL OR (username = "chip"),1,0))'}
+        simple_math: {kind: Metric, field: "@count_star +  @total_nulls   + @chip_nulls"}
+        refs_division: {kind: Metric, field: "@count_star / 100.0"}
+        refs_as_denom: {kind: Metric, field: "12 / @count_star"}
+        math: {kind: Metric, field: "(@count_star / @count_star) + (5.0 / 2.0)"}
+        parentheses: {kind: Metric, field: "@count_star / (@count_star + (12.0 / 2.0))"}
+        """
+        config = yaml.safe_load(yml)
+        uncached_start = time.time()
+        COUNT = 2
+        for i in range(COUNT):
+            Shelf.from_config(deepcopy(config), self.scores_with_nulls_table)
+        uncached_duration = time.time() - uncached_start
+
+        cache = Cache()
+        # prime the cache
+        Shelf.from_config(
+            deepcopy(config), self.scores_with_nulls_table, ingredient_cache=cache
+        )
+        cached_start = time.time()
+        for i in range(COUNT):
+            Shelf.from_config(
+                deepcopy(config), self.scores_with_nulls_table, ingredient_cache=cache
+            )
+        cached_duration = time.time() - cached_start
+
+        # usually this performance is somewhere between 100 and 1000 times faster, but
+        # we should be conservative here
+        if not cached_duration < (uncached_duration / 50):
+            # let's just warn instead of actually failing the test suite
+            warnings.warn(
+                "cache was not fast enough: "
+                f"cached duration {cached_duration}, "
+                f"uncached duration: {uncached_duration}",
+                UserWarning,
+            )
+
+    def test_broken_cache(self):
+        """If the cache has corrupt data, it is ignored"""
+        cache = Cache()
+        self.shelf_from_yaml(
+            """
+            username: {kind: Dimension, field: username}
+            count_star: {kind: Metric, field: count(*)}
+            convertdate: {kind: Dimension, field: month(test_date)}
+            """,
+            self.scores_with_nulls_table,
+            ingredient_cache=cache,
+        )
+        og_cache = deepcopy(cache)
+        self.assertEqual(len(cache), 1)
+        main_cache_key = list(cache.keys())[0]
+        broken_ingredients = {
+            k: ({"broken": "tree"}, {"broken": "validator"})
+            for k in cache[main_cache_key]
+        }
+        cache[main_cache_key] = broken_ingredients
+        self.shelf_from_yaml(
+            """
+            username: {kind: Dimension, field: username}
+            count_star: {kind: Metric, field: count(*)}
+            convertdate: {kind: Dimension, field: month(test_date)}
+            """,
+            self.scores_with_nulls_table,
+            ingredient_cache=cache,
+        )
+        # the cache should be reinitialized, and should be identical to the old cache
+        self.assertEqual(cache, og_cache)
+
+
+class Cache(dict):
+    def set(self, k, v):
+        self[k] = v
 
 
 class TestParsedIntellligentDates(ConfigTestBase):

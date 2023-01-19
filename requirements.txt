@@ -8,3 +8,4 @@ sureberus==0.14.0
 dateparser==1.1.1
 attrs==19.3.0
 lark==1.1.2
+structlog>=19.2.0

@@ -37,6 +37,7 @@ install = [
     'dateparser>=1.1.1',
     'attrs',
     'lark',
+    'structlog',
 ]
 # yapf: enable
 
