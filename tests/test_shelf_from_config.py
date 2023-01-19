@@ -1440,7 +1440,6 @@ count_username:
                 UserWarning,
             )
 
-
     def test_broken_cache(self):
         """If the cache has corrupt data, it is ignored"""
         cache = Cache()
