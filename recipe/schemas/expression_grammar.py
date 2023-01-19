@@ -1161,24 +1161,21 @@ class SQLAlchemyBuilder(object):
             self.cached_trees.get(key) if self.cached_trees is not None else None
         )
 
-        def tree_to_expression(t, v):
-            return self.tree_to_expression(
-                t,
-                v,
-                key,
-                enforce_aggregation,
-                debug,
-                convert_dates_with,
-                convert_datetimes_with,
-            )
+        extra_args = (
+            key,
+            enforce_aggregation,
+            debug,
+            convert_dates_with,
+            convert_datetimes_with,
+        )
 
         if cache_result is None:
             (tree, validator) = self._parse(text, forbid_aggregation)
-            return tree_to_expression(tree, validator)
+            return self.tree_to_expression(tree, validator, *extra_args)
         else:
             (tree, validator) = cache_result
             try:
-                return tree_to_expression(tree, validator)
+                return self.tree_to_expression(tree, validator, *extra_args)
             except Exception:
                 SLOG.exception("cached-tree-to-validator-error")
                 # If we get ANY error while dealing with the cached ingredient data, we
@@ -1188,7 +1185,7 @@ class SQLAlchemyBuilder(object):
                 # details encoded into the cached data).
                 del self.cached_trees[key]
                 (tree, validator) = self._parse(text, forbid_aggregation)
-                return tree_to_expression(tree, validator)
+                return self.tree_to_expression(tree, validator, *extra_args)
 
     def _parse(self, text, forbid_aggregation):
         tree = self.parser.parse(text, start="col")
