@@ -1441,6 +1441,39 @@ count_username:
             )
 
 
+    def test_broken_cache(self):
+        """If the cache has corrupt data, it is ignored"""
+        cache = Cache()
+        self.shelf_from_yaml(
+            """
+            username: {kind: Dimension, field: username}
+            count_star: {kind: Metric, field: count(*)}
+            convertdate: {kind: Dimension, field: month(test_date)}
+            """,
+            self.scores_with_nulls_table,
+            ingredient_cache=cache,
+        )
+        og_cache = deepcopy(cache)
+        self.assertEqual(len(cache), 1)
+        main_cache_key = list(cache.keys())[0]
+        broken_ingredients = {
+            k: ({"broken": "tree"}, {"broken": "validator"})
+            for k in cache[main_cache_key]
+        }
+        cache[main_cache_key] = broken_ingredients
+        self.shelf_from_yaml(
+            """
+            username: {kind: Dimension, field: username}
+            count_star: {kind: Metric, field: count(*)}
+            convertdate: {kind: Dimension, field: month(test_date)}
+            """,
+            self.scores_with_nulls_table,
+            ingredient_cache=cache,
+        )
+        # the cache should be reinitialized, and should be identical to the old cache
+        self.assertEqual(cache, og_cache)
+
+
 class Cache(dict):
     def set(self, k, v):
         self[k] = v

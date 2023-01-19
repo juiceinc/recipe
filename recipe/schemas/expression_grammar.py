@@ -3,7 +3,9 @@ import re
 from collections import defaultdict
 from datetime import date, datetime
 
+import attr
 import dateparser
+import structlog
 from lark import GrammarError, Lark, Transformer, Tree, Visitor, v_args
 from lark.lexer import Token
 from sqlalchemy import (
@@ -13,7 +15,6 @@ from sqlalchemy import (
     Float,
     Integer,
     String,
-    Table,
     and_,
     between,
     case,
@@ -36,6 +37,8 @@ from .utils import (
     convert_to_eod_datetime,
     convert_to_start_datetime,
 )
+
+SLOG = structlog.get_logger(__name__)
 
 
 # SQL server can not support parameters in queries that are used for grouping
@@ -299,26 +302,26 @@ def make_grammar(columns):
     return grammar
 
 
+@attr.s
 class SQLALchemyValidator(Visitor):
-    def __init__(self, text, forbid_aggregation, drivername):
-        """Visit the tree and return descriptive information. Populate
-        a list of errors.
+    """Visit the tree and return descriptive information. Populate
+    a list of errors.
 
-        Args:
-            text (str): A copy of the parsed text for error descriptions
-            forbid_aggregation (bool): Should aggregations be treated as an error
-            drivername (str): The database engine we are running against
-        """
-        self.text = text
-        self.forbid_aggregation = forbid_aggregation
-        self.drivername = drivername
+    Args:
+        text (str): A copy of the parsed text for error descriptions
+        forbid_aggregation (bool): Should aggregations be treated as an error
+        drivername (str): The database engine we are running against
+    """
 
-        # Was an aggregation encountered in the tree?
-        self.found_aggregation = False
-        # What is the datatype of the returned expression
-        self.last_datatype = None
-        # Errors encountered while visiting the tree
-        self.errors = []
+    text = attr.ib()
+    forbid_aggregation = attr.ib()
+    drivername = attr.ib()
+    # Was an aggregation encountered in the tree?
+    found_aggregation = attr.ib(default=False)
+    # What is the datatype of the returned expression
+    last_datatype = attr.ib(default=None)
+    # Errors encountered while visiting the tree
+    errors = attr.ib(factory=list)
 
     def _data_type(self, tree):
         # Find the data type for a tree
@@ -1073,7 +1076,7 @@ class SQLAlchemyBuilder(object):
         self.cache = cache
         self.columns = make_columns_for_selectable(selectable)
         self.grammar = make_grammar(self.columns)
-        grammar_hash = mkkey(self.grammar)
+        grammar_hash = mkkey("grammar", self.grammar)
         # Developer Note: cache key
         # This cache key is used for both LARK_CACHE as well as the SQLAlchemy
         # expressions that we use in `parse` below. This key must change any time the
@@ -1082,9 +1085,13 @@ class SQLAlchemyBuilder(object):
         # (e.g. we switch to separate steps for parsing and type/variable validation),
         # we'll need to calculate the expression hash key separately.
         self.cache_key = f"recipe-expr:{grammar_hash}"
-        self.cached_trees = (
-            self.cache.get(self.cache_key, {}) if self.cache is not None else None
-        )
+        try:
+            self.cached_trees = (
+                self.cache.get(self.cache_key, {}) if self.cache is not None else None
+            )
+        except Exception:
+            SLOG.exception("ingredient-cache-error")
+            self.cached_trees = None
         if self.cache_key in LARK_CACHE:
             self.parser = LARK_CACHE[self.cache_key]
         else:
@@ -1142,8 +1149,8 @@ class SQLAlchemyBuilder(object):
                 ColumnElement: A SQLALchemy expression
                 DataType: The datatype of the expression (bool, date, datetime, num, str)
         """
-        # see "Developer Note: cache key" for info about cache keys.
         key = mkkey(
+            "parsed-ingredient",
             text,
             forbid_aggregation,
             enforce_aggregation,
@@ -1153,12 +1160,52 @@ class SQLAlchemyBuilder(object):
         cache_result = (
             self.cached_trees.get(key) if self.cached_trees is not None else None
         )
+
+        def tree_to_expression(t, v):
+            return self.tree_to_expression(
+                t,
+                v,
+                key,
+                enforce_aggregation,
+                debug,
+                convert_dates_with,
+                convert_datetimes_with,
+            )
+
         if cache_result is None:
-            tree = self.parser.parse(text, start="col")
-            validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)
-            validator.visit(tree)
+            (tree, validator) = self._parse(text, forbid_aggregation)
+            return tree_to_expression(tree, validator)
         else:
             (tree, validator) = cache_result
+            try:
+                return tree_to_expression(tree, validator)
+            except Exception:
+                SLOG.exception("cached-tree-to-validator-error")
+                # If we get ANY error while dealing with the cached ingredient data, we
+                # should just retry everything without using the cache. There could be
+                # any number of things wrong with the cache, e.g. if it was produced on
+                # an older version of Recipe (there are a lot of internal implementation
+                # details encoded into the cached data).
+                del self.cached_trees[key]
+                (tree, validator) = self._parse(text, forbid_aggregation)
+                return tree_to_expression(tree, validator)
+
+    def _parse(self, text, forbid_aggregation):
+        tree = self.parser.parse(text, start="col")
+        validator = SQLALchemyValidator(text, forbid_aggregation, self.drivername)
+        validator.visit(tree)
+        return (tree, validator)
+
+    def tree_to_expression(
+        self,
+        tree,
+        validator,
+        key,
+        enforce_aggregation,
+        debug,
+        convert_dates_with,
+        convert_datetimes_with,
+    ):
         self.last_datatype = validator.last_datatype
         if validator.errors:
             if debug:
@@ -1194,11 +1241,14 @@ class SQLAlchemyBuilder(object):
 
     def save_cache(self):
         # see "Developer Note: cache key" for info about cache keys.
-        self.cache.set(self.cache_key, self.cached_trees)
+        try:
+            self.cache.set(self.cache_key, self.cached_trees)
+        except Exception:
+            SLOG.exception("shelf-save-cache-error")
 
 
-def mkkey(*parts):
+def mkkey(prefix, *parts):
     hash = hashlib.sha1()
     for k in parts:
         hash.update(str(k).encode("utf-8"))
-    return hash.hexdigest()
+    return f"{prefix}-{hash.hexdigest()}"
