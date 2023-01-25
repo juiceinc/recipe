@@ -299,6 +299,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
 
         for field, expected_data_type in self.examples(good_examples):
             _, data_type = self.builder.parse(field)
+            self.assertIs(type(data_type), str)
             self.assertEqual(data_type, expected_data_type)
 
     def test_disallow_literals(self):
