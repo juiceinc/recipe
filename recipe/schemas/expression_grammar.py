@@ -331,6 +331,7 @@ class SQLALchemyValidator(Visitor):
             dt = self._data_type(tree.children[0])
         else:
             dt = tree.data
+        dt = str(dt)  # Convert Tokens to strings
         if dt == "datetime_end":
             dt = "datetime"
         elif dt == "string":
