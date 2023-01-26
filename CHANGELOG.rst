@@ -2,6 +2,11 @@
 Changelog
 =========
 
+v0.32.1 (2023-01-26)
+-----------------------------------------
+* Allow automatic filters to be applied more than once to a recipe
+* Ensure datatypes are always str
+
 v0.32.0 (2023-01-19)
 -----------------------------------------
 * cache parsed ingredient fields and the result of their validation in the context of a specific grammar
