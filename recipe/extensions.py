@@ -186,7 +186,15 @@ class AutomaticFilters(RecipeExtension):
     """
 
     recipe_schema = {
-        "automatic_filters": {"type": "dict", "keyschema": {"type": "string"}},
+        "automatic_filters": {
+            "anyof": [
+                {"type": "dict", "keyschema": {"type": "string"}},
+                {
+                    "type": "list",
+                    "schema": {"type": "dict", "keyschema": {"type": "string"}},
+                },
+            ]
+        },
         "include_automatic_filter_keys": {"type": "list", "schema": {"type": "string"}},
         "exclude_automatic_filter_keys": {"type": "list", "schema": {"type": "string"}},
         "apply_automatic_filters": {"type": "boolean"},
@@ -195,7 +203,7 @@ class AutomaticFilters(RecipeExtension):
     def __init__(self, *args, **kwargs):
         super(AutomaticFilters, self).__init__(*args, **kwargs)
         self.apply = True
-        self._automatic_filters = {}
+        self._automatic_filters = []
         self.exclude_keys = None
         self.include_keys = None
         self._optimize_redshift = False
@@ -297,11 +305,12 @@ class AutomaticFilters(RecipeExtension):
 
     def add_ingredients(self):
         if self.apply:
-            for dim, values in self._automatic_filters.items():
-                if is_compound_filter(dim):
-                    self.recipe.filters(self._build_compound_filter(dim, values))
-                else:
-                    self.recipe.filters(self._build_automatic_filter(dim, values))
+            for filter_dict in self._automatic_filters:
+                for dim, values in filter_dict.items():
+                    if is_compound_filter(dim):
+                        self.recipe.filters(self._build_compound_filter(dim, values))
+                    else:
+                        self.recipe.filters(self._build_automatic_filter(dim, values))
 
     @recipe_arg()
     def optimize_redshift(self, value):
@@ -326,7 +335,7 @@ class AutomaticFilters(RecipeExtension):
         self.apply = value
 
     @recipe_arg()
-    def automatic_filters(self, value):
+    def automatic_filters(self, value: Union[dict, list]):
         """Sets a dictionary of automatic filters to apply to this recipe.
         If your recipe uses a shelf that has dimensions 'state' and 'gender'
         you could filter the data to Men in California and New Hampshire with::
@@ -341,6 +350,8 @@ class AutomaticFilters(RecipeExtension):
                 'state': ['California', 'New Hampshire'],
                 'gender': 'M'
             })
+
+        The value passed to `.automatic_filters()` can also be a list of dicts.
 
         Automatic filter keys can optionally include an ``operator``.
 
@@ -429,8 +440,12 @@ class AutomaticFilters(RecipeExtension):
         may generate extremely large SQL.
 
         """
+        if isinstance(value, list):
+            [self.automatic_filters(v) for v in value]
+            return
+
         assert isinstance(value, dict)
-        self._automatic_filters = value
+        self._automatic_filters.append(value)
 
     @recipe_arg()
     def exclude_automatic_filter_keys(self, *keys):

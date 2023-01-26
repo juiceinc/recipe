@@ -18,14 +18,6 @@ from recipe.utils import (
 uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
-# recipe/utils/__init__.py                    4      0      0      0   100.00%
-# recipe/utils/anonymize.py                  93     11     44      9    85.40%   46, 52, 55-58, 61->71, 69, 100, 107->103, 115, 118, 122-124, 130
-# recipe/utils/datatype.py                   65     16     40      8    73.33%   20-21, 27, 33, 41-42, 47, 54->69, 65-67, 72, 74, 91-94
-# recipe/utils/extensions.py                 17      1      6      1    91.30%   20
-# recipe/utils/formatting.py                 42      6     18      6    80.00%   16, 21-22, 33, 38, 53->59, 54->56, 62
-# recipe/utils/utils.py                      33      3     10      0    88.37%   33-36
-
-
 class TestUtils(object):
     def test_replace_whitespace_with_space(self):
         assert replace_whitespace_with_space("fooo    moo") == "fooo moo"
@@ -288,8 +280,16 @@ class TestMakeSchema(RecipeTestCase):
                         "required": False,
                     },
                     "automatic_filters": {
-                        "type": "dict",
-                        "keyschema": {"type": "string"},
+                        "anyof": [
+                            {"keyschema": {"type": "string"}, "type": "dict"},
+                            {
+                                "schema": {
+                                    "keyschema": {"type": "string"},
+                                    "type": "dict",
+                                },
+                                "type": "list",
+                            },
+                        ]
                     },
                     "include_automatic_filter_keys": {
                         "type": "list",
