@@ -173,7 +173,37 @@ class AutomaticFiltersTestCase(RecipeTestCase):
             },
         ):
             ext = recipe.recipe_extensions[0]
-            self.assertEqual(ext._automatic_filters, {"first": ["foo"]})
+            self.assertEqual(ext._automatic_filters, [{"first": ["foo"]}])
+            self.assertEqual(ext.include_keys, ("foo", "moo"))
+            self.assertEqual(ext.exclude_keys, ("foo", "you"))
+            self.assertFalse(ext.apply)
+
+    def test_multiple_filter_dicts(self):
+        """Check the internal state of an extension after configuration"""
+        for recipe in self.recipe_list(
+            (
+                self.recipe()
+                .metrics("age")
+                .dimensions("first")
+                .automatic_filters({"first": ["foo"]})
+                .automatic_filters({"second": ["moo"]})
+                .include_automatic_filter_keys("foo", "moo")
+                .exclude_automatic_filter_keys("foo", "you")
+                .apply_automatic_filters(False)
+            ),
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": [{"first": ["foo"]}, {"second": ["moo"]}],
+                "include_automatic_filter_keys": ["foo", "moo"],
+                "exclude_automatic_filter_keys": ["foo", "you"],
+                "apply_automatic_filters": False,
+            },
+        ):
+            ext = recipe.recipe_extensions[0]
+            self.assertEqual(
+                ext._automatic_filters, [{"first": ["foo"]}, {"second": ["moo"]}]
+            )
             self.assertEqual(ext.include_keys, ("foo", "moo"))
             self.assertEqual(ext.exclude_keys, ("foo", "you"))
             self.assertFalse(ext.apply)
@@ -313,6 +343,56 @@ class AutomaticFiltersTestCase(RecipeTestCase):
             WHERE foo.first IS NULL
             GROUP BY first""",
             )
+
+    def test_multiple_automatic_filters(self):
+        """Automatic filters can be passed multiple times and all will apply"""
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": [{"first": ["foo"]}, {"last__gt": "x"}],
+            }
+        ):
+            self.assertTrue(recipe.recipe_extensions[0].apply)
+            self.assertRecipeSQLContains(recipe, "foo.first IN ('foo')")
+            self.assertRecipeSQLContains(recipe, "foo.last > 'x'")
+
+        recipe = (
+            self.recipe()
+            .metrics("age")
+            .dimensions("first")
+            .automatic_filters({"first": ["foo"]})
+            .automatic_filters({"last__gt": "t"})
+        )
+        self.assertTrue(recipe.recipe_extensions[0].apply)
+        self.assertRecipeSQLContains(recipe, "foo.first IN ('foo')")
+        self.assertRecipeSQLContains(recipe, "foo.last > 't'")
+
+    def test_multiple_automatic_filters_with_exclude(self):
+        """Automatic filters can be passed multiple times and all will apply"""
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": [{"first": ["foo"]}, {"last__gt": "x"}],
+                "exclude_automatic_filter_keys": ["last"],
+            }
+        ):
+            self.assertTrue(recipe.recipe_extensions[0].apply)
+            self.assertRecipeSQLContains(recipe, "foo.first IN ('foo')")
+            self.assertRecipeSQLNotContains(recipe, "foo.last > 'x'")
+
+        recipe = (
+            self.recipe()
+            .metrics("age")
+            .dimensions("first")
+            .automatic_filters({"first": ["foo"]})
+            .automatic_filters({"last__gt": "t"})
+            .exclude_automatic_filter_keys("last")
+        )
+        self.assertTrue(recipe.recipe_extensions[0].apply)
+        self.assertRecipeSQLContains(recipe, "foo.first IN ('foo')")
+        self.assertRecipeSQLNotContains(recipe, "foo.last > 't'")
 
     def test_automatic_filters_with_unknown_dim(self):
         """Test filters built using an unknown dimension"""
