@@ -193,12 +193,12 @@ class BuildGrammarTestCase(RecipeTestCase):
             columns = make_columns_for_selectable(selectable)
             gathered_columns = f"""
             {gather_columns("unusable_col", columns, "unusable")}
-            {gather_columns("date.1", columns, "date", ["extra_date_rule"])}
-            {gather_columns("datetime.2", columns, "datetime", ["extra_datetime_rule"])}
-            {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
-            {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "extra_bool_rule"])}
-            {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "extra_string_rule"])}
-            {gather_columns("num.1", columns, "num", ["NUMBER", "extra_num_rule"])}
+            {gather_columns("date.1", columns, "date", additional_rules=["extra_date_rule"])}
+            {gather_columns("datetime.2", columns, "datetime", additional_rules=["extra_datetime_rule"])}
+            {gather_columns("datetime_end.1", columns, "datetime", additional_rules=["datetime_end_conv", "datetime_aggr"])}
+            {gather_columns("boolean.1", columns, "bool", additional_rules=["TRUE", "FALSE", "extra_bool_rule"])}
+            {gather_columns("string.1", columns, "str", additional_rules=["ESCAPED_STRING", "extra_string_rule"])}
+            {gather_columns("num.1", columns, "num", additional_rules=["NUMBER", "extra_num_rule"])}
             """
             self.assertEqual(
                 str_dedent(gathered_columns), str_dedent(expected_gathered)

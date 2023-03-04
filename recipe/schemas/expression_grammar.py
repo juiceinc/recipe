@@ -40,19 +40,23 @@ def make_columns_grammar(columns: dict) -> str:
     return "\n".join(items).lstrip()
 
 
-def gather_columns(rule_name: str, columns: dict, prefix: str, additions=None) -> str:
+def gather_columns(
+    rule_name: str, columns: dict, prefix: str, *, additional_rules=None
+) -> str:
     """Build a list of all columns matching a prefix allong with potential additional rules."""
-    if additions is None:
-        additions = []
-
-    raw_rule_name = rule_name.split(".")[0]
-
-    # Reduce a pair of parens around a type back to itself.
-    paren_rule = f'"(" + {raw_rule_name} + ")"'
+    if additional_rules is None:
+        additional_rules = []
 
     matching_keys = [k for k in sorted(columns.keys()) if k.startswith(f"{prefix}_")]
-    if matching_keys + additions:
-        return f"{rule_name}: " + " | ".join(matching_keys + additions + [paren_rule])
+    if matching_keys + additional_rules:
+        raw_rule_name = rule_name.split(".")[0]
+
+        # Reduce a pair of parens around a type back to itself.
+        paren_rule = f'"(" + {raw_rule_name} + ")"'
+
+        return f"{rule_name}: " + " | ".join(
+            matching_keys + additional_rules + [paren_rule]
+        )
     else:
         return f'{rule_name}: "DUMMYVALUNUSABLECOL"'
 
@@ -112,14 +116,14 @@ def make_grammar(columns):
     // These are the raw columns in the selectable
     {make_columns_grammar(columns)}
 
-    {gather_columns("unusable_col", columns, "unusable", [])}
-    {gather_columns("date.1", columns, "date", ["date_conv", "date_fn", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "dt_day_conv", "dt_week_conv", "dt_month_conv", "dt_quarter_conv", "dt_year_conv", "datetime_to_date_conv", "date_aggr", "date_if_statement", "date_coalesce"])}
-    {gather_columns("datetime.2", columns, "datetime", ["datetime_conv", "datetime_if_statement", "datetime_coalesce"])}
+    {gather_columns("unusable_col", columns, "unusable")}
+    {gather_columns("date.1", columns, "date", additional_rules=["date_conv", "date_fn", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "dt_day_conv", "dt_week_conv", "dt_month_conv", "dt_quarter_conv", "dt_year_conv", "datetime_to_date_conv", "date_aggr", "date_if_statement", "date_coalesce"])}
+    {gather_columns("datetime.2", columns, "datetime", additional_rules=["datetime_conv", "datetime_if_statement", "datetime_coalesce"])}
     // Datetimes that are converted to the end of day
-    {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
-    {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "bool_expr", "date_bool_expr", "datetime_bool_expr", "str_like_expr", "vector_expr", "between_expr", "date_between_expr", "datetime_between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
-    {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "string_add", "string_cast", "string_coalesce", "string_substr", "string_if_statement", "string_aggr"])}
-    {gather_columns("num.1", columns, "num", ["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "num_coalesce", "aggr", "error_aggr", "num_if_statement", "age_conv"])}
+    {gather_columns("datetime_end.1", columns, "datetime", additional_rules=["datetime_end_conv", "datetime_aggr"])}
+    {gather_columns("boolean.1", columns, "bool", additional_rules=["TRUE", "FALSE", "bool_expr", "date_bool_expr", "datetime_bool_expr", "str_like_expr", "vector_expr", "between_expr", "date_between_expr", "datetime_between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
+    {gather_columns("string.1", columns, "str", additional_rules=["ESCAPED_STRING", "string_add", "string_cast", "string_coalesce", "string_substr", "string_if_statement", "string_aggr"])}
+    {gather_columns("num.1", columns, "num", additional_rules=["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "num_coalesce", "aggr", "error_aggr", "num_if_statement", "age_conv"])}
     string_add: string "+" string
     num_add.1: num "+" num | "(" num "+" num ")"
     num_sub.1: num "-" num | "(" num "-" num ")"
