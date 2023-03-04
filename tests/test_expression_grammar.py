@@ -9,12 +9,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from lark import GrammarError
 
 from recipe.schemas.expression_grammar import (
-    SQLAlchemyBuilder,
     is_valid_column,
     make_columns_for_selectable,
     make_columns_grammar,
     gather_columns,
 )
+from recipe.schemas.builders import SQLAlchemyBuilder
+from recipe.schemas.transformers import TransformToSQLAlchemyExpression
 from recipe.utils.formatting import expr_to_str
 from tests.test_base import RecipeTestCase
 
@@ -312,7 +313,6 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         """
 
         for field, _ in self.examples(examples):
-
             with self.assertRaises(GrammarError):
                 self.builder.parse(field)
 
@@ -1115,7 +1115,7 @@ if(department = "foo", department, valid_score, score)
                 self.builder.parse(field, forbid_aggregation=True, debug=True)
             if str(e.exception).strip() != expected_error.strip():
                 print("===actual===")
-                print(str(e.exception))
+                print(e.exception)
                 print("===expected===")
                 print(expected_error)
                 print("===" * 10)

@@ -16,10 +16,8 @@ def pgage(element, compiler, **kw):
     # using EXTRACT('dayofyear') failed on edge cases
     clauses = compiler.process(element.clauses)
     return (
-        "DATEDIFF('YEAR', %s, CURRENT_DATE) - " % clauses
-        + "CASE WHEN extract('month' from CURRENT_DATE) + extract('day' from CURRENT_DATE)/100.0 "
-        + "< extract('month' from %s)+ extract('day' from %s)/100.0 THEN 1 ELSE 0 END"
-        % (clauses, clauses)
+        f"DATEDIFF('YEAR', {clauses}, CURRENT_DATE) - CASE WHEN extract('month' from CURRENT_DATE) + extract('day' from CURRENT_DATE)/100.0 "
+        + f"< extract('month' from {clauses})+ extract('day' from {clauses})/100.0 THEN 1 ELSE 0 END"
     )
 
 
@@ -73,47 +71,47 @@ class bq_percentile99(expression.FunctionElement):
 
 @compiles(bq_median, "bigquery")
 def bqmedian(element, compiler, **kw):
-    return "approx_quantiles(%s, 2)[OFFSET(1)]" % compiler.process(element.clauses)
+    return f"approx_quantiles({compiler.process(element.clauses)}, 2)[OFFSET(1)]"
 
 
 @compiles(bq_percentile1, "bigquery")
 def bqpercentile1(element, compiler, **kw):
-    return "approx_quantiles(%s, 100)[OFFSET(1)]" % compiler.process(element.clauses)
+    return f"approx_quantiles({compiler.process(element.clauses)}, 100)[OFFSET(1)]"
 
 
 @compiles(bq_percentile5, "bigquery")
 def bqpercentile5(element, compiler, **kw):
-    return "approx_quantiles(%s, 20)[OFFSET(1)]" % compiler.process(element.clauses)
+    return f"approx_quantiles({compiler.process(element.clauses)}, 20)[OFFSET(1)]"
 
 
 @compiles(bq_percentile10, "bigquery")
 def bqpercentile10(element, compiler, **kw):
-    return "approx_quantiles(%s, 10)[OFFSET(1)]" % compiler.process(element.clauses)
+    return f"approx_quantiles({compiler.process(element.clauses)}, 10)[OFFSET(1)]"
 
 
 @compiles(bq_percentile25, "bigquery")
 def bqpercentile25(element, compiler, **kw):
-    return "approx_quantiles(%s, 4)[OFFSET(1)]" % compiler.process(element.clauses)
+    return f"approx_quantiles({compiler.process(element.clauses)}, 4)[OFFSET(1)]"
 
 
 @compiles(bq_percentile75, "bigquery")
 def bqpercentile75(element, compiler, **kw):
-    return "approx_quantiles(%s, 4)[OFFSET(3)]" % compiler.process(element.clauses)
+    return f"approx_quantiles({compiler.process(element.clauses)}, 4)[OFFSET(3)]"
 
 
 @compiles(bq_percentile90, "bigquery")
 def bqpercentile90(element, compiler, **kw):
-    return "approx_quantiles(%s, 10)[OFFSET(9)]" % compiler.process(element.clauses)
+    return f"approx_quantiles({compiler.process(element.clauses)}, 10)[OFFSET(9)]"
 
 
 @compiles(bq_percentile95, "bigquery")
 def bqpercentile95(element, compiler, **kw):
-    return "approx_quantiles(%s, 20)[OFFSET(19)]" % compiler.process(element.clauses)
+    return f"approx_quantiles({compiler.process(element.clauses)}, 20)[OFFSET(19)]"
 
 
 @compiles(bq_percentile99, "bigquery")
 def bqpercentile99(element, compiler, **kw):
-    return "approx_quantiles(%s, 100)[OFFSET(99)]" % compiler.process(element.clauses)
+    return f"approx_quantiles({compiler.process(element.clauses)}, 100)[OFFSET(99)]"
 
 
 # An age calculation for bigquery
@@ -128,10 +126,8 @@ class bq_age(expression.FunctionElement):
 def bqage(element, compiler, **kw):
     clauses = compiler.process(element.clauses)
     return (
-        "DATE_DIFF(CURRENT_DATE, %s, YEAR) - " % clauses
-        + "IF(EXTRACT(MONTH FROM CURRENT_DATE) + EXTRACT(DAY FROM CURRENT_DATE)/100.0 "
-        + "< EXTRACT(MONTH FROM %s)+ EXTRACT(DAY FROM %s)/100.0, 1, 0)"
-        % (clauses, clauses)
+        f"DATE_DIFF(CURRENT_DATE, {clauses}, YEAR) - IF(EXTRACT(MONTH FROM CURRENT_DATE) + EXTRACT(DAY FROM CURRENT_DATE)/100.0 "
+        + f"< EXTRACT(MONTH FROM {clauses})+ EXTRACT(DAY FROM {clauses})/100.0, 1, 0)"
     )
 
 
@@ -222,7 +218,7 @@ conversions = {
 
 conversions_redshift = {
     # age doesn't work on all databases
-    "age": lambda fld: postgres_age(fld),
+    "age": lambda fld: postgres_age(fld)
 }
 
 conversions_bigquery = {

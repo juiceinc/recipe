@@ -13,7 +13,7 @@ from recipe.ingredients import Dimension, Filter, Ingredient, Metric, InvalidIng
 from recipe.schemas import shelf_schema
 from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
 
-from recipe.schemas.expression_grammar import SQLAlchemyBuilder
+from recipe.schemas.builders import SQLAlchemyBuilder
 
 _POP_DEFAULT = object()
 

@@ -3,6 +3,7 @@ from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 import dateparser
 import inspect
+import hashlib
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ColumnCollection
 
@@ -296,3 +297,11 @@ def calc_date_range(offset, units, dt):
         return dt, dt
     else:
         raise ValueError("Unknown intelligent date units")
+
+
+def mkkey(prefix, *parts):
+    """Make a hash key."""
+    hash = hashlib.sha1()
+    for k in parts:
+        hash.update(str(k).encode("utf-8"))
+    return f"{prefix}-{hash.hexdigest()}"
