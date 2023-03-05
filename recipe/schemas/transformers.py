@@ -31,10 +31,12 @@ from .utils import (
 class TransformToSQLAlchemyExpression(Transformer):
     """Converts a field to a SQLAlchemy expression"""
 
-    def __init__(self, selectable, columns, drivername, forbid_aggregation=True):
+    def __init__(self, selectable, cc, drivername, forbid_aggregation=True):
         self.text = None
         self.selectable = selectable
-        self.columns = columns
+
+        # A dict from column rule name to sqlalchemy column
+        self.column_lookup = cc.column_lookup()
         self.last_datatype = None
         # Convert all dates with this conversion
         self.convert_dates_with = None
@@ -69,7 +71,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return v
 
     def string(self, v):
-        return self.columns[v.data] if isinstance(v, Tree) else v
+        return self.column_lookup[v.data] if isinstance(v, Tree) else v
 
     def string_cast(self, _, fld):
         """Cast a field to a string"""
@@ -87,7 +89,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return func.substr(fld, *args)
 
     def num(self, v):
-        return self.columns[v.data] if isinstance(v, Tree) else v
+        return self.column_lookup[v.data] if isinstance(v, Tree) else v
 
     def int_cast(self, _, fld):
         """Cast a field to a string"""
@@ -98,7 +100,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return func.coalesce(left, right)
 
     def boolean(self, v):
-        return self.columns[v.data] if isinstance(v, Tree) else v
+        return self.column_lookup[v.data] if isinstance(v, Tree) else v
 
     def num_add(self, a, b):
         """Add numbers or strings"""
@@ -148,7 +150,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def date(self, v):
         if isinstance(v, Tree):
-            fld = self.columns[v.data]
+            fld = self.column_lookup[v.data]
             if self.convert_dates_with:
                 converter = getattr(self, self.convert_dates_with, None)
                 if converter:
@@ -165,7 +167,7 @@ class TransformToSQLAlchemyExpression(Transformer):
 
     def datetime(self, v):
         if isinstance(v, Tree):
-            fld = self.columns[v.data]
+            fld = self.column_lookup[v.data]
             if self.convert_datetimes_with:
                 converter = getattr(self, self.convert_datetimes_with, None)
                 if converter:
@@ -175,7 +177,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         return fld
 
     def datetime_end(self, v):
-        return self.columns[v.data] if isinstance(v, Tree) else v
+        return self.column_lookup[v.data] if isinstance(v, Tree) else v
 
     def date_conv(self, _, datestr):
         try:

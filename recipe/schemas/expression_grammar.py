@@ -1,5 +1,6 @@
+import attr
 import re
-from collections import defaultdict
+from typing import List
 
 import structlog
 from sqlalchemy import Boolean, Date, DateTime, Integer, String, text
@@ -19,49 +20,125 @@ literal_0 = text("0")
 VALID_COLUMN_RE = re.compile("^\w+$")
 
 
-def is_valid_column(c: str) -> bool:
+def is_valid_column(colname: str) -> bool:
     """We can only build columns on field names that are alphanumeric"""
-    return bool(VALID_COLUMN_RE.match(c))
+    return bool(VALID_COLUMN_RE.match(colname))
 
 
-def make_columns_grammar(columns: dict) -> str:
+@attr.s
+class Col:
+    """Convert a sqlalchemy column to a grammar expression"""
+
+    datatype: str = attr.ib()
+    sqla_col = attr.ib()
+    idx: int = attr.ib(default=-1)
+    namespace: str = attr.ib(default="")
+
+    @classmethod
+    def make_from_sqla_col(cls, sqla_col):
+        if is_valid_column(sqla_col.name):
+            if isinstance(sqla_col.type, String):
+                datatype = "str"
+            elif isinstance(sqla_col.type, Date):
+                datatype = "date"
+            elif isinstance(sqla_col.type, DateTime):
+                datatype = "datetime"
+            elif isinstance(sqla_col.type, Integer):
+                datatype = "num"
+            elif isinstance(sqla_col.type, Numeric):
+                datatype = "num"
+            elif isinstance(sqla_col.type, Boolean):
+                datatype = "bool"
+            else:
+                datatype = "unusable"
+            return cls(namespace="", datatype=datatype, sqla_col=sqla_col)
+
+    @property
+    def rule_name(self) -> str:
+        """The name for the lark rule for this column"""
+        if self.idx == -1:
+            raise Exception("Must assign indexes first")
+        return f"{self.datatype}_{self.idx}"
+
+    @property
+    def field_name(self) -> str:
+        """What to call this column in expressions."""
+        if self.namespace:
+            return f"{self.namespace}\\.{self.sqla_col.name}"
+        else:
+            return self.sqla_col.name
+
+    def as_rule(self):
+        return f'    {self.rule_name}: "[" + /{self.field_name}/i + "]" | /{self.field_name}/i'
+
+
+@attr.s
+class ColCollection:
+    columns: List[Col] = attr.ib()
+
+    def assign_indexes(self):
+        """Sort columns by datatype and assign an index"""
+        idx = 0
+        prev_datatype = None
+        for col in sorted(self.columns, key=lambda c: (c.datatype, c.sqla_col.name)):
+            if col.datatype != prev_datatype:
+                idx = 0
+            col.idx = idx
+            prev_datatype = col.datatype
+            idx += 1
+
+    def set_namespace(self, namespace):
+        for c in self.columns:
+            c.namespace = namespace
+
+    def extend(self, other_cc):
+        self.columns += other_cc.columns
+
+    def column_lookup(self) -> dict:
+        """Generate a lookup from rule names to the sqlalchemy columns"""
+        return {c.rule_name: c.sqla_col for c in self.columns}
+
+
+def make_columns_grammar(cc: ColumnCollection) -> str:
     """Return a lark rule that looks like
 
     // These are my raw columns
     str_0: "[" + /username/i + "]" | /username/i
     str_1: "[" + /department/i + "]" | /department/i
     str_2: "[" + /testid/i + "]" | /testid/i
+    num_0: "[" + /score/i + "]" | /score/i
     """
-    items = []
-    for k in sorted(columns.keys()):
-        c = columns[k]
-        if is_valid_column(c.name):
-            items.append(f'    {k}: "[" + /{c.name}/i + "]" | /{c.name}/i')
-    return "\n".join(items).lstrip()
+    cc.assign_indexes()
+    return "\n".join(sorted([col.as_rule() for col in cc.columns]))
 
 
 def gather_columns(
-    rule_name: str, columns: dict, prefix: str, *, additional_rules=None
+    datatype_rule_name: str,
+    cc: ColumnCollection,
+    datatype: str,
+    *,
+    additional_rules=None,
 ) -> str:
-    """Build a list of all columns matching a prefix allong with potential additional rules."""
+    """Build a list of all column rules matching a datatype along with potential additional rules."""
     if additional_rules is None:
         additional_rules = []
 
-    matching_keys = [k for k in sorted(columns.keys()) if k.startswith(f"{prefix}_")]
-    if matching_keys + additional_rules:
-        raw_rule_name = rule_name.split(".")[0]
+    matching_cols = [c for c in cc.columns if c.datatype == datatype]
+    column_rules = [f"{datatype}_{n}" for n in range(len(matching_cols))]
+    if matching_cols + additional_rules:
+        raw_rule_name = datatype_rule_name.split(".")[0]
 
         # Reduce a pair of parens around a type back to itself.
         paren_rule = f'"(" + {raw_rule_name} + ")"'
 
-        return f"{rule_name}: " + " | ".join(
-            matching_keys + additional_rules + [paren_rule]
+        return f"{datatype_rule_name}: " + " | ".join(
+            column_rules + additional_rules + [paren_rule]
         )
     else:
-        return f'{rule_name}: "DUMMYVALUNUSABLECOL"'
+        return f'{datatype_rule_name}: "DUMMYVALUNUSABLECOL"'
 
 
-def make_columns_for_selectable(selectable) -> dict:
+def make_columns_for_selectable(selectable, *, namespace=None) -> ColumnCollection:
     """Return a dictionary of columns. The keys
     are unique lark rule names prefixed by the column type
     like num_0, num_1, string_0, etc.
@@ -81,30 +158,16 @@ def make_columns_for_selectable(selectable) -> dict:
     else:
         raise Exception("Selectable does not have columns")
 
-    columns = {}
-    type_counter = defaultdict(int)
+    columns = []
+    for sqla_col in column_iterable:
+        col = Col.make_from_sqla_col(sqla_col)
+        if col:
+            columns.append(col)
 
-    for c in column_iterable:
-        if is_valid_column(c.name):
-            # Check supported column types
-            if isinstance(c.type, String):
-                prefix = "str"
-            elif isinstance(c.type, Date):
-                prefix = "date"
-            elif isinstance(c.type, DateTime):
-                prefix = "datetime"
-            elif isinstance(c.type, Integer):
-                prefix = "num"
-            elif isinstance(c.type, Numeric):
-                prefix = "num"
-            elif isinstance(c.type, Boolean):
-                prefix = "bool"
-            else:
-                prefix = "unusable"
-            cnt = type_counter[prefix]
-            type_counter[prefix] += 1
-            columns[f"{prefix}_{cnt}"] = c
-    return columns
+    cc = ColCollection(columns)
+    if namespace:
+        cc.set_namespace(namespace=namespace)
+    return cc
 
 
 def make_grammar(columns):
