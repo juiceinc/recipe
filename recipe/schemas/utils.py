@@ -4,7 +4,11 @@ from dateutil.relativedelta import relativedelta
 import dateparser
 import inspect
 import hashlib
-from sqlalchemy.ext.declarative import DeclarativeMeta
+
+try:
+    from sqlalchemy.ext.declarative.api import DeclarativeMeta
+except ImportError:
+    from sqlalchemy.orm.decl_api import DeclarativeMeta
 from sqlalchemy.sql.base import ColumnCollection
 
 ColumnCollection

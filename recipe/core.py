@@ -432,20 +432,10 @@ class Recipe(object):
         select_parts = self._cauldron.brew_select_parts(self._order_bys)
         from sqlalchemy import select
 
-        for c in select_parts.columns:
-            print()
-            print(dir(c))
-            print(c.description)
-            print(c.base_columns)
-            for col in c.base_columns:
-                print("\tinner")
-                print(col.description)
-                print(dir(col))
-
         if self._select_from is not None:
-            sel = select(select_parts.columns[:1]).select_from(self._select_from)
+            sel = select(select_parts.columns).select_from(self._select_from)
         else:
-            sel = select(select_parts.columns[:1])
+            sel = select(select_parts.columns)
         # sel = sel.with_only_columns(select_parts.columns)
         if select_parts.group_bys:
             sel = sel.group_by(*select_parts.group_bys)
@@ -515,7 +505,7 @@ class Recipe(object):
 
         if (
             self._select_from is None
-            and len(recipe_parts["query"].selectable.froms) != 1
+            and len(recipe_parts["query"].selectable.get_final_froms()) != 1
         ):
             raise BadRecipe(
                 "Recipes must use ingredients that all come from "

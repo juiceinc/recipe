@@ -1,19 +1,19 @@
+import contextlib
+from collections import OrderedDict, namedtuple
 from copy import copy
+from dataclasses import dataclass
 
 from lark.exceptions import VisitError
-from collections import OrderedDict
 from sqlalchemy import Float, Integer, String, Table
-from sqlalchemy.util import lightweight_named_tuple
 from sureberus import errors as E
 from sureberus import normalize_schema
 from yaml import safe_load
 
 from recipe.exceptions import BadIngredient, BadRecipe, InvalidColumnError
-from recipe.ingredients import Dimension, Filter, Ingredient, Metric, InvalidIngredient
+from recipe.ingredients import Dimension, Filter, Ingredient, InvalidIngredient, Metric
 from recipe.schemas import shelf_schema
-from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
-
 from recipe.schemas.builders import SQLAlchemyBuilder
+from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
 
 _POP_DEFAULT = object()
 
@@ -520,14 +520,16 @@ class Shelf(object):
                     extra_callables.append(extra_callable)
 
             # Mixin the extra fields
-            keyed_tuple = lightweight_named_tuple(
+            keyed_tuple = namedtuple(
                 "result", sample_item._fields + tuple(extra_fields)
             )
 
             # Iterate over the results and build a new namedtuple for each row
             for row in data:
-                values = row + tuple(fn(row) for fn in extra_callables)
-                enchantedlist.append(keyed_tuple(values))
+                vals = tuple(row._asdict().values())
+                extras = tuple(fn(row) for fn in extra_callables)
+                all_values = vals + extras
+                enchantedlist.append(keyed_tuple(*values))
 
         return enchantedlist
 

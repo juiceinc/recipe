@@ -66,9 +66,9 @@ GROUP BY firstlast_id,
         self.assertRecipeCSV(
             recipe,
             """
-            firstlast_id,firstlast,age,firstlast_id
-            hi,fred,10,hi
-            hi,there,5,hi
+            firstlast_id,firstlast,age
+            hi,fred,10
+            hi,there,5
             """,
         )
 
@@ -95,9 +95,9 @@ GROUP BY d_id,
         self.assertRecipeCSV(
             recipe,
             """
-            d_id,d,d_age,age,d_id
-            hi,fred,10,10,hi
-            hi,there,5,5,hi
+            d_id,d,d_age,age
+            hi,fred,10,10
+            hi,there,5,5
             """,
         )
 
@@ -127,9 +127,9 @@ GROUP BY d_id,
         self.assertRecipeCSV(
             recipe,
             """
-            d_id,d_raw,d_age,age,d,d_id
-            hi,fred,10,10,DEFAULT,hi
-            hi,there,5,5,DEFAULT,hi
+            d_id,d_raw,d_age,age,d
+            hi,fred,10,10,DEFAULT
+            hi,there,5,5,DEFAULT
             """,
         )
 
@@ -702,56 +702,22 @@ GROUP BY username""",
         from sqlalchemy.sql.expression import join
 
         self.shelf = self.mixed_shelf
-        j = join(
+        j = (
             RecipeTestCase.tagscores_table,
             RecipeTestCase.scores_table,
             RecipeTestCase.tagscores_table.c.username
             == RecipeTestCase.scores_table.c.username,
         )
 
-        recipe = (
-            self.recipe()
-            .metrics("score")
-            .dimensions("tagscorestestid")
-            # .select_from(j)
-            # .select_from(RecipeTestCase.scores_table)
-            # .join(
-            #     RecipeTestCase.tagscores_table,
-            #     RecipeTestCase.tagscores_table.c.username
-            #     == RecipeTestCase.scores_table.c.username,
-            # )
-        )
+        recipe = self.recipe().metrics("score").dimensions("tagscorestestid", "testid")
         sel = recipe.select()
-        sel = sel.join_from(
-            RecipeTestCase.scores_table,
-            RecipeTestCase.tagscores_table.c.username
-            == RecipeTestCase.scores_table.c.username,
-        )
-        # sel = sel.select_from(j)
+        print(sel)
+
+        # Now we test a join!
+        sel = sel.join_from(*j)
         print(type(sel))
         print(sel)
         self.assertEqual(str(sel), "foo")
-
-
-#         self.assertRecipeSQL(
-#             recipe,
-#             """SELECT tagscores.testid AS tagscorestestid,
-#        avg(scores.score) AS score
-# FROM tagscores,
-#      scores,
-#      scores
-# JOIN tagscores ON tagscores.username = scores.username
-# GROUP BY tagscorestestid""",
-#         )
-#         self.assertRecipeCSV(
-#             recipe,
-#             """
-#             username,score,username_id
-#             annika,85.0,annika
-#             chip,90.0,chip
-#             chris,80.0,chris
-#             """,
-#         )
 
 
 class CacheContextTestCase(RecipeTestCase):
