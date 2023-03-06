@@ -79,6 +79,7 @@ class Recipe(object):
         self._total_count = None
 
         self._select_from = None
+        self._joins = []
         self.shelf(shelf)
 
         # Stores all ingredients used in the recipe
@@ -360,6 +361,10 @@ class Recipe(object):
     @recipe_arg()
     def select_from(self, selectable) -> Recipe:
         self._select_from = selectable
+
+    @recipe_arg()
+    def join(self, join_selectable, join_on=None) -> Recipe:
+        self._joins.append((join_selectable, join_on))
 
     @recipe_arg()
     def session(self, session) -> Recipe:
