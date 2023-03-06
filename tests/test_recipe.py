@@ -658,7 +658,7 @@ FROM
 
 
 class TestRecipeIngredientsFromMultipleTables(RecipeTestCase):
-    def test_dimension(self):
+    def test_same_table(self):
         from sqlalchemy.sql.expression import join
 
         self.shelf = self.mixed_shelf

@@ -522,9 +522,7 @@ class Recipe(object):
 
     def as_table(self, name=None):
         """Return an alias to a table"""
-        if name is None:
-            name = self._id
-        return alias(self.subquery(), name=name)
+        return alias(self.subquery(), name=name or self._id)
 
     def all(self):
         """Return a (potentially cached) list of result objects."""
@@ -533,11 +531,8 @@ class Recipe(object):
 
         if self._all is None:
             fetchtime = time.time()
-            if not self._use_cache:
-                # Invalidate this query in the cache
-                # to ensure it gets fresh data from the database
-                if hasattr(self._query, "invalidate"):
-                    self._query.invalidate()
+            if not self._use_cache and hasattr(self._query, "invalidate"):
+                self._query.invalidate()
 
             self._all = self._cauldron.enchant(
                 self._query.all(), cache_context=self.cache_context
@@ -557,10 +552,7 @@ class Recipe(object):
     def one(self):
         """Return the first element on the result"""
         all = self.all()
-        if len(all) > 0:
-            return all[0]
-        else:
-            return []
+        return all[0] if len(all) > 0 else []
 
     def first(self):
         """Return the first element on the result"""
