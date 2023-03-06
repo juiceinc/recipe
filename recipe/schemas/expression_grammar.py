@@ -27,7 +27,7 @@ def is_valid_column(colname: str) -> bool:
 
 @attr.s
 class Col:
-    """Convert a sqlalchemy column to a grammar expression"""
+    """Link a sqlalchemy column with a grammar rule"""
 
     datatype: str = attr.ib()
     sqla_col = attr.ib()
@@ -74,6 +74,8 @@ class Col:
 
 @attr.s
 class ColCollection:
+    """A collection of columns. These columns may come from more than one selectable."""
+
     columns: List[Col] = attr.ib()
 
     def assign_indexes(self):

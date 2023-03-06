@@ -227,7 +227,10 @@ class GrammarTestCase(RecipeTestCase):
 
     def setUp(self):
         super().setUp()
-        self.builder = SQLAlchemyBuilder.get_builder(self.datatypes_table)
+        extra_selectables = [(self.scores_table, "scores")]
+        self.builder = SQLAlchemyBuilder.get_builder(
+            self.datatypes_table, extra_selectables=extra_selectables
+        )
 
     def examples(self, input_rows):
         """Take input where each line looks like
@@ -289,6 +292,8 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         [ScORE] + [ScORE]               -> sum(datatypes.score + datatypes.score)
         max([ScORE] + [ScORE])          -> max(datatypes.score + datatypes.score)
         max(score) - min(score)         -> max(datatypes.score) - min(datatypes.score)
+        max(scores.score)               -> max(scores.score)
+        max([score] - [scores.score])   -> max(datatypes.score - scores.score)
         """
 
         for field, expected_sql in self.examples(good_examples):
@@ -313,6 +318,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         count(department > "foo")       -> num
         substr(department, 5)           -> str
         substr(department, 5, 5)        -> str
+        max([score] - [scores.score])   -> num
         """
 
         for field, expected_data_type in self.examples(good_examples):
