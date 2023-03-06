@@ -35,6 +35,78 @@ def ingredient_from_validated_dict(ingr_dict, selectable, builder=None):
             raise
 
 
+@dataclass
+class SelectParts:
+    columns: list
+    group_bys: list
+    filters: set
+    havings: set
+    raw_order_by_keys: list
+    order_bys: list
+    all_filters: set
+
+    def add_ingredient(self, ingredient):
+        if ingredient.error:
+            error_type = ingredient.error.get("type")
+            if error_type == "invalid_column":
+                extra = ingredient.error.get("extra", {})
+                column_name = extra.get("column_name")
+                ingredient_name = extra.get("ingredient_name")
+                error_msg = 'Invalid column "{0}" in ingredient "{1}"'.format(
+                    column_name, ingredient_name
+                )
+                raise InvalidColumnError(error_msg, column_name=column_name)
+            raise BadIngredient(str(ingredient.error))
+        if ingredient.query_columns:
+            self.columns.extend(ingredient.query_columns)
+        if ingredient.group_by:
+            self.group_bys.extend(ingredient.group_by)
+        if ingredient.filters:
+            # Ensure we don't add duplicate filters
+            for new_f in ingredient.filters:
+                from recipe.utils import filter_to_string
+
+                new_f_str = filter_to_string(new_f)
+                if new_f_str not in self.all_filters:
+                    self.filters.add(new_f)
+                    self.all_filters.add(new_f_str)
+        if ingredient.havings:
+            self.havings.update(ingredient.havings)
+
+        if (
+            "order_by" in ingredient.roles
+            and ingredient.id not in self.raw_order_by_keys
+            and f"-{ingredient.id}" not in self.raw_order_by_keys
+        ):
+            if ingredient.ordering == "desc":
+                self.raw_order_by_keys.append(f"-{ingredient.id}")
+            else:
+                self.raw_order_by_keys.append(ingredient.id)
+
+    def validate_order_bys(self, shelf):
+        validated_order_bys = OrderedDict()
+        for key in self.raw_order_by_keys:
+            with contextlib.suppress(BadRecipe):
+                ingr = shelf.find(key, (Dimension, Metric))
+                for c in ingr.order_by_columns:
+                    # Avoid duplicate order by columns
+                    if str(c) not in [str(o) for o in validated_order_bys]:
+                        validated_order_bys[c] = None
+        self.order_bys = list(validated_order_bys.keys())
+
+    @classmethod
+    def create(cls, raw_order_by_keys: list):
+        return cls(
+            columns=[],
+            group_bys=[],
+            filters=set(),
+            havings=set(),
+            order_bys=[],
+            raw_order_by_keys=raw_order_by_keys,
+            all_filters=set(),
+        )
+
+
 class Shelf(object):
     """Holds ingredients used by a recipe.
 
@@ -342,6 +414,17 @@ class Shelf(object):
             return obj
         else:
             raise BadRecipe("{} is not a {}".format(obj, filter_to_class))
+
+    def brew_select_parts(self, order_by_keys=None) -> SelectParts:
+        if order_by_keys is None:
+            order_by_keys = []
+        parts = SelectParts.create(raw_order_by_keys=order_by_keys)
+
+        for ingredient in self.ingredients():
+            parts.add_ingredient(ingredient)
+
+        parts.validate_order_bys(self)
+        return parts
 
     def brew_query_parts(self, order_by_keys=[]):
         """Make columns, group_bys, filters, havings"""

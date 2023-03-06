@@ -75,6 +75,7 @@ class Recipe(object):
     ):
         self._id = str(uuid4())[:8]
         self._query = None
+        self._select = None
         self._all = None
         self._total_count = None
 
@@ -412,6 +413,51 @@ class Recipe(object):
         except:
             pass
         return False
+
+    def select(self):
+        if self._select is not None:
+            return self._select
+
+        if hasattr(self, "optimize_redshift"):
+            self.optimize_redshift(self._is_redshift())
+
+        if len(self._cauldron.ingredients()) == 0:
+            raise BadRecipe("No ingredients have been added to this recipe")
+
+        # Step 1: Gather up global filters and user filters and
+        # apply them as if they had been added to recipe().filters(...)
+        for extension in self.recipe_extensions:
+            extension.add_ingredients()
+
+        select_parts = self._cauldron.brew_select_parts(self._order_bys)
+        from sqlalchemy import select
+
+        for c in select_parts.columns:
+            print()
+            print(dir(c))
+            print(c.description)
+            print(c.base_columns)
+            for col in c.base_columns:
+                print("\tinner")
+                print(col.description)
+                print(dir(col))
+
+        if self._select_from is not None:
+            sel = select(select_parts.columns[:1]).select_from(self._select_from)
+        else:
+            sel = select(select_parts.columns[:1])
+        # sel = sel.with_only_columns(select_parts.columns)
+        if select_parts.group_bys:
+            sel = sel.group_by(*select_parts.group_bys)
+        if select_parts.order_bys:
+            sel = sel.order_by(*select_parts.order_bys)
+        if select_parts.filters:
+            sel = sel.where(*select_parts.filters)
+        if select_parts.havings:
+            sel = sel.having(*select_parts.havings)
+
+        self._sel = sel
+        return self._sel
 
     def query(self):
         """

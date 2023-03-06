@@ -19,6 +19,7 @@ from sqlalchemy import (
     distinct,
     func,
     select,
+    ForeignKey,
 )
 from yaml import safe_load
 
@@ -252,7 +253,7 @@ class RecipeTestCase(TestCase):
         cls.tagscores_table = Table(
             "tagscores",
             cls.meta,
-            Column("username", String),
+            Column("username", String, ForeignKey("scores.username")),
             Column("tag", String),
             Column("department", String),
             Column("testid", String),

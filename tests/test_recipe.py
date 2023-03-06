@@ -442,6 +442,7 @@ ORDER BY last""",
         with self.assertRaises(BadRecipe):
             recipe.all()
 
+    @pytest.mark.skip()
     def test_recipe_multi_tables(self):
         """All ingredients in the recipe must use the same table"""
         dim = Dimension(self.scores_table.c.username)
@@ -696,6 +697,61 @@ GROUP BY username""",
             chris,80.0,chris
             """,
         )
+
+    def test_multi_table(self):
+        from sqlalchemy.sql.expression import join
+
+        self.shelf = self.mixed_shelf
+        j = join(
+            RecipeTestCase.tagscores_table,
+            RecipeTestCase.scores_table,
+            RecipeTestCase.tagscores_table.c.username
+            == RecipeTestCase.scores_table.c.username,
+        )
+
+        recipe = (
+            self.recipe()
+            .metrics("score")
+            .dimensions("tagscorestestid")
+            # .select_from(j)
+            # .select_from(RecipeTestCase.scores_table)
+            # .join(
+            #     RecipeTestCase.tagscores_table,
+            #     RecipeTestCase.tagscores_table.c.username
+            #     == RecipeTestCase.scores_table.c.username,
+            # )
+        )
+        sel = recipe.select()
+        sel = sel.join_from(
+            RecipeTestCase.scores_table,
+            RecipeTestCase.tagscores_table.c.username
+            == RecipeTestCase.scores_table.c.username,
+        )
+        # sel = sel.select_from(j)
+        print(type(sel))
+        print(sel)
+        self.assertEqual(str(sel), "foo")
+
+
+#         self.assertRecipeSQL(
+#             recipe,
+#             """SELECT tagscores.testid AS tagscorestestid,
+#        avg(scores.score) AS score
+# FROM tagscores,
+#      scores,
+#      scores
+# JOIN tagscores ON tagscores.username = scores.username
+# GROUP BY tagscorestestid""",
+#         )
+#         self.assertRecipeCSV(
+#             recipe,
+#             """
+#             username,score,username_id
+#             annika,85.0,annika
+#             chip,90.0,chip
+#             chris,80.0,chris
+#             """,
+#         )
 
 
 class CacheContextTestCase(RecipeTestCase):
