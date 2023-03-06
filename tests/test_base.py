@@ -121,7 +121,7 @@ class RecipeTestCase(TestCase):
 
     def assertRecipeCSV(self, recipe: Recipe, csv_text: str, ignore_columns=None):
         """Recipe data returns the supplied csv content"""
-        actual = recipe.dataset.export("csv", lineterminator=str("\n")).strip("\n")
+        actual = recipe.dataset.export("csv", lineterminator="\n").strip("\n")
         actual = strip_columns_from_csv(actual, ignore_columns=ignore_columns)
         expected = str_dedent(csv_text).strip("\n")
         if actual != expected:
@@ -357,6 +357,25 @@ class RecipeTestCase(TestCase):
                 "testid": Dimension(cls.scores_table.c.testid),
                 "test_cnt": Metric(func.count(distinct(cls.tagscores_table.c.testid))),
                 "score": Metric(func.avg(cls.scores_table.c.score)),
+            }
+        )
+
+        # A shelf with ingredients from multiple tables.
+        cls.mixed_shelf = Shelf(
+            {
+                "username": Dimension(cls.scores_table.c.username),
+                "department": Dimension(
+                    cls.scores_table.c.department,
+                    anonymizer=lambda value: value[::-1] if value else "None",
+                ),
+                "testid": Dimension(cls.scores_table.c.testid),
+                "score": Metric(func.avg(cls.scores_table.c.score)),
+                "test_cnt": Metric(func.count(distinct(cls.tagscores_table.c.testid))),
+                "ztestid": Dimension(
+                    cls.tagscores_table.c.testid,
+                    join_on=cls.tagscores_table.c.username
+                    == cls.scores_table.c.username,
+                ),
             }
         )
 
