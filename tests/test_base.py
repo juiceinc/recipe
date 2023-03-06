@@ -370,8 +370,10 @@ class RecipeTestCase(TestCase):
                 ),
                 "testid": Dimension(cls.scores_table.c.testid),
                 "score": Metric(func.avg(cls.scores_table.c.score)),
-                "test_cnt": Metric(func.count(distinct(cls.tagscores_table.c.testid))),
-                "ztestid": Dimension(
+                "tagscorestest_cnt": Metric(
+                    func.count(distinct(cls.tagscores_table.c.testid))
+                ),
+                "tagscorestestid": Dimension(
                     cls.tagscores_table.c.testid,
                     join_on=cls.tagscores_table.c.username
                     == cls.scores_table.c.username,

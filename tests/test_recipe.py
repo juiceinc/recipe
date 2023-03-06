@@ -657,6 +657,47 @@ FROM
         self.assertRecipeCSV(r2, "pop\n3147355.0")
 
 
+class TestRecipeIngredientsFromMultipleTables(RecipeTestCase):
+    def test_dimension(self):
+        from sqlalchemy.sql.expression import join
+
+        self.shelf = self.mixed_shelf
+        # j = join(
+        #     RecipeTestCase.scores_table,
+        #     RecipeTestCase.tagscores_table,
+        #     RecipeTestCase.tagscores_table.c.username
+        #     == RecipeTestCase.scores_table.c.username,
+        # )
+
+        recipe = (
+            self.recipe()
+            .metrics("score")
+            .dimensions("username")
+            # .select_from(RecipeTestCase.scores_table)
+            # .join(
+            #     RecipeTestCase.tagscores_table,
+            #     RecipeTestCase.tagscores_table.c.username
+            #     == RecipeTestCase.scores_table.c.username,
+            # )
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT scores.username AS username,
+       avg(scores.score) AS score
+FROM scores
+GROUP BY username""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            username,score,username_id
+            annika,85.0,annika
+            chip,90.0,chip
+            chris,80.0,chris
+            """,
+        )
+
+
 class CacheContextTestCase(RecipeTestCase):
     def test_cache_context(self):
         recipe = self.recipe().metrics("age").dimensions("last")
