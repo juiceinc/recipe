@@ -659,8 +659,7 @@ class Dimension(Ingredient):
         for extra in super(Dimension, self).cauldron_extras:
             yield extra
 
-        if "id" not in self.roles:
-            yield self.id + "_id", lambda row: getattr(row, self.id_prop)
+        yield self.id + "_id", lambda row: getattr(row, self.id_prop)
 
     def make_column_suffixes(self):
         """Make sure we have the right column suffixes. These will be appended

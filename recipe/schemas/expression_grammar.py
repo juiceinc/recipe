@@ -4,11 +4,7 @@ from typing import List
 
 import structlog
 from sqlalchemy import Boolean, Date, DateTime, Integer, String, text
-
-try:
-    from sqlalchemy.ext.declarative.api import DeclarativeMeta
-except ImportError:
-    from sqlalchemy.orm.decl_api import DeclarativeMeta
+from sqlalchemy.ext.declarative.api import DeclarativeMeta
 from sqlalchemy.sql.base import ColumnCollection
 from sqlalchemy.sql.sqltypes import Numeric
 
