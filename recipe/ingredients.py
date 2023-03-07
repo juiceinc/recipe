@@ -656,27 +656,36 @@ class Dimension(Ingredient):
         a row
         """
         # This will format the value field
-        yield from super(Dimension, self).cauldron_extras
+        for extra in super(Dimension, self).cauldron_extras:
+            yield extra
+
         if "id" not in self.roles:
-            yield (f"{self.id}_id", lambda row: getattr(row, self.id_prop))
+            yield self.id + "_id", lambda row: getattr(row, self.id_prop)
 
     def make_column_suffixes(self):
         """Make sure we have the right column suffixes. These will be appended
         to `id` when generating the query.
         """
-        value_suffix = "_raw" if self.formatters else ""
+        if self.formatters:
+            value_suffix = "_raw"
+        else:
+            value_suffix = ""
+
         return tuple(
-            value_suffix if role == "value" else f"_{role}" for role in self.role_keys
+            value_suffix if role == "value" else "_" + role for role in self.role_keys
         )
 
     @property
     def id_prop(self):
         """The label of this dimensions id in the query columns"""
         if "id" in self.role_keys:
-            return f"{self.id}_id"
+            return self.id + "_id"
         else:
             # Use the value dimension
-            return f"{self.id}_raw" if self.formatters else self.id
+            if self.formatters:
+                return self.id + "_raw"
+            else:
+                return self.id
 
 
 class IdValueDimension(Dimension):

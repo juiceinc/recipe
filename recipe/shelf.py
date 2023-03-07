@@ -529,7 +529,7 @@ class Shelf(object):
                 vals = tuple(row._asdict().values())
                 extras = tuple(fn(row) for fn in extra_callables)
                 all_values = vals + extras
-                enchantedlist.append(keyed_tuple(*all_values))
+                enchantedlist.append(keyed_tuple(*values))
 
         return enchantedlist
 

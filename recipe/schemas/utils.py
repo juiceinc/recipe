@@ -112,10 +112,10 @@ def _convert_date_value(v):
     elif isinstance(v, str):
         parsed_dt = dateparser.parse(v, **parse_kwargs)
         if parsed_dt is None:
-            raise ValueError(f"Could not parse date in {v}")
+            raise ValueError("Could not parse date in {}".format(v))
         return parsed_dt.date()
     else:
-        raise ValueError(f"Can not convert {v} to date")
+        raise ValueError("Can not convert {} to date".format(v))
 
 
 def _convert_datetime_value(v):
@@ -127,10 +127,10 @@ def _convert_datetime_value(v):
     elif isinstance(v, str):
         parsed_dt = dateparser.parse(v, **parse_kwargs)
         if parsed_dt is None:
-            raise ValueError(f"Could not parse datetime in {v}")
+            raise ValueError("Could not parse datetime in {}".format(v))
         return parsed_dt
     else:
-        raise ValueError(f"Can not convert {v} to datetime")
+        raise ValueError("Can not convert {} to datetime".format(v))
 
 
 def convert_value(field, value):
