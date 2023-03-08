@@ -442,7 +442,6 @@ ORDER BY last""",
         with self.assertRaises(BadRecipe):
             recipe.all()
 
-    @pytest.mark.skip()
     def test_recipe_multi_tables(self):
         """All ingredients in the recipe must use the same table"""
         dim = Dimension(self.scores_table.c.username)
