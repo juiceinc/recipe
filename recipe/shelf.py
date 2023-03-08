@@ -1,3 +1,4 @@
+import contextlib
 from copy import copy
 
 from lark.exceptions import VisitError
