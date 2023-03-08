@@ -9,7 +9,7 @@ from uuid import uuid4
 
 import attr
 import tablib
-from sqlalchemy import alias, func
+from sqlalchemy import alias, func, select
 from sureberus import normalize_dict, normalize_schema
 
 from recipe.dynamic_extensions import run_hooks
@@ -81,7 +81,7 @@ class Recipe(object):
         self._total_count = None
 
         self._select_from = None
-        self._joins = []
+        self._allow_multiple_tables = False
         self.shelf(shelf)
 
         # Stores all ingredients used in the recipe
@@ -144,7 +144,7 @@ class Recipe(object):
 
             # If recipe_caching is installed, apply caching to this query.
             try:
-                from recd .cipe_caching.mappers import FromCache
+                from recd.cipe_caching.mappers import FromCache
 
                 count_query = count_query.options(
                     FromCache(self._cache_region, cache_prefix=self._cache_prefix)
@@ -250,16 +250,20 @@ class Recipe(object):
         self._cache_region = value
 
     @recipe_arg()
-    def cache_prefix(self, value) -> Recipe:
+    def cache_prefix(self, value: str) -> Recipe:
         """Set a cache prefix for recipe-caching to use"""
         assert isinstance(value, str)
         self._cache_prefix = value
 
     @recipe_arg()
-    def use_cache(self, value) -> Recipe:
+    def use_cache(self, value: bool) -> Recipe:
         """If False, invalidate the cache before fetching data."""
         assert isinstance(value, bool)
         self._use_cache = value
+
+    @recipe_arg()
+    def allow_multiple_tables(self, value: bool) -> Recipe:
+        self._allow_multiple_tables = value
 
     @recipe_arg()
     def shelf(self, shelf=None) -> Recipe:
@@ -358,10 +362,6 @@ class Recipe(object):
         self._select_from = selectable
 
     @recipe_arg()
-    def join(self, join_selectable, join_on=None) -> Recipe:
-        self._joins.append((join_selectable, join_on))
-
-    @recipe_arg()
     def session(self, session) -> Recipe:
         self._session = session
 
@@ -405,6 +405,12 @@ class Recipe(object):
         return False
 
     def select(self):
+        """
+        Generate a SQLALchemy core select.
+
+        This is a lighter way to generate queries. Extensions are
+        not currently supported.
+        """
         if self._select is not None:
             return self._select
 
@@ -420,23 +426,10 @@ class Recipe(object):
             extension.add_ingredients()
 
         select_parts = self._cauldron.brew_select_parts(self._order_bys)
-        from sqlalchemy import select
-
-        for c in select_parts.columns:
-            print()
-            print(dir(c))
-            print(c.description)
-            print(c.base_columns)
-            for col in c.base_columns:
-                print("\tinner")
-                print(col.description)
-                print(dir(col))
-
         if self._select_from is not None:
             sel = select(select_parts.columns[:1]).select_from(self._select_from)
         else:
             sel = select(select_parts.columns[:1])
-        # sel = sel.with_only_columns(select_parts.columns)
         if select_parts.group_bys:
             sel = sel.group_by(*select_parts.group_bys)
         if select_parts.order_bys:
@@ -446,8 +439,8 @@ class Recipe(object):
         if select_parts.havings:
             sel = sel.having(*select_parts.havings)
 
-        self._sel = sel
-        return self._sel
+        self._select = sel
+        return self._select
 
     def query(self):
         """
@@ -501,7 +494,8 @@ class Recipe(object):
                 recipe_parts["query"] = recipe_parts["query"].having(having)
 
         if (
-            self._select_from is None
+            self._allow_multiple_tables is False
+            and self._select_from is None
             and len(recipe_parts["query"].selectable.froms) != 1
         ):
             raise BadRecipe(

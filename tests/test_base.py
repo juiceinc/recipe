@@ -376,8 +376,9 @@ class RecipeTestCase(TestCase):
                 ),
                 "tagscorestestid": Dimension(
                     cls.tagscores_table.c.testid,
-                    join_on=cls.tagscores_table.c.username
-                    == cls.scores_table.c.username,
+                    filters=[
+                        cls.tagscores_table.c.username == cls.scores_table.c.username
+                    ],
                 ),
             }
         )

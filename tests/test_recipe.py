@@ -662,25 +662,12 @@ class TestRecipeIngredientsFromMultipleTables(RecipeTestCase):
     def test_same_table(self):
         from sqlalchemy.sql.expression import join
 
+        # Shelves with multiple tables don't raise
+        # exceptions when you select ingredients that all come
+        # from the same table.
         self.shelf = self.mixed_shelf
-        # j = join(
-        #     RecipeTestCase.scores_table,
-        #     RecipeTestCase.tagscores_table,
-        #     RecipeTestCase.tagscores_table.c.username
-        #     == RecipeTestCase.scores_table.c.username,
-        # )
 
-        recipe = (
-            self.recipe()
-            .metrics("score")
-            .dimensions("username")
-            # .select_from(RecipeTestCase.scores_table)
-            # .join(
-            #     RecipeTestCase.tagscores_table,
-            #     RecipeTestCase.tagscores_table.c.username
-            #     == RecipeTestCase.scores_table.c.username,
-            # )
-        )
+        recipe = self.recipe().metrics("score").dimensions("username")
         self.assertRecipeSQL(
             recipe,
             """SELECT scores.username AS username,
@@ -699,58 +686,45 @@ GROUP BY username""",
         )
 
     def test_multi_table(self):
-        from sqlalchemy.sql.expression import join
-
         self.shelf = self.mixed_shelf
-        j = join(
-            RecipeTestCase.tagscores_table,
-            RecipeTestCase.scores_table,
-            RecipeTestCase.tagscores_table.c.username
-            == RecipeTestCase.scores_table.c.username,
-        )
 
+        with self.assertRaises(BadRecipe):
+            recipe = self.recipe().metrics("score").dimensions("tagscorestestid")
+            # Exception is raised only on query generation
+            recipe.to_sql()
+
+        # We can optionally allow multiple tables to be joined
         recipe = (
             self.recipe()
             .metrics("score")
             .dimensions("tagscorestestid")
-            # .select_from(j)
-            # .select_from(RecipeTestCase.scores_table)
-            # .join(
-            #     RecipeTestCase.tagscores_table,
-            #     RecipeTestCase.tagscores_table.c.username
-            #     == RecipeTestCase.scores_table.c.username,
-            # )
+            .allow_multiple_tables(True)
         )
-        sel = recipe.select()
-        # sel = sel.join_from(
-        #     RecipeTestCase.scores_table,
-        #     RecipeTestCase.tagscores_table.c.username
-        #     == RecipeTestCase.scores_table.c.username,
-        # )
-        # sel = sel.select_from(j)
-        print(type(sel))
-        print(sel)
-
-
-#         self.assertRecipeSQL(
-#             recipe,
-#             """SELECT tagscores.testid AS tagscorestestid,
-#        avg(scores.score) AS score
-# FROM tagscores,
-#      scores,
-#      scores
-# JOIN tagscores ON tagscores.username = scores.username
-# GROUP BY tagscorestestid""",
-#         )
-#         self.assertRecipeCSV(
-#             recipe,
-#             """
-#             username,score,username_id
-#             annika,85.0,annika
-#             chip,90.0,chip
-#             chris,80.0,chris
-#             """,
-#         )
+        # In this case, the dimension contains filtering criteria that allow it
+        # to jion tagscores and scores
+        self.assertRecipeSQL(
+            recipe,
+            """
+            SELECT tagscores.testid AS tagscorestestid,
+                avg(scores.score) AS score
+            FROM tagscores,
+                scores
+            WHERE tagscores.username = scores.username
+            GROUP BY tagscorestestid
+            """,
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            tagscorestestid,score,tagscorestestid_id
+            1,80.0,1
+            2,90.0,2
+            3,90.0,3
+            4,90.0,4
+            5,85.0,5
+            6,85.0,6
+            """,
+        )
 
 
 class CacheContextTestCase(RecipeTestCase):
