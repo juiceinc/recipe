@@ -144,7 +144,7 @@ class Recipe(object):
 
             # If recipe_caching is installed, apply caching to this query.
             try:
-                from recd.cipe_caching.mappers import FromCache
+                from recipe_caching.mappers import FromCache
 
                 count_query = count_query.options(
                     FromCache(self._cache_region, cache_prefix=self._cache_prefix)
