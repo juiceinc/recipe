@@ -724,8 +724,6 @@ GROUP BY username""",
         )
 
 
-
-
 class CacheContextTestCase(RecipeTestCase):
     def test_cache_context(self):
         recipe = self.recipe().metrics("age").dimensions("last")
