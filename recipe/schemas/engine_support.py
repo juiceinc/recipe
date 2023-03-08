@@ -1,6 +1,6 @@
-from sqlalchemy.sql import expression, func, distinct, text
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.types import Numeric, String, Integer
+from sqlalchemy.sql import distinct, expression, func, text
+from sqlalchemy.types import Integer, Numeric, String
 
 # A custom age function for postgres
 

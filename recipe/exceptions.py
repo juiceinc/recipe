@@ -1,9 +1,9 @@
 class BadIngredient(Exception):
-    """ Something is wrong with an ingredient """
+    """Something is wrong with an ingredient"""
 
 
 class BadRecipe(Exception):
-    """ Something is wrong with a recipe """
+    """Something is wrong with a recipe"""
 
 
 class InvalidColumnError(Exception):
@@ -11,5 +11,5 @@ class InvalidColumnError(Exception):
         self.column_name = kwargs.pop("column_name", None)
         if not args:
             # default exception message
-            args = ['Invalid column "{}"'.format(self.column_name)]
+            args = [f'Invalid column "{self.column_name}"']
         super(InvalidColumnError, self).__init__(*args, **kwargs)

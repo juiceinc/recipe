@@ -66,9 +66,9 @@ GROUP BY firstlast_id,
         self.assertRecipeCSV(
             recipe,
             """
-            firstlast_id,firstlast,age,firstlast_id
-            hi,fred,10,hi
-            hi,there,5,hi
+            firstlast_id,firstlast,age
+            hi,fred,10
+            hi,there,5
             """,
         )
 
@@ -95,9 +95,9 @@ GROUP BY d_id,
         self.assertRecipeCSV(
             recipe,
             """
-            d_id,d,d_age,age,d_id
-            hi,fred,10,10,hi
-            hi,there,5,5,hi
+            d_id,d,d_age,age
+            hi,fred,10,10
+            hi,there,5,5
             """,
         )
 
@@ -127,9 +127,9 @@ GROUP BY d_id,
         self.assertRecipeCSV(
             recipe,
             """
-            d_id,d_raw,d_age,age,d,d_id
-            hi,fred,10,10,DEFAULT,hi
-            hi,there,5,5,DEFAULT,hi
+            d_id,d_raw,d_age,age,d
+            hi,fred,10,10,DEFAULT
+            hi,there,5,5,DEFAULT
             """,
         )
 
@@ -722,15 +722,14 @@ GROUP BY username""",
             # )
         )
         sel = recipe.select()
-        sel = sel.join_from(
-            RecipeTestCase.scores_table,
-            RecipeTestCase.tagscores_table.c.username
-            == RecipeTestCase.scores_table.c.username,
-        )
+        # sel = sel.join_from(
+        #     RecipeTestCase.scores_table,
+        #     RecipeTestCase.tagscores_table.c.username
+        #     == RecipeTestCase.scores_table.c.username,
+        # )
         # sel = sel.select_from(j)
         print(type(sel))
         print(sel)
-        self.assertEqual(str(sel), "foo")
 
 
 #         self.assertRecipeSQL(

@@ -3,12 +3,11 @@ from datetime import date, datetime
 import structlog
 from lark import GrammarError, Lark
 from sqlalchemy import func, text
-from typing import Optional, List
+
 from .expression_grammar import make_columns_for_selectable, make_grammar
 from .transformers import TransformToSQLAlchemyExpression
-from .validators import SQLALchemyValidator
-
 from .utils import mkkey
+from .validators import SQLALchemyValidator
 
 SLOG = structlog.get_logger(__name__)
 

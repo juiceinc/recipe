@@ -330,11 +330,10 @@ class Ingredient(object):
                 if qs.get("name") == value:
                     return qs.get("condition")
             raise ValueError(
-                "quickselect {} was not found in "
-                "ingredient {}".format(value, self.id)
+                f"quickselect {value} was not found in ingredient {self.id}"
             )
         else:
-            raise ValueError("Unknown operator {}".format(operator))
+            raise ValueError(f"Unknown operator {operator}")
 
     def _build_vector_filter(self, value, operator=None, target_role=None):
         """Build a Filter given a list of values.
@@ -422,8 +421,7 @@ class Ingredient(object):
                         break
                 if not qs_found:
                     raise ValueError(
-                        "quickselect {} was not found in "
-                        "ingredient {}".format(value, self.id)
+                        f"quickselect {value} was not found in ingredient {self.id}"
                     )
             return or_(*qs_conditions)
         else:
@@ -470,10 +468,7 @@ class Ingredient(object):
     def expression(self):
         """An accessor for the SQLAlchemy expression representing this
         Ingredient."""
-        if self.columns:
-            return self.columns[0]
-        else:
-            return None
+        return self.columns[0] if self.columns else None
 
 
 class Filter(Ingredient):
@@ -656,10 +651,9 @@ class Dimension(Ingredient):
         a row
         """
         # This will format the value field
-        for extra in super(Dimension, self).cauldron_extras:
-            yield extra
-
-        yield self.id + "_id", lambda row: getattr(row, self.id_prop)
+        yield from super(Dimension, self).cauldron_extras
+        if "id" not in self.role_keys:
+            yield (f"{self.id}_id", lambda row: getattr(row, self.id_prop))
 
     def make_column_suffixes(self):
         """Make sure we have the right column suffixes. These will be appended
@@ -671,20 +665,19 @@ class Dimension(Ingredient):
             value_suffix = ""
 
         return tuple(
-            value_suffix if role == "value" else "_" + role for role in self.role_keys
+            value_suffix if role == "value" else f"_{role}" for role in self.role_keys
         )
 
     @property
     def id_prop(self):
         """The label of this dimensions id in the query columns"""
         if "id" in self.role_keys:
-            return self.id + "_id"
-        else:
+            return f"{self.id}_id"
             # Use the value dimension
-            if self.formatters:
-                return self.id + "_raw"
-            else:
-                return self.id
+        if self.formatters:
+            return f"{self.id}_raw"
+        else:
+            return self.id
 
 
 class IdValueDimension(Dimension):

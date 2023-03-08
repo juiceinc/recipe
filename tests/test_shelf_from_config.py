@@ -982,17 +982,17 @@ ORDER BY state_raw""",
         self.assertRecipeCSV(
             recipe,
             """
-            state_idval_id,state_idval,avgage,state_idval_id
-            5033,Tennessee,84.0,5033
-            5562,Tennessee,83.0,5562
-            6452,Tennessee,82.0,6452
-            7322,Tennessee,81.0,7322
-            8598,Tennessee,80.0,8598
-            9583,Tennessee,79.0,9583
-            10501,Tennessee,84.0,10501
-            10672,Tennessee,78.0,10672
-            11141,Tennessee,83.0,11141
-            11168,Tennessee,77.0,11168
+            state_idval_id,state_idval,avgage
+            5033,Tennessee,84.0
+            5562,Tennessee,83.0
+            6452,Tennessee,82.0
+            7322,Tennessee,81.0
+            8598,Tennessee,80.0
+            9583,Tennessee,79.0
+            10501,Tennessee,84.0
+            10672,Tennessee,78.0
+            11141,Tennessee,83.0
+            11168,Tennessee,77.0
             """,
         )
 

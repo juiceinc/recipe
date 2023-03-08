@@ -633,7 +633,7 @@ class TestDimension(RecipeTestCase):
             ["moo_order_by DESC", "moo_zed DESC", "moo DESC", "moo_id DESC"],
         )
 
-    def test_dimension_cauldron_extras(self):
+    def test_simple_dimension_cauldron_extras(self):
         d = Dimension(self.basic_table.c.first, id="moo")
         extras = list(d.cauldron_extras)
         self.assertEqual(len(extras), 1)
@@ -658,9 +658,9 @@ class TestDimension(RecipeTestCase):
             id="moo",
         )
         extras = list(d.cauldron_extras)
-        self.assertEqual(len(extras), 1)
+        # If there is a id_expression, we won't create an extra callable to fetch it
+        self.assertEqual(len(extras), 0)
         # id gets injected in the response
-        self.assertEqual(extras[0][0], "moo_id")
         self.assertEqual(d.role_keys, ["id", "value", "age"])
         self.assertEqual(len(d.group_by), 3)
         self.assertEqual(len(d.columns), 3)
@@ -726,9 +726,7 @@ class IdValueDimensionTestCase(RecipeTestCase):
             self.basic_table.c.first, self.basic_table.c.last, id="moo"
         )
         extras = list(d.cauldron_extras)
-        self.assertEqual(len(extras), 1)
-        # id gets injected in the response
-        self.assertEqual(extras[0][0], "moo_id")
+        self.assertEqual(len(extras), 0)
 
         d = IdValueDimension(
             self.basic_table.c.first,
@@ -737,10 +735,9 @@ class IdValueDimensionTestCase(RecipeTestCase):
             formatters=[lambda x: x + "moo"],
         )
         extras = list(d.cauldron_extras)
-        self.assertEqual(len(extras), 2)
+        self.assertEqual(len(extras), 1)
         # formatted value and id gets injected in the response
         self.assertEqual(extras[0][0], "moo")
-        self.assertEqual(extras[1][0], "moo_id")
 
     def test_dimension_roles_cauldron_extras(self):
         """Creating a dimension with roles performs the same as
@@ -749,9 +746,8 @@ class IdValueDimensionTestCase(RecipeTestCase):
             self.basic_table.c.first, id_expression=self.basic_table.c.last, id="moo"
         )
         extras = list(d.cauldron_extras)
-        self.assertEqual(len(extras), 1)
+        self.assertEqual(len(extras), 0)
         # id gets injected in the response
-        self.assertEqual(extras[0][0], "moo_id")
 
         d = Dimension(
             self.basic_table.c.first,
@@ -760,10 +756,9 @@ class IdValueDimensionTestCase(RecipeTestCase):
             formatters=[lambda x: x + "moo"],
         )
         extras = list(d.cauldron_extras)
-        self.assertEqual(len(extras), 2)
+        self.assertEqual(len(extras), 1)
         # formatted value and id gets injected in the response
         self.assertEqual(extras[0][0], "moo")
-        self.assertEqual(extras[1][0], "moo_id")
 
 
 class TestLookupDimension(RecipeTestCase):

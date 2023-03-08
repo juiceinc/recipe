@@ -19,7 +19,7 @@ def run_hooks(recipe_parts, hook_type, extensions=[]):
     if not extensions:
         return recipe_parts
 
-    namespace = "recipe.hooks." + hook_type
+    namespace = f"recipe.hooks.{hook_type}"
     hook_mgr = NamedExtensionManager(namespace, extensions, name_order=True)
 
     for extension in hook_mgr.extensions:

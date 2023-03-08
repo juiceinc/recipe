@@ -25,7 +25,7 @@ def move_extra_fields(value):
             value["extra_fields"] = []
             for k in sorted(keys_to_move):
                 value["extra_fields"].append(
-                    {"name": k[:-6] + "_expression", "field": value.pop(k)}
+                    {"name": f"{k[:-6]}_expression", "field": value.pop(k)}
                 )
 
     return value
@@ -111,7 +111,7 @@ def _lowercase_kind(value):
 
 
 def _save_raw_config(value):
-    """Save the original config excluding _config and _meta """
+    """Save the original config excluding _config and _meta"""
     config = deepcopy(value)
     config.pop("_config", None)
     config.pop("_neta", None)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
 import warnings
@@ -143,7 +144,7 @@ class Recipe(object):
 
             # If recipe_caching is installed, apply caching to this query.
             try:
-                from recipe_caching.mappers import FromCache
+                from recd .cipe_caching.mappers import FromCache
 
                 count_query = count_query.options(
                     FromCache(self._cache_region, cache_prefix=self._cache_prefix)
@@ -165,7 +166,7 @@ class Recipe(object):
 
     @classmethod
     def from_config(cls, shelf, spec, **kwargs):
-        """
+        """tppyt
         Construct a Recipe from a plain Python dictionary.
 
         Most of the directives only support named ingredients, specified as
@@ -215,24 +216,17 @@ class Recipe(object):
         :param name:
         :return:
         """
-        try:
+        with contextlib.suppress(AttributeError):
             return self.__getattribute__(name)
-        except AttributeError:
-            pass
-
         for extension in self.recipe_extensions:
-            try:
+            with contextlib.suppress(AttributeError):
                 proxy_callable = getattr(extension, name)
                 break
-            except AttributeError:
-                pass
-
         try:
             proxy_callable
         except NameError:
             raise AttributeError(
-                "{} isn't available on this recipe, "
-                "you may need to add an extension".format(name)
+                f"{name} isn't available on this recipe, you may need to add an extension"
             )
 
         return proxy_callable
@@ -397,21 +391,17 @@ class Recipe(object):
 
     def _is_postgres(self):
         """Determine if the running engine is postgres"""
-        try:
+        with contextlib.suppress(Exception):
             driver = self._session.bind.url.drivername
             if "redshift" in driver or "postg" in driver or "pg" in driver:
                 return True
-        except:
-            pass
         return False
 
     def _is_redshift(self):
-        try:
+        with contextlib.suppress(Exception):
             driver = self._session.bind.url.drivername
             if "redshift" in driver:
                 return True
-        except:
-            pass
         return False
 
     def select(self):
@@ -510,17 +500,13 @@ class Recipe(object):
             for having in recipe_parts["havings"]:
                 recipe_parts["query"] = recipe_parts["query"].having(having)
 
-        for extension in self.recipe_extensions:
-            recipe_parts = extension.modify_prequery_parts(recipe_parts)
-
         if (
             self._select_from is None
             and len(recipe_parts["query"].selectable.froms) != 1
         ):
             raise BadRecipe(
-                "Recipes must use ingredients that all come from "
-                "the same table. \nDetails on this recipe:\n{"
-                "}".format(str(self._cauldron))
+                f"Recipes must use ingredients that all come from the same table. \n"
+                f"Details on this recipe:\n{str(self._cauldron)}"
             )
 
         for extension in self.recipe_extensions:
@@ -549,8 +535,7 @@ class Recipe(object):
         """A convenience method to determine the table the query is
         selecting from
         """
-        descriptions = self.query().column_descriptions
-        if descriptions:
+        if descriptions := self.query().column_descriptions:
             return descriptions[0]["entity"]
         else:
             return None

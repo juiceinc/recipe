@@ -7,6 +7,7 @@ from sqlalchemy.util import lightweight_named_tuple
 from sureberus import errors as E
 from sureberus import normalize_schema
 from yaml import safe_load
+from dataclasses import dataclass
 
 from recipe.exceptions import BadIngredient, BadRecipe, InvalidColumnError
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric, InvalidIngredient

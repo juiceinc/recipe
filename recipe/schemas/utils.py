@@ -6,12 +6,19 @@ import inspect
 import hashlib
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ColumnCollection
+from sqlalchemy import text
 
 ColumnCollection
 from sureberus import schema as S
 from recipe.exceptions import InvalidColumnError
 
 SCALAR_TYPES = [S.Integer(), S.String(), S.Float(), S.Boolean()]
+
+# SQL server can not support parameters in queries that are used for grouping
+# https://github.com/mkleehammer/pyodbc/issues/479
+# To avoid parameterization, we pass literals
+literal_1 = text("1")
+literal_0 = text("0")
 
 
 def _chain(*args):
