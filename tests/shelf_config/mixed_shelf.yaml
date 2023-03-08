@@ -1,0 +1,19 @@
+username:
+  kind: Dimension
+  field: username
+department:
+  kind: Dimension
+  field: department
+testid:
+  kind: Dimension
+  field: testid
+score:
+  kind: Metric
+  field: avg(score)
+tagscorestest_cnt:
+  kind: Metric
+  field: count_distinct(tagscores.testid)
+tagscorestestid:
+  kind: Dimension
+  field: tagscores.testid
+  filter: tagscores.username = username

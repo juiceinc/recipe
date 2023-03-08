@@ -23,12 +23,12 @@ class ConfigTestBase(RecipeTestCase):
     yaml_location = "shelf_config"
     shelf_cache = {}
 
-    def shelf_from_filename(self, shelf_name, selectable=None):
+    def shelf_from_filename(self, shelf_name, selectable=None, **kwargs):
         """Load a file from the sample ingredients.yaml files."""
         d = os.path.dirname(os.path.realpath(__file__))
         fn = os.path.join(d, self.yaml_location, shelf_name)
         contents = open(fn).read()
-        return self.shelf_from_yaml(contents, selectable)
+        return self.shelf_from_yaml(contents, selectable, **kwargs)
 
     def shelf_from_yaml(self, yaml_config, selectable, **kwargs):
         """Create a shelf directly from configuration"""
@@ -1049,6 +1049,54 @@ ORDER BY state_raw""",
             first,intelligent_date_test,first_id
             hi,4,hi
             """,
+        )
+
+
+class TestMultipleSelectables(ConfigTestBase):
+    def test_multi_selectable(self):
+        """A shelf can reference multiple selectables"""
+        shelf = self.shelf_from_filename(
+            "mixed_shelf.yaml",
+            self.scores_with_nulls_table,
+            extra_selectables=[(self.tagscores_table, "tagscores")],
+        )
+
+        recipe = self.recipe(shelf=shelf).metrics("score").dimensions("department")
+        self.assertRecipeSQL(
+            recipe,
+            f"""
+            SELECT scores_with_nulls.department AS department,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department
+        """,
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            department,score,department_id
+            ,80.0,
+            ops,90.0,ops
+            sales,,sales
+            """,
+        )
+
+        # Now use multiple tables
+        # We are doing a cross join BUT the filter key on
+        # tagscorestestid allows us to join the two tables.
+        # Note: Shelves created from config will implicitly get a _select_from
+        # and will not raise an BadRecipe when selecting from multiple tables.
+        recipe = self.recipe(shelf=shelf).metrics("score").dimensions("tagscorestestid")
+        self.assertRecipeSQL(
+            recipe,
+            f"""
+SELECT tagscores.testid AS tagscorestestid,
+       avg(scores_with_nulls.score) AS score
+FROM tagscores,
+     scores_with_nulls
+WHERE tagscores.username = scores_with_nulls.username
+GROUP BY tagscorestestid
+        """,
         )
 
 

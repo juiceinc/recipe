@@ -301,6 +301,7 @@ class Shelf(object):
         metadata=None,
         *,
         ingredient_cache=None,
+        extra_selectables=None,
     ):
         """Create a shelf using a dict shelf definition.
 
@@ -341,7 +342,9 @@ class Shelf(object):
                 else:
                     if builder is None:
                         builder = SQLAlchemyBuilder.get_builder(
-                            selectable=selectable, cache=ingredient_cache
+                            selectable=selectable,
+                            cache=ingredient_cache,
+                            extra_selectables=extra_selectables,
                         )
                     d[k] = ingredient_constructor(v, selectable, builder=builder)
             else:

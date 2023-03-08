@@ -89,7 +89,7 @@ def get_convert_datetimes(format: str):
 def convert_quickselects(
     builder: SQLAlchemyBuilder, ingr_dict: dict, builder_kwargs: dict
 ):
-    """Convert quickselects from expressions to"""
+    """Convert quickselects from expressions to an object with name, expression"""
     if "quickselects" in ingr_dict:
         parsed_quickselects = []
         for qs in ingr_dict.pop("quickselects", []):
@@ -103,14 +103,14 @@ def convert_quickselects(
 
 def convert_filter(builder: SQLAlchemyBuilder, ingr_dict: dict, builder_kwargs: dict):
     """If a filter property exists, validate that it is a boolean expression and add it
-    to the ingredient filters"""
+    to the ingredient filters. Silently ignore if we return the wrong datatype."""
     if "filter" in ingr_dict:
         filt_expression = ingr_dict.pop("filter")
 
         expr, datatype = builder.parse(
             filt_expression, forbid_aggregation=True, **builder_kwargs
         )
-        if datatype == "boolean":
+        if datatype == "bool":
             ingr_dict["filters"] = [expr]
 
 
