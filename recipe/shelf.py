@@ -8,7 +8,7 @@ from sqlalchemy.util import lightweight_named_tuple
 from sureberus import errors as E
 from sureberus import normalize_schema
 from yaml import safe_load
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from recipe.exceptions import BadIngredient, BadRecipe, InvalidColumnError
 from recipe.ingredients import Dimension, Filter, Ingredient, Metric, InvalidIngredient
@@ -39,15 +39,16 @@ def ingredient_from_validated_dict(ingr_dict, selectable, builder=None):
 
 @dataclass
 class SelectParts:
-    columns: list
-    group_bys: list
-    filters: set
-    havings: set
-    raw_order_by_keys: list
-    order_bys: list
-    all_filters: set
+    columns: list = field(default_factory=list)
+    group_bys: list = field(default_factory=list)
+    filters: set = field(default_factory=set)
+    havings: set = field(default_factory=set)
+    raw_order_by_keys: list = field(default_factory=list)
+    order_bys: list = field(default_factory=list)
+    all_filters: set = field(default_factory=set)
 
     def add_ingredient(self, ingredient):
+        """Gather the SQLAlchemy fragments from this ingredient into a consolidated list."""
         if ingredient.error:
             error_type = ingredient.error.get("type")
             if error_type == "invalid_column":
@@ -59,10 +60,9 @@ class SelectParts:
                 )
                 raise InvalidColumnError(error_msg, column_name=column_name)
             raise BadIngredient(str(ingredient.error))
-        if ingredient.query_columns:
-            self.columns.extend(ingredient.query_columns)
-        if ingredient.group_by:
-            self.group_bys.extend(ingredient.group_by)
+        self.columns.extend(ingredient.labeled_columns)
+        self.group_bys.extend(ingredient.group_by)
+        self.havings.update(ingredient.havings)
         if ingredient.filters:
             # Ensure we don't add duplicate filters
             for new_f in ingredient.filters:
@@ -72,9 +72,8 @@ class SelectParts:
                 if new_f_str not in self.all_filters:
                     self.filters.add(new_f)
                     self.all_filters.add(new_f_str)
-        if ingredient.havings:
-            self.havings.update(ingredient.havings)
 
+        # Hoist any order by into the ordering
         if (
             "order_by" in ingredient.roles
             and ingredient.id not in self.raw_order_by_keys
@@ -95,18 +94,6 @@ class SelectParts:
                     if str(c) not in [str(o) for o in validated_order_bys]:
                         validated_order_bys[c] = None
         self.order_bys = list(validated_order_bys.keys())
-
-    @classmethod
-    def create(cls, raw_order_by_keys: list):
-        return cls(
-            columns=[],
-            group_bys=[],
-            filters=set(),
-            havings=set(),
-            order_bys=[],
-            raw_order_by_keys=raw_order_by_keys,
-            all_filters=set(),
-        )
 
 
 class Shelf(object):
@@ -423,7 +410,7 @@ class Shelf(object):
     def brew_select_parts(self, order_by_keys=None) -> SelectParts:
         if order_by_keys is None:
             order_by_keys = []
-        parts = SelectParts.create(raw_order_by_keys=order_by_keys)
+        parts = SelectParts(raw_order_by_keys=order_by_keys)
 
         for ingredient in self.ingredients():
             parts.add_ingredient(ingredient)
@@ -449,21 +436,17 @@ class Shelf(object):
                     )
                     raise InvalidColumnError(error_msg, column_name=column_name)
                 raise BadIngredient(str(ingredient.error))
-            if ingredient.query_columns:
-                columns.extend(ingredient.query_columns)
-            if ingredient.group_by:
-                group_bys.extend(ingredient.group_by)
-            if ingredient.filters:
-                # Ensure we don't add duplicate filters
-                for new_f in ingredient.filters:
-                    from recipe.utils import filter_to_string
+            columns.extend(ingredient.labeled_columns)
+            group_bys.extend(ingredient.group_by)
+            # Ensure we don't add duplicate filters
+            for new_f in ingredient.filters:
+                from recipe.utils import filter_to_string
 
-                    new_f_str = filter_to_string(new_f)
-                    if new_f_str not in all_filters:
-                        filters.add(new_f)
-                        all_filters.add(new_f_str)
-            if ingredient.havings:
-                havings.update(ingredient.havings)
+                new_f_str = filter_to_string(new_f)
+                if new_f_str not in all_filters:
+                    filters.add(new_f)
+                    all_filters.add(new_f_str)
+            havings.update(ingredient.havings)
 
             # If there is an order_by key on one of the ingredients, make sure
             # the recipe orders by this ingredient

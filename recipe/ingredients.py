@@ -189,7 +189,7 @@ class Ingredient(object):
             )
 
     @property
-    def query_columns(self):
+    def labeled_columns(self):
         """Yield labeled columns to be used as a select in a query."""
         self._labels = []
         for column, suffix in zip(self.columns, self.make_column_suffixes()):
@@ -206,7 +206,7 @@ class Ingredient(object):
         """
         # Ensure the labels are generated
         if not self._labels:
-            list(self.query_columns)
+            list(self.labeled_columns)
 
         if self.group_by_strategy == "labels":
             if self.ordering == "desc":
@@ -634,7 +634,7 @@ class Dimension(Ingredient):
     def group_by(self):
         # Ensure the labels are generated
         if not self._labels:
-            list(self.query_columns)
+            list(self.labeled_columns)
 
         if self.group_by_strategy == "labels":
             return [lbl for _, lbl in zip(self._group_by, self._labels)]
