@@ -659,8 +659,6 @@ FROM
 
 class TestRecipeIngredientsFromMultipleTables(RecipeTestCase):
     def test_same_table(self):
-        from sqlalchemy.sql.expression import join
-
         # Shelves with multiple tables don't raise
         # exceptions when you select ingredients that all come
         # from the same table.
@@ -724,6 +722,8 @@ GROUP BY username""",
             6,85.0,6
             """,
         )
+
+
 
 
 class CacheContextTestCase(RecipeTestCase):
