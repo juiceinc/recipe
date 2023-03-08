@@ -166,7 +166,7 @@ class Recipe(object):
 
     @classmethod
     def from_config(cls, shelf, spec, **kwargs):
-        """tppyt
+        """
         Construct a Recipe from a plain Python dictionary.
 
         Most of the directives only support named ingredients, specified as
