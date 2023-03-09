@@ -35,9 +35,6 @@ class RecipeExtension(object):
 
         (RECIPE) recipe builds a preliminary query with columns
 
-        (EXTENSIONS) all extension ``modify_prequery_parts(prequery_parts)``
-        run to modify the query
-
         (RECIPE) recipe builds a full query with group_bys, order_bys,
         and filters.
 
@@ -84,19 +81,6 @@ class RecipeExtension(object):
             "filters": recipe_parts["filters"],
             "havings": recipe_parts["havings"],
             "order_bys": recipe_parts["order_bys"],
-        }
-
-    def modify_prequery_parts(self, prequery_parts: dict) -> dict:
-        """This method allows extensions to directly modify query,
-        group_bys, filters, and order_bys generated from collected
-        ingredients after a preliminary query using columns has been created.
-        """
-        return {
-            "query": prequery_parts["query"],
-            "group_bys": prequery_parts["group_bys"],
-            "filters": prequery_parts["filters"],
-            "havings": prequery_parts["havings"],
-            "order_bys": prequery_parts["order_bys"],
         }
 
     def modify_postquery_parts(self, postquery_parts: dict) -> dict:
