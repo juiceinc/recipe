@@ -110,6 +110,7 @@ def convert_filter(builder: SQLAlchemyBuilder, ingr_dict: dict, builder_kwargs: 
         expr, datatype = builder.parse(
             filt_expression, forbid_aggregation=True, **builder_kwargs
         )
+        # TODO: We should raise visible error here rather than ignoring non-bool.
         if datatype == "bool":
             ingr_dict["filters"] = [expr]
 

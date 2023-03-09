@@ -1088,9 +1088,27 @@ username:
         recipe = self.recipe(shelf=shelf).dimensions("username")
         self.assertRecipeSQL(
             recipe,
-            """SSELECT scores_with_nulls.username AS username
+            """SELECT scores_with_nulls.username AS username
 FROM scores_with_nulls
 WHERE scores_with_nulls.username = 'foo'
+GROUP BY username""",
+        )
+
+        # Filters that aren't datatype=bool are ignored.
+        shelf = self.shelf_from_yaml(
+            """
+username:
+    kind: Dimension
+    field: username
+    filter: username
+""",
+            self.scores_with_nulls_table,
+        )
+        recipe = self.recipe(shelf=shelf).dimensions("username")
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT scores_with_nulls.username AS username
+FROM scores_with_nulls
 GROUP BY username""",
         )
 
