@@ -1052,6 +1052,163 @@ ORDER BY state_raw""",
         )
 
 
+class TestMultipleSelectables(ConfigTestBase):
+    def test_multi_selectable(self):
+        """A shelf can reference multiple selectables"""
+        shelf_config = """
+username:
+  kind: Dimension
+  field: username
+department:
+  kind: Dimension
+  field: department
+testid:
+  kind: Dimension
+  field: testid
+score:
+  kind: Metric
+  field: avg(score)
+tagscorestest_cnt:
+  kind: Metric
+  field: count_distinct(tagscores.testid)
+tagscoresdepartment:
+  kind: Dimension
+  field: tagscores.department
+  filter: tagscores.username = username
+tagscorestestid:
+  kind: Dimension
+  field: tagscores.testid
+  filter: tagscores.username = username
+tagscoresscore:
+  kind: Metric
+  field: min(tagscores.score)
+  filter: tagscores.username = username
+        """
+
+        shelf = self.shelf_from_yaml(
+            shelf_config,
+            self.scores_with_nulls_table,
+            extra_selectables=[(self.tagscores_table, "tagscores")],
+        )
+
+        recipe = self.recipe(shelf=shelf).metrics("score").dimensions("department")
+        self.assertRecipeSQL(
+            recipe,
+            """
+            SELECT scores_with_nulls.department AS department,
+                avg(scores_with_nulls.score) AS score
+            FROM scores_with_nulls
+            GROUP BY department
+        """,
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            department,score,department_id
+            ,80.0,
+            ops,90.0,ops
+            sales,,sales
+            """,
+        )
+
+        # Now use multiple tables
+        # We are doing a cross join BUT the filter key on
+        # tagscorestestid allows us to join the two tables.
+        # Note: Shelves created from config will implicitly get a _select_from
+        # and will not raise an BadRecipe when selecting from multiple tables.
+        recipe = self.recipe(shelf=shelf).metrics("score").dimensions("tagscorestestid")
+        self.assertRecipeSQL(
+            recipe,
+            """
+SELECT tagscores.testid AS tagscorestestid,
+       avg(scores_with_nulls.score) AS score
+FROM tagscores,
+     scores_with_nulls
+WHERE tagscores.username = scores_with_nulls.username
+GROUP BY tagscorestestid
+        """,
+        )
+
+        # Now use multiple tables
+        # We are doing a cross join BUT the filter key on
+        # tagscorestestid allows us to join the two tables.
+        # Note: Shelves created from config will implicitly get a _select_from
+        # and will not raise an BadRecipe when selecting from multiple tables.
+        recipe = self.recipe(shelf=shelf).metrics("score").dimensions("tagscorestestid")
+        self.assertRecipeSQL(
+            recipe,
+            """
+SELECT tagscores.testid AS tagscorestestid,
+       avg(scores_with_nulls.score) AS score
+FROM tagscores,
+     scores_with_nulls
+WHERE tagscores.username = scores_with_nulls.username
+GROUP BY tagscorestestid
+        """,
+        )
+
+        # We can select multiple dimensions and metrics from both tables
+        # We will not duplicate the join filter as long as it has the same sql representation
+        recipe = (
+            self.recipe(shelf=shelf)
+            .metrics("score", "tagscoresscore")
+            .dimensions("tagscorestestid", "tagscoresdepartment")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """
+SELECT tagscores.department AS tagscoresdepartment,
+       tagscores.testid AS tagscorestestid,
+       avg(scores_with_nulls.score) AS score,
+       min(tagscores.score) AS tagscoresscore
+FROM tagscores,
+     scores_with_nulls
+WHERE tagscores.username = scores_with_nulls.username
+GROUP BY tagscoresdepartment,
+         tagscorestestid
+        """,
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+tagscoresdepartment,tagscorestestid,score,tagscoresscore,tagscoresdepartment_id,tagscorestestid_id
+ops,2,90.0,80.0,ops,2
+ops,3,90.0,90.0,ops,3
+ops,4,90.0,100.0,ops,4
+ops,5,80.0,80.0,ops,5
+ops,6,80.0,90.0,ops,6
+sales,1,,80.0,sales,1
+            """,
+        )
+
+        # FIXME: If we try to only use the tagscores table, we get a crossjoin.
+        # It would be better if we only added the filter conditionally.
+        recipe = (
+            self.recipe(shelf=shelf)
+            .metrics("tagscoresscore")
+            .dimensions("tagscoresdepartment")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """
+SELECT tagscores.department AS tagscoresdepartment,
+       min(tagscores.score) AS tagscoresscore
+FROM tagscores,
+     scores_with_nulls
+WHERE tagscores.username = scores_with_nulls.username
+GROUP BY tagscoresdepartment
+        """,
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+tagscoresdepartment,tagscoresscore,tagscoresdepartment_id
+ops,80.0,ops
+sales,80.0,sales
+            """,
+        )
+
+
 class TestParsedSQLGeneration(ConfigTestBase):
     """More tests of SQL generation on complex parsed expressions"""
 
