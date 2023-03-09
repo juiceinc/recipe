@@ -3,17 +3,17 @@
 import time
 
 from freezegun import freeze_time
-from sqlalchemy import Table, Column, String, Integer
-from sqlalchemy.ext.serializer import dumps, loads
-from sqlalchemy.ext.declarative import declarative_base
 from lark import GrammarError
+from sqlalchemy import Column, Integer, String, Table
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.serializer import dumps, loads
 
+from recipe.schemas.builders import SQLAlchemyBuilder
 from recipe.schemas.expression_grammar import (
-    SQLAlchemyBuilder,
+    gather_columns,
     is_valid_column,
     make_columns_for_selectable,
     make_columns_grammar,
-    gather_columns,
 )
 from recipe.utils.formatting import expr_to_str
 from tests.test_base import RecipeTestCase
