@@ -9,13 +9,6 @@ from sqlalchemy.sql.sqltypes import Numeric
 
 SLOG = structlog.get_logger(__name__)
 
-
-# SQL server can not support parameters in queries that are used for grouping
-# https://github.com/mkleehammer/pyodbc/issues/479
-# To avoid parameterization, we pass literals
-literal_1 = text("1")
-literal_0 = text("0")
-
 VALID_COLUMN_RE = re.compile("^\w+$")
 
 
