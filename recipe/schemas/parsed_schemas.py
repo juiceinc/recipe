@@ -111,18 +111,12 @@ def _lowercase_kind(value):
 
 
 def _save_raw_config(value):
-    """Save the original config excluding _config and _meta """
+    """Save the original config excluding _config and _meta"""
     config = deepcopy(value)
     config.pop("_config", None)
     config.pop("_neta", None)
     value["_config"] = config
     return value
-
-
-def add_version(v):
-    # Add version to a parsed ingredient
-    v["_version"] = "2"
-    return v
 
 
 # A field that may OR MAY NOT contain an aggregation.
@@ -185,7 +179,6 @@ ingredient_schema = S.Dict(
         default_choice="metric",
     ),
     coerce=_chain(_lowercase_kind, _save_raw_config),
-    coerce_post=add_version,
     registry={},
 )
 
@@ -198,6 +191,7 @@ strict_metric_schema = S.Dict(
         "icon": S.String(required=False),
         "_meta": S.Dict(required=False),
         "_config": S.Dict(required=False),
+        "filter": S.String(required=False),
         "singular": S.String(required=False),
         "plural": S.String(required=False),
         "field": field_schema,
@@ -214,6 +208,7 @@ strict_dimension_schema = S.Dict(
         "icon": S.String(required=False),
         "_meta": S.Dict(required=False),
         "_config": S.Dict(required=False),
+        "filter": S.String(required=False),
         "singular": S.String(required=False),
         "plural": S.String(required=False),
         "field": field_schema,
@@ -264,7 +259,6 @@ strict_ingredient_schema = S.Dict(
         default_choice="metric",
     ),
     coerce=_chain(_lowercase_kind, _save_raw_config),
-    coerce_post=add_version,
     registry={},
 )
 
