@@ -321,7 +321,6 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         """
 
         for field, expected_data_type in self.examples(good_examples):
-            print(field)
             _, data_type = self.builder.parse(field, debug=True)
             self.assertIs(type(data_type), str)
             self.assertEqual(data_type, expected_data_type)
