@@ -454,7 +454,6 @@ class AutomaticFilters(RecipeExtension):
 
 
 class SummarizeOver(RecipeExtension):
-
     recipe_schema = {"summarize_over": {"type": "string"}}
 
     def __init__(self, *args, **kwargs):
@@ -577,7 +576,6 @@ class Anonymize(RecipeExtension):
 
                 # Build a FakerAnonymizer if we have a string
                 if isinstance(anonymizer, str):
-
                     # Check for extra parameters
                     kwargs = {}
                     anonymizer_locale = getattr(
