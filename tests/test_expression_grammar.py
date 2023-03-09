@@ -312,7 +312,6 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         """
 
         for field, _ in self.examples(examples):
-
             with self.assertRaises(GrammarError):
                 self.builder.parse(field)
 
