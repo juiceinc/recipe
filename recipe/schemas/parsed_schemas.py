@@ -186,7 +186,8 @@ ingredient_schema = S.Dict(
 strict_metric_schema = S.Dict(
     allow_unknown=False,
     schema={
-        "_version": S.String(default="2"),
+        # _version is deprecated.
+        "_version": S.String(required=False),
         "_shelf_meta": S.Dict(required=False),
         "icon": S.String(required=False),
         "_meta": S.Dict(required=False),
@@ -203,7 +204,8 @@ strict_metric_schema = S.Dict(
 strict_dimension_schema = S.Dict(
     allow_unknown=False,
     schema={
-        "_version": S.String(default="2"),
+        # _version is deprecated.
+        "_version": S.String(required=False),
         "_shelf_meta": S.Dict(required=False),
         "icon": S.String(required=False),
         "_meta": S.Dict(required=False),
@@ -230,7 +232,8 @@ strict_dimension_schema = S.Dict(
 strict_filter_schema = S.Dict(
     allow_unknown=False,
     schema={
-        "_version": S.String(default="2"),
+        # This _version is deprecated.
+        "_version": S.String(required=False),
         "_shelf_meta": S.Dict(required=False),
         "condition": field_schema,
     },
@@ -239,7 +242,8 @@ strict_filter_schema = S.Dict(
 strict_having_schema = S.Dict(
     allow_unknown=False,
     schema={
-        "_version": S.String(default="2"),
+        # _version is deprecated.
+        "_version": S.String(required=False),
         "_shelf_meta": S.Dict(required=False),
         "condition": field_schema,
     },
