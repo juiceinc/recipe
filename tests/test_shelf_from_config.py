@@ -1074,6 +1074,26 @@ class TestParsedSQLGeneration(ConfigTestBase):
             """,
         )
 
+    def test_included_filter(self):
+        """Test ingredient definitions that include a filter expression"""
+        shelf = self.shelf_from_yaml(
+            """
+username:
+    kind: Dimension
+    field: username
+    filter: username = "foo"
+""",
+            self.scores_with_nulls_table,
+        )
+        recipe = self.recipe(shelf=shelf).dimensions("username")
+        self.assertRecipeSQL(
+            recipe,
+            """SSELECT scores_with_nulls.username AS username
+FROM scores_with_nulls
+WHERE scores_with_nulls.username = 'foo'
+GROUP BY username""",
+        )
+
     def test_complex_field(self):
         """Test parsed field definitions that use math, field references and more"""
         shelf = self.shelf_from_yaml(
