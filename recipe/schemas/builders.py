@@ -17,19 +17,24 @@ LARK_CACHE = {}
 
 class SQLAlchemyBuilder(object):
     @classmethod
-    def get_builder(cls, selectable, *, cache=None):
-        return cls(selectable, cache=cache)
+    def get_builder(cls, selectable, *, extra_selectables=None, cache=None):
+        return cls(selectable, extra_selectables=extra_selectables, cache=cache)
 
     @classmethod
     def clear_builder_cache(cls):
         LARK_CACHE.clear()
 
-    def __init__(self, selectable, *, cache=None):
+    def __init__(self, selectable, *, extra_selectables=None, cache=None):
         """Parse a recipe field by building a custom grammar that
         uses the colums in a selectable.
 
         Args:
             selectable (Table): A SQLAlchemy selectable
+
+        Keyword Args:
+            extra_selectables (list): A list containing pairs of selectable,
+              namespace string.
+            cache (cache): An optional cache.
         """
         self.selectable = selectable
         # Database driver
@@ -40,6 +45,12 @@ class SQLAlchemyBuilder(object):
 
         self.cache = cache
         self.columns = make_columns_for_selectable(selectable)
+        if extra_selectables:
+            for selectable, namespace in extra_selectables:
+                self.columns.extend(
+                    make_columns_for_selectable(selectable, namespace=namespace)
+                )
+
         self.grammar = make_grammar(self.columns)
         grammar_hash = mkkey("grammar", self.grammar)
         # Developer Note: cache key
