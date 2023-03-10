@@ -56,8 +56,10 @@ class BuildGrammarTestCase(RecipeTestCase):
             DateTesterData,
         ]
 
-    def assertSelectableGrammar(self, selectable, grammar_text: str):
-        grammar = make_columns_grammar(make_columns_for_selectable(selectable))
+    def assertSelectableGrammar(self, selectable, grammar_text: str, *, namespace=None):
+        grammar = make_columns_grammar(
+            make_columns_for_selectable(selectable, namespace=namespace)
+        )
 
         if str_dedent(grammar) != str_dedent(grammar_text):
             print(
@@ -67,19 +69,20 @@ class BuildGrammarTestCase(RecipeTestCase):
 
     def test_make_columns_for_table(self):
         expected_column_keys = [
-            ["date_0", "datetime_0", "num_0", "str_0", "str_1"],
-            ["bool_0", "date_0", "datetime_0", "num_0", "str_0", "str_1", "str_2"],
-            ["num_0", "str_0", "str_1"],
-            ["num_0", "str_0", "str_1"],
-            ["date_0", "datetime_0", "num_0", "str_0", "str_1"],
-            ["num_0"],
+            ["date", "datetime", "num", "str", "str"],
+            ["bool", "date", "datetime", "num", "str", "str", "str"],
+            ["num", "str", "str"],
+            ["num", "str", "str"],
+            ["date", "datetime", "num", "str", "str"],
+            ["num"],
         ]
 
         for selectable, expected_column_keys in zip(
             self.selectables, expected_column_keys
         ):
-            c = make_columns_for_selectable(selectable)
-            self.assertEqual(sorted(list(c.keys())), expected_column_keys)
+            cc = make_columns_for_selectable(selectable)
+            ctypes = sorted([col.datatype for col in cc.columns])
+            self.assertEqual(ctypes, expected_column_keys)
 
         with self.assertRaises(Exception):
             make_columns_for_selectable(None)
@@ -100,9 +103,9 @@ class BuildGrammarTestCase(RecipeTestCase):
             date_0: "[" + /test_date/i + "]" | /test_date/i
             datetime_0: "[" + /test_datetime/i + "]" | /test_datetime/i
             num_0: "[" + /score/i + "]" | /score/i
-            str_0: "[" + /username/i + "]" | /username/i
-            str_1: "[" + /department/i + "]" | /department/i
-            str_2: "[" + /testid/i + "]" | /testid/i
+            str_0: "[" + /department/i + "]" | /department/i
+            str_1: "[" + /testid/i + "]" | /testid/i
+            str_2: "[" + /username/i + "]" | /username/i
             """,
             """
             num_0: "[" + /age/i + "]" | /age/i
@@ -111,8 +114,8 @@ class BuildGrammarTestCase(RecipeTestCase):
             """,
             """
             num_0: "[" + /age/i + "]" | /age/i
-            str_0: "[" + /firstlast_id/i + "]" | /firstlast_id/i
-            str_1: "[" + /firstlast/i + "]" | /firstlast/i
+            str_0: "[" + /firstlast/i + "]" | /firstlast/i
+            str_1: "[" + /firstlast_id/i + "]" | /firstlast_id/i
             """,
             """
             date_0: "[" + /birth_date/i + "]" | /birth_date/i
@@ -127,6 +130,20 @@ class BuildGrammarTestCase(RecipeTestCase):
         ]
         for selectable, expected_grammar in zip(self.selectables, expected_grammars):
             self.assertSelectableGrammar(selectable, expected_grammar)
+
+    def test_make_columns_grammar_with_namespace(self):
+        # If we pass a namespace, field names will be prefixed by the namespace
+        expected_grammars = [
+            """
+            date_0: "[" + /foo\.birth_date/i + "]" | /foo\.birth_date/i
+            datetime_0: "[" + /foo\.dt/i + "]" | /foo\.dt/i
+            num_0: "[" + /foo\.age/i + "]" | /foo\.age/i
+            str_0: "[" + /foo\.first/i + "]" | /foo\.first/i
+            str_1: "[" + /foo\.last/i + "]" | /foo\.last/i
+            """
+        ]
+        for selectable, expected_grammar in zip(self.selectables, expected_grammars):
+            self.assertSelectableGrammar(selectable, expected_grammar, namespace="foo")
 
     def test_gather_columns(self):
         """Gathered columns collects all the rules for column types into a single rule"""
@@ -192,12 +209,12 @@ class BuildGrammarTestCase(RecipeTestCase):
             columns = make_columns_for_selectable(selectable)
             gathered_columns = f"""
             {gather_columns("unusable_col", columns, "unusable")}
-            {gather_columns("date.1", columns, "date", ["extra_date_rule"])}
-            {gather_columns("datetime.2", columns, "datetime", ["extra_datetime_rule"])}
-            {gather_columns("datetime_end.1", columns, "datetime", ["datetime_end_conv", "datetime_aggr"])}
-            {gather_columns("boolean.1", columns, "bool", ["TRUE", "FALSE", "extra_bool_rule"])}
-            {gather_columns("string.1", columns, "str", ["ESCAPED_STRING", "extra_string_rule"])}
-            {gather_columns("num.1", columns, "num", ["NUMBER", "extra_num_rule"])}
+            {gather_columns("date.1", columns, "date", additional_rules=["extra_date_rule"])}
+            {gather_columns("datetime.2", columns, "datetime", additional_rules=["extra_datetime_rule"])}
+            {gather_columns("datetime_end.1", columns, "datetime", additional_rules=["datetime_end_conv", "datetime_aggr"])}
+            {gather_columns("boolean.1", columns, "bool", additional_rules=["TRUE", "FALSE", "extra_bool_rule"])}
+            {gather_columns("string.1", columns, "str", additional_rules=["ESCAPED_STRING", "extra_string_rule"])}
+            {gather_columns("num.1", columns, "num", additional_rules=["NUMBER", "extra_num_rule"])}
             """
             self.assertEqual(
                 str_dedent(gathered_columns), str_dedent(expected_gathered)
@@ -209,7 +226,10 @@ class GrammarTestCase(RecipeTestCase):
 
     def setUp(self):
         super().setUp()
-        self.builder = SQLAlchemyBuilder.get_builder(self.datatypes_table)
+        extra_selectables = [(self.scores_table, "scores")]
+        self.builder = SQLAlchemyBuilder.get_builder(
+            self.datatypes_table, extra_selectables=extra_selectables
+        )
 
     def examples(self, input_rows):
         """Take input where each line looks like
@@ -271,6 +291,8 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         [ScORE] + [ScORE]               -> sum(datatypes.score + datatypes.score)
         max([ScORE] + [ScORE])          -> max(datatypes.score + datatypes.score)
         max(score) - min(score)         -> max(datatypes.score) - min(datatypes.score)
+        max(scores.score)               -> max(scores.score)
+        max([score] - [scores.score])   -> max(datatypes.score - scores.score)
         """
 
         for field, expected_sql in self.examples(good_examples):
@@ -295,10 +317,11 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         count(department > "foo")       -> num
         substr(department, 5)           -> str
         substr(department, 5, 5)        -> str
+        max([score] - [scores.score])   -> num
         """
 
         for field, expected_data_type in self.examples(good_examples):
-            _, data_type = self.builder.parse(field)
+            _, data_type = self.builder.parse(field, debug=True)
             self.assertIs(type(data_type), str)
             self.assertEqual(data_type, expected_data_type)
 
@@ -1114,7 +1137,7 @@ if(department = "foo", department, valid_score, score)
                 self.builder.parse(field, forbid_aggregation=True, debug=True)
             if str(e.exception).strip() != expected_error.strip():
                 print("===actual===")
-                print(str(e.exception))
+                print(e.exception)
                 print("===expected===")
                 print(expected_error)
                 print("===" * 10)

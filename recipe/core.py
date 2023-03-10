@@ -459,9 +459,6 @@ class Recipe(object):
             for having in recipe_parts["havings"]:
                 recipe_parts["query"] = recipe_parts["query"].having(having)
 
-        for extension in self.recipe_extensions:
-            recipe_parts = extension.modify_prequery_parts(recipe_parts)
-
         if (
             self._select_from is None
             and len(recipe_parts["query"].selectable.froms) != 1
