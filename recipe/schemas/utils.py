@@ -1,16 +1,27 @@
+import hashlib
+import inspect
 from copy import copy
 from datetime import date, datetime
-from dateutil.relativedelta import relativedelta
+
 import dateparser
-import inspect
+from dateutil.relativedelta import relativedelta
+from sqlalchemy import text
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ColumnCollection
 
 ColumnCollection
 from sureberus import schema as S
+
 from recipe.exceptions import InvalidColumnError
 
 SCALAR_TYPES = [S.Integer(), S.String(), S.Float(), S.Boolean()]
+
+
+# SQL server can not support parameters in queries that are used for grouping
+# https://github.com/mkleehammer/pyodbc/issues/479
+# To avoid parameterization, we pass literals
+literal_1 = text("1")
+literal_0 = text("0")
 
 
 def _chain(*args):
@@ -296,3 +307,10 @@ def calc_date_range(offset, units, dt):
         return dt, dt
     else:
         raise ValueError("Unknown intelligent date units")
+
+
+def mkkey(prefix, *parts):
+    hash = hashlib.sha1()
+    for k in parts:
+        hash.update(str(k).encode("utf-8"))
+    return f"{prefix}-{hash.hexdigest()}"
