@@ -361,8 +361,8 @@ class Shelf(object):
                     )
                     raise InvalidColumnError(error_msg, column_name=column_name)
                 raise BadIngredient(str(ingredient.error))
-            if ingredient.query_columns:
-                columns.extend(ingredient.query_columns)
+            if ingredient.labeled_columns:
+                columns.extend(ingredient.labeled_columns)
             if ingredient.group_by:
                 group_bys.extend(ingredient.group_by)
             if ingredient.filters:
