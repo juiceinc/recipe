@@ -227,11 +227,28 @@ class SQLAlchemyBuilder:
         self.transformer.convert_datetimes_with = convert_datetimes_with
         expr = self.transformer.transform(tree)
 
-        # Expressions that return literal values can't be labeled
-        # Possibly we could wrap them in text() but this may be unsafe
-        # instead we will disallow them.
-        if isinstance(expr, (str, float, int, date, datetime)):
-            raise GrammarError("Must return an expression, not a constant value")
+        # Wrap literal expressions in a cast so they can be labeled
+        if isinstance(expr, (str, float, int, date, datetime, bool)):
+            if isinstance(expr, str):
+                self.last_datatype = "str"
+                expr = cast(expr, String)
+            elif isinstance(expr, date):
+                self.last_datatype = "date"
+                expr = cast(expr, Date)
+            elif isinstance(expr, datetime):
+                self.last_datatype = "datetime"
+                expr = cast(expr, DateTime)
+            elif isinstance(expr, int):
+                self.last_datatype = "num"
+                expr = cast(expr, Integer)
+            elif isinstance(expr, float):
+                self.last_datatype = "num"
+                expr = cast(expr, Float)
+            elif isinstance(expr, bool):
+                self.last_datatype = "bool"
+                expr = cast(expr, Boolean)
+            else:
+                raise GrammarError("Unsure of the datatype of {expr}")
 
         if (
             enforce_aggregation
