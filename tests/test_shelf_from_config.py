@@ -17,7 +17,7 @@ from tests.test_base import RecipeTestCase
 
 
 class ConfigTestBase(RecipeTestCase):
-    """A base class for testing shelves built from v1 or v2 config."""
+    """A base class for testing shelves built from config."""
 
     # The directory to look for yaml config files
     yaml_location = "shelf_config"
@@ -1546,6 +1546,53 @@ count_username:
         )
         self.assertRecipeCSV(recipe2, "count_star,count_username\n3,3\n")
 
+
+class TestShelfConstants(ConfigTestBase):
+    def test_simple_constant(self):
+        cache = Cache()
+        shelf = self.shelf_from_yaml(
+            """
+            _constants: {
+                two: 2,
+                twofloat: 2.0,
+                twostr: "two"
+            }
+            username: {kind: Dimension, field: username+constants.twostr}
+            count_star: {kind: Metric, field: count(*)}
+            count_star_times_two: {kind: Metric, field: count(*)*constants.two}
+            convertdate: {kind: Dimension, field: month(test_date)}
+            """,
+            self.scores_with_nulls_table,
+            ingredient_cache=cache,
+        )
+        recipe = (
+            self.recipe(shelf=shelf)
+            .metrics("count_star", "count_star_times_two")
+            .dimensions("username")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT scores_with_nulls.username || CAST('two' AS VARCHAR) AS username,
+       count(*) AS count_star,
+       count(*) * CAST(2 AS INTEGER) AS count_star_times_two
+FROM scores_with_nulls
+GROUP BY username""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """username,count_star,count_star_times_two,username_id
+annikatwo,2,4,annikatwo
+chiptwo,3,6,chiptwo
+christwo,1,2,christwo""",
+        )
+
+
+class Cache(dict):
+    def set(self, k, v):
+        self[k] = v
+
+
+class TestCache(ConfigTestBase):
     def test_cache(self):
         cache = Cache()
         self.shelf_from_yaml(
@@ -1666,11 +1713,6 @@ count_username:
         )
         # the cache should be reinitialized, and should be identical to the old cache
         self.assertEqual(cache, og_cache)
-
-
-class Cache(dict):
-    def set(self, k, v):
-        self[k] = v
 
 
 class TestParsedIntellligentDates(ConfigTestBase):

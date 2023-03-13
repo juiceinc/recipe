@@ -1,10 +1,16 @@
 from datetime import date, datetime
 
+import attr
 import structlog
 from lark import GrammarError, Lark
 from sqlalchemy import func, text
+from typing import List, Optional
 
-from .expression_grammar import make_columns_for_selectable, make_grammar
+from .expression_grammar import (
+    make_columns_for_selectable,
+    make_grammar,
+    make_column_collection_for_constants,
+)
 from .transformers import TransformToSQLAlchemyExpression
 from .utils import mkkey
 from .validators import SQLALchemyValidator
@@ -15,16 +21,36 @@ SLOG = structlog.get_logger(__name__)
 LARK_CACHE = {}
 
 
-class SQLAlchemyBuilder(object):
+class SQLAlchemyBuilder:
     @classmethod
-    def get_builder(cls, selectable, *, extra_selectables=None, cache=None):
-        return cls(selectable, extra_selectables=extra_selectables, cache=cache)
+    def get_builder(
+        cls,
+        selectable,
+        *,
+        constants: Optional[dict] = None,
+        extra_selectables: Optional[List] = None,
+        cache=None,
+    ):
+        print("Getting builder")
+        return cls(
+            selectable,
+            constants=constants,
+            extra_selectables=extra_selectables,
+            cache=cache,
+        )
 
     @classmethod
     def clear_builder_cache(cls):
         LARK_CACHE.clear()
 
-    def __init__(self, selectable, *, extra_selectables=None, cache=None):
+    def __init__(
+        self,
+        selectable,
+        *,
+        constants: Optional[dict] = None,
+        extra_selectables: Optional[List] = None,
+        cache=None,
+    ):
         """Parse a recipe field by building a custom grammar that
         uses the colums in a selectable.
 
@@ -45,6 +71,14 @@ class SQLAlchemyBuilder(object):
 
         self.cache = cache
         self.columns = make_columns_for_selectable(selectable)
+
+        if constants:
+            self.columns.extend(
+                make_column_collection_for_constants(
+                    constants=constants, namespace="constants"
+                )
+            )
+
         if extra_selectables:
             for selectable, namespace in extra_selectables:
                 self.columns.extend(

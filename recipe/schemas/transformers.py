@@ -20,6 +20,7 @@ from sqlalchemy import (
 )
 
 from . import engine_support
+from .expression_grammar import ColCollection
 from .utils import (
     calc_date_range,
     convert_to_end_datetime,
@@ -36,7 +37,13 @@ SLOG = structlog.get_logger(__name__)
 class TransformToSQLAlchemyExpression(Transformer):
     """Converts a field to a SQLAlchemy expression"""
 
-    def __init__(self, selectable, cc, drivername, forbid_aggregation=True):
+    def __init__(
+        self,
+        selectable,
+        cc: ColCollection,
+        drivername: str,
+        forbid_aggregation: bool = True,
+    ):
         self.text = None
         self.selectable = selectable
 

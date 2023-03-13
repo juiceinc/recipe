@@ -1,9 +1,10 @@
 import attr
 import re
-from typing import List
+from typing import List, Optional
+from datetime import datetime, date
 
 import structlog
-from sqlalchemy import Boolean, Date, DateTime, Integer, String, text
+from sqlalchemy import Boolean, Date, DateTime, Integer, String, Float, text, cast
 from sqlalchemy.ext.declarative.api import DeclarativeMeta
 from sqlalchemy.sql.base import ColumnCollection
 from sqlalchemy.sql.sqltypes import Numeric
@@ -25,6 +26,7 @@ class Col:
 
     datatype: str = attr.ib()
     sqla_col = attr.ib()
+    name: str = attr.ib()
     idx: int = attr.ib(default=-1)
     namespace: str = attr.ib(default="")
 
@@ -45,10 +47,39 @@ class Col:
                 datatype = "bool"
             else:
                 datatype = "unusable"
-            return cls(namespace="", datatype=datatype, sqla_col=sqla_col)
+            return cls(
+                namespace="", datatype=datatype, sqla_col=sqla_col, name=sqla_col.name
+            )
+
+    @classmethod
+    def make_from_constant(cls, key, value):
+        """Make a column from a scalar constant"""
+        if is_valid_column(key):
+            datatype = "unusable"
+            sqla_col = None
+
+            if isinstance(value, str):
+                datatype = "str"
+                sqla_col = cast(value, String)
+            elif isinstance(value, date):
+                datatype = "date"
+                sqla_col = cast(value, Date)
+            elif isinstance(value, datetime):
+                datatype = "datetime"
+                sqla_col = cast(value, DateTime)
+            elif isinstance(value, int):
+                datatype = "num"
+                sqla_col = cast(value, Integer)
+            elif isinstance(value, float):
+                datatype = "num"
+                sqla_col = cast(value, Float)
+            elif isinstance(value, bool):
+                datatype = "bool"
+                sqla_col = cast(value, Boolean)
+            return cls(namespace="", datatype=datatype, sqla_col=sqla_col, name=key)
 
     @property
-    def rule_name(self) -> str:
+    def rule_name(self) -> str:  # sourcery skip: raise-specific-error
         """The name for the lark rule for this column"""
         if self.idx == -1:
             raise Exception("Must assign indexes first")
@@ -58,9 +89,9 @@ class Col:
     def field_name(self) -> str:
         """What to call this column in expressions."""
         if self.namespace:
-            return f"{self.namespace}\\.{self.sqla_col.name}"
+            return f"{self.namespace}\\.{self.name}"
         else:
-            return self.sqla_col.name
+            return self.name
 
     def as_rule(self):
         return f'    {self.rule_name}: "[" + /{self.field_name}/i + "]" | /{self.field_name}/i'
@@ -76,7 +107,7 @@ class ColCollection:
         """Sort columns by datatype and assign an index"""
         idx = 0
         prev_datatype = None
-        for col in sorted(self.columns, key=lambda c: (c.datatype, c.sqla_col.name)):
+        for col in sorted(self.columns, key=lambda c: (c.datatype, c.name)):
             if col.datatype != prev_datatype:
                 idx = 0
             col.idx = idx
@@ -134,7 +165,9 @@ def gather_columns(
         return f'{datatype_rule_name}: "DUMMYVALUNUSABLECOL"'
 
 
-def make_columns_for_selectable(selectable, *, namespace=None) -> ColumnCollection:
+def make_columns_for_selectable(
+    selectable, *, namespace: Optional[str] = None
+) -> ColumnCollection:
     """Return a dictionary of columns. The keys
     are unique lark rule names prefixed by the column type
     like num_0, num_1, string_0, etc.
@@ -156,10 +189,32 @@ def make_columns_for_selectable(selectable, *, namespace=None) -> ColumnCollecti
 
     columns = []
     for sqla_col in column_iterable:
-        col = Col.make_from_sqla_col(sqla_col)
-        if col:
+        if col := Col.make_from_sqla_col(sqla_col):
             columns.append(col)
 
+    cc = ColCollection(columns)
+    if namespace:
+        cc.set_namespace(namespace=namespace)
+    return cc
+
+
+def make_column_collection_for_constants(
+    constants: dict, *, namespace: Optional[str] = None
+) -> ColumnCollection:
+    """
+    Constants are a dict of names to scalar values to use in expressions
+    We will treat them as if they are another column collection
+
+    Args:
+        constants (dict): A dict with string keys and scalar values
+        namespace (str, optional): A namespace to add. Defaults to None.
+
+    Returns:
+        ColumnCollection: A column collection of constant values
+    """
+    columns = []
+    for k, v in constants.items():
+        columns.append(Col.make_from_constant(k, v))
     cc = ColCollection(columns)
     if namespace:
         cc.set_namespace(namespace=namespace)
