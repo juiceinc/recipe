@@ -303,11 +303,7 @@ class Shelf(object):
         """
         from recipe import Recipe
 
-        from pprint import pprint
-
-        pprint(obj)
         constants = obj.pop("_constants", {})
-        pprint(obj)
 
         if isinstance(selectable, Recipe):
             selectable = selectable.subquery()
@@ -337,7 +333,6 @@ class Shelf(object):
                         extra_selectables=extra_selectables,
                         constants=constants,
                     )
-                print(builder.grammar)
                 d[k] = ingredient_constructor(v, selectable, builder=builder)
             else:
                 d[k] = ingredient_constructor(v, selectable)
