@@ -475,17 +475,14 @@ class Recipe(object):
         #             "havings": havings,
         #             "order_bys": list(order_bys)
         #         }
-        recipe_parts = self._cauldron.brew_query_parts(self._order_bys)
-
-        for extension in self.recipe_extensions:
-            recipe_parts = extension.modify_recipe_parts(recipe_parts)
+        parts = self._cauldron.brew_select_parts(self._order_bys)
 
         # Start building the query
-        query = self._session.query(*recipe_parts["columns"])
+        query = self._session.query(parts.columns)
         if self._select_from is not None:
             query = query.select_from(self._select_from)
-        recipe_parts["query"] = (
-            query.group_by(*recipe_parts["group_bys"])
+        parts.query = (
+            query.group_by(*parts.group_bys)
             .order_by(*recipe_parts["order_bys"])
             .filter(*recipe_parts["filters"])
         )

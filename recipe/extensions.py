@@ -8,6 +8,7 @@ from recipe.core import Recipe
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import ALLOWED_OPERATORS, Dimension, Ingredient, Metric, Filter
 from recipe.utils import FakerAnonymizer, recipe_arg, pad_values
+from recipe.shelf import SelectParts
 
 Base = declarative_base()
 
@@ -30,9 +31,6 @@ class RecipeExtension(object):
         (RECIPE) recipe runs cauldron.brew_query_parts to gather sqlalchemy
         columns, group_bys and filters
 
-        (EXTENSIONS) all extension ``modify_recipe_parts(recipeparts)`` run to
-        directly modify the collected sqlalchemy columns, group_bys or filters
-
         (RECIPE) recipe builds a preliminary query with columns
 
         (RECIPE) recipe builds a full query with group_bys, order_bys,
@@ -47,15 +45,6 @@ class RecipeExtension(object):
 
         (RECIPE) recipe caches completed query
 
-    When the recipe fetches data the results will be ``enchanted`` to add
-    fields to the result. ``RecipeExtensions`` can modify result rows with
-
-        enchant_add_fields: Return a tuple of field names to add to a
-        result row
-
-        enchant_row(row): Return a tuple of field values for each row in
-        results.
-
     """
 
     def __init__(self, recipe):
@@ -68,45 +57,12 @@ class RecipeExtension(object):
         This method should be overridden by subclasses"""
         pass
 
-    def modify_recipe_parts(self, recipe_parts: dict) -> dict:
-        """
-        Modify sqlalchemy components of the query
-
-        This method allows extensions to directly modify columns,
-        group_bys, filters, and order_bys generated from collected
-        ingredients."""
-        return {
-            "columns": recipe_parts["columns"],
-            "group_bys": recipe_parts["group_bys"],
-            "filters": recipe_parts["filters"],
-            "havings": recipe_parts["havings"],
-            "order_bys": recipe_parts["order_bys"],
-        }
-
-    def modify_postquery_parts(self, postquery_parts: dict) -> dict:
+    def modify_postquery_parts(self, select_parts: SelectParts) -> SelectParts:
         """This method allows extensions to directly modify query,
         group_bys, filters, and order_bys generated from collected
         ingredients after a final query using columns has been created.
         """
-        return {
-            "query": postquery_parts["query"],
-            "group_bys": postquery_parts["group_bys"],
-            "filters": postquery_parts["filters"],
-            "havings": postquery_parts["havings"],
-            "order_bys": postquery_parts["order_bys"],
-        }
-
-    def enchant_add_fields(self) -> tuple:
-        """This method allows extensions to add fields to a result row.
-        Return a tuple of the field names that are being added with
-        this method
-        """
-        return tuple()
-
-    def enchant_row(self, row):
-        """This method adds the fields named in ``enchant_add_fields`` to
-        each result row."""
-        return ()
+        return select_parts
 
 
 def handle_directives(directives, handlers):
@@ -125,7 +81,7 @@ def handle_directives(directives, handlers):
 
 def is_compound_filter(key: str) -> bool:
     """Is this key a compound filter key?"""
-    return bool("," in key)
+    return "," in key
 
 
 def clean_filtering_values(values, ingr, operator=None, optimize_for_redshift=False):
@@ -288,6 +244,7 @@ class AutomaticFilters(RecipeExtension):
         return dimension.build_filter(values, operator)
 
     def add_ingredients(self):
+        """Add filters to the recipe"""
         if self.apply:
             for filter_dict in self._automatic_filters:
                 for dim, values in filter_dict.items():
@@ -468,30 +425,28 @@ class SummarizeOver(RecipeExtension):
     def summarize_over(self, dimension_key):
         self._summarize_over = dimension_key
 
-    def modify_postquery_parts(self, postquery_parts):
+    def modify_postquery_parts(self, parts: SelectParts) -> SelectParts:
         """
         Take a recipe that has dimensions
         Resummarize it over one of the dimensions returning averages of the
         metrics.
         """
         if self._summarize_over is None:
-            return postquery_parts
+            return parts
         assert self._summarize_over in self.recipe.dimension_ids
 
         # Start with a subquery
-        subq = postquery_parts["query"].subquery(name="summarize")
+        subq = parts.query.subquery(name="summarize")
 
-        summarize_over_dim = set(
-            (
-                self._summarize_over,
-                self._summarize_over + "_id",
-                self._summarize_over + "_raw",
-            )
-        )
+        summarize_over_dim = {
+            self._summarize_over,
+            f"{self._summarize_over}_id",
+            f"{self._summarize_over}_raw",
+        }
         dim_column_names = (
-            set(dim for dim in self.recipe.dimension_ids)
-            .union(set(dim + "_id" for dim in self.recipe.dimension_ids))
-            .union(set(dim + "_raw" for dim in self.recipe.dimension_ids))
+            set(self.recipe.dimension_ids)
+            .union({f"{dim}_id" for dim in self.recipe.dimension_ids})
+            .union({f"{dim}_raw" for dim in self.recipe.dimension_ids})
         )
         used_dim_column_names = dim_column_names - summarize_over_dim
 
@@ -526,20 +481,17 @@ class SummarizeOver(RecipeExtension):
 
         # Find the ordering columns and apply them to the new query
         order_by_columns = []
-        for col in postquery_parts["query"]._order_by:
+        for col in parts["query"]._order_by:
             subq_col = getattr(subq.c, str(col).split(" ")[0])
             if subq_col is not None:
                 order_by_columns.append(subq_col)
 
-        postquery_parts["query"] = (
+        parts.query = (
             self.recipe._session.query(*(group_by_columns + metric_columns))
             .group_by(*group_by_columns)
             .order_by(*order_by_columns)
         )
-
-        # Remove the summarized dimension
-        self.recipe._cauldron.pop(self._summarize_over, None)
-        return postquery_parts
+        return parts
 
 
 class Anonymize(RecipeExtension):
@@ -606,9 +558,8 @@ class Anonymize(RecipeExtension):
                 if self._anonymize:
                     if ingredient.meta.anonymizer not in ingredient.formatters:
                         ingredient.formatters.append(anonymizer)
-                else:
-                    if ingredient.meta.anonymizer in ingredient.formatters:
-                        ingredient.formatters.remove(anonymizer)
+                elif ingredient.meta.anonymizer in ingredient.formatters:
+                    ingredient.formatters.remove(anonymizer)
 
 
 class Paginate(RecipeExtension):
@@ -838,38 +789,39 @@ class Paginate(RecipeExtension):
 
         # Inject the paginator ordering ahead of the existing ordering and filter
         # out sort items that aren't in the cauldron
-        if self.do_pagination():
+        if not self.do_pagination():
+            return
 
-            def make_ordering_key(ingr):
-                if isinstance(ingr, Ingredient):
-                    if ingr.ordering == "desc":
-                        return "-" + ingr.id
-                    else:
-                        return ingr.id
+        def make_ordering_key(ingr):
+            if isinstance(ingr, Ingredient):
+                if ingr.ordering == "desc":
+                    return f"-{ingr.id}"
                 else:
-                    return ingr
-
-            # Recover the existing orderings
-            existing_orderings = [
-                make_ordering_key(ingr) for ingr in self.recipe._order_bys
-            ]
-
-            # Remove paginator sort keys from any existing order bys
-            # Search for both ascending and descending versions of the keys
-            existing_order_bys = [
-                key
-                for key in existing_orderings
-                if key not in self._pagination_order_by
-                and ("-" + key) not in self._pagination_order_by
-            ]
-            new_order_by = list(self._pagination_order_by) + existing_order_bys
-
-            if self._pagination_default_order_by is None:
-                self._pagination_default_order_by = self.recipe._cauldron.dimension_ids
-            if not new_order_by:
-                self.recipe.order_by(*self._pagination_default_order_by)
+                    return ingr.id
             else:
-                self.recipe.order_by(*new_order_by)
+                return ingr
+
+        # Recover the existing orderings
+        existing_orderings = [
+            make_ordering_key(ingr) for ingr in self.recipe._order_bys
+        ]
+
+        # Remove paginator sort keys from any existing order bys
+        # Search for both ascending and descending versions of the keys
+        existing_order_bys = [
+            key
+            for key in existing_orderings
+            if key not in self._pagination_order_by
+            and f"-{key}" not in self._pagination_order_by
+        ]
+        new_order_by = list(self._pagination_order_by) + existing_order_bys
+
+        if self._pagination_default_order_by is None:
+            self._pagination_default_order_by = self.recipe._cauldron.dimension_ids
+        if not new_order_by:
+            self.recipe.order_by(*self._pagination_default_order_by)
+        else:
+            self.recipe.order_by(*new_order_by)
 
     def _apply_pagination_q(self):
         """Apply pagination querying to all paginate search keys"""
@@ -879,16 +831,14 @@ class Paginate(RecipeExtension):
 
             filters = []
             for key in search_keys:
-                # build a filter for each search key and use in the recipe
-                ingredient = self.recipe._shelf.get(key, None)
-                if ingredient:
+                if ingredient := self.recipe._shelf.get(key, None):
                     filters.append(
                         ingredient.build_filter(
                             q, operator="ilike", target_role="value"
                         )
                     )
 
-            # Build a big or filter for the search
+            # Build a big OR filter for the search
             if filters:
                 or_expression = or_(
                     f.filters[0] if hasattr(f, "filters") else f for f in filters
@@ -901,16 +851,16 @@ class Paginate(RecipeExtension):
         self._apply_pagination_order_by()
         self._apply_pagination_q()
 
-    def modify_postquery_parts(self, postquery_parts):
+    def modify_postquery_parts(self, parts: SelectParts) -> SelectParts:
         """Apply validated pagination limits and offset to a completed query."""
         if not self.do_pagination():
-            return postquery_parts
+            return parts
 
         limit = self._pagination_page_size
 
         # Validate what page we are on by looking at the total
         # number of items.
-        total_count = self.recipe.total_count(postquery_parts["query"])
+        total_count = self.recipe.total_count(parts["query"])
 
         d, m = divmod(total_count, limit)
         total_pages = max(1, d + (1 if m > 0 else 0))
@@ -927,11 +877,11 @@ class Paginate(RecipeExtension):
         # page=1 is the first page
         offset = limit * (validated_page - 1)
 
-        postquery_parts["query"] = postquery_parts["query"].limit(limit)
+        parts.query = parts.query.limit(limit)
         if offset:
-            postquery_parts["query"] = postquery_parts["query"].offset(offset)
+            parts.query = parts.query.offset(offset)
 
-        return postquery_parts
+        return parts
 
     def validated_pagination(self):
         """Return pagination validated against the actual number of items in the
@@ -1039,10 +989,10 @@ class PaginateInline(Paginate):
 
     """
 
-    def modify_postquery_parts(self, postquery_parts):
+    def modify_postquery_parts(self, parts: SelectParts) -> SelectParts:
         """Apply validated pagination limits and offset to a completed query."""
         if not self.do_pagination():
-            return postquery_parts
+            return parts
 
         limit = self._pagination_page_size
         # Get the unvalidated page. When we validate pagination
@@ -1059,11 +1009,11 @@ class PaginateInline(Paginate):
         # page=1 is the first page
         offset = limit * (validated_page - 1)
 
-        postquery_parts["query"] = postquery_parts["query"].limit(limit)
+        parts.query = parts.query.limit(limit)
         if offset:
-            postquery_parts["query"] = postquery_parts["query"].offset(offset)
+            parts.query = parts.query.offset(offset)
 
-        q = postquery_parts["query"]
+        q = parts.query
 
         # Count the rows in our query without limit or offset or ordering
         total_counter = (
@@ -1076,8 +1026,8 @@ class PaginateInline(Paginate):
         # Need an aggregation even though there's only one row
         q = q.add_columns(func.min(total_counter.c._total_count).label("_total_count"))
 
-        postquery_parts["query"] = q
-        return postquery_parts
+        parts.query = q
+        return parts
 
     def validated_pagination(self):
         """Return pagination validated against the actual number of items in the
@@ -1092,8 +1042,7 @@ class PaginateInline(Paginate):
             "pageSize": self._pagination_page_size,
             "totalItems": 0,
         }
-        rows = self.recipe.all()
-        if rows:
+        if rows := self.recipe.all():
             row = rows[0]
             validated_pagination["totalItems"] = row._total_count
         elif self._pagination_page != 1:
@@ -1161,7 +1110,7 @@ class BlendRecipe(RecipeExtension):
                 if isinstance(ingr, Dimension):
                     ingr.group_by_strategy = "direct"
 
-    def modify_postquery_parts(self, postquery_parts):
+    def modify_postquery_parts(self, parts: SelectParts) -> SelectParts:
         """
         Make the comparison recipe a subquery that is left joined to the
         base recipe using dimensions that are shared between the recipes.
@@ -1171,7 +1120,7 @@ class BlendRecipe(RecipeExtension):
 
         """
         if not self.blend_recipes:
-            return postquery_parts
+            return parts
 
         for blend_recipe, blend_type, blend_criteria in zip(
             self.blend_recipes, self.blend_types, self.blend_criteria
@@ -1189,13 +1138,12 @@ class BlendRecipe(RecipeExtension):
                 for suffix in met.make_column_suffixes():
                     col = getattr(blend_subq.c, met.id, None)
                     if col is not None:
-                        postquery_parts["query"] = postquery_parts["query"].add_columns(
+                        parts.query = parts.query.add_columns(
                             col.label(met.id + suffix)
                         )
                     else:
                         raise BadRecipe(
-                            "{} could not be found in .blend() "
-                            "recipe subquery".format(id + suffix)
+                            f"{id + suffix} could not be found in .blend() recipe subquery"
                         )
 
             # For all dimensions in the blend recipe
@@ -1209,18 +1157,13 @@ class BlendRecipe(RecipeExtension):
                 self.recipe._cauldron.use(dim)
                 for suffix in dim.make_column_suffixes():
                     col = getattr(blend_subq.c, dim.id, None)
-                    if col is not None:
-                        postquery_parts["query"] = postquery_parts["query"].add_columns(
-                            col.label(dim.id + suffix)
-                        )
-                        postquery_parts["query"] = postquery_parts["query"].group_by(
-                            col
-                        )
-                    else:
+                    if col is None:
                         raise BadRecipe(
-                            "{} could not be found in .blend() "
-                            "recipe subquery".format(id + suffix)
+                            f"{id + suffix} could not be found in .blend() recipe subquery"
                         )
+
+                    parts.query = parts.query.add_columns(col.label(dim.id + suffix))
+                    parts.query = parts.query.group_by(col)
 
             base_dim = self.recipe._cauldron[join_base]
             blend_dim = blend_recipe._cauldron[join_blend]
@@ -1229,22 +1172,15 @@ class BlendRecipe(RecipeExtension):
             blend_col = getattr(blend_subq.c, blend_dim.id_prop, None)
             if blend_col is None:
                 raise BadRecipe(
-                    "Can't find join property for {} dimension in \
-                        blend recipe".format(
-                        blend_dim.id_prop
-                    )
+                    f"Can't find join property for {blend_dim.id_prop} dimension in blend recipe"
                 )
 
             if blend_type == "outer":
-                postquery_parts["query"] = postquery_parts["query"].outerjoin(
-                    blend_subq, base_col == blend_col
-                )
+                parts.query = parts.query.outerjoin(blend_subq, base_col == blend_col)
             else:
-                postquery_parts["query"] = postquery_parts["query"].join(
-                    blend_subq, base_col == blend_col
-                )
+                parts.query = parts.query.join(blend_subq, base_col == blend_col)
 
-        return postquery_parts
+        return parts
 
 
 class CompareRecipe(RecipeExtension):
@@ -1282,7 +1218,7 @@ class CompareRecipe(RecipeExtension):
                 if isinstance(ingr, Dimension):
                     ingr.group_by_strategy = "direct"
 
-    def modify_postquery_parts(self, postquery_parts):
+    def modify_postquery_parts(self, parts: SelectParts) -> SelectParts:
         """Make the comparison recipe a subquery that is left joined to the
         base recipe using dimensions that are shared between the recipes.
 
@@ -1291,7 +1227,7 @@ class CompareRecipe(RecipeExtension):
 
         """
         if not self.compare_recipe:
-            return postquery_parts
+            return parts
 
         for compare_recipe, compare_suffix in zip(self.compare_recipe, self.suffix):
             comparison_subq = compare_recipe.subquery()
@@ -1306,20 +1242,19 @@ class CompareRecipe(RecipeExtension):
             # metric.meta.summary_aggregation callable parameter
             for m in compare_recipe.metric_ids:
                 met = compare_recipe._cauldron[m]
-                id = met.id
-                met.id = id + compare_suffix
+                _id = met.id
+                met.id = _id + compare_suffix
                 summary_aggregation = met.meta.get("summary_aggregation", func.avg)
                 self.recipe._cauldron.use(met)
                 for suffix in met.make_column_suffixes():
-                    col = getattr(comparison_subq.c, id + suffix, None)
+                    col = getattr(comparison_subq.c, _id + suffix, None)
                     if col is not None:
-                        postquery_parts["query"] = postquery_parts["query"].add_columns(
+                        parts.query = parts.query.add_columns(
                             summary_aggregation(col).label(met.id + suffix)
                         )
                     else:
                         raise BadRecipe(
-                            "{} could not be found in .compare() "
-                            "recipe subquery".format(id + suffix)
+                            f"{_id + suffix} could not be found in .compare() recipe subquery"
                         )
 
             join_conditions = []
@@ -1328,25 +1263,16 @@ class CompareRecipe(RecipeExtension):
                     raise BadRecipe(
                         "{} dimension in comparison recipe must exist " "in base recipe"
                     )
-                base_dim = self.recipe._cauldron[dim]
                 compare_dim = compare_recipe._cauldron[dim]
-                base_col = base_dim.columns[0]
                 compare_col = getattr(comparison_subq.c, compare_dim.id_prop, None)
                 if compare_col is None:
                     raise BadRecipe(
-                        "Can't find join property for {} dimension in \
-                        compare recipe".format(
-                            compare_dim.id_prop
-                        )
+                        f"Can't find join property for {compare_dim.id_prop} dimension in compare recipe"
                     )
-                join_conditions.append(base_col == compare_col)
+                base_dim = self.recipe._cauldron[dim]
+                join_conditions.append(base_dim.columns[0] == compare_col)
 
-            join_clause = text("1=1")
-            if join_conditions:
-                join_clause = and_(*join_conditions)
+            join_clause = and_(*join_conditions) if join_conditions else text("1=1")
+            parts.query = parts.query.outerjoin(comparison_subq, join_clause)
 
-            postquery_parts["query"] = postquery_parts["query"].outerjoin(
-                comparison_subq, join_clause
-            )
-
-        return postquery_parts
+        return parts

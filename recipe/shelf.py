@@ -15,6 +15,15 @@ from recipe.ingredients import Dimension, Filter, Ingredient, Metric, InvalidIng
 from recipe.schemas import shelf_schema
 from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
 
+try:
+    # 1.4 and 2.0
+    from sqlalchemy.orm import Query
+except ImportError:
+    # 1.3
+    from sqlalchemy.orm.query import Query
+
+from sqlalchemy.sql.expression import Select
+
 from recipe.schemas.builders import SQLAlchemyBuilder
 
 _POP_DEFAULT = object()
@@ -46,6 +55,8 @@ class SelectParts:
     raw_order_by_keys: list = field(default_factory=list)
     order_bys: list = field(default_factory=list)
     all_filters: set = field(default_factory=set)
+    query: Query
+    select: Select
 
     def add_ingredient(self, ingredient):
         """Gather the SQLAlchemy fragments from this ingredient into a consolidated list."""
