@@ -1094,23 +1094,17 @@ WHERE scores_with_nulls.username = 'foo'
 GROUP BY username""",
         )
 
-        # Filters that aren't datatype=bool are ignored.
-        shelf = self.shelf_from_yaml(
-            """
-username:
-    kind: Dimension
-    field: username
-    filter: username
-""",
-            self.scores_with_nulls_table,
-        )
-        recipe = self.recipe(shelf=shelf).dimensions("username")
-        self.assertRecipeSQL(
-            recipe,
-            """SELECT scores_with_nulls.username AS username
-FROM scores_with_nulls
-GROUP BY username""",
-        )
+        # Filters that aren't datatype=bool raise errors.
+        with self.assertRaises(BadIngredient):
+            shelf = self.shelf_from_yaml(
+                """
+    username:
+        kind: Dimension
+        field: username
+        filter: username + "moo"
+    """,
+                self.scores_with_nulls_table,
+            )
 
     def test_complex_field(self):
         """Test parsed field definitions that use math, field references and more"""
