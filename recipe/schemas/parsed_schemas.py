@@ -211,6 +211,7 @@ strict_dimension_schema = S.Dict(
         "_meta": S.Dict(required=False),
         "_config": S.Dict(required=False),
         "filter": S.String(required=False),
+        "date_aggregation": S.String(required=False, allowed=["year", "month", "day"]),
         "singular": S.String(required=False),
         "plural": S.String(required=False),
         "field": field_schema,

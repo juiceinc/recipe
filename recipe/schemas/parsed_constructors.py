@@ -58,32 +58,41 @@ def _convert_bucket_to_field(field, bucket, buckets_default_label, builder):
     return "if(" + ",".join(parts) + ")", "if(" + ",".join(order_by_parts) + ")"
 
 
-def get_convert_dates(format: str):
-    """If a format only shows years or months, wrap dates in a conversion in the builder"""
-    if not isinstance(format, str):
-        return
-    if format == "%Y":
-        return "year_conv"
-    # A format for months but not days
-    elif (
-        "%B" in format and "%Y" in format and "%-d" not in format and "%d" not in format
-    ):
-        return "month_conv"
+def set_date_aggregation_from_format(ingr_dict: dict):
+    """
+    Determine the date aggregation from a format property.
 
+    Allowed values are:
 
-def get_convert_datetimes(format: str):
-    """If a format only shows years or months, wrap datetimes in a conversion in the builder"""
-    if not isinstance(format, str):
+    year: Group dates and datetimes by the first day of the year.
+    month: Group dates and datestimes by the first day of the month.
+    day: Group by the day (this is only relevant to datetimes)
+
+    This will wrap any expression with an appropriate date trunctation
+    """
+    # Note: If date_aggregation is populated on ingr_dict
+    # we can remove this hackito.
+    if "date_aggregation" in ingr_dict or "format" not in ingr_dict:
         return
-    if format == "%Y":
-        return "dt_year_conv"
-    # A format for months but not days
+
+    # Derive date_aggregation from the format property. This is not a property
+    # that recipe cares about.
+    clean_format = ingr_dict["format"]
+    # The format string may be wrapped with d3 time formatting brackets <>
+    if clean_format.startswith("<") and clean_format.endswith(">"):
+        clean_format = clean_format[1:-1]
+
+    if clean_format == "%Y":
+        ingr_dict["date_aggregation"] = "year"
     elif (
-        "%B" in format and "%Y" in format and "%-d" not in format and "%d" not in format
+        "%B" in clean_format
+        and "%Y" in clean_format
+        and "%-d" not in clean_format
+        and "%d" not in clean_format
     ):
-        return "dt_month_conv"
-    elif "%H" not in format:
-        return "dt_day_conv"
+        ingr_dict["date_aggregation"] = "month"
+    elif "%H" not in clean_format:
+        ingr_dict["date_aggregation"] = "day"
 
 
 def convert_quickselects(
@@ -179,11 +188,22 @@ def create_ingredient_from_parsed(
     ):
         clean_format = clean_format[1:-1]
 
+    # TODO: this can be removed when "date_aggregation" is set on ingr_dict directly.
+    set_date_aggregation_from_format(ingr_dict=ingr_dict)
+
     # For some formats, we will automatically convert dates to year or month in the builder
+    date_aggregation = ingr_dict.get("date_aggregation")
+    date_aggr_lookup = {"year": "year_conv", "month": "month_conv"}
+    dt_aggr_lookup = {
+        "year": "dt_year_conv",
+        "month": "dt_month_conv",
+        "day": "dt_day_conv",
+    }
+
     builder_kwargs = {
         "debug": debug,
-        "convert_dates_with": get_convert_dates(clean_format),
-        "convert_datetimes_with": get_convert_datetimes(clean_format),
+        "convert_dates_with": date_aggr_lookup.get(date_aggregation),
+        "convert_datetimes_with": dt_aggr_lookup.get(date_aggregation),
     }
 
     if builder.drivername.startswith("mssql") or builder.drivername.startswith(
