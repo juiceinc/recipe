@@ -1074,6 +1074,38 @@ class TestParsedSQLGeneration(ConfigTestBase):
             """,
         )
 
+    def test_included_filter(self):
+        """Test ingredient definitions that include a filter expression"""
+        shelf = self.shelf_from_yaml(
+            """
+username:
+    kind: Dimension
+    field: username
+    filter: username = "foo"
+""",
+            self.scores_with_nulls_table,
+        )
+        recipe = self.recipe(shelf=shelf).dimensions("username")
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT scores_with_nulls.username AS username
+FROM scores_with_nulls
+WHERE scores_with_nulls.username = 'foo'
+GROUP BY username""",
+        )
+
+        # Filters that aren't datatype=bool raise errors.
+        with self.assertRaises(BadIngredient):
+            shelf = self.shelf_from_yaml(
+                """
+    username:
+        kind: Dimension
+        field: username
+        filter: username + "moo"
+    """,
+                self.scores_with_nulls_table,
+            )
+
     def test_complex_field(self):
         """Test parsed field definitions that use math, field references and more"""
         shelf = self.shelf_from_yaml(
@@ -1620,7 +1652,8 @@ test:
         assert len(unique_sql) == 3
 
     def test_convert_date(self):
-        """We can convert dates using formats"""
+        """We can convert dates using formats.
+        But it is better to use the date_aggregation property"""
 
         shelf = self.shelf_from_yaml(
             """
@@ -1663,6 +1696,74 @@ test5:
                     test3,
                     test4,
                     test5""",
+        )
+
+    def test_convert_date_with_date_aggregation(self):
+        """We can convert dates using date_aggregation"""
+
+        shelf = self.shelf_from_yaml(
+            """
+test:
+    kind: Dimension
+    field: dt
+    date_aggregation: year
+test2:
+    kind: Dimension
+    field: dt
+    date_aggregation: year
+test3:
+    kind: Dimension
+    field: dt
+    date_aggregation: month
+test4:
+    kind: Dimension
+    field: dt
+    date_aggregation: month
+test5:
+    kind: Dimension
+    field: dt
+    format: ".2f"
+""",
+            self.datetester_table,
+        )
+        recipe = self.recipe(shelf=shelf).dimensions(
+            "test", "test2", "test3", "test4", "test5"
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT date_trunc('year', datetester.dt) AS test,
+                date_trunc('year', datetester.dt) AS test2,
+                date_trunc('month', datetester.dt) AS test3,
+                date_trunc('month', datetester.dt) AS test4,
+                datetester.dt AS test5
+            FROM datetester
+            GROUP BY test,
+                    test2,
+                    test3,
+                    test4,
+                    test5""",
+        )
+
+    def test_invalid_date_aggregation(self):
+        """Invalid date formats are ignored in a shelf construction
+        and would fail ingredient validation."""
+
+        shelf = self.shelf_from_yaml(
+            """
+test:
+    kind: Dimension
+    field: dt
+    date_aggregation: years
+""",
+            self.datetester_table,
+        )
+        recipe = self.recipe(shelf=shelf).dimensions("test")
+        # No date aggregation is applied.
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT datetester.dt AS test
+FROM datetester
+GROUP BY test""",
         )
 
     def test_id_fields(self):

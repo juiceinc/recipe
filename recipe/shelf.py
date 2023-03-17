@@ -262,15 +262,11 @@ class Shelf(object):
 
         for k, v in validated_shelf.items():
             if ingredient_constructor == ingredient_from_validated_dict:
-                version = str(v.get("_version", "1"))
-                if version == "1":
-                    d[k] = ingredient_constructor(v, selectable)
-                else:
-                    if builder is None:
-                        builder = SQLAlchemyBuilder.get_builder(
-                            selectable=selectable, cache=ingredient_cache
-                        )
-                    d[k] = ingredient_constructor(v, selectable, builder=builder)
+                if builder is None:
+                    builder = SQLAlchemyBuilder.get_builder(
+                        selectable=selectable, cache=ingredient_cache
+                    )
+                d[k] = ingredient_constructor(v, selectable, builder=builder)
             else:
                 d[k] = ingredient_constructor(v, selectable)
 

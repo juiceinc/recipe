@@ -111,18 +111,12 @@ def _lowercase_kind(value):
 
 
 def _save_raw_config(value):
-    """Save the original config excluding _config and _meta """
+    """Save the original config excluding _config and _meta"""
     config = deepcopy(value)
     config.pop("_config", None)
     config.pop("_neta", None)
     value["_config"] = config
     return value
-
-
-def add_version(v):
-    # Add version to a parsed ingredient
-    v["_version"] = "2"
-    return v
 
 
 # A field that may OR MAY NOT contain an aggregation.
@@ -185,7 +179,6 @@ ingredient_schema = S.Dict(
         default_choice="metric",
     ),
     coerce=_chain(_lowercase_kind, _save_raw_config),
-    coerce_post=add_version,
     registry={},
 )
 
@@ -193,11 +186,13 @@ ingredient_schema = S.Dict(
 strict_metric_schema = S.Dict(
     allow_unknown=False,
     schema={
-        "_version": S.String(default="2"),
+        # _version is deprecated.
+        "_version": S.String(required=False),
         "_shelf_meta": S.Dict(required=False),
         "icon": S.String(required=False),
         "_meta": S.Dict(required=False),
         "_config": S.Dict(required=False),
+        "filter": S.String(required=False),
         "singular": S.String(required=False),
         "plural": S.String(required=False),
         "field": field_schema,
@@ -209,11 +204,14 @@ strict_metric_schema = S.Dict(
 strict_dimension_schema = S.Dict(
     allow_unknown=False,
     schema={
-        "_version": S.String(default="2"),
+        # _version is deprecated.
+        "_version": S.String(required=False),
         "_shelf_meta": S.Dict(required=False),
         "icon": S.String(required=False),
         "_meta": S.Dict(required=False),
         "_config": S.Dict(required=False),
+        "filter": S.String(required=False),
+        "date_aggregation": S.String(required=False, allowed=["year", "month", "day"]),
         "singular": S.String(required=False),
         "plural": S.String(required=False),
         "field": field_schema,
@@ -235,7 +233,8 @@ strict_dimension_schema = S.Dict(
 strict_filter_schema = S.Dict(
     allow_unknown=False,
     schema={
-        "_version": S.String(default="2"),
+        # This _version is deprecated.
+        "_version": S.String(required=False),
         "_shelf_meta": S.Dict(required=False),
         "condition": field_schema,
     },
@@ -244,7 +243,8 @@ strict_filter_schema = S.Dict(
 strict_having_schema = S.Dict(
     allow_unknown=False,
     schema={
-        "_version": S.String(default="2"),
+        # _version is deprecated.
+        "_version": S.String(required=False),
         "_shelf_meta": S.Dict(required=False),
         "condition": field_schema,
     },
@@ -264,7 +264,6 @@ strict_ingredient_schema = S.Dict(
         default_choice="metric",
     ),
     coerce=_chain(_lowercase_kind, _save_raw_config),
-    coerce_post=add_version,
     registry={},
 )
 
