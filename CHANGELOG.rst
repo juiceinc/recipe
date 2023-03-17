@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.33.0 (2023-03-17)
+-----------------------------------------
+* Allow shelves to be built with more than one table reference.
+
 v0.32.1 (2023-01-26)
 -----------------------------------------
 * Allow automatic filters to be applied more than once to a recipe
