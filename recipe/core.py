@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
 import warnings
@@ -8,7 +9,7 @@ from uuid import uuid4
 
 import attr
 import tablib
-from sqlalchemy import alias, func
+from sqlalchemy import alias, func, select
 from sureberus import normalize_dict, normalize_schema
 
 from recipe.dynamic_extensions import run_hooks
@@ -75,10 +76,12 @@ class Recipe(object):
     ):
         self._id = str(uuid4())[:8]
         self._query = None
+        self._select = None
         self._all = None
         self._total_count = None
 
         self._select_from = None
+        self._allow_multiple_tables = False
         self.shelf(shelf)
 
         # Stores all ingredients used in the recipe
@@ -184,6 +187,7 @@ class Recipe(object):
         core_kwargs = subdict(spec, recipe_schema["schema"].keys())
         core_kwargs = normalize_schema(recipe_schema, core_kwargs)
         core_kwargs["filters"] = [
+            # FIXME: This doesn't exist
             parse_unvalidated_condition(filter, shelf.Meta.select_from)
             if isinstance(filter, dict)
             else filter
@@ -213,24 +217,17 @@ class Recipe(object):
         :param name:
         :return:
         """
-        try:
+        with contextlib.suppress(AttributeError):
             return self.__getattribute__(name)
-        except AttributeError:
-            pass
-
         for extension in self.recipe_extensions:
-            try:
+            with contextlib.suppress(AttributeError):
                 proxy_callable = getattr(extension, name)
                 break
-            except AttributeError:
-                pass
-
         try:
             proxy_callable
         except NameError:
             raise AttributeError(
-                "{} isn't available on this recipe, "
-                "you may need to add an extension".format(name)
+                f"{name} isn't available on this recipe, you may need to add an extension"
             )
 
         return proxy_callable
@@ -254,16 +251,20 @@ class Recipe(object):
         self._cache_region = value
 
     @recipe_arg()
-    def cache_prefix(self, value) -> Recipe:
+    def cache_prefix(self, value: str) -> Recipe:
         """Set a cache prefix for recipe-caching to use"""
         assert isinstance(value, str)
         self._cache_prefix = value
 
     @recipe_arg()
-    def use_cache(self, value) -> Recipe:
+    def use_cache(self, value: bool) -> Recipe:
         """If False, invalidate the cache before fetching data."""
         assert isinstance(value, bool)
         self._use_cache = value
+
+    @recipe_arg()
+    def allow_multiple_tables(self, value: bool) -> Recipe:
+        self._allow_multiple_tables = value
 
     @recipe_arg()
     def shelf(self, shelf=None) -> Recipe:
@@ -391,22 +392,56 @@ class Recipe(object):
 
     def _is_postgres(self):
         """Determine if the running engine is postgres"""
-        try:
+        with contextlib.suppress(Exception):
             driver = self._session.bind.url.drivername
             if "redshift" in driver or "postg" in driver or "pg" in driver:
                 return True
-        except:
-            pass
         return False
 
     def _is_redshift(self):
-        try:
+        with contextlib.suppress(Exception):
             driver = self._session.bind.url.drivername
             if "redshift" in driver:
                 return True
-        except:
-            pass
         return False
+
+    def select(self):
+        """
+        Generate a SQLALchemy core select.
+
+        This is a lighter way to generate queries. Extensions are
+        not currently supported.
+        """
+        if self._select is not None:
+            return self._select
+
+        if hasattr(self, "optimize_redshift"):
+            self.optimize_redshift(self._is_redshift())
+
+        if len(self._cauldron.ingredients()) == 0:
+            raise BadRecipe("No ingredients have been added to this recipe")
+
+        # Step 1: Gather up global filters and user filters and
+        # apply them as if they had been added to recipe().filters(...)
+        for extension in self.recipe_extensions:
+            extension.add_ingredients()
+
+        select_parts = self._cauldron.brew_select_parts(self._order_bys)
+        if self._select_from is not None:
+            sel = select(select_parts.columns[:1]).select_from(self._select_from)
+        else:
+            sel = select(select_parts.columns[:1])
+        if select_parts.group_bys:
+            sel = sel.group_by(*select_parts.group_bys)
+        if select_parts.order_bys:
+            sel = sel.order_by(*select_parts.order_bys)
+        if select_parts.filters:
+            sel = sel.where(*select_parts.filters)
+        if select_parts.havings:
+            sel = sel.having(*select_parts.havings)
+
+        self._select = sel
+        return self._select
 
     def query(self):
         """
@@ -460,13 +495,13 @@ class Recipe(object):
                 recipe_parts["query"] = recipe_parts["query"].having(having)
 
         if (
-            self._select_from is None
+            self._allow_multiple_tables is False
+            and self._select_from is None
             and len(recipe_parts["query"].selectable.froms) != 1
         ):
             raise BadRecipe(
-                "Recipes must use ingredients that all come from "
-                "the same table. \nDetails on this recipe:\n{"
-                "}".format(str(self._cauldron))
+                f"Recipes must use ingredients that all come from the same table. \n"
+                f"Details on this recipe:\n{str(self._cauldron)}"
             )
 
         for extension in self.recipe_extensions:
@@ -495,8 +530,7 @@ class Recipe(object):
         """A convenience method to determine the table the query is
         selecting from
         """
-        descriptions = self.query().column_descriptions
-        if descriptions:
+        if descriptions := self.query().column_descriptions:
             return descriptions[0]["entity"]
         else:
             return None
@@ -514,9 +548,7 @@ class Recipe(object):
 
     def as_table(self, name=None):
         """Return an alias to a table"""
-        if name is None:
-            name = self._id
-        return alias(self.subquery(), name=name)
+        return alias(self.subquery(), name=name or self._id)
 
     def all(self):
         """Return a (potentially cached) list of result objects."""
@@ -525,11 +557,8 @@ class Recipe(object):
 
         if self._all is None:
             fetchtime = time.time()
-            if not self._use_cache:
-                # Invalidate this query in the cache
-                # to ensure it gets fresh data from the database
-                if hasattr(self._query, "invalidate"):
-                    self._query.invalidate()
+            if not self._use_cache and hasattr(self._query, "invalidate"):
+                self._query.invalidate()
 
             self._all = self._cauldron.enchant(
                 self._query.all(), cache_context=self.cache_context
@@ -549,10 +578,7 @@ class Recipe(object):
     def one(self):
         """Return the first element on the result"""
         all = self.all()
-        if len(all) > 0:
-            return all[0]
-        else:
-            return []
+        return all[0] if len(all) > 0 else []
 
     def first(self):
         """Return the first element on the result"""
