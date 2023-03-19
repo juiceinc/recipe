@@ -55,8 +55,8 @@ class SelectParts:
     raw_order_by_keys: list = field(default_factory=list)
     order_bys: list = field(default_factory=list)
     all_filters: set = field(default_factory=set)
-    query: Query
-    select: Select
+    query: Query = None
+    select: Select = None
 
     def add_ingredient(self, ingredient):
         """Gather the SQLAlchemy fragments from this ingredient into a consolidated list."""

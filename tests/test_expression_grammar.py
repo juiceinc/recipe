@@ -68,6 +68,18 @@ class BuildGrammarTestCase(RecipeTestCase):
         self.assertEqual(str_dedent(grammar), str_dedent(grammar_text))
 
     def test_make_columns_for_table(self):
+        # Selectable are
+        # self.selectables = [
+        #     self.basic_table,
+        #     self.datatypes_table,
+        #     self.recipe_from_config(
+        #         {"dimensions": ["first", "last"], "metrics": ["age"]}
+        #     ),
+        #     self.recipe_from_config({"dimensions": ["firstlast"], "metrics": ["age"]}),
+        #     BasicData,
+        #     DateTesterData,
+        # ]
+
         expected_column_keys = [
             ["date", "datetime", "num", "str", "str"],
             ["bool", "date", "datetime", "num", "str", "str", "str"],
@@ -80,6 +92,14 @@ class BuildGrammarTestCase(RecipeTestCase):
         for selectable, expected_column_keys in zip(
             self.selectables, expected_column_keys
         ):
+            print("Selectable is")
+            print(selectable)
+            from recipe import Recipe
+
+            if isinstance(selectable, Recipe):
+                print(selectable.to_sql())
+                self.assertEqual(1, 2)
+                continue
             cc = make_columns_for_selectable(selectable)
             ctypes = sorted([col.datatype for col in cc.columns])
             self.assertEqual(ctypes, expected_column_keys)
@@ -203,9 +223,23 @@ class BuildGrammarTestCase(RecipeTestCase):
             num.1: num_0 | NUMBER | extra_num_rule | "(" + num + ")"
             """,
         ]
+
+        expected_gathered_columns = [
+            """
+            unusable_col: "DUMMYVALUNUSABLECOL"
+            date.1: date_0 | extra_date_rule | "(" + date + ")"
+            datetime.2: datetime_0 | extra_datetime_rule | "(" + datetime + ")"
+            datetime_end.1: datetime_0 | datetime_end_conv | datetime_aggr | "(" + datetime_end + ")"
+            boolean.1: TRUE | FALSE | extra_bool_rule | "(" + boolean + ")"
+            string.1: str_0 | str_1 | ESCAPED_STRING | extra_string_rule | "(" + string + ")"
+            num.1: num_0 | NUMBER | extra_num_rule | "(" + num + ")"
+            """
+        ]
         for selectable, expected_gathered in zip(
             self.selectables, expected_gathered_columns
         ):
+            print("Selectable is")
+            print(selectable)
             columns = make_columns_for_selectable(selectable)
             gathered_columns = f"""
             {gather_columns("unusable_col", columns, "unusable")}

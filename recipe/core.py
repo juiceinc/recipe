@@ -478,23 +478,27 @@ class Recipe(object):
         parts = self._cauldron.brew_select_parts(self._order_bys)
 
         # Start building the query
+        print("partscol")
+        print(parts.columns)
+        cols = list(parts.columns)
+        # from sqlalchemy.sql.elements
         query = self._session.query(parts.columns)
         if self._select_from is not None:
             query = query.select_from(self._select_from)
         parts.query = (
             query.group_by(*parts.group_bys)
-            .order_by(*recipe_parts["order_bys"])
-            .filter(*recipe_parts["filters"])
+            .order_by(*parts["order_bys"])
+            .filter(*parts["filters"])
         )
 
-        if recipe_parts["havings"]:
-            for having in recipe_parts["havings"]:
-                recipe_parts["query"] = recipe_parts["query"].having(having)
+        if parts.havings:
+            for having in parts.havings:
+                parts.query = parts.query.having(having)
 
         if (
             self._allow_multiple_tables is False
             and self._select_from is None
-            and len(recipe_parts["query"].selectable.froms) != 1
+            and len(parts.query.selectable.froms) != 1
         ):
             raise BadRecipe(
                 f"Recipes must use ingredients that all come from the same table. \n"
@@ -504,23 +508,24 @@ class Recipe(object):
         for extension in self.recipe_extensions:
             recipe_parts = extension.modify_postquery_parts(recipe_parts)
 
-        if "recipe" not in recipe_parts:
-            recipe_parts["cache_region"] = self._cache_region
-            recipe_parts["cache_prefix"] = self._cache_prefix
-        recipe_parts = run_hooks(recipe_parts, "modify_query", self.dynamic_extensions)
+        # FIXME: This is tightly bound with how recipe_parts is structured.
+        # if "recipe" not in recipe_parts:
+        #     recipe_parts["cache_region"] = self._cache_region
+        #     recipe_parts["cache_prefix"] = self._cache_prefix
+        # recipe_parts = run_hooks(recipe_parts, "modify_query", self.dynamic_extensions)
 
         # Apply limit on the outermost query
         # This happens after building the comparison recipe
         if self._limit and self._limit > 0:
-            recipe_parts["query"] = recipe_parts["query"].limit(self._limit)
+            parts.query = parts.query.limit(self._limit)
 
         if self._offset and self._offset > 0:
-            recipe_parts["query"] = recipe_parts["query"].offset(self._offset)
+            parts.query = parts.query.offset(self._offset)
 
         # Patch the query if there's a comparison query
         # cache results
 
-        self._query = recipe_parts["query"]
+        self._query = parts.query
         return self._query
 
     def _table(self):
