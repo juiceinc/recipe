@@ -17,7 +17,7 @@ from tests.test_base import RecipeTestCase
 
 
 class ConfigTestBase(RecipeTestCase):
-    """A base class for testing shelves built from v1 or v2 config."""
+    """A base class for testing shelves built from config."""
 
     # The directory to look for yaml config files
     yaml_location = "shelf_config"
@@ -1540,6 +1540,109 @@ count_username:
         )
         self.assertRecipeCSV(recipe2, "count_star,count_username\n3,3\n")
 
+
+class TestShelfConstants(ConfigTestBase):
+    def test_simple_constant(self):
+        cache = Cache()
+        shelf = self.shelf_from_yaml(
+            """
+            username: {kind: Dimension, field: username+constants.twostr}
+            count_star: {kind: Metric, field: count(*) * constants.sumscore}
+            count_star_times_two: {kind: Metric, field: constants.two*count(*)}
+            convertdate: {kind: Dimension, field: month(test_date)}
+            """,
+            self.scores_with_nulls_table,
+            ingredient_cache=cache,
+            constants={
+                "two": 2,
+                "twofloat": 2.0,
+                "twostr": "two",
+                "sumscore": "sum(score)",
+            },
+        )
+        recipe = (
+            self.recipe(shelf=shelf)
+            .metrics("count_star", "count_star_times_two")
+            .dimensions("username")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT scores_with_nulls.username || CAST('two' AS VARCHAR) AS username,
+       count(*) * constants.sumscore AS count_star,
+       CAST(2 AS INTEGER) * count(*) AS count_star_times_two
+FROM scores_with_nulls,
+
+  (SELECT sum(scores_with_nulls.score) AS sumscore
+   FROM scores_with_nulls) AS constants
+GROUP BY username""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """username,count_star,count_star_times_two,username_id
+annikatwo,520.0,4,annikatwo
+chiptwo,780.0,6,chiptwo
+christwo,260.0,2,christwo""",
+        )
+
+    def test_census_constants(self):
+        cache = Cache()
+        shelf = self.shelf_from_yaml(
+            """
+            state: {kind: Dimension, field: state}
+            pop2000: {kind: Metric, field: sum(pop2000)}
+            pop2000_of_total: {kind: Metric, field: sum(pop2000)/constants.ttlpop}
+            """,
+            self.census_table,
+            ingredient_cache=cache,
+            constants={"ttlpop": "sum(pop2000)"},
+        )
+        recipe = self.recipe(shelf=shelf).metrics("pop2000").dimensions("state")
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY state""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """state,pop2000,state_id
+Tennessee,5685230,Tennessee
+Vermont,609480,Vermont""",
+        )
+        recipe = (
+            self.recipe(shelf=shelf)
+            .metrics("pop2000", "pop2000_of_total")
+            .dimensions("state")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000,
+       CASE
+           WHEN (constants.ttlpop = 0) THEN NULL
+           ELSE CAST(sum(census.pop2000) AS FLOAT) / CAST(constants.ttlpop AS FLOAT)
+       END AS pop2000_of_total
+FROM census,
+
+  (SELECT sum(census.pop2000) AS ttlpop
+   FROM census) AS constants
+GROUP BY state""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """state,pop2000,pop2000_of_total,state_id
+Tennessee,5685230,0.9031758413016644,Tennessee
+Vermont,609480,0.09682415869833559,Vermont""",
+        )
+
+
+class Cache(dict):
+    def set(self, k, v):
+        self[k] = v
+
+
+class TestCache(ConfigTestBase):
     def test_cache(self):
         cache = Cache()
         self.shelf_from_yaml(
@@ -1660,11 +1763,6 @@ count_username:
         )
         # the cache should be reinitialized, and should be identical to the old cache
         self.assertEqual(cache, og_cache)
-
-
-class Cache(dict):
-    def set(self, k, v):
-        self[k] = v
 
 
 class TestParsedIntellligentDates(ConfigTestBase):

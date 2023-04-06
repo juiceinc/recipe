@@ -12,7 +12,7 @@ from recipe.schemas.builders import SQLAlchemyBuilder
 from recipe.schemas.expression_grammar import (
     gather_columns,
     is_valid_column,
-    make_columns_for_selectable,
+    make_column_collection_for_selectable,
     make_columns_grammar,
 )
 from recipe.utils.formatting import expr_to_str
@@ -58,7 +58,7 @@ class BuildGrammarTestCase(RecipeTestCase):
 
     def assertSelectableGrammar(self, selectable, grammar_text: str, *, namespace=None):
         grammar = make_columns_grammar(
-            make_columns_for_selectable(selectable, namespace=namespace)
+            make_column_collection_for_selectable(selectable, namespace=namespace)
         )
 
         if str_dedent(grammar) != str_dedent(grammar_text):
@@ -80,14 +80,14 @@ class BuildGrammarTestCase(RecipeTestCase):
         for selectable, expected_column_keys in zip(
             self.selectables, expected_column_keys
         ):
-            cc = make_columns_for_selectable(selectable)
+            cc = make_column_collection_for_selectable(selectable)
             ctypes = sorted([col.datatype for col in cc.columns])
             self.assertEqual(ctypes, expected_column_keys)
 
         with self.assertRaises(Exception):
-            make_columns_for_selectable(None)
+            make_column_collection_for_selectable(None)
         with self.assertRaises(Exception):
-            make_columns_for_selectable("foo")
+            make_column_collection_for_selectable("foo")
 
     def test_make_columns_grammar(self):
         expected_grammars = [
@@ -206,7 +206,7 @@ class BuildGrammarTestCase(RecipeTestCase):
         for selectable, expected_gathered in zip(
             self.selectables, expected_gathered_columns
         ):
-            columns = make_columns_for_selectable(selectable)
+            columns = make_column_collection_for_selectable(selectable)
             gathered_columns = f"""
             {gather_columns("unusable_col", columns, "unusable")}
             {gather_columns("date.1", columns, "date", additional_rules=["extra_date_rule"])}
@@ -327,16 +327,17 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
 
     def test_disallow_literals(self):
         examples = """
-        "22"          -> error
-        2.0           -> error
-        2.0 + 1.0     -> error
-        "220" + "foo" -> error
-        5             -> error
+        "22"          -> str
+        2.0           -> num
+        2.0 + 1.0     -> num
+        "220" + "foo" -> str
+        5             -> num
         """
 
-        for field, _ in self.examples(examples):
-            with self.assertRaises(GrammarError):
-                self.builder.parse(field)
+        for field, expected_data_type in self.examples(examples):
+            _, data_type = self.builder.parse(field, debug=True)
+            self.assertIs(type(data_type), str)
+            self.assertEqual(data_type, expected_data_type)
 
     def test_selectable_recipe(self):
         """Test a selectable that is a recipe"""

@@ -2,9 +2,28 @@ from datetime import date, datetime
 
 import structlog
 from lark import GrammarError, Lark
-from sqlalchemy import func, text
+from sqlalchemy import (
+    func,
+    text,
+    cast,
+    String,
+    Date,
+    DateTime,
+    Integer,
+    Float,
+    Boolean,
+    alias,
+)
+from typing import List, Optional
 
-from .expression_grammar import make_columns_for_selectable, make_grammar
+from .expression_grammar import (
+    make_grammar,
+    make_column_collection_for_selectable,
+    make_column_collection_for_constant_literals,
+    make_column_collection_for_constant_expressions,
+    has_constant_expressions,
+    has_constant_literals,
+)
 from .transformers import TransformToSQLAlchemyExpression
 from .utils import mkkey
 from .validators import SQLALchemyValidator
@@ -15,16 +34,35 @@ SLOG = structlog.get_logger(__name__)
 LARK_CACHE = {}
 
 
-class SQLAlchemyBuilder(object):
+class SQLAlchemyBuilder:
     @classmethod
-    def get_builder(cls, selectable, *, extra_selectables=None, cache=None):
-        return cls(selectable, extra_selectables=extra_selectables, cache=cache)
+    def get_builder(
+        cls,
+        selectable,
+        *,
+        constants: Optional[dict] = None,
+        extra_selectables: Optional[List] = None,
+        cache=None,
+    ):
+        return cls(
+            selectable,
+            constants=constants,
+            extra_selectables=extra_selectables,
+            cache=cache,
+        )
 
     @classmethod
     def clear_builder_cache(cls):
         LARK_CACHE.clear()
 
-    def __init__(self, selectable, *, extra_selectables=None, cache=None):
+    def __init__(
+        self,
+        selectable,
+        *,
+        constants: Optional[dict] = None,
+        extra_selectables: Optional[List] = None,
+        cache=None,
+    ):
         """Parse a recipe field by building a custom grammar that
         uses the colums in a selectable.
 
@@ -44,13 +82,46 @@ class SQLAlchemyBuilder(object):
             self.drivername = "unknown"
 
         self.cache = cache
-        self.columns = make_columns_for_selectable(selectable)
+
+        constants = constants or {}
+        constant_expressions_cc = None
+
+        # If we have expressions, we'll build a select statement
+        # using the expressions, and make these into constants.
+        # Note, constants can only be aggregate expressions on the base selectable.
+        if has_constant_expressions(constants):
+            self.columns = make_column_collection_for_selectable(selectable)
+            self.finalize_grammar()
+
+            constant_expressions_cc = make_column_collection_for_constant_expressions(
+                self, constants, namespace="constants"
+            )
+
+        self.columns = make_column_collection_for_selectable(selectable)
+
+        if constant_expressions_cc:
+            self.columns.extend(constant_expressions_cc)
+
+        # Add literal constants
+        if has_constant_literals(constants):
+            self.columns.extend(
+                make_column_collection_for_constant_literals(
+                    constants=constants, namespace="constants"
+                )
+            )
+
         if extra_selectables:
             for selectable, namespace in extra_selectables:
                 self.columns.extend(
-                    make_columns_for_selectable(selectable, namespace=namespace)
+                    make_column_collection_for_selectable(
+                        selectable, namespace=namespace
+                    )
                 )
 
+        self.finalize_grammar()
+
+    def finalize_grammar(self):
+        """Once we have a set of columns, we can generate the parser and transformer"""
         self.grammar = make_grammar(self.columns)
         grammar_hash = mkkey("grammar", self.grammar)
         # Developer Note: cache key
@@ -193,11 +264,28 @@ class SQLAlchemyBuilder(object):
         self.transformer.convert_datetimes_with = convert_datetimes_with
         expr = self.transformer.transform(tree)
 
-        # Expressions that return literal values can't be labeled
-        # Possibly we could wrap them in text() but this may be unsafe
-        # instead we will disallow them.
-        if isinstance(expr, (str, float, int, date, datetime)):
-            raise GrammarError("Must return an expression, not a constant value")
+        # Wrap literal expressions in a cast so they can be labeled
+        if isinstance(expr, (str, float, int, date, datetime, bool)):
+            if isinstance(expr, str):
+                self.last_datatype = "str"
+                expr = cast(expr, String)
+            elif isinstance(expr, date):
+                self.last_datatype = "date"
+                expr = cast(expr, Date)
+            elif isinstance(expr, datetime):
+                self.last_datatype = "datetime"
+                expr = cast(expr, DateTime)
+            elif isinstance(expr, int):
+                self.last_datatype = "num"
+                expr = cast(expr, Integer)
+            elif isinstance(expr, float):
+                self.last_datatype = "num"
+                expr = cast(expr, Float)
+            elif isinstance(expr, bool):
+                self.last_datatype = "bool"
+                expr = cast(expr, Boolean)
+            else:
+                raise GrammarError("Unsure of the datatype of {expr}")
 
         if (
             enforce_aggregation
