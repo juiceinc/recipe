@@ -1565,6 +1565,7 @@ class TestShelfConstants(ConfigTestBase):
             .metrics("count_star", "count_star_times_two")
             .dimensions("username")
         )
+        # FIXME: why is this named foo here?!!
         self.assertRecipeSQL(
             recipe,
             """SELECT scores_with_nulls.username || CAST('two' AS VARCHAR) AS username,
