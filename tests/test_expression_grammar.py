@@ -327,16 +327,17 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
 
     def test_disallow_literals(self):
         examples = """
-        "22"          -> error
-        2.0           -> error
-        2.0 + 1.0     -> error
-        "220" + "foo" -> error
-        5             -> error
+        "22"          -> str
+        2.0           -> num
+        2.0 + 1.0     -> num
+        "220" + "foo" -> str
+        5             -> num
         """
 
-        for field, _ in self.examples(examples):
-            with self.assertRaises(GrammarError):
-                self.builder.parse(field)
+        for field, expected_data_type in self.examples(examples):
+            _, data_type = self.builder.parse(field, debug=True)
+            self.assertIs(type(data_type), str)
+            self.assertEqual(data_type, expected_data_type)
 
     def test_selectable_recipe(self):
         """Test a selectable that is a recipe"""
