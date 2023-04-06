@@ -1,10 +1,10 @@
-import attr
 import re
+from datetime import date, datetime
 from typing import List, Optional
-from datetime import datetime, date
 
+import attr
 import structlog
-from sqlalchemy import Boolean, Date, DateTime, Integer, String, Float, text, cast
+from sqlalchemy import Boolean, Date, DateTime, Float, Integer, String, alias, cast
 from sqlalchemy.ext.declarative.api import DeclarativeMeta
 from sqlalchemy.sql.base import ColumnCollection
 from sqlalchemy.sql.sqltypes import Numeric
@@ -88,10 +88,7 @@ class Col:
     @property
     def field_name(self) -> str:
         """What to call this column in expressions."""
-        if self.namespace:
-            return f"{self.namespace}\\.{self.name}"
-        else:
-            return self.name
+        return f"{self.namespace}\\.{self.name}" if self.namespace else self.name
 
     def as_rule(self):
         return f'    {self.rule_name}: "[" + /{self.field_name}/i + "]" | /{self.field_name}/i'
@@ -124,45 +121,6 @@ class ColCollection:
     def column_lookup(self) -> dict:
         """Generate a lookup from rule names to the sqlalchemy columns"""
         return {c.rule_name: c.sqla_col for c in self.columns}
-
-
-def make_columns_grammar(cc: ColumnCollection) -> str:
-    """Return a lark rule that looks like
-
-    // These are my raw columns
-    str_0: "[" + /username/i + "]" | /username/i
-    str_1: "[" + /department/i + "]" | /department/i
-    str_2: "[" + /testid/i + "]" | /testid/i
-    num_0: "[" + /score/i + "]" | /score/i
-    """
-    cc.assign_indexes()
-    return "\n".join(sorted([col.as_rule() for col in cc.columns]))
-
-
-def gather_columns(
-    datatype_rule_name: str,
-    cc: ColumnCollection,
-    datatype: str,
-    *,
-    additional_rules=None,
-) -> str:
-    """Build a list of all column rules matching a datatype along with potential additional rules."""
-    if additional_rules is None:
-        additional_rules = []
-
-    matching_cols = [c for c in cc.columns if c.datatype == datatype]
-    column_rules = [f"{datatype}_{n}" for n in range(len(matching_cols))]
-    if matching_cols + additional_rules:
-        raw_rule_name = datatype_rule_name.split(".")[0]
-
-        # Reduce a pair of parens around a type back to itself.
-        paren_rule = f'"(" + {raw_rule_name} + ")"'
-
-        return f"{datatype_rule_name}: " + " | ".join(
-            column_rules + additional_rules + [paren_rule]
-        )
-    else:
-        return f'{datatype_rule_name}: "DUMMYVALUNUSABLECOL"'
 
 
 def make_column_collection_for_selectable(
@@ -258,10 +216,47 @@ def make_column_collection_for_constant_expressions(
             expr, dtype = builder.parse(v)
             expression_columns.append(expr.label(k))
 
-    from sqlalchemy import alias
-
     sel = alias(select(expression_columns), "constants")
     return make_column_collection_for_selectable(sel, namespace=namespace)
+
+
+def make_columns_grammar(cc: ColumnCollection) -> str:
+    """Return a lark rule that looks like
+
+    // These are my raw columns
+    str_0: "[" + /username/i + "]" | /username/i
+    str_1: "[" + /department/i + "]" | /department/i
+    str_2: "[" + /testid/i + "]" | /testid/i
+    num_0: "[" + /score/i + "]" | /score/i
+    """
+    cc.assign_indexes()
+    return "\n".join(sorted([col.as_rule() for col in cc.columns]))
+
+
+def gather_columns(
+    datatype_rule_name: str,
+    cc: ColumnCollection,
+    datatype: str,
+    *,
+    additional_rules=None,
+) -> str:
+    """Build a list of all column rules matching a datatype along with potential additional rules."""
+    if additional_rules is None:
+        additional_rules = []
+
+    matching_cols = [c for c in cc.columns if c.datatype == datatype]
+    column_rules = [f"{datatype}_{n}" for n in range(len(matching_cols))]
+    if matching_cols + additional_rules:
+        raw_rule_name = datatype_rule_name.split(".")[0]
+
+        # Reduce a pair of parens around a type back to itself.
+        paren_rule = f'"(" + {raw_rule_name} + ")"'
+
+        return f"{datatype_rule_name}: " + " | ".join(
+            column_rules + additional_rules + [paren_rule]
+        )
+    else:
+        return f'{datatype_rule_name}: "DUMMYVALUNUSABLECOL"'
 
 
 def make_grammar(columns):

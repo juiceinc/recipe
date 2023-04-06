@@ -1546,12 +1546,6 @@ class TestShelfConstants(ConfigTestBase):
         cache = Cache()
         shelf = self.shelf_from_yaml(
             """
-            _constants: {
-                two: 2,
-                twofloat: 2.0,
-                twostr: "two",
-                sumscore: sum(score)
-            }
             username: {kind: Dimension, field: username+constants.twostr}
             count_star: {kind: Metric, field: count(*) * constants.sumscore}
             count_star_times_two: {kind: Metric, field: constants.two*count(*)}
@@ -1559,6 +1553,12 @@ class TestShelfConstants(ConfigTestBase):
             """,
             self.scores_with_nulls_table,
             ingredient_cache=cache,
+            constants={
+                "two": 2,
+                "twofloat": 2.0,
+                "twostr": "two",
+                "sumscore": "sum(score)",
+            },
         )
         recipe = (
             self.recipe(shelf=shelf)
@@ -1588,15 +1588,13 @@ christwo,260.0,2,christwo""",
         cache = Cache()
         shelf = self.shelf_from_yaml(
             """
-            _constants: {
-                ttlpop: sum(pop2000)
-            }
             state: {kind: Dimension, field: state}
             pop2000: {kind: Metric, field: sum(pop2000)}
             pop2000_of_total: {kind: Metric, field: sum(pop2000)/constants.ttlpop}
             """,
             self.census_table,
             ingredient_cache=cache,
+            constants={"ttlpop": "sum(pop2000)"},
         )
         recipe = self.recipe(shelf=shelf).metrics("pop2000").dimensions("state")
         self.assertRecipeSQL(

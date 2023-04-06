@@ -20,6 +20,7 @@ from recipe.schemas.builders import SQLAlchemyBuilder
 _POP_DEFAULT = object()
 
 
+# FIXME: we can do all this in create_ingredient_from_parsed; we don't need this layer
 def ingredient_from_validated_dict(ingr_dict, selectable, builder=None):
     """Create an ingredient object from a validated ingredient schema"""
     try:
@@ -285,29 +286,31 @@ class Shelf(object):
         cls,
         obj,
         selectable,
-        ingredient_constructor=ingredient_from_validated_dict,
+        ingredient_constructor=None,
         metadata=None,
         *,
         ingredient_cache=None,
         extra_selectables=None,
+        constants=None,
     ):
         """Create a shelf using a dict shelf definition.
 
-        :param obj: A Python dictionary describing a Shelf.
+        :param obj: A Python dictionary describing the configuration of a Shelf.
         :param selectable: A SQLAlchemy Table, a Recipe, a table name, or a
             SQLAlchemy join to select from.
+        :param ingredient_constructor: DEPRECATED, a callable used to create
+            ingredients
         :param metadata: If `selectable` is passed as a table name, then in
             order to introspect its schema, we must have the SQLAlchemy
             MetaData object to associate it with.
+        :param ingredient_cache: An optional cache for improving parse times
+        :param extra_selectables: A dict with keys of namespace and selectable
+            these are extra selectables that can be used in expressions
         :return: A shelf that contains the ingredients defined in obj.
         """
         from recipe import Recipe
 
-        from pprint import pprint
-
-        pprint(obj)
-        constants = obj.pop("_constants", {})
-        pprint(obj)
+        constants = constants or {}
 
         if isinstance(selectable, Recipe):
             selectable = selectable.subquery()
@@ -329,18 +332,14 @@ class Shelf(object):
         builder = None
 
         for k, v in validated_shelf.items():
-            if ingredient_constructor == ingredient_from_validated_dict:
-                if builder is None:
-                    builder = SQLAlchemyBuilder.get_builder(
-                        selectable=selectable,
-                        cache=ingredient_cache,
-                        extra_selectables=extra_selectables,
-                        constants=constants,
-                    )
-                print(builder.grammar)
-                d[k] = ingredient_constructor(v, selectable, builder=builder)
-            else:
-                d[k] = ingredient_constructor(v, selectable)
+            if builder is None:
+                builder = SQLAlchemyBuilder.get_builder(
+                    selectable=selectable,
+                    cache=ingredient_cache,
+                    extra_selectables=extra_selectables,
+                    constants=constants,
+                )
+            d[k] = ingredient_from_validated_dict(v, selectable, builder=builder)
 
             if isinstance(d[k], InvalidIngredient):
                 if not d[k].error.get("extra"):
