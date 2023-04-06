@@ -19,9 +19,10 @@ from typing import List, Optional
 from .expression_grammar import (
     make_grammar,
     make_column_collection_for_selectable,
-    make_column_collection_for_constants,
+    make_column_collection_for_constant_literals,
     make_column_collection_for_constant_expressions,
     has_constant_expressions,
+    has_constant_literals,
 )
 from .transformers import TransformToSQLAlchemyExpression
 from .utils import mkkey
@@ -87,6 +88,7 @@ class SQLAlchemyBuilder:
 
         # If we have expressions, we'll build a select statement
         # using the expressions, and make these into constants.
+        # Note, constants can only be aggregate expressions on the base selectable.
         if has_constant_expressions(constants):
             self.columns = make_column_collection_for_selectable(selectable)
             self.finalize_grammar()
@@ -97,15 +99,16 @@ class SQLAlchemyBuilder:
 
         self.columns = make_column_collection_for_selectable(selectable)
 
+        if constant_expressions_cc:
+            self.columns.extend(constant_expressions_cc)
+
         # Add literal constants
-        if constants:
+        if has_constant_literals(constants):
             self.columns.extend(
-                make_column_collection_for_constants(
+                make_column_collection_for_constant_literals(
                     constants=constants, namespace="constants"
                 )
             )
-        if constant_expressions_cc:
-            self.columns.extend(constant_expressions_cc)
 
         if extra_selectables:
             for selectable, namespace in extra_selectables:

@@ -164,7 +164,11 @@ def has_constant_expressions(constants: dict) -> bool:
     return any(is_constant_expression(v) for v in constants.values())
 
 
-def make_column_collection_for_constants(
+def has_constant_literals(constants: dict) -> bool:
+    return any(not is_constant_expression(v) for v in constants.values())
+
+
+def make_column_collection_for_constant_literals(
     constants: dict, *, namespace: Optional[str] = None
 ) -> ColCollection:
     """
