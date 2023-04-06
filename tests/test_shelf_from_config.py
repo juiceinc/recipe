@@ -1549,11 +1549,12 @@ class TestShelfConstants(ConfigTestBase):
             _constants: {
                 two: 2,
                 twofloat: 2.0,
-                twostr: "two"
+                twostr: "two",
+                sumscore: sum(score)
             }
             username: {kind: Dimension, field: username+constants.twostr}
-            count_star: {kind: Metric, field: count(*)}
-            count_star_times_two: {kind: Metric, field: count(*)*constants.two}
+            count_star: {kind: Metric, field: count(*) * constants.sumscore}
+            count_star_times_two: {kind: Metric, field: constants.two*count(*)}
             convertdate: {kind: Dimension, field: month(test_date)}
             """,
             self.scores_with_nulls_table,
@@ -1567,17 +1568,74 @@ class TestShelfConstants(ConfigTestBase):
         self.assertRecipeSQL(
             recipe,
             """SELECT scores_with_nulls.username || CAST('two' AS VARCHAR) AS username,
-       count(*) AS count_star,
-       count(*) * CAST(2 AS INTEGER) AS count_star_times_two
-FROM scores_with_nulls
+       count(*) * constants.sumscore AS count_star,
+       CAST(2 AS INTEGER) * count(*) AS count_star_times_two
+FROM scores_with_nulls,
+
+  (SELECT sum(foo.score) AS sumscore
+   FROM scores_with_nulls AS foo) AS constants
 GROUP BY username""",
         )
         self.assertRecipeCSV(
             recipe,
             """username,count_star,count_star_times_two,username_id
-annikatwo,2,4,annikatwo
-chiptwo,3,6,chiptwo
-christwo,1,2,christwo""",
+annikatwo,520.0,4,annikatwo
+chiptwo,780.0,6,chiptwo
+christwo,260.0,2,christwo""",
+        )
+
+    def test_census_constants(self):
+        cache = Cache()
+        shelf = self.shelf_from_yaml(
+            """
+            _constants: {
+                ttlpop: sum(pop2000)
+            }
+            state: {kind: Dimension, field: state}
+            pop2000: {kind: Metric, field: sum(pop2000)}
+            pop2000_of_total: {kind: Metric, field: sum(pop2000)/constants.ttlpop}
+            """,
+            self.census_table,
+            ingredient_cache=cache,
+        )
+        recipe = self.recipe(shelf=shelf).metrics("pop2000").dimensions("state")
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000
+FROM census
+GROUP BY state""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """state,pop2000,state_id
+Tennessee,5685230,Tennessee
+Vermont,609480,Vermont""",
+        )
+        recipe = (
+            self.recipe(shelf=shelf)
+            .metrics("pop2000", "pop2000_of_total")
+            .dimensions("state")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT census.state AS state,
+       sum(census.pop2000) AS pop2000,
+       CASE
+           WHEN (constants.ttlpop = 0) THEN NULL
+           ELSE CAST(sum(census.pop2000) AS FLOAT) / CAST(constants.ttlpop AS FLOAT)
+       END AS pop2000_of_total
+FROM census,
+
+  (SELECT sum(foo.pop2000) AS ttlpop
+   FROM census AS foo) AS constants
+GROUP BY state""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """state,pop2000,pop2000_of_total,state_id
+Tennessee,5685230,0.9031758413016644,Tennessee
+Vermont,609480,0.09682415869833559,Vermont""",
         )
 
 

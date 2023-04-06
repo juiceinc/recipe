@@ -1,15 +1,27 @@
 from datetime import date, datetime
 
-import attr
 import structlog
 from lark import GrammarError, Lark
-from sqlalchemy import func, text
+from sqlalchemy import (
+    func,
+    text,
+    cast,
+    String,
+    Date,
+    DateTime,
+    Integer,
+    Float,
+    Boolean,
+    alias,
+)
 from typing import List, Optional
 
 from .expression_grammar import (
-    make_columns_for_selectable,
     make_grammar,
+    make_column_collection_for_selectable,
     make_column_collection_for_constants,
+    make_column_collection_for_constant_expressions,
+    has_constant_expressions,
 )
 from .transformers import TransformToSQLAlchemyExpression
 from .utils import mkkey
@@ -70,21 +82,44 @@ class SQLAlchemyBuilder:
             self.drivername = "unknown"
 
         self.cache = cache
-        self.columns = make_columns_for_selectable(selectable)
 
+        constants = constants or {}
+        constant_expressions_cc = None
+
+        # If we have expressions, we'll build a select statement
+        # using the expressions, and make these into constants.
+        if has_constant_expressions(constants):
+            self.columns = make_column_collection_for_selectable(selectable)
+            self.finalize_grammar()
+
+            constant_expressions_cc = make_column_collection_for_constant_expressions(
+                self, constants, namespace="constants"
+            )
+
+        self.columns = make_column_collection_for_selectable(selectable)
+
+        # Add literal constants
         if constants:
             self.columns.extend(
                 make_column_collection_for_constants(
                     constants=constants, namespace="constants"
                 )
             )
+        if constant_expressions_cc:
+            self.columns.extend(constant_expressions_cc)
 
         if extra_selectables:
             for selectable, namespace in extra_selectables:
                 self.columns.extend(
-                    make_columns_for_selectable(selectable, namespace=namespace)
+                    make_column_collection_for_selectable(
+                        selectable, namespace=namespace
+                    )
                 )
 
+        self.finalize_grammar()
+
+    def finalize_grammar(self):
+        """Once we have a set of columns, we can generate the parser and transformer"""
         self.grammar = make_grammar(self.columns)
         grammar_hash = mkkey("grammar", self.grammar)
         # Developer Note: cache key

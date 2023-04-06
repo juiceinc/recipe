@@ -165,9 +165,9 @@ def gather_columns(
         return f'{datatype_rule_name}: "DUMMYVALUNUSABLECOL"'
 
 
-def make_columns_for_selectable(
+def make_column_collection_for_selectable(
     selectable, *, namespace: Optional[str] = None
-) -> ColumnCollection:
+) -> ColCollection:
     """Return a dictionary of columns. The keys
     are unique lark rule names prefixed by the column type
     like num_0, num_1, string_0, etc.
@@ -198,27 +198,70 @@ def make_columns_for_selectable(
     return cc
 
 
+def is_constant_expression(v) -> bool:
+    return isinstance(v, str) and "(" in v and ")" in v
+
+
+def has_constant_expressions(constants: dict) -> bool:
+    return any(is_constant_expression(v) for v in constants.values())
+
+
 def make_column_collection_for_constants(
     constants: dict, *, namespace: Optional[str] = None
-) -> ColumnCollection:
+) -> ColCollection:
     """
     Constants are a dict of names to scalar values to use in expressions
     We will treat them as if they are another column collection
 
     Args:
+        selectable: A selectable for column expressions
         constants (dict): A dict with string keys and scalar values
         namespace (str, optional): A namespace to add. Defaults to None.
 
     Returns:
         ColumnCollection: A column collection of constant values
     """
-    columns = []
-    for k, v in constants.items():
-        columns.append(Col.make_from_constant(k, v))
-    cc = ColCollection(columns)
+    # Create columns
+    constant_columns = [
+        Col.make_from_constant(k, v)
+        for k, v in constants.items()
+        if not is_constant_expression(v)
+    ]
+    cc = ColCollection(constant_columns)
     if namespace:
         cc.set_namespace(namespace=namespace)
     return cc
+
+
+def make_column_collection_for_constant_expressions(
+    builder, constants: dict, *, namespace: Optional[str] = None
+) -> ColCollection:
+    """
+    Constants are a dict of names to scalar values to use in expressions
+    We will treat them as if they are another column collection
+
+    Args:
+        builder: A selectable for column expressions
+        constants (dict): A dict with string keys and scalar values
+        namespace (str, optional): A namespace to add. Defaults to None.
+
+    Returns:
+        ColumnCollection: A column collection of constant values
+    """
+    # Create columns
+    from sqlalchemy import select
+
+    expression_columns = []
+    sel = select()
+    for k, v in constants.items():
+        if is_constant_expression(v):
+            expr, dtype = builder.parse(v)
+            expression_columns.append(expr.label(k))
+
+    from sqlalchemy import alias
+
+    sel = alias(select(expression_columns), "constants")
+    return make_column_collection_for_selectable(sel, namespace=namespace)
 
 
 def make_grammar(columns):
