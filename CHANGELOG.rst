@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.34.0 (2023-04-06)
+-----------------------------------------
+* Support a dictionary of literal or aggregate constants when defining shelves from config.
+
 v0.33.0 (2023-03-17)
 -----------------------------------------
 * Allow shelves to be built with more than one table reference.
