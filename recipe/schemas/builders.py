@@ -43,7 +43,6 @@ class SQLAlchemyBuilder:
         extra_selectables: Optional[List] = None,
         cache=None,
     ):
-        print("Getting builder")
         return cls(
             selectable,
             constants=constants,
