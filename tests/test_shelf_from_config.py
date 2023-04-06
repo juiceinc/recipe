@@ -1565,7 +1565,6 @@ class TestShelfConstants(ConfigTestBase):
             .metrics("count_star", "count_star_times_two")
             .dimensions("username")
         )
-        # FIXME: why is this named foo here?!!
         self.assertRecipeSQL(
             recipe,
             """SELECT scores_with_nulls.username || CAST('two' AS VARCHAR) AS username,
@@ -1573,8 +1572,8 @@ class TestShelfConstants(ConfigTestBase):
        CAST(2 AS INTEGER) * count(*) AS count_star_times_two
 FROM scores_with_nulls,
 
-  (SELECT sum(foo.score) AS sumscore
-   FROM scores_with_nulls AS foo) AS constants
+  (SELECT sum(scores_with_nulls.score) AS sumscore
+   FROM scores_with_nulls) AS constants
 GROUP BY username""",
         )
         self.assertRecipeCSV(
@@ -1628,8 +1627,8 @@ Vermont,609480,Vermont""",
        END AS pop2000_of_total
 FROM census,
 
-  (SELECT sum(foo.pop2000) AS ttlpop
-   FROM census AS foo) AS constants
+  (SELECT sum(census.pop2000) AS ttlpop
+   FROM census) AS constants
 GROUP BY state""",
         )
         self.assertRecipeCSV(
