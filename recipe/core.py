@@ -186,13 +186,7 @@ class Recipe(object):
 
         core_kwargs = subdict(spec, recipe_schema["schema"].keys())
         core_kwargs = normalize_schema(recipe_schema, core_kwargs)
-        core_kwargs["filters"] = [
-            # FIXME: This doesn't exist
-            parse_unvalidated_condition(filter, shelf.Meta.select_from)
-            if isinstance(filter, dict)
-            else filter
-            for filter in spec.get("filters", [])
-        ]
+        core_kwargs["filters"] = spec.get("filters", [])
         core_kwargs.update(kwargs)
         recipe = cls(shelf=shelf, **core_kwargs)
 
