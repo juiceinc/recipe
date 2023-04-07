@@ -1306,9 +1306,36 @@ math:
 parentheses:
     kind: Metric
     field: "@count_star / (@count_star + (12.0 / 2.0))"
+maxdate:
+    kind: Metric
+    field: max(test_date)
+mindate:
+    kind: Metric
+    field: min(test_date)
+datediff:
+    kind: Metric
+    field: datediff(max(test_date), min(test_date))
 """,
             self.scores_with_nulls_table,
         )
+
+        # Test datediff
+        recipe = self.recipe(shelf=shelf).metrics("maxdate", "mindate", "datediff")
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT CAST(julianday(max(scores_with_nulls.test_date)) AS INTEGER) - CAST(julianday(min(scores_with_nulls.test_date)) AS INTEGER) AS datediff,
+       max(scores_with_nulls.test_date) AS maxdate,
+       min(scores_with_nulls.test_date) AS mindate
+FROM scores_with_nulls""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            datediff,maxdate,mindate
+            31,2005-02-02,2005-01-02
+            """,
+        )
+
         recipe = self.recipe(shelf=shelf).metrics("count_star")
         self.assertRecipeSQL(
             recipe,

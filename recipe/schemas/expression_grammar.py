@@ -279,7 +279,7 @@ def make_grammar(columns):
     {gather_columns("datetime_end.1", columns, "datetime", additional_rules=["datetime_end_conv", "datetime_aggr"])}
     {gather_columns("boolean.1", columns, "bool", additional_rules=["TRUE", "FALSE", "bool_expr", "date_bool_expr", "datetime_bool_expr", "str_like_expr", "vector_expr", "between_expr", "date_between_expr", "datetime_between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
     {gather_columns("string.1", columns, "str", additional_rules=["ESCAPED_STRING", "string_add", "string_cast", "string_coalesce", "string_substr", "string_if_statement", "string_aggr"])}
-    {gather_columns("num.1", columns, "num", additional_rules=["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "num_coalesce", "aggr", "error_aggr", "num_if_statement", "age_conv"])}
+    {gather_columns("num.1", columns, "num", additional_rules=["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "num_coalesce", "aggr", "error_aggr", "num_if_statement", "age_conv", "datediff"])}
     string_add: string "+" string
     num_add.1: num "+" num | "(" num "+" num ")"
     num_sub.1: num "-" num | "(" num "-" num ")"
@@ -352,6 +352,8 @@ def make_grammar(columns):
     dt_month_conv: /month/i "(" datetime ")"
     dt_quarter_conv: /quarter/i "(" datetime ")"
     dt_year_conv: /year/i "(" datetime ")"
+    /// date->int
+    datediff: /datediff/i "(" date "," date ")"
     // col->string
     string_cast: /string/i "(" col ")"
     string_substr: /substr/i "(" string "," [num ("," num)?] ")"

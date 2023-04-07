@@ -88,7 +88,7 @@ class SQLAlchemyBuilder:
 
         # If we have expressions, we'll build a select statement
         # using the expressions, and make these into constants.
-        # Note, constants can only be aggregate expressions on the base selectable.
+        # This limits constants to aggregate expressions on the base selectable.
         if has_constant_expressions(constants):
             self.columns = make_column_collection_for_selectable(selectable)
             self.finalize_grammar()

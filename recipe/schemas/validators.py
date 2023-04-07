@@ -128,6 +128,21 @@ class SQLALchemyValidator(Visitor):
         if self.forbid_aggregation:
             self._add_error("Aggregations are not allowed in this field.", tree)
 
+    def string_aggr(self, tree):
+        self.found_aggregation = True
+        if self.forbid_aggregation:
+            self._add_error("Aggregations are not allowed in this field.", tree)
+
+    def date_aggr(self, tree):
+        self.found_aggregation = True
+        if self.forbid_aggregation:
+            self._add_error("Aggregations are not allowed in this field.", tree)
+
+    def datetime_aggr(self, tree):
+        self.found_aggregation = True
+        if self.forbid_aggregation:
+            self._add_error("Aggregations are not allowed in this field.", tree)
+
     def unknown_col(self, tree):
         """Column name doesn't exist in the data"""
         tok1 = tree.children[0]

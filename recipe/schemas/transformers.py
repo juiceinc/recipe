@@ -355,6 +355,17 @@ class TransformToSQLAlchemyExpression(Transformer):
     def timedelta(self):
         pass
 
+    def datediff(self, _, dt1, dt2):
+        if self.drivername == "bigquery":
+            return func.date_diff(dt1, dt2, text("day"))
+        elif self.drivername == "sqlite":
+            return cast(func.julianday(dt1), Integer()) - cast(
+                func.julianday(dt2), Integer()
+            )
+        else:
+            # This works for postgres and mssql
+            return func.datediff(text("day"), dt1, dt2)
+
     # Booleans
 
     def and_boolean(self, left_boolean, AND, right_boolean):
