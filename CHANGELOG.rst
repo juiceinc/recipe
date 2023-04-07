@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.34.1 (2023-04-06)
+-----------------------------------------
+* Add datediff function, improve aggregation
+
 v0.34.0 (2023-04-06)
 -----------------------------------------
 * Support a dictionary of literal or aggregate constants when defining shelves from config.
