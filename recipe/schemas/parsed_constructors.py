@@ -170,17 +170,17 @@ def convert_extra_fields(
 
 
 def create_ingredient_from_parsed(
-    ingr_dict: dict, builder: SQLAlchemyBuilder, debug: bool = False
+    ingr_config: dict, builder: SQLAlchemyBuilder, debug: bool = False
 ):
     """Create an ingredient from config version 2 object ."""
-    kind = ingr_dict.pop("kind", "metric")
+    kind = ingr_config.pop("kind", "metric")
     IngredientClass = ingredient_class_for_name(kind.title())
     if IngredientClass is None:
         raise BadIngredient(f"Unknown ingredient kind {kind}")
 
     args = []
 
-    clean_format = ingr_dict.get("format")
+    clean_format = ingr_config.get("format")
     if (
         isinstance(clean_format, str)
         and clean_format.startswith("<")
@@ -189,10 +189,10 @@ def create_ingredient_from_parsed(
         clean_format = clean_format[1:-1]
 
     # TODO: this can be removed when "date_aggregation" is set on ingr_dict directly.
-    set_date_aggregation_from_format(ingr_dict=ingr_dict)
+    set_date_aggregation_from_format(ingr_dict=ingr_config)
 
     # For some formats, we will automatically convert dates to year or month in the builder
-    date_aggregation = ingr_dict.get("date_aggregation")
+    date_aggregation = ingr_config.get("date_aggregation")
     date_aggr_lookup = {"year": "year_conv", "month": "month_conv"}
     dt_aggr_lookup = {
         "year": "dt_year_conv",
@@ -219,55 +219,49 @@ def create_ingredient_from_parsed(
 
     try:
         if kind == "metric":
-            ingr_dict["group_by_strategy"] = ingr_dict.get(
+            ingr_config["group_by_strategy"] = ingr_config.get(
                 "group_by_strategy", default_group_by_strategy
             )
 
-            fld_defn = ingr_dict.pop("field", None)
+            fld_defn = ingr_config.pop("field", None)
             # SQLAlchemy ingredient with required aggregation
             expr, datatype = builder.parse(
                 fld_defn, enforce_aggregation=True, **builder_kwargs
             )
             # Save the data type in the ingredient
-            ingr_dict["datatype"] = datatype
-            if datatype != "num":
-                error = {
-                    "type": "Can not parse field",
-                    "extra": {"details": "A string can not be aggregated"},
-                }
-                return InvalidIngredient(error=error)
+            ingr_config["datatype"] = datatype
 
-            convert_filter(builder, ingr_dict, builder_kwargs)
-            convert_quickselects(builder, ingr_dict, builder_kwargs)
+            convert_filter(builder, ingr_config, builder_kwargs)
+            convert_quickselects(builder, ingr_config, builder_kwargs)
             args = [expr]
 
         elif kind == "dimension":
-            fld_defn = ingr_dict.pop("field", None)
+            fld_defn = ingr_config.pop("field", None)
             fld_defn = convert_buckets_to_field_defn(
-                builder, ingr_dict, fld_defn, builder_kwargs
+                builder, ingr_config, fld_defn, builder_kwargs
             )
 
             expr, datatype = builder.parse(
                 fld_defn, forbid_aggregation=True, **builder_kwargs
             )
             # Save the data type in the ingredient
-            ingr_dict["datatype"] = datatype
+            ingr_config["datatype"] = datatype
             args = [expr]
-            ingr_dict["datatype_by_role"] = {"value": datatype}
+            ingr_config["datatype_by_role"] = {"value": datatype}
 
-            convert_extra_fields(builder, ingr_dict, builder_kwargs)
-            convert_filter(builder, ingr_dict, builder_kwargs)
-            convert_quickselects(builder, ingr_dict, builder_kwargs)
+            convert_extra_fields(builder, ingr_config, builder_kwargs)
+            convert_filter(builder, ingr_config, builder_kwargs)
+            convert_quickselects(builder, ingr_config, builder_kwargs)
 
         elif kind == "filter":
-            condition_defn = ingr_dict.get("condition")
+            condition_defn = ingr_config.get("condition")
             expr, datatype = builder.parse(
                 condition_defn, forbid_aggregation=True, **builder_kwargs
             )
             args = [expr]
 
         elif kind == "having":
-            condition_defn = ingr_dict.get("condition")
+            condition_defn = ingr_config.get("condition")
             expr, datatype = builder.parse(
                 condition_defn, forbid_aggregation=False, **builder_kwargs
             )
@@ -282,7 +276,7 @@ def create_ingredient_from_parsed(
         return InvalidIngredient(error=error)
 
     try:
-        return IngredientClass(*args, **ingr_dict)
+        return IngredientClass(*args, **ingr_config)
     except BadIngredient as e:
         # Some internal error while running the Ingredient constructor
         error = {"type": "bad_ingredient", "extra": {"details": str(e)}}
