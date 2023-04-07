@@ -264,10 +264,7 @@ class Shelf(object):
         """A string representation of the ingredients used in a recipe
         ordered by Dimensions, Metrics, Filters, then Havings
         """
-        lines = []
-        # sort the ingredients by type
-        for ingredient in sorted(self.values()):
-            lines.append(ingredient.describe())
+        lines = [ingredient.describe() for ingredient in sorted(self.values())]
         return "\n".join(lines)
 
     def use(self, ingredient):
@@ -345,6 +342,8 @@ class Shelf(object):
                 if not d[k].error.get("extra"):
                     d[k].error["extra"] = {}
                 d[k].error["extra"]["ingredient_name"] = k
+
+        # TODO: Evaluate how and if we're using select_from
         shelf = cls(d, select_from=selectable)
         if builder and ingredient_cache is not None:
             builder.save_cache()
