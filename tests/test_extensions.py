@@ -12,6 +12,7 @@ from recipe.extensions import (
     CompareRecipe,
     Paginate,
     PaginateInline,
+    PaginateCountOver,
     RecipeExtension,
     SummarizeOver,
     handle_directives,
@@ -25,7 +26,7 @@ def convert_to_json_encoded(d: dict) -> dict:
     newd = {}
     for k, v in d.items():
         if "," in k and isinstance(v, list):
-            v = [dumps(itm) if not isinstance(itm, str) else itm for itm in v]
+            v = [itm if isinstance(itm, str) else dumps(itm) for itm in v]
         newd[k] = v
     return newd
 
@@ -1210,6 +1211,79 @@ class PaginateInlineTestCase(PaginateTestCase):
             idvalue_state_id,idvalue_state,pop2000
             Tennessee,State:Tennessee,5685230
             """,
+        )
+
+
+class PaginateCountOverTestCase(PaginateTestCase):
+    """Run all the paginate tests with a different paginator
+
+    PaginateInline will add a "_total_count" column to each returned row.
+    Be sure to ignore this when evaluating results.
+    """
+
+    extension_classes = [PaginateCountOver]
+
+    def assertRecipeCSV(self, recipe: Recipe, csv_text: str):
+        super().assertRecipeCSV(recipe, csv_text, ignore_columns=["_total_count"])
+
+    def test_pagination_q_idvalue(self):
+        """Pagination queries use the value of an id value dimension"""
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["idvalue_state"],
+                "pagination_page_size": 10,
+                "pagination_q": "State:T%",
+            }
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            idvalue_state_id,idvalue_state,pop2000
+            Tennessee,State:Tennessee,5685230
+            """,
+        )
+
+        self.assertRecipeCSV(
+            recipe,
+            """
+            idvalue_state_id,idvalue_state,pop2000
+            Tennessee,State:Tennessee,5685230
+            """,
+        )
+
+    def test_count_over_sql(self):
+        """Test all pagination options together"""
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["pop2000"],
+                "dimensions": ["state", "sex", "age"],
+                "pagination_page_size": 10,
+                "pagination_page": 5,
+                "pagination_q": "T%",
+                "pagination_search_keys": ["state", "sex"],
+            }
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """
+            SELECT census.age AS age,
+                census.sex AS sex,
+                census.state AS state,
+                sum(census.pop2000) AS pop2000,
+                count('*') OVER () AS _total_count
+            FROM census
+            WHERE lower(census.state) LIKE lower('T%')
+            OR lower(census.sex) LIKE lower('T%')
+            GROUP BY age,
+                    sex,
+                    state
+            ORDER BY state,
+                    sex,
+                    age
+            LIMIT 10
+            OFFSET 40
+        """,
         )
 
 
