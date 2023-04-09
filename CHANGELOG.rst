@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.35.0 (2023-04-09)
+-----------------------------------------
+* Add PaginateCountOver, a simpler pagination counter
+
 v0.34.1 (2023-04-06)
 -----------------------------------------
 * Add datediff function, improve aggregation

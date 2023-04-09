@@ -15,6 +15,8 @@ from recipe.extensions import (
     RecipeExtension,
     SummarizeOver,
     Paginate,
+    PaginateInline,
+    PaginateCountOver,
 )
 from recipe.ingredients import (
     Dimension,
@@ -54,6 +56,7 @@ __version__ = "0.34.1"
 __all__ = [
     "BadIngredient",
     "BadRecipe",
+    "InvalidColumnError",
     "Ingredient",
     "Dimension",
     "LookupDimension",
@@ -61,6 +64,7 @@ __all__ = [
     "Metric",
     "DivideMetric",
     "WtdAvgMetric",
+    "InvalidIngredient",
     "Filter",
     "Having",
     "Recipe",
@@ -74,6 +78,8 @@ __all__ = [
     "CompareRecipe",
     "RecipeExtension",
     "Paginate",
+    "PaginateInline",
+    "PaginateCountOver",
     "SummarizeOver",
     "FakerAnonymizer",
 ]
