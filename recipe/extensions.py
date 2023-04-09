@@ -1105,6 +1105,148 @@ class PaginateInline(Paginate):
         return validated_pagination
 
 
+class PaginateCountOver(Paginate):
+    """
+    Allows recipes to paginate results while returning total record count as a
+    field in the recipe itself. PaginateInline differs from Paginate is how
+    the recipe behaves when hitting the last page. Because PaginateInline
+    only knows the total number of items after a recipe has run, it is possible
+    to set a page that goes beyond the total number of results. In this case
+    PaginateInline will result in a query that returns 0 results. The pagination
+    page in this case will be reset back to the first page and the query will
+    run again.
+
+    **Using and controlling pagination**
+
+    Pagination returns pages of data using limit and offset.
+
+    Pagination is enabled by setting a nonzero page size, like this::
+
+        shelf = Shelf({
+            'state': Dimension(Census.state),
+            'gender': Dimension(Census.gender),
+            'population': Metric(func.sum(Census.population)),
+        })
+        recipe = Recipe(shelf=shelf, extension_classes=[PaginateInline])\
+            .dimensions('state')\
+            .metrics('population')\
+            .pagination_page_size(10)
+
+
+    Pagination may be disabled by setting `.apply_pagination(False)`.
+
+    **Searching**
+
+    `pagination_q` allows a recipe to be searched for a string.
+    The default search fields are all dimensions used in the recipe.
+    Search keys can be customized with `pagination_search_keys`.
+    Search may be disabled by setting `.apply_pagination_filters(False)`
+    The value role will be targetted when searching dimensions.
+
+    **Sorting**
+
+    Pagination can override ordering applied to a recipe by setting
+    `.pagination_order_by(...)` to a list of ordering keys. If keys are
+    preceded by a "-", ordering is descending, otherwise ordering is ascending.
+
+    **An example using all features**
+
+    Here's an example that searches for keys that start with "t", showing
+    the fifth page of results::
+
+        shelf = Shelf({
+            'state': Dimension(Census.state),
+            'gender': Dimension(Census.gender),
+            'age': Dimension(Census.age),
+            'population': Metric(func.sum(Census.population)),
+        })
+        recipe = self.recipe()\
+            .metrics("pop2000")\
+            .dimensions("state", "sex", "age")\
+            .pagination_page_size(10)\
+            .pagination_page(5)\
+            .pagination_q('t%')\
+            .pagination_search_keys("state", "sex")
+
+
+    This will generate SQL like::
+
+        SELECT census.age AS age,
+            census.sex AS sex,
+            census.state AS state,
+            sum(census.pop2000) AS pop2000,
+            count(*) over() AS _total_count
+        FROM census
+        WHERE lower(census.state) LIKE lower('T%')
+        OR lower(census.sex) LIKE lower('T%')
+        GROUP BY age,
+                sex,
+                state
+        ORDER BY state,
+                sex,
+                age
+        LIMIT 10
+        OFFSET 40
+
+    """
+
+    def add_ingredients(self):
+        self._apply_pagination_order_by()
+        self._apply_pagination_q()
+        count_over = Ingredient(columns=[func.count("*").over()], id="_total_count")
+        self.recipe._cauldron.use(count_over)
+
+    def modify_postquery_parts(self, postquery_parts):
+        """Apply validated pagination limits and offset to a completed query."""
+        if not self.do_pagination():
+            return postquery_parts
+
+        limit = self._pagination_page_size
+        # Get the unvalidated page. When we validate pagination
+        # we may need to reset to page 1 if no items are returned.
+        validated_page = page = self._pagination_page
+
+        self._validated_pagination = {
+            "requestedPage": page,
+            "page": page,
+            "pageSize": limit,
+            "totalItems": 0,
+        }
+
+        # page=1 is the first page
+        offset = limit * (validated_page - 1)
+
+        postquery_parts["query"] = postquery_parts["query"].limit(limit)
+        if offset:
+            postquery_parts["query"] = postquery_parts["query"].offset(offset)
+        return postquery_parts
+
+    def validated_pagination(self):
+        """Return pagination validated against the actual number of items in the
+        response.
+        """
+        if not self.do_pagination():
+            return
+
+        validated_pagination = {
+            "requestedPage": self._pagination_page,
+            "page": self._pagination_page,
+            "pageSize": self._pagination_page_size,
+            "totalItems": 0,
+        }
+        rows = self.recipe.all()
+        if rows:
+            row = rows[0]
+            validated_pagination["totalItems"] = row._total_count
+        elif self._pagination_page != 1:
+            # Go to the first page and rerun the query
+            self.pagination_page(1)
+            self.recipe.reset()
+            return self.validated_pagination()
+
+        return validated_pagination
+
+
 class BlendRecipe(RecipeExtension):
     """Add blend recipes, used for joining data from another table to a base
     table
@@ -1194,8 +1336,7 @@ class BlendRecipe(RecipeExtension):
                         )
                     else:
                         raise BadRecipe(
-                            "{} could not be found in .blend() "
-                            "recipe subquery".format(id + suffix)
+                            f"{id + suffix} could not be found in .blend() recipe subquery"
                         )
 
             # For all dimensions in the blend recipe
@@ -1209,19 +1350,15 @@ class BlendRecipe(RecipeExtension):
                 self.recipe._cauldron.use(dim)
                 for suffix in dim.make_column_suffixes():
                     col = getattr(blend_subq.c, dim.id, None)
-                    if col is not None:
-                        postquery_parts["query"] = postquery_parts["query"].add_columns(
-                            col.label(dim.id + suffix)
-                        )
-                        postquery_parts["query"] = postquery_parts["query"].group_by(
-                            col
-                        )
-                    else:
+                    if col is None:
                         raise BadRecipe(
-                            "{} could not be found in .blend() "
-                            "recipe subquery".format(id + suffix)
+                            f"{id + suffix} could not be found in .blend() recipe subquery"
                         )
 
+                    postquery_parts["query"] = postquery_parts["query"].add_columns(
+                        col.label(dim.id + suffix)
+                    )
+                    postquery_parts["query"] = postquery_parts["query"].group_by(col)
             base_dim = self.recipe._cauldron[join_base]
             blend_dim = blend_recipe._cauldron[join_blend]
 
@@ -1318,8 +1455,7 @@ class CompareRecipe(RecipeExtension):
                         )
                     else:
                         raise BadRecipe(
-                            "{} could not be found in .compare() "
-                            "recipe subquery".format(id + suffix)
+                            f"{id + suffix} could not be found in .compare() recipe subquery"
                         )
 
             join_conditions = []
@@ -1334,10 +1470,7 @@ class CompareRecipe(RecipeExtension):
                 compare_col = getattr(comparison_subq.c, compare_dim.id_prop, None)
                 if compare_col is None:
                     raise BadRecipe(
-                        "Can't find join property for {} dimension in \
-                        compare recipe".format(
-                            compare_dim.id_prop
-                        )
+                        f"Can't find join property for {compare_dim.id_prop} dimension in compare recipe"
                     )
                 join_conditions.append(base_col == compare_col)
 
