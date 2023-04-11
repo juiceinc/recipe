@@ -307,6 +307,12 @@ class Shelf(object):
         """
         constants = constants or {}
 
+        print("\nMaking shelf from config")
+        print("sel", selectable, type(selectable))
+        print("cache", ingredient_cache, type(ingredient_cache))
+        print("extra_selectables", extra_selectables, type(extra_selectables))
+        print("constants", constants, type(constants))
+
         try:
             validated_shelf = normalize_schema(shelf_schema, obj, allow_unknown=True)
         except E.SureError as e:
