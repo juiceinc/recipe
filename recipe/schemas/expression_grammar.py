@@ -143,7 +143,9 @@ def make_column_collection_for_selectable(
     elif hasattr(selectable, "c") and isinstance(selectable.c, ColumnCollection):
         column_iterable = selectable.c
     else:
-        raise Exception("Selectable does not have columns")
+        raise Exception(
+            f"Selectable must be a Table or ColumnCollection, this is a {type(selectable)}"
+        )
 
     columns = []
     for sqla_col in column_iterable:

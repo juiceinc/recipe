@@ -305,37 +305,22 @@ class Shelf(object):
             these are extra selectables that can be used in expressions
         :return: A shelf that contains the ingredients defined in obj.
         """
-        from recipe import Recipe
-
         constants = constants or {}
-
-        if isinstance(selectable, Recipe):
-            selectable = selectable.subquery()
-        elif isinstance(selectable, str):
-            if "." in selectable:
-                schema, tablename = selectable.split(".")
-            else:
-                schema, tablename = None, selectable
-
-            selectable = Table(
-                tablename, metadata, schema=schema, extend_existing=True, autoload=True
-            )
 
         try:
             validated_shelf = normalize_schema(shelf_schema, obj, allow_unknown=True)
         except E.SureError as e:
             raise BadIngredient(str(e))
+
         d = {}
-        builder = None
+        builder = SQLAlchemyBuilder.get_builder(
+            selectable=selectable,
+            cache=ingredient_cache,
+            extra_selectables=extra_selectables,
+            constants=constants,
+        )
 
         for k, v in validated_shelf.items():
-            if builder is None:
-                builder = SQLAlchemyBuilder.get_builder(
-                    selectable=selectable,
-                    cache=ingredient_cache,
-                    extra_selectables=extra_selectables,
-                    constants=constants,
-                )
             d[k] = ingredient_from_validated_dict(v, selectable, builder=builder)
 
             if isinstance(d[k], InvalidIngredient):
