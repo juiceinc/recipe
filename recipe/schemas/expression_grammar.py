@@ -134,9 +134,6 @@ def make_column_collection_for_selectable(
     """
     from recipe import Recipe
 
-    print("\nMaking cc for selectable")
-    print("sel is", selectable, type(selectable))
-
     if isinstance(selectable, Recipe):
         selectable = selectable.subquery()
 

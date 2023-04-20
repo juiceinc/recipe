@@ -1,21 +1,21 @@
 import contextlib
+from collections import OrderedDict
 from copy import copy
+from dataclasses import dataclass, field
+from typing import Optional, List, Dict
 
 from lark.exceptions import VisitError
-from collections import OrderedDict
 from sqlalchemy import Float, Integer, String, Table
 from sqlalchemy.util import lightweight_named_tuple
 from sureberus import errors as E
 from sureberus import normalize_schema
 from yaml import safe_load
-from dataclasses import dataclass, field
 
 from recipe.exceptions import BadIngredient, BadRecipe, InvalidColumnError
-from recipe.ingredients import Dimension, Filter, Ingredient, Metric, InvalidIngredient
+from recipe.ingredients import Dimension, Filter, Ingredient, InvalidIngredient, Metric
 from recipe.schemas import shelf_schema
-from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
-
 from recipe.schemas.builders import SQLAlchemyBuilder
+from recipe.schemas.parsed_constructors import create_ingredient_from_parsed
 
 _POP_DEFAULT = object()
 
@@ -281,15 +281,15 @@ class Shelf(object):
     @classmethod
     def from_config(
         cls,
-        obj,
+        obj: Dict,
         selectable,
         ingredient_constructor=None,
         metadata=None,
         *,
-        builder=None,
+        builder: Optional[SQLAlchemyBuilder] = None,
         ingredient_cache=None,
-        extra_selectables=None,
-        constants=None,
+        extra_selectables: Optional[List] = None,
+        constants: Optional[Dict] = None,
     ):
         """Create a shelf using a dict shelf definition.
 
@@ -306,7 +306,6 @@ class Shelf(object):
             these are extra selectables that can be used in expressions
         :return: A shelf that contains the ingredients defined in obj.
         """
-        constants = constants or {}
 
         try:
             validated_shelf = normalize_schema(shelf_schema, obj, allow_unknown=True)
@@ -315,6 +314,26 @@ class Shelf(object):
 
         d = {}
         if builder is None:
+            from recipe import Recipe
+
+            constants = constants or {}
+
+            if isinstance(selectable, Recipe):
+                selectable = selectable.subquery()
+            elif isinstance(selectable, str):
+                if "." in selectable:
+                    schema, tablename = selectable.split(".")
+                else:
+                    schema, tablename = None, selectable
+
+                selectable = Table(
+                    tablename,
+                    metadata,
+                    schema=schema,
+                    extend_existing=True,
+                    autoload=True,
+                )
+
             builder = SQLAlchemyBuilder.get_builder(
                 selectable=selectable,
                 cache=ingredient_cache,
