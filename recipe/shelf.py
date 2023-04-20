@@ -286,6 +286,7 @@ class Shelf(object):
         ingredient_constructor=None,
         metadata=None,
         *,
+        builder=None,
         ingredient_cache=None,
         extra_selectables=None,
         constants=None,
@@ -301,17 +302,11 @@ class Shelf(object):
             order to introspect its schema, we must have the SQLAlchemy
             MetaData object to associate it with.
         :param ingredient_cache: An optional cache for improving parse times
-        :param extra_selectables: A dict with keys of namespace and selectable
+        :param extra_selectables: A list of (selectable, namespace) tuples.
             these are extra selectables that can be used in expressions
         :return: A shelf that contains the ingredients defined in obj.
         """
         constants = constants or {}
-
-        print("\nMaking shelf from config")
-        print("sel", selectable, type(selectable))
-        print("cache", ingredient_cache, type(ingredient_cache))
-        print("extra_selectables", extra_selectables, type(extra_selectables))
-        print("constants", constants, type(constants))
 
         try:
             validated_shelf = normalize_schema(shelf_schema, obj, allow_unknown=True)
@@ -319,12 +314,13 @@ class Shelf(object):
             raise BadIngredient(str(e))
 
         d = {}
-        builder = SQLAlchemyBuilder.get_builder(
-            selectable=selectable,
-            cache=ingredient_cache,
-            extra_selectables=extra_selectables,
-            constants=constants,
-        )
+        if builder is None:
+            builder = SQLAlchemyBuilder.get_builder(
+                selectable=selectable,
+                cache=ingredient_cache,
+                extra_selectables=extra_selectables,
+                constants=constants,
+            )
 
         for k, v in validated_shelf.items():
             d[k] = ingredient_from_validated_dict(v, selectable, builder=builder)
