@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.35.1 (2023-04-20)
+-----------------------------------------
+* Allow expression builder to be passed to Shelf.from_config constructor.
+
 v0.35.0 (2023-04-09)
 -----------------------------------------
 * Add PaginateCountOver, a simpler pagination counter

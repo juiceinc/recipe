@@ -1053,9 +1053,7 @@ ORDER BY state_raw""",
 
 
 class TestMultipleSelectables(ConfigTestBase):
-    def test_multi_selectable(self):
-        """A shelf can reference multiple selectables"""
-        shelf_config = """
+    shelf_config = """
 username:
   kind: Dimension
   field: username
@@ -1085,11 +1083,16 @@ tagscoresscore:
   filter: tagscores.username = username
         """
 
-        shelf = self.shelf_from_yaml(
-            shelf_config,
+    def make_shelf(self):
+        return self.shelf_from_yaml(
+            self.shelf_config,
             self.scores_with_nulls_table,
             extra_selectables=[(self.tagscores_table, "tagscores")],
         )
+
+    def test_multi_selectable(self):
+        """Using a shelf can reference multiple selectables"""
+        shelf = self.make_shelf()
 
         recipe = self.recipe(shelf=shelf).metrics("score").dimensions("department")
         self.assertRecipeSQL(
@@ -1207,6 +1210,19 @@ ops,80.0,ops
 sales,80.0,sales
             """,
         )
+
+
+class TestShelfFromBuilder(TestMultipleSelectables):
+    def make_shelf(self):
+        from recipe.schemas.builders import SQLAlchemyBuilder
+
+        builder = SQLAlchemyBuilder.get_builder(
+            self.scores_with_nulls_table,
+            extra_selectables=[(self.tagscores_table, "tagscores")],
+        )
+
+        # no selectable is passed, it's used in the builder
+        return self.shelf_from_yaml(self.shelf_config, None, builder=builder)
 
 
 class TestParsedSQLGeneration(ConfigTestBase):
