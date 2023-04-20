@@ -350,7 +350,7 @@ class Shelf(object):
                 d[k].error["extra"]["ingredient_name"] = k
 
         # TODO: Evaluate how and if we're using select_from
-        shelf = cls(d, select_from=selectable)
+        shelf = cls(d, select_from=builder.selectable)
         if builder and ingredient_cache is not None:
             builder.save_cache()
 
