@@ -1,6 +1,6 @@
 faker==2.0.4
 SQLAlchemy>=1.2.2,<1.4
-sqlparse==0.4.2
+sqlparse==0.4.4
 stevedore==1.31.0
 tablib==3.2.0
 pyyaml>=5
