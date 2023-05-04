@@ -9,7 +9,6 @@ Extensions build on the core behavior or recipe to let you perform
    :maxdepth: 3
 
    automaticfilters
-   summarizeover
    comparerecipe
    blendrecipe
    anonymize

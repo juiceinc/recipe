@@ -6,7 +6,7 @@ from typing import Optional, List, Dict
 
 from lark.exceptions import VisitError
 from sqlalchemy import Float, Integer, String, Table
-from sqlalchemy.util import lightweight_named_tuple
+from collections import namedtuple
 from sureberus import errors as E
 from sureberus import normalize_schema
 from yaml import safe_load
@@ -507,6 +507,7 @@ class Shelf(object):
             # Extra fields to add to each row
             # With extra callables
             extra_fields, extra_callables = [], []
+            original_fields = set(sample_item._fields)
 
             for ingredient in self.ingredients():
                 if not isinstance(ingredient, (Dimension, Metric)):
@@ -514,18 +515,19 @@ class Shelf(object):
                 if cache_context:
                     ingredient.cache_context += str(cache_context)
                 for extra_field, extra_callable in ingredient.cauldron_extras:
-                    extra_fields.append(extra_field)
-                    extra_callables.append(extra_callable)
+                    if extra_field not in original_fields:
+                        extra_fields.append(extra_field)
+                        extra_callables.append(extra_callable)
 
             # Mixin the extra fields
-            keyed_tuple = lightweight_named_tuple(
+            keyed_tuple = namedtuple(
                 "result", sample_item._fields + tuple(extra_fields)
             )
 
             # Iterate over the results and build a new namedtuple for each row
             for row in data:
-                values = row + tuple(fn(row) for fn in extra_callables)
-                enchantedlist.append(keyed_tuple(values))
+                values = tuple(row) + tuple(fn(row) for fn in extra_callables)
+                enchantedlist.append(keyed_tuple(*values))
 
         return enchantedlist
 

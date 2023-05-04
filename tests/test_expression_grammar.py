@@ -588,10 +588,10 @@ class TestDataTypesTable(GrammarTestCase):
 
     def test_arrays(self):
         good_examples = """
-        [score] NOT in (1,2,3)            -> datatypes.score NOT IN (1, 2, 3)
-        [score] In (1,2,   3.0)           -> datatypes.score IN (1, 2, 3.0)
+        [score] NOT in (1,2,3)            -> (datatypes.score NOT IN (1, 2, 3))
+        [score] In (1,2,   3.0)           -> datatypes.score IN (1, 2, 3)
         [score] In (1)                    -> datatypes.score IN (1)
-        NOT [score] In (1)                -> datatypes.score NOT IN (1)
+        NOT [score] In (1)                -> (datatypes.score NOT IN (1))
         NOT NOT [score] In (1)            -> datatypes.score IN (1)
         [department] In ("A", "B")        -> datatypes.department IN ('A', 'B')
         [department] In ("A", "B",)       -> datatypes.department IN ('A', 'B')
@@ -603,7 +603,7 @@ class TestDataTypesTable(GrammarTestCase):
 
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, debug=False)
-            self.assertEqual(expr_to_str(expr), expected_sql)
+            self.assertEqual(expr_to_str(expr), f"{expected_sql}")
 
     def test_boolean(self):
         good_examples = """
@@ -903,6 +903,10 @@ class TestAggregations(GrammarTestCase):
     def test_allow_aggregation(self):
         # Can't tests with date conversions and freeze time :/
         good_examples = f"""
+        count_distinct(department = "MO" AND score > 20) -> count(DISTINCT (datatypes.department = 'MO' AND datatypes.score > 20))
+        count_distinct(if(department = "MO" AND score > 20, department)) -> count(DISTINCT CASE WHEN (datatypes.department = 'MO' AND datatypes.score > 20) THEN datatypes.department END)
+        count(IF(department = "MO" AND score > 20, department)) -> count(CASE WHEN (datatypes.department = 'MO' AND datatypes.score > 20) THEN datatypes.department END)
+        count(*)                     -> count(*)
         sum([score])                 -> sum(datatypes.score)
         sum(score)                   -> sum(datatypes.score)
         sum(score*2.0)               -> sum(datatypes.score * 2.0)
@@ -913,10 +917,6 @@ class TestAggregations(GrammarTestCase):
         count_distinct([score])      -> count(DISTINCT datatypes.score)
         count_distinct([department]) -> count(DISTINCT datatypes.department)
         count_distinct(department)   -> count(DISTINCT datatypes.department)
-        count_distinct(department = "MO" AND score > 20) -> count(DISTINCT (datatypes.department = 'MO' AND datatypes.score > 20))
-        count_distinct(if(department = "MO" AND score > 20, department)) -> count(DISTINCT CASE WHEN (datatypes.department = 'MO' AND datatypes.score > 20) THEN datatypes.department END)
-        count(IF(department = "MO" AND score > 20, department)) -> count(CASE WHEN (datatypes.department = 'MO' AND datatypes.score > 20) THEN datatypes.department END)
-        count(*)                     -> count(*)
         """
 
         for field, expected_sql in self.examples(good_examples):

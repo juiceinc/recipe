@@ -80,6 +80,5 @@ __all__ = [
     "Paginate",
     "PaginateInline",
     "PaginateCountOver",
-    "SummarizeOver",
     "FakerAnonymizer",
 ]
