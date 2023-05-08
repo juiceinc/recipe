@@ -18,8 +18,18 @@
 	// This can be used to network with other containers or the host.
 	// "forwardPorts": [5000, 5432],
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "pip install --user -r requirements.txt -r requirements_dev.txt",
-	"postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}"
+	"postCreateCommand": "pip install --user -r requirements.txt -r requirements_dev.txt && python ${containerWorkspaceFolder}/tests/setup_test_data.py",
+	"postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.vscode-pylance",
+				"ms-python.python",
+				"alexcvzz.vscode-sqlite",
+				"ms-python.black-formatter"
+			]
+		}
+	}
 	// Configure tool-specific properties.
 	// "customizations": {},
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
