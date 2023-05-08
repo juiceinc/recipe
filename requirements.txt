@@ -9,3 +9,5 @@ dateparser==1.1.8
 attrs==23.1.0
 lark==1.1.5
 structlog>=23.1.0
+dogpile.cache
+redis

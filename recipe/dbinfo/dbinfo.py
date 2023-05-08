@@ -125,7 +125,7 @@ def get_dbinfo(conn_string: str, use_caching: bool = False, **engine_kwargs):
     Returns:
         DBInfo: A cached db info object
     """
-    engine = create_engine(connection_str=conn_string, **engine_kwargs)
+    engine = create_engine(conn_string, **engine_kwargs)
 
     # Listen to events
     # if settings.DEBUG_SQLALCHEMY:
