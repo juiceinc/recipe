@@ -12,7 +12,7 @@ from sqlalchemy import MetaData, create_engine
 
 SLOG = structlog.get_logger(__name__)
 
-from recipe_caching.caching_query import CachingQuery
+from .caching_query import CachingQuery
 
 
 def query_callable(regions, query_cls=CachingQuery, **kwargs):
@@ -115,18 +115,16 @@ _DBINFO_CACHE_LOCK = Lock()
     key=lambda conn_string, *a, **kw: conn_string + str(a) + str(kw),
     lock=_DBINFO_CACHE_LOCK,
 )
-def get_dbinfo(conn_string: str, caching: bool = True, **engine_kwargs):
+def get_dbinfo(conn_string: str, use_caching: bool = False, **engine_kwargs):
     """Get a (potentially cached) DBInfo object based on a connection string.
 
     Args:
         conn_string (str): A connection string
-        engine_kwargs (dict, optional): Kwargs of engine options. Defaults to None.
+        use_caching (bool): Should caching be used
 
     Returns:
         DBInfo: A cached db info object
     """
-    if engine_kwargs is None:
-        engine_kwargs = {}
     engine = create_engine(connection_str=conn_string, **engine_kwargs)
 
     # Listen to events
@@ -152,7 +150,10 @@ def get_dbinfo(conn_string: str, caching: bool = True, **engine_kwargs):
     #         )
 
     is_postgres = engine_is_postgres(engine)
-    session = init_caching_session(engine)
+    if use_caching:
+        session = init_caching_session(engine)
+    else:
+        session = init_session(engine)
     sqlalchemy_meta = MetaData(bind=engine)
 
     dbinfo = DBInfo(

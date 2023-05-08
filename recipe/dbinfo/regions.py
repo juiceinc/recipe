@@ -72,11 +72,11 @@ def mangle_key(key):
     base = "recipe_cache:"
     try:
         prefix, key = key.split(":", 1)
-        base += "{}".format(prefix)
+        base += prefix
     except ValueError:
         pass
 
-    return "{}:{}".format(base, unicode_sha1_mangle_key(key))
+    return f"{base}:{unicode_sha1_mangle_key(key)}"
 
 
 def build_region(region_type="redis", region_args={}):
