@@ -202,7 +202,7 @@ GROUP BY first"""
         self.assertEqual(recipe.all()[0].age, 15)
         self.assertEqual(recipe.stats.rows, 1)
 
-        sess = self.oven.Session()
+        sess = self.dbinfo.Session()
         recipe.reset()
         recipe.session(sess)
 

@@ -22,7 +22,8 @@ from sqlalchemy import (
 )
 from yaml import safe_load
 
-from recipe import Dimension, Filter, IdValueDimension, Metric, Recipe, Shelf, get_oven
+from recipe import Dimension, Filter, IdValueDimension, Metric, Recipe, Shelf
+from recipe.dbinfo.dbinfo import get_dbinfo
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -179,26 +180,21 @@ class RecipeTestCase(TestCase):
         return Recipe.from_config(shelf, config, **recipe_args)
 
     @classmethod
-    def load_data(cls, table_name):
-        """Load data from the data/ directory"""
-        table = getattr(cls, table_name)
-
-        data = safe_load(open(os.path.join(cls.root_dir, "data", f"{table_name}.yml")))
-        cls.oven.engine.execute(table.insert(), data)
-
-    @classmethod
     def setUpClass(cls):
         """Set up tables using a connection_string to define an oven.
 
         Tables are loaded using data in data/{tablename}.yml
         """
         super(RecipeTestCase, cls).setUpClass()
-        cls.oven = get_oven(cls.connection_string)
-        cls.meta = MetaData(bind=cls.oven.engine)
-        cls.session = cls.oven.Session()
+        cls.dbinfo = get_dbinfo(cls.connection_string)
+        cls.meta = cls.dbinfo.sqlalchemy_meta
+        cls.session = cls.dbinfo.session_factory()
 
         cls.weird_table_with_column_named_true_table = Table(
-            "weird_table_with_column_named_true", cls.meta, Column("true", String)
+            "weird_table_with_column_named_true",
+            cls.meta,
+            Column("true", String),
+            extend_existing=True,
         )
 
         cls.basic_table = Table(
@@ -209,10 +205,15 @@ class RecipeTestCase(TestCase):
             Column("age", Integer),
             Column("birth_date", Date),
             Column("dt", DateTime),
+            extend_existing=True,
         )
 
         cls.datetester_table = Table(
-            "datetester", cls.meta, Column("dt", Date), Column("count", Integer)
+            "datetester",
+            cls.meta,
+            Column("dt", Date),
+            Column("count", Integer),
+            extend_existing=True,
         )
 
         cls.scores_table = Table(
@@ -223,6 +224,7 @@ class RecipeTestCase(TestCase):
             Column("testid", String),
             Column("score", Float),
             Column("test_date", Date),
+            extend_existing=True,
         )
 
         cls.datatypes_table = Table(
@@ -235,6 +237,7 @@ class RecipeTestCase(TestCase):
             Column("test_date", Date),
             Column("test_datetime", DateTime),
             Column("valid_score", Boolean),
+            extend_existing=True,
         )
 
         cls.scores_with_nulls_table = Table(
@@ -245,6 +248,7 @@ class RecipeTestCase(TestCase):
             Column("testid", String),
             Column("score", Float),
             Column("test_date", Date),
+            extend_existing=True,
         )
 
         cls.tagscores_table = Table(
@@ -255,6 +259,7 @@ class RecipeTestCase(TestCase):
             Column("department", String),
             Column("testid", String),
             Column("score", Float),
+            extend_existing=True,
         )
 
         cls.id_tests_table = Table(
@@ -265,6 +270,7 @@ class RecipeTestCase(TestCase):
             Column("age", Integer),
             Column("age_id", Integer),
             Column("score", Float),
+            extend_existing=True,
         )
 
         cls.census_table = Table(
@@ -275,6 +281,7 @@ class RecipeTestCase(TestCase):
             Column("age", Integer),
             Column("pop2000", Integer),
             Column("pop2008", Integer),
+            extend_existing=True,
         )
 
         cls.state_fact_table = Table(
@@ -295,6 +302,7 @@ class RecipeTestCase(TestCase):
             Column("census_division", String),
             Column("census_division_name", String),
             Column("circuit_court", String),
+            extend_existing=True,
         )
 
         cls.mytable_shelf = Shelf(

@@ -35,7 +35,7 @@ class BuildGrammarTestCase(RecipeTestCase):
                 Base.metadata,
                 Column("first", String, primary_key=True),
                 autoload=True,
-                autoload_with=self.oven.engine,
+                autoload_with=self.dbinfo.engine,
                 extend_existing=True,
             )
 
@@ -1165,7 +1165,7 @@ class TestSQLAlchemySerialize(GrammarTestCase):
         for field, expected_sql in self.examples(good_examples):
             expr, _ = self.builder.parse(field, forbid_aggregation=False, debug=True)
             ser = dumps(expr)
-            expr = loads(ser, self.builder.selectable.metadata, self.oven.Session())
+            expr = loads(ser, self.builder.selectable.metadata, self.dbinfo.Session())
             self.assertEqual(expr_to_str(expr), expected_sql)
 
 
