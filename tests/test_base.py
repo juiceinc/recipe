@@ -24,6 +24,10 @@ from yaml import safe_load
 
 from recipe import Dimension, Filter, IdValueDimension, Metric, Recipe, Shelf, get_oven
 
+ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+
+sqlite_db = os.path.join(ROOT_DIR, "testdata.db")
+
 
 def strip_columns_from_csv(content: str, ignore_columns: list = None) -> str:
     if ignore_columns:
@@ -111,7 +115,7 @@ class RecipeTestCase(TestCase):
     """Test cases that can build and test a recipe"""
 
     maxDiff = None
-    connection_string = "sqlite://"
+    connection_string = f"sqlite:///{sqlite_db}"
     create_table_kwargs = {}
 
     def setUp(self):
@@ -193,8 +197,6 @@ class RecipeTestCase(TestCase):
         cls.meta = MetaData(bind=cls.oven.engine)
         cls.session = cls.oven.Session()
 
-        cls.root_dir = os.path.abspath(os.path.dirname(__file__))
-
         cls.weird_table_with_column_named_true_table = Table(
             "weird_table_with_column_named_true", cls.meta, Column("true", String)
         )
@@ -207,7 +209,6 @@ class RecipeTestCase(TestCase):
             Column("age", Integer),
             Column("birth_date", Date),
             Column("dt", DateTime),
-            **cls.create_table_kwargs,
         )
 
         cls.datetester_table = Table(
@@ -222,7 +223,6 @@ class RecipeTestCase(TestCase):
             Column("testid", String),
             Column("score", Float),
             Column("test_date", Date),
-            **cls.create_table_kwargs,
         )
 
         cls.datatypes_table = Table(
@@ -235,7 +235,6 @@ class RecipeTestCase(TestCase):
             Column("test_date", Date),
             Column("test_datetime", DateTime),
             Column("valid_score", Boolean),
-            **cls.create_table_kwargs,
         )
 
         cls.scores_with_nulls_table = Table(
@@ -246,7 +245,6 @@ class RecipeTestCase(TestCase):
             Column("testid", String),
             Column("score", Float),
             Column("test_date", Date),
-            **cls.create_table_kwargs,
         )
 
         cls.tagscores_table = Table(
@@ -257,7 +255,6 @@ class RecipeTestCase(TestCase):
             Column("department", String),
             Column("testid", String),
             Column("score", Float),
-            **cls.create_table_kwargs,
         )
 
         cls.id_tests_table = Table(
@@ -268,7 +265,6 @@ class RecipeTestCase(TestCase):
             Column("age", Integer),
             Column("age_id", Integer),
             Column("score", Float),
-            **cls.create_table_kwargs,
         )
 
         cls.census_table = Table(
@@ -279,7 +275,6 @@ class RecipeTestCase(TestCase):
             Column("age", Integer),
             Column("pop2000", Integer),
             Column("pop2008", Integer),
-            **cls.create_table_kwargs,
         )
 
         cls.state_fact_table = Table(
@@ -300,28 +295,7 @@ class RecipeTestCase(TestCase):
             Column("census_division", String),
             Column("census_division_name", String),
             Column("circuit_court", String),
-            **cls.create_table_kwargs,
         )
-
-        cls.meta.drop_all(cls.oven.engine)
-        cls.meta.create_all(cls.oven.engine)
-        cls.load_data("weird_table_with_column_named_true_table")
-        cls.load_data("basic_table")
-        cls.load_data("scores_table")
-        cls.load_data("datatypes_table")
-        cls.load_data("scores_with_nulls_table")
-        cls.load_data("tagscores_table")
-        cls.load_data("id_tests_table")
-        cls.load_data("census_table")
-        cls.load_data("state_fact_table")
-
-        # Load the datetester_table with dynamic date data
-        start_dt = date(date.today().year, date.today().month, 1)
-        data = [
-            {"dt": start_dt + relativedelta(months=offset_month), "count": 1}
-            for offset_month in range(-50, 50)
-        ]
-        cls.oven.engine.execute(cls.datetester_table.insert(), data)
 
         cls.mytable_shelf = Shelf(
             {
