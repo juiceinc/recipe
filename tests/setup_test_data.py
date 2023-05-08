@@ -195,5 +195,7 @@ if __name__ == "__main__":
     d = SetupData(f"sqlite:///{sqlite_db}", echo=True)
     d.setup()
 
-    d = SetupData(f"postgresql+psycopg2://postgres:postgres@db:5432/postgres", echo=True)
+    d = SetupData(
+        f"postgresql+psycopg2://postgres:postgres@db:5432/postgres", echo=True
+    )
     d.setup()
