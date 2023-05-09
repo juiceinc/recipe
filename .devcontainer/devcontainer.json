@@ -26,7 +26,8 @@
 				"ms-python.vscode-pylance",
 				"ms-python.python",
 				"alexcvzz.vscode-sqlite",
-				"ms-python.black-formatter"
+				"ms-python.black-formatter",
+				"ms-python.isort"
 			]
 		}
 	}

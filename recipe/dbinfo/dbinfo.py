@@ -5,10 +5,8 @@ import attr
 import cachetools
 import structlog
 from cachetools import TTLCache, cached
-from sqlalchemy.orm import sessionmaker
-
 from sqlalchemy import MetaData, create_engine
-
+from sqlalchemy.orm import sessionmaker
 
 SLOG = structlog.get_logger(__name__)
 
