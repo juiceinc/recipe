@@ -70,4 +70,3 @@ docs/_build
 tests/test_parsed_engines.py
 tests/test_engines.py
 cov.xml
-tests/*.db
