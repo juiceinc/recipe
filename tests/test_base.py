@@ -116,7 +116,8 @@ class RecipeTestCase(TestCase):
     """Test cases that can build and test a recipe"""
 
     maxDiff = None
-    connection_string = f"sqlite:///{sqlite_db}"
+    # connection_string = f"sqlite:///{sqlite_db}"
+    connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
     create_table_kwargs = {}
 
     def setUp(self):
