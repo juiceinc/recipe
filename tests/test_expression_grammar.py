@@ -3,7 +3,6 @@
 import time
 
 from freezegun import freeze_time
-from lark import GrammarError
 from sqlalchemy import Column, Integer, String, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.serializer import dumps, loads
