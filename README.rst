@@ -10,7 +10,7 @@ Overview
 
 .. |commits-since| image:: https://img.shields.io/github/commits-since/chrisgemignani/recipe/v0.35.2.svg
     :alt: Commits since latest release
-    :target: https://github.com/chrisgemignani/recipe/compare/v0.35.2...master
+    :target: https://github.com/chrisgemignani/recipe/compare/v0.35.2...main
 
 .. |downloads| image:: https://img.shields.io/pypi/dm/recipe.svg
     :alt: PyPI Package monthly downloads
