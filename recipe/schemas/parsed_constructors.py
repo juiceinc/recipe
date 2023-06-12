@@ -219,10 +219,6 @@ def create_ingredient_from_parsed(
 
     try:
         if kind == "metric":
-            ingr_config["group_by_strategy"] = ingr_config.get(
-                "group_by_strategy", default_group_by_strategy
-            )
-
             fld_defn = ingr_config.pop("field", None)
             # SQLAlchemy ingredient with required aggregation
             expr, datatype = builder.parse(
@@ -236,6 +232,10 @@ def create_ingredient_from_parsed(
             args = [expr]
 
         elif kind == "dimension":
+            ingr_config["group_by_strategy"] = ingr_config.get(
+                "group_by_strategy", default_group_by_strategy
+            )
+
             fld_defn = ingr_config.pop("field", None)
             fld_defn = convert_buckets_to_field_defn(
                 builder, ingr_config, fld_defn, builder_kwargs
