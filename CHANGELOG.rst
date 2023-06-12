@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.35.3 (2023-06-12)
+-----------------------------------------
+* Fix default group by strategy for dimensions in snowflake and mssql databases
+
 v0.35.2 (2023-06-01)
 -----------------------------------------
 * Allow snowflake timestamps in expressions
