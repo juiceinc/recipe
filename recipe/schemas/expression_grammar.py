@@ -12,7 +12,7 @@ from sqlalchemy.sql.sqltypes import Numeric
 SLOG = structlog.get_logger(__name__)
 
 
-VALID_COLUMN_RE = re.compile("^\w+$")
+VALID_COLUMN_RE = re.compile("^\w[\w ]*$")
 
 
 def is_valid_column(colname: str) -> bool:
