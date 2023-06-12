@@ -96,7 +96,10 @@ class Col:
         return f"{self.namespace}\\.{self.name}" if self.namespace else self.name
 
     def as_rule(self):
-        return f'    {self.rule_name}: "[" + /{self.field_name}/i + "]" | /{self.field_name}/i'
+        if " " in self.field_name:
+            return f'    {self.rule_name}: "[" + /{self.field_name}/i + "]"'
+        else:
+            return f'    {self.rule_name}: "[" + /{self.field_name}/i + "]" | /{self.field_name}/i'
 
 
 @attr.s
