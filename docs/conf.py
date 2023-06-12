@@ -23,7 +23,7 @@ project = "Recipe"
 year = "2019"
 author = "Chris Gemignani"
 copyright = "{0}, {1}".format(year, author)
-version = release = "0.35.2"
+version = release = "0.35.3"
 
 pygments_style = "trac"
 templates_path = ["."]
