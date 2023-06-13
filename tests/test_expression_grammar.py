@@ -1179,16 +1179,21 @@ class TestIsValidColumn(GrammarTestCase):
             "this_that_and_other",
             "_other",
             "THIS_that_",
+            "that ",
+            "TH AT  ",
+            "x",
+            "_",
+            "5",
+            "_5",
         ]
         for v in good_values:
             self.assertTrue(is_valid_column(v))
 
         bad_values = [
-            " this",
-            "that ",
-            " THIS",
-            "TH AT  ",
             "for_slackbot}_organization_name",
+            " this",
+            " THIS",
+            "this_that-and-other",
         ]
         for v in bad_values:
             self.assertFalse(is_valid_column(v))

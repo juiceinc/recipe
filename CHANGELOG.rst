@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.35.4 (2023-06-12)
+-----------------------------------------
+* Support expressions for database column names that contain spaces
+
 v0.35.3 (2023-06-12)
 -----------------------------------------
 * Fix default group by strategy for dimensions in snowflake and mssql databases
