@@ -5,11 +5,8 @@ from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.exc import UnsupportedCompilationError
 from sqlalchemy.orm import Query
 from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
-
-
-def expr_to_str(expr):
-    """Utility to print sql for a expression"""
-    return str(expr.compile(compile_kwargs={"literal_binds": True}))
+from sqlalchemy.dialects import postgresql
+from datetime import date, datetime, timedelta
 
 
 def filter_to_string(filt):
@@ -55,11 +52,6 @@ def prettyprintable_sql(statement, dialect=None, reindent=True):
     WARNING: Should only be used for debugging. Inlining parameters is not
              safe when handling user created data.
     """
-    if isinstance(statement, Query):
-        if dialect is None:
-            dialect = statement.session.get_bind().dialect
-        statement = statement.statement
-
     # Generate a class that can handle encoding
     if dialect:
         DialectKlass = dialect.__class__
@@ -73,7 +65,6 @@ def prettyprintable_sql(statement, dialect=None, reindent=True):
             # teach SA about how to literalize a datetime
             DateTime: StringLiteral,
             Date: StringLiteral,
-            # don't format py2 long integers to NULL
             NullType: StringLiteral,
         }
 
@@ -81,3 +72,8 @@ def prettyprintable_sql(statement, dialect=None, reindent=True):
         dialect=LiteralDialect(), compile_kwargs={"literal_binds": True}
     )
     return sqlparse.format(str(compiled), reindent=reindent)
+
+
+def expr_to_str(expr, engine):
+    """Utility to print sql for a expression"""
+    return prettyprintable_sql(expr, engine.dialect, reindent=False)

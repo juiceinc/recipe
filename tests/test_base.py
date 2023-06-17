@@ -1,11 +1,9 @@
 import csv
 import io
 import os
-from datetime import date
 from typing import Iterator
 from unittest import TestCase
 
-from dateutil.relativedelta import relativedelta
 from sqlalchemy import (
     Boolean,
     Column,
@@ -13,7 +11,6 @@ from sqlalchemy import (
     DateTime,
     Float,
     Integer,
-    MetaData,
     String,
     Table,
     distinct,
@@ -21,6 +18,7 @@ from sqlalchemy import (
     select,
 )
 from yaml import safe_load
+from typing import Optional, List
 
 from recipe import Dimension, Filter, IdValueDimension, Metric, Recipe, Shelf
 from recipe.dbinfo.dbinfo import get_dbinfo
@@ -30,7 +28,8 @@ ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 sqlite_db = os.path.join(ROOT_DIR, "testdata.db")
 
 
-def strip_columns_from_csv(content: str, ignore_columns: list = None) -> str:
+def strip_columns_from_csv(content: str, ignore_columns: Optional[List]) -> str:
+    """Strip columns from a csv string"""
     if ignore_columns:
         content = str_dedent(content)
         rows = list(csv.DictReader(content.splitlines()))
@@ -49,11 +48,15 @@ def strip_columns_from_csv(content: str, ignore_columns: list = None) -> str:
 
 
 def str_dedent(s: str) -> str:
+    """Dedent a string, but also strip leading and trailing newlines"""
     return "\n".join([x.lstrip() for x in s.split("\n")]).lstrip("\n").rstrip("\n")
 
 
 class UtilsTestCase(TestCase):
+    """Test cases for utility functions"""
+
     def test_strip_columns_from_csv(self):
+        """Test strip_columns_from_csv"""
         csv_content = """
             a,b,foo,c
             1,2,3,cow
@@ -72,6 +75,7 @@ class UtilsTestCase(TestCase):
         )
 
     def test_str_dedent(self):
+        """Test str_dedent"""
         csv_content = """
             a,b,foo,c
             1,2,3,cow
@@ -113,11 +117,11 @@ class UtilsTestCase(TestCase):
 
 
 class RecipeTestCase(TestCase):
-    """Test cases that can build and test a recipe"""
+    """Test cases for Recipe"""
 
     maxDiff = None
-    # connection_string = f"sqlite:///{sqlite_db}"
-    connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
+    connection_string = f"sqlite:///{sqlite_db}"
+    # connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
     create_table_kwargs = {}
 
     def setUp(self):
@@ -182,9 +186,8 @@ class RecipeTestCase(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """Set up tables using a connection_string to define an oven.
-
-        Tables are loaded using data in data/{tablename}.yml
+        """Set up tables using connection_string. The data must be already loaded
+        into the tables.
         """
         super(RecipeTestCase, cls).setUpClass()
         cls.dbinfo = get_dbinfo(cls.connection_string)
@@ -380,6 +383,8 @@ class RecipeTestCase(TestCase):
             }
         )
 
+
+class TestRecipeTestCase(RecipeTestCase):
     def test_sample_data_loaded(self):
         values = [
             (self.weird_table_with_column_named_true_table, 2),

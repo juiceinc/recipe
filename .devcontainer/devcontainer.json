@@ -11,7 +11,7 @@
 		},
 		"ghcr.io/warrenbuckley/codespace-features/sqlite:1": {},
 		"ghcr.io/devcontainers-contrib/features/coverage-py:2": {}
-	}
+	},
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
@@ -23,8 +23,8 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"ms-python.vscode-pylance",
 				"ms-python.python",
+				"ms-python.vscode-pylance",
 				"alexcvzz.vscode-sqlite",
 				"ms-python.black-formatter",
 				"ms-python.isort"
