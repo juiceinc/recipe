@@ -2,7 +2,7 @@
 
 import time
 from functools import partial
-from typing import Callable
+from typing import Callable, Tuple
 
 from freezegun import freeze_time
 from sqlalchemy import Column, Integer, String, Table
@@ -252,7 +252,9 @@ class GrammarTestCase(RecipeTestCase):
             expected_sql = expected_sql.strip()
             yield field, expected_sql
 
-    def validate_examples(self, input_rows: str, tester: Callable[[str], str]):
+    def validate_examples(
+        self, input_rows: str, constructor: Callable[[str], Tuple[str, str]]
+    ):
         """
         Test sql generation with examples taken from a string.
 
@@ -280,7 +282,7 @@ class GrammarTestCase(RecipeTestCase):
             ):
                 continue
 
-            generated_expr, generated_dtype = tester(field, debug=False)
+            generated_expr, generated_dtype = constructor(field, debug=False)
             generated_sql = expr_to_str(generated_expr, engine=self.dbinfo.engine)
             if generated_sql != expected_sql:
                 print(
@@ -290,6 +292,46 @@ class GrammarTestCase(RecipeTestCase):
     Filter driver={drivername}, current driver {self.builder.drivername}"""
                 )
             self.assertEqual(generated_sql, expected_sql)
+
+    def validate_examples_data_type(
+        self, input_rows: str, constructor: Callable[[str], Tuple[str, str]]
+    ):
+        """
+        Test sql generation with examples taken from a string.
+
+        field     -> expected_sql
+        #field    -> expected_sql (commented out)
+        # The following example only runs on sqlite
+        sqlite::field     -> expected_sql
+        """
+        for row in input_rows.split("\n"):
+            row = row.strip()
+            if row == "" or row.startswith("#"):
+                continue
+            if "->" not in row:
+                continue
+
+            # None will match all drivers
+            drivername = None
+            field, expected_datatype = row.split("->", 1)
+            if "::" in field:
+                drivername, field = field.split("::", 1)
+
+            expected_datatype = expected_datatype.strip()
+            if drivername is not None and not self.builder.drivername.startswith(
+                drivername
+            ):
+                continue
+
+            generated_expr, generated_dtype = constructor(field, debug=False)
+            if generated_dtype != expected_datatype:
+                print(
+                    f"""Field '{field.strip()}'
+    Expected: {expected_datatype}
+    Actual:   {generated_dtype}
+    Filter driver={drivername}, current driver {self.builder.drivername}"""
+                )
+            self.assertEqual(expected_datatype, generated_dtype)
 
     def bad_examples(self, input_rows):
         """Take input where each input is separated by three equals
@@ -319,6 +361,58 @@ class GrammarTestCase(RecipeTestCase):
             expected_error = expected_error.strip() + "\n"
             yield field, expected_error
 
+    def validate_bad_examples(
+        self, input_rows: str, constructor: Callable[[str], Tuple[str, str]]
+    ):
+        """Take input where each input is separated by three equals
+
+        field ->
+        expected_error
+        ===
+        field ->
+        expected_error
+        ===
+        #field ->
+        expected_error  (commented out)
+
+        """
+        for row in input_rows.split("==="):
+            row = row.strip()
+            if row == "" or row.startswith("#"):
+                continue
+            if "->" not in row:
+                continue
+
+            # None will match all drivers
+            drivername = None
+            field, expected_error = row.split("->", 1)
+            if "::" in field:
+                drivername, field = field.split("::", 1)
+            expected_error = expected_error.strip() + "\n"
+            field = field.strip()
+
+            if drivername is not None and not self.builder.drivername.startswith(
+                drivername
+            ):
+                continue
+
+            with self.assertRaises(Exception) as e:
+                constructor(field, debug=False)
+
+            if str(e.exception).strip() != expected_error.strip():
+                print(
+                    f"""Field '{field.strip()}'
+----
+Expected error:
+{expected_error}
+----
+Actual error:
+{e.exception}
+----
+Filter driver={drivername}, current driver {self.builder.drivername}"""
+                )
+            self.assertEqual(str(e.exception).strip(), expected_error.strip())
+
 
 class TestSQLAlchemyBuilder(GrammarTestCase):
     def test_enforce_aggregation(self):
@@ -334,9 +428,9 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         max([score] - [scores.score])   -> max(datatypes.score - scores.score)
         """
 
-        for field, expected_sql in self.examples(good_examples):
-            expr, _ = self.builder.parse(field, enforce_aggregation=True, debug=True)
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+        self.validate_examples(
+            good_examples, partial(self.builder.parse, enforce_aggregation=True)
+        )
 
     def test_data_type(self):
         good_examples = """
@@ -359,12 +453,9 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         max([score] - [scores.score])   -> num
         """
 
-        for field, expected_data_type in self.examples(good_examples):
-            _, data_type = self.builder.parse(field, debug=True)
-            self.assertIs(type(data_type), str)
-            self.assertEqual(data_type, expected_data_type)
+        self.validate_examples_data_type(good_examples, partial(self.builder.parse))
 
-    def test_disallow_literals(self):
+    def test_literals(self):
         examples = """
         "22"          -> str
         2.0           -> num
@@ -372,11 +463,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         "220" + "foo" -> str
         5             -> num
         """
-
-        for field, expected_data_type in self.examples(examples):
-            _, data_type = self.builder.parse(field, debug=True)
-            self.assertIs(type(data_type), str)
-            self.assertEqual(data_type, expected_data_type)
+        self.validate_examples_data_type(examples, partial(self.builder.parse))
 
     def test_selectable_recipe(self):
         """Test a selectable that is a recipe"""
@@ -390,10 +477,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         [first] > "foo"               -> bool
         age * 2                       -> num
         """
-
-        for field, expected_data_type in self.examples(type_examples):
-            _, data_type = b.parse(field)
-            self.assertEqual(data_type, expected_data_type)
+        self.validate_examples_data_type(type_examples, partial(b.parse))
 
         sql_examples = """
         [age]                         -> anon_1.age
@@ -401,9 +485,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         [first] > "foo"               -> anon_1.first > 'foo'
         age * 2                       -> anon_1.age * 2
         """
-        for field, expected_sql in self.examples(sql_examples):
-            expr, _ = b.parse(field, debug=True)
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+        self.validate_examples(sql_examples, partial(b.parse))
 
     def test_selectable_orm(self):
         """Test a selectable that is a orm class"""
@@ -416,10 +498,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         score * 2                       -> num
         test_date                       -> date
         """
-
-        for field, expected_data_type in self.examples(type_examples):
-            _, data_type = b.parse(field)
-            self.assertEqual(data_type, expected_data_type)
+        self.validate_examples_data_type(type_examples, partial(b.parse))
 
         sql_examples = """
         [score]                         -> datatypes.score
@@ -428,9 +507,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         score * 2                       -> datatypes.score * 2
         test_date                       -> datatypes.test_date
         """
-        for field, expected_sql in self.examples(sql_examples):
-            expr, _ = b.parse(field, debug=True)
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+        self.validate_examples(sql_examples, partial(b.parse))
 
     def test_selectable_census(self):
         """Test a selectable that is a orm class"""
@@ -443,10 +520,7 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         state = "2"                     -> bool
         max(pop2000) > 100              -> bool
         """
-
-        for field, expected_data_type in self.examples(type_examples):
-            _, data_type = b.parse(field)
-            self.assertEqual(data_type, expected_data_type)
+        self.validate_examples_data_type(type_examples, partial(b.parse))
 
         sql_examples = """
         age                             -> census.age
@@ -454,9 +528,11 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         min([pop2000] + pop2008)        -> min(census.pop2000 + census.pop2008)
         state + sex                     -> census.state || census.sex
         """
-        for field, expected_sql in self.examples(sql_examples):
-            expr, _ = b.parse(field, debug=True)
-            self.assertEqual(expr_to_str(expr, self.dbinfo.engine), expected_sql)
+        self.validate_examples(sql_examples, partial(b.parse))
+
+
+class TestSQLAlchemyBuilderPostgres(TestSQLAlchemyBuilder):
+    connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
 class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
@@ -468,28 +544,28 @@ class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
         test_date                         -> date_trunc('year', datatypes.test_date)
         coalesce([test_date], date("2020-01-01"))   -> coalesce(date_trunc('year', datatypes.test_date), '2020-01-01')
         """
-        for field, expected_sql in self.examples(good_examples):
-            expr, _ = self.builder.parse(
-                field,
+        self.validate_examples(
+            good_examples,
+            partial(
+                self.builder.parse,
                 enforce_aggregation=True,
-                debug=True,
                 convert_dates_with="year_conv",
-            )
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+            ),
+        )
 
         good_examples = """
         [test_date]                       -> date_trunc('month', datatypes.test_date)
         test_date                         -> date_trunc('month', datatypes.test_date)
         coalesce([test_date], date("2020-01-01"))   -> coalesce(date_trunc('month', datatypes.test_date), '2020-01-01')
         """
-        for field, expected_sql in self.examples(good_examples):
-            expr, _ = self.builder.parse(
-                field,
+        self.validate_examples(
+            good_examples,
+            partial(
+                self.builder.parse,
                 enforce_aggregation=True,
-                debug=True,
                 convert_dates_with="month_conv",
-            )
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+            ),
+        )
 
         # If the date conversion doesn't exist, don't convert
         good_examples = """
@@ -497,14 +573,18 @@ class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
         test_date                         -> datatypes.test_date
         coalesce([test_date], date("2020-01-01"))   -> coalesce(datatypes.test_date, '2020-01-01')
         """
-        for field, expected_sql in self.examples(good_examples):
-            expr, _ = self.builder.parse(
-                field,
+        self.validate_examples(
+            good_examples,
+            partial(
+                self.builder.parse,
                 enforce_aggregation=True,
-                debug=True,
                 convert_dates_with="a_potato",
-            )
-            self.assertEqual(expr_to_str(expr, self.dbinfo.engine), expected_sql)
+            ),
+        )
+
+
+class TestSQLAlchemyBuilderConvertDatesPostgres(TestSQLAlchemyBuilderConvertDates):
+    connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
 class TestDataTypesTable(GrammarTestCase):
@@ -531,30 +611,32 @@ class TestDataTypesTable(GrammarTestCase):
         NOT [score] >= 2.0              -> datatypes.score < 2.0
         NOT 2.0 <= [score]              -> datatypes.score < 2.0
         [score] > 3 AND true            -> datatypes.score > 3
-        valid_score AND [score] > 2     -> datatypes.valid_score = 1 AND datatypes.score > 2
+sqlite::valid_score AND [score] > 2     -> datatypes.valid_score = 1 AND datatypes.score > 2
+postgres::valid_score AND [score] > 2   -> datatypes.valid_score AND datatypes.score > 2
         # This is a bad case
         # what happens is TRUE AND score > 3 gets simplified to score > 3
         valid_score = TRUE AND score > 4 -> datatypes.valid_score = (datatypes.score > 4)
         # Parentheses make this work
-        (valid_score = TRUE) AND score > 5 -> datatypes.valid_score = 1 AND datatypes.score > 5
+sqlite::(valid_score = TRUE) AND score > 5 -> datatypes.valid_score = 1 AND datatypes.score > 5
+postgres::(valid_score = TRUE) AND score > 5 -> datatypes.valid_score = true AND datatypes.score > 5
         [score] = Null                  -> datatypes.score IS NULL
         [score] IS NULL                 -> datatypes.score IS NULL
         [score] != Null                 -> datatypes.score IS NOT NULL
         [score] <> Null                 -> datatypes.score IS NOT NULL
         [score] IS NOT nULL             -> datatypes.score IS NOT NULL
-        [department] like "foo"         -> datatypes.department LIKE '%foo%'
-        [department] ilike "foo%"       -> lower(datatypes.department) LIKE lower('foo%')
-        "F" + [department] ILIKE "f__"  -> lower('F' || datatypes.department) LIKE lower('f__')
+sqlite::[department] like "foo"         -> datatypes.department LIKE '%foo%'
+sqlite::[department] ilike "foo%"       -> lower(datatypes.department) LIKE lower('foo%')
+sqlite::"F" + [department] ILIKE "f__"  -> lower('F' || datatypes.department) LIKE lower('f__')
+postgres::[department] like "foo"         -> datatypes.department LIKE '%%foo%%'
+postgres::[department] ilike "foo%"       -> datatypes.department ILIKE 'foo%%'
+postgres::"F" + [department] ILIKE "f__"  -> 'F' || datatypes.department ILIKE 'f__'
         string([score])                 -> CAST(datatypes.score AS VARCHAR)
         coalesce([score], 0.14)         -> coalesce(datatypes.score, 0.14)
         int([department])               -> CAST(datatypes.department AS INTEGER)
         coalesce([department], "moo")   -> coalesce(datatypes.department, 'moo')
         coalesce([test_date], date("2020-01-01"))   -> coalesce(datatypes.test_date, '2020-01-01')
         """
-
-        for field, expected_sql in self.examples(good_examples):
-            expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+        self.validate_examples(good_examples, partial(self.builder.parse))
 
     def test_division_and_math(self):
         """These examples should all succeed"""
@@ -582,10 +664,7 @@ class TestDataTypesTable(GrammarTestCase):
         # Order of operations has: score + (3 + 0.5 - 5)
         score + (3 + 5 / 10 - 5)         -> datatypes.score + -1.5
         """
-
-        for field, expected_sql in self.examples(good_examples):
-            expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+        self.validate_examples(good_examples, partial(self.builder.parse))
 
     def test_no_brackets(self):
         """Brackets are optional around field names"""
@@ -612,18 +691,18 @@ class TestDataTypesTable(GrammarTestCase):
         score != Null                 -> datatypes.score IS NOT NULL
         score <> Null                 -> datatypes.score IS NOT NULL
         score IS NOT nULL             -> datatypes.score IS NOT NULL
-        department like "foo"         -> datatypes.department LIKE '%foo%'
-        department ilike "foo%"       -> lower(datatypes.department) LIKE lower('foo%')
-        "F" + department ILIKE "f__"  -> lower('F' || datatypes.department) LIKE lower('f__')
+sqlite::department like "foo"         -> datatypes.department LIKE '%foo%'
+sqlite::department ilike "foo%"       -> lower(datatypes.department) LIKE lower('foo%')
+sqlite::"F" + department ILIKE "f__"  -> lower('F' || datatypes.department) LIKE lower('f__')
+postgres::department like "foo"         -> datatypes.department LIKE '%%foo%%'
+postgres::department ilike "foo%"       -> datatypes.department ILIKE 'foo%%'
+postgres::"F" + department ILIKE "f__"  -> 'F' || datatypes.department ILIKE 'f__'
         string(score)                 -> CAST(datatypes.score AS VARCHAR)
         coalesce(score, 0.14)         -> coalesce(datatypes.score, 0.14)
         int(department)               -> CAST(datatypes.department AS INTEGER)
         coalesce(department, "moo")   -> coalesce(datatypes.department, 'moo')
         """
-
-        for field, expected_sql in self.examples(good_examples):
-            expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+        self.validate_examples(good_examples, partial(self.builder.parse))
 
     def test_arrays(self):
         good_examples = """
@@ -639,12 +718,7 @@ class TestDataTypesTable(GrammarTestCase):
         [department] In ("A")             -> datatypes.department IN ('A')
         [department] + [username] In ("A", "B")        -> datatypes.department || datatypes.username IN ('A', 'B')
         """
-
-        for field, expected_sql in self.examples(good_examples):
-            expr, _ = self.builder.parse(field, debug=False)
-            self.assertEqual(
-                expr_to_str(expr, engine=self.dbinfo.engine), f"{expected_sql}"
-            )
+        self.validate_examples(good_examples, partial(self.builder.parse))
 
     def test_boolean(self):
         good_examples = """
@@ -654,7 +728,8 @@ class TestDataTypesTable(GrammarTestCase):
         [score] > 3 AND [score] < 5                           -> datatypes.score > 3 AND datatypes.score < 5
         [score] > 3 AND [score] < 5 AND [score] = 4           -> datatypes.score > 3 AND datatypes.score < 5 AND datatypes.score = 4
         [score] > 3 AND True                                  -> datatypes.score > 3
-        [score] > 3 AND False                                 -> 0 = 1
+sqlite::[score] > 3 AND False                                 -> 0 = 1
+postgres::[score] > 3 AND False                               -> false
         NOT [score] > 3 AND [score] < 5                       -> NOT (datatypes.score > 3 AND datatypes.score < 5)
         NOT ([score] > 3 AND [score] < 5)                     -> NOT (datatypes.score > 3 AND datatypes.score < 5)
         (NOT [score] > 3) AND [score] < 5                     -> datatypes.score <= 3 AND datatypes.score < 5
@@ -672,18 +747,7 @@ class TestDataTypesTable(GrammarTestCase):
         count_distinct([score] > 80)                          -> count(DISTINCT (datatypes.score > 80))
         count([score] > 80)                                   -> count(datatypes.score > 80)
         """
-
-        for field, expected_sql in self.examples(good_examples):
-            expr, _ = self.builder.parse(field, debug=True)
-
-            if expr_to_str(expr, engine=self.dbinfo.engine) != expected_sql:
-                print("===" * 10)
-                print(expr_to_str(expr, engine=self.dbinfo.engine))
-                print("vs")
-                print(expected_sql)
-                print("===" * 10)
-
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+        self.validate_examples(good_examples, partial(self.builder.parse))
 
     def test_failure(self):
         """These examples should all fail"""
@@ -817,17 +881,11 @@ A date can not be aggregated using avg.
 avg(test_date)
 ^
 """
+        self.validate_bad_examples(bad_examples, partial(self.builder.parse))
 
-        for field, expected_error in self.bad_examples(bad_examples):
-            with self.assertRaises(Exception) as e:
-                self.builder.parse(field, debug=True)
-            if str(e.exception) != expected_error:
-                print("===" * 10)
-                print(str(e.exception))
-                print("vs")
-                print(expected_error)
-                print("===" * 10)
-            self.assertEqual(str(e.exception).strip(), expected_error.strip())
+
+class TestDataTypesTablePostgres(TestDataTypesTable):
+    connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
 class TestDataTypesTableDates(GrammarTestCase):
@@ -855,9 +913,7 @@ class TestDataTypesTableDates(GrammarTestCase):
         [test_datetime] between date("30 days ago") and date("now") -> datatypes.test_datetime BETWEEN '2019-12-15 09:21:34' AND '2020-01-14 09:21:34'
         """
 
-        for field, expected_sql in self.examples(good_examples):
-            expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+        self.validate_examples(good_examples, partial(self.builder.parse))
 
     def test_dates_without_freetime(self):
         # Can't tests with date conversions and freeze time :/
@@ -873,10 +929,7 @@ class TestDataTypesTableDates(GrammarTestCase):
         date(2020, 1, 1)                                 -> date(2020, 1, 1)
         month(date(2020, 1, 1))                          -> date_trunc('month', date(2020, 1, 1))
         """
-
-        for field, expected_sql in self.examples(good_examples):
-            expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+        self.validate_examples(good_examples, partial(self.builder.parse))
 
     def test_failure(self):
         """These examples should all fail"""
@@ -895,17 +948,11 @@ When using between, the column (date) and between values (date, num) must be the
 [test_date] between "potato" and date("2020-01-01") ->
 Can't convert 'potato' to a date.
 """
+        self.validate_bad_examples(bad_examples, partial(self.builder.parse))
 
-        for field, expected_error in self.bad_examples(bad_examples):
-            with self.assertRaises(Exception) as e:
-                self.builder.parse(field, debug=True)
-            if str(e.exception).strip() != expected_error.strip():
-                print("===" * 10)
-                print(str(e.exception))
-                print("vs")
-                print(expected_error)
-                print("===" * 10)
-            self.assertEqual(str(e.exception).strip(), expected_error.strip())
+
+class TestDataTypesTableDatesPostgres(TestDataTypesTableDates):
+    connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
 class TestDataTypesTableDatesInBigquery(TestDataTypesTableDates):
@@ -934,10 +981,7 @@ class TestDataTypesTableDatesInBigquery(TestDataTypesTableDates):
         date([test_datetime])                            -> datetime(timestamp_trunc(datatypes.test_datetime, day))
         """
 
-        for field, expected_sql in self.examples(good_examples):
-            print("Parsing field", field, self.builder.drivername)
-            expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+        self.validate_examples(good_examples, partial(self.builder.parse))
 
 
 class TestAggregations(GrammarTestCase):
@@ -959,10 +1003,9 @@ class TestAggregations(GrammarTestCase):
         count_distinct([department]) -> count(DISTINCT datatypes.department)
         count_distinct(department)   -> count(DISTINCT datatypes.department)
         """
-
-        for field, expected_sql in self.examples(good_examples):
-            expr, _ = self.builder.parse(field, forbid_aggregation=False, debug=True)
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+        self.validate_examples(
+            good_examples, partial(self.builder.parse, forbid_aggregation=False)
+        )
 
     def test_forbid_aggregation(self):
         """These examples should all fail"""
@@ -1012,17 +1055,9 @@ A str can not be aggregated using sum.
 sum(score) + sum(department)
              ^
 """
-
-        for field, expected_error in self.bad_examples(bad_examples):
-            with self.assertRaises(Exception) as e:
-                self.builder.parse(field, forbid_aggregation=True, debug=True)
-            if str(e.exception).strip() != expected_error.strip():
-                print("===" * 10)
-                print(str(e.exception))
-                print("vs")
-                print(expected_error)
-                print("===" * 10)
-            self.assertEqual(str(e.exception).strip(), expected_error.strip())
+        self.validate_bad_examples(
+            bad_examples, partial(self.builder.parse, forbid_aggregation=True)
+        )
 
     def test_bad_aggregations(self):
         """These examples should all fail"""
@@ -1046,13 +1081,13 @@ A str can not be aggregated using sum.
 sum(score) + sum(department)
              ^
 ===
-percentile1([score]) ->
+sqlite::percentile1([score]) ->
 Percentile is not supported on sqlite
 
 percentile1([score])
 ^
 ===
-percentile13([score]) ->
+sqlite::percentile13([score]) ->
 Percentile values of 13 are not supported.
 
 percentile13([score])
@@ -1061,29 +1096,28 @@ Percentile is not supported on sqlite
 
 percentile13([score])
 ^
+===
+postgres::percentile13([score]) ->
+Percentile values of 13 are not supported.
+
+percentile13([score])
+^
 """
 
-        for field, expected_error in self.bad_examples(bad_examples):
-            with self.assertRaises(Exception) as e:
-                self.builder.parse(field, debug=True)
-            if str(e.exception).strip() != expected_error.strip():
-                print("===" * 10)
-                print(str(e.exception))
-                print("vs")
-                print(expected_error)
-                print("===" * 10)
-            self.assertEqual(str(e.exception).strip(), expected_error.strip())
+        self.validate_bad_examples(bad_examples, partial(self.builder.parse))
 
     def test_percentiles(self):
         # TODO: build these tests
         # Can't test with sqlalchemy
         good_examples = f"""
-        #percentile1([score])                 -> sum(datatypes.score)
+        postgres::percentile1([score])                 -> percentile_cont(0.01) WITHIN GROUP (ORDER BY datatypes.score)
+        postgres::percentile50([score])                 -> percentile_cont(0.5) WITHIN GROUP (ORDER BY datatypes.score)
+        postgres::percentile90([score])                 -> percentile_cont(0.9) WITHIN GROUP (ORDER BY datatypes.score)
         """
 
-        for field, expected_sql in self.examples(good_examples):
-            expr, _ = self.builder.parse(field, debug=True)
-            self.assertEqual(expr_to_str(expr, engine=self.dbinfo.engine), expected_sql)
+        self.validate_examples(
+            good_examples, partial(self.builder.parse, forbid_aggregation=False)
+        )
 
 
 class TestIf(GrammarTestCase):
@@ -1124,8 +1158,7 @@ postgres::if([score] > 2, test_datetime)                                -> CASE 
         if(department = "1", score, department="2", score*2)            -> CASE WHEN (datatypes.department = '1') THEN datatypes.score WHEN (datatypes.department = '2') THEN datatypes.score * 2 END
         """
 
-        tester = partial(self.builder.parse)
-        self.validate_examples(good_examples, tester)
+        self.validate_examples(good_examples, partial(self.builder.parse))
 
     def test_failing_if(self):
         """These examples should all fail"""
@@ -1173,17 +1206,9 @@ The values in this if statement must be the same type, not str and num
 if(department = "foo", department, valid_score, score)
                                                 ^
 """
-
-        for field, expected_error in self.bad_examples(bad_examples):
-            with self.assertRaises(Exception) as e:
-                self.builder.parse(field, forbid_aggregation=True, debug=True)
-            if str(e.exception).strip() != expected_error.strip():
-                print("===actual===")
-                print(e.exception)
-                print("===expected===")
-                print(expected_error)
-                print("===" * 10)
-            self.assertEqual(str(e.exception).strip(), expected_error.strip())
+        self.validate_bad_examples(
+            bad_examples, partial(self.builder.parse, forbid_aggregation=True)
+        )
 
 
 class TestAggregationsPostgres(TestAggregations):
