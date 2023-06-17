@@ -9,4 +9,5 @@ psycopg2-binary
 sqlalchemy-redshift
 sqlalchemy-bigquery
 google-api-core
+python-dotenv
 -e .
