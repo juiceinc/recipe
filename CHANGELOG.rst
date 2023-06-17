@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.35.2 (2023-06-01)
+-----------------------------------------
+* Allow snowflake timestamps in expressions
+
 v0.35.1 (2023-04-20)
 -----------------------------------------
 * Allow expression builder to be passed to Shelf.from_config constructor.

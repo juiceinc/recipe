@@ -45,6 +45,11 @@ class Col:
                 datatype = "num"
             elif isinstance(sqla_col.type, Boolean):
                 datatype = "bool"
+            elif str(sqla_col.type).startswith("TIMESTAMP"):
+                # This check is to support snowflake which uses custom
+                # types for timestamps that are not derived from sqlalchemy
+                # types.
+                datatype = "datetime"
             else:
                 datatype = "unusable"
             return cls(
