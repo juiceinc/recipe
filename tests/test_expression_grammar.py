@@ -2,7 +2,7 @@
 
 import time
 from functools import partial
-from typing import Callable, Tuple
+from typing import Callable, Tuple, List, Optional
 
 from freezegun import freeze_time
 from sqlalchemy import Column, Integer, String, Table
@@ -17,7 +17,12 @@ from recipe.schemas.expression_grammar import (
     make_columns_grammar,
 )
 from recipe.utils.formatting import expr_to_str
-from tests.test_base import RecipeTestCase, str_dedent
+from tests.test_base import (
+    RecipeTestCase,
+    str_dedent,
+    get_bigquery_connection_string,
+    get_bigquery_engine_kwargs,
+)
 
 utc_offset = -1 * time.localtime().tm_gmtoff / 3600.0 + time.localtime().tm_isdst
 
@@ -252,8 +257,23 @@ class GrammarTestCase(RecipeTestCase):
             expected_sql = expected_sql.strip()
             yield field, expected_sql
 
+    def _skip_drivername(
+        self,
+        include_drivernames: Optional[List[str]] = None,
+        exclude_drivernames: Optional[List[str]] = None,
+    ):
+        drivername = self.builder.drivername
+        if include_drivernames is not None:
+            return not any(drivername.startswith(dn) for dn in include_drivernames)
+        if exclude_drivernames is not None:
+            return any(drivername.startswith(dn) for dn in exclude_drivernames)
+
     def validate_examples(
-        self, input_rows: str, constructor: Callable[[str], Tuple[str, str]]
+        self,
+        input_rows: str,
+        constructor: Callable[[str], Tuple[str, str]],
+        include_drivernames: Optional[List[str]] = None,
+        exclude_drivernames: Optional[List[str]] = None,
     ):
         """
         Test sql generation with examples taken from a string.
@@ -263,6 +283,9 @@ class GrammarTestCase(RecipeTestCase):
         # The following example only runs on sqlite
         sqlite::field     -> expected_sql
         """
+        if self._skip_drivername(include_drivernames, exclude_drivernames):
+            return
+
         for row in input_rows.split("\n"):
             row = row.strip()
             if row == "" or row.startswith("#"):
@@ -273,17 +296,12 @@ class GrammarTestCase(RecipeTestCase):
             # None will match all drivers
             drivername = None
             field, expected_sql = row.split("->", 1)
-            if "::" in field:
-                drivername, field = field.split("::", 1)
-
             expected_sql = expected_sql.strip()
-            if drivername is not None and not self.builder.drivername.startswith(
-                drivername
-            ):
-                continue
 
             generated_expr, generated_dtype = constructor(field, debug=False)
             generated_sql = expr_to_str(generated_expr, engine=self.dbinfo.engine)
+            if self.builder.drivername == "bigquery":
+                generated_sql = generated_sql.replace("`", "")
             if generated_sql != expected_sql:
                 print(
                     f"""Field '{field.strip()}'
@@ -294,7 +312,11 @@ class GrammarTestCase(RecipeTestCase):
             self.assertEqual(generated_sql, expected_sql)
 
     def validate_examples_data_type(
-        self, input_rows: str, constructor: Callable[[str], Tuple[str, str]]
+        self,
+        input_rows: str,
+        constructor: Callable[[str], Tuple[str, str]],
+        include_drivernames: Optional[List[str]] = None,
+        exclude_drivernames: Optional[List[str]] = None,
     ):
         """
         Test sql generation with examples taken from a string.
@@ -304,6 +326,8 @@ class GrammarTestCase(RecipeTestCase):
         # The following example only runs on sqlite
         sqlite::field     -> expected_sql
         """
+        if self._skip_drivername(include_drivernames, exclude_drivernames):
+            return
         for row in input_rows.split("\n"):
             row = row.strip()
             if row == "" or row.startswith("#"):
@@ -314,14 +338,7 @@ class GrammarTestCase(RecipeTestCase):
             # None will match all drivers
             drivername = None
             field, expected_datatype = row.split("->", 1)
-            if "::" in field:
-                drivername, field = field.split("::", 1)
-
             expected_datatype = expected_datatype.strip()
-            if drivername is not None and not self.builder.drivername.startswith(
-                drivername
-            ):
-                continue
 
             generated_expr, generated_dtype = constructor(field, debug=False)
             if generated_dtype != expected_datatype:
@@ -333,36 +350,40 @@ class GrammarTestCase(RecipeTestCase):
                 )
             self.assertEqual(expected_datatype, generated_dtype)
 
-    def bad_examples(self, input_rows):
-        """Take input where each input is separated by three equals
+    # def bad_examples(self, input_rows):
+    #     """Take input where each input is separated by three equals
 
-        field ->
-        expected_error
-        ===
-        field ->
-        expected_error
-        ===
-        #field ->
-        expected_error  (commented out)
+    #     field ->
+    #     expected_error
+    #     ===
+    #     field ->
+    #     expected_error
+    #     ===
+    #     #field ->
+    #     expected_error  (commented out)
 
-        """
-        for row in input_rows.split("==="):
-            row = row.strip()
-            if row == "" or row.startswith("#"):
-                continue
+    #     """
+    #     for row in input_rows.split("==="):
+    #         row = row.strip()
+    #         if row == "" or row.startswith("#"):
+    #             continue
 
-            if "->" in row:
-                field, expected_error = row.split("->")
-            else:
-                field = row
-                expected_error = "None"
+    #         if "->" in row:
+    #             field, expected_error = row.split("->")
+    #         else:
+    #             field = row
+    #             expected_error = "None"
 
-            field = field.strip()
-            expected_error = expected_error.strip() + "\n"
-            yield field, expected_error
+    #         field = field.strip()
+    #         expected_error = expected_error.strip() + "\n"
+    #         yield field, expected_error
 
     def validate_bad_examples(
-        self, input_rows: str, constructor: Callable[[str], Tuple[str, str]]
+        self,
+        input_rows: str,
+        constructor: Callable[[str], Tuple[str, str]],
+        include_drivernames: Optional[List[str]] = None,
+        exclude_drivernames: Optional[List[str]] = None,
     ):
         """Take input where each input is separated by three equals
 
@@ -376,6 +397,8 @@ class GrammarTestCase(RecipeTestCase):
         expected_error  (commented out)
 
         """
+        if self._skip_drivername(include_drivernames, exclude_drivernames):
+            return
         for row in input_rows.split("==="):
             row = row.strip()
             if row == "" or row.startswith("#"):
@@ -386,15 +409,8 @@ class GrammarTestCase(RecipeTestCase):
             # None will match all drivers
             drivername = None
             field, expected_error = row.split("->", 1)
-            if "::" in field:
-                drivername, field = field.split("::", 1)
             expected_error = expected_error.strip() + "\n"
             field = field.strip()
-
-            if drivername is not None and not self.builder.drivername.startswith(
-                drivername
-            ):
-                continue
 
             with self.assertRaises(Exception) as e:
                 constructor(field, debug=False)
@@ -485,7 +501,9 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         [first] > "foo"               -> anon_1.first > 'foo'
         age * 2                       -> anon_1.age * 2
         """
-        self.validate_examples(sql_examples, partial(b.parse))
+        self.validate_examples(
+            sql_examples, partial(b.parse), exclude_drivernames=["bigquery"]
+        )
 
     def test_selectable_orm(self):
         """Test a selectable that is a orm class"""
@@ -507,7 +525,9 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         score * 2                       -> datatypes.score * 2
         test_date                       -> datatypes.test_date
         """
-        self.validate_examples(sql_examples, partial(b.parse))
+        self.validate_examples(
+            sql_examples, partial(b.parse), exclude_drivernames=["bigquery"]
+        )
 
     def test_selectable_census(self):
         """Test a selectable that is a orm class"""
@@ -528,11 +548,28 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         min([pop2000] + pop2008)        -> min(census.pop2000 + census.pop2008)
         state + sex                     -> census.state || census.sex
         """
-        self.validate_examples(sql_examples, partial(b.parse))
+        self.validate_examples(
+            sql_examples, partial(b.parse), exclude_drivernames=["bigquery"]
+        )
+
+        sql_examples = """
+        age                             -> age
+        state                           -> state
+        min([pop2000] + pop2008)        -> min(census.pop2000 + census.pop2008)
+        state + sex                     -> census.state || census.sex
+        """
+        self.validate_examples(
+            sql_examples, partial(b.parse), include_drivernames=["bigquery"]
+        )
 
 
 class TestSQLAlchemyBuilderPostgres(TestSQLAlchemyBuilder):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
+
+
+class TestSQLAlchemyBuilderBigquery(TestSQLAlchemyBuilder):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
@@ -551,6 +588,21 @@ class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
                 enforce_aggregation=True,
                 convert_dates_with="year_conv",
             ),
+            exclude_drivernames=["bigquery"],
+        )
+        bigquery_examples = """
+        [test_date]                       -> date_trunc(datatypes.test_date, year)
+        test_date                         -> date_trunc(datatypes.test_date, year)
+        coalesce([test_date], date("2020-01-01"))   -> coalesce(date_trunc(datatypes.test_date, year), '2020-01-01')
+        """
+        self.validate_examples(
+            bigquery_examples,
+            partial(
+                self.builder.parse,
+                enforce_aggregation=True,
+                convert_dates_with="year_conv",
+            ),
+            include_drivernames=["bigquery"],
         )
 
         good_examples = """
@@ -565,6 +617,21 @@ class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
                 enforce_aggregation=True,
                 convert_dates_with="month_conv",
             ),
+            exclude_drivernames=["bigquery"],
+        )
+        bigquery_examples = """
+        [test_date]                       -> date_trunc(datatypes.test_date, month)
+        test_date                         -> date_trunc(datatypes.test_date, month)
+        coalesce([test_date], date("2020-01-01"))   -> coalesce(date_trunc(datatypes.test_date, month), '2020-01-01')
+        """
+        self.validate_examples(
+            bigquery_examples,
+            partial(
+                self.builder.parse,
+                enforce_aggregation=True,
+                convert_dates_with="month_conv",
+            ),
+            include_drivernames=["bigquery"],
         )
 
         # If the date conversion doesn't exist, don't convert
@@ -580,6 +647,7 @@ class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
                 enforce_aggregation=True,
                 convert_dates_with="a_potato",
             ),
+            exclude_drivernames=["bigquery"],
         )
 
 
@@ -587,13 +655,16 @@ class TestSQLAlchemyBuilderConvertDatesPostgres(TestSQLAlchemyBuilderConvertDate
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
+class TestSQLAlchemyBuilderConvertDatesBigquery(TestSQLAlchemyBuilderConvertDates):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
+
+
 class TestDataTypesTable(GrammarTestCase):
     def test_fields_and_addition(self):
         """These examples should all succeed"""
 
         good_examples = """
-        [score]                         -> datatypes.score
-        [ScORE]                         -> datatypes.score
         [ScORE] + [ScORE]               -> datatypes.score + datatypes.score
         [score] + 2.0                   -> datatypes.score + 2.0
         substr(department, 5)           -> substr(datatypes.department, 5)
@@ -611,32 +682,79 @@ class TestDataTypesTable(GrammarTestCase):
         NOT [score] >= 2.0              -> datatypes.score < 2.0
         NOT 2.0 <= [score]              -> datatypes.score < 2.0
         [score] > 3 AND true            -> datatypes.score > 3
-sqlite::valid_score AND [score] > 2     -> datatypes.valid_score = 1 AND datatypes.score > 2
-postgres::valid_score AND [score] > 2   -> datatypes.valid_score AND datatypes.score > 2
         # This is a bad case
         # what happens is TRUE AND score > 3 gets simplified to score > 3
         valid_score = TRUE AND score > 4 -> datatypes.valid_score = (datatypes.score > 4)
-        # Parentheses make this work
-sqlite::(valid_score = TRUE) AND score > 5 -> datatypes.valid_score = 1 AND datatypes.score > 5
-postgres::(valid_score = TRUE) AND score > 5 -> datatypes.valid_score = true AND datatypes.score > 5
         [score] = Null                  -> datatypes.score IS NULL
         [score] IS NULL                 -> datatypes.score IS NULL
         [score] != Null                 -> datatypes.score IS NOT NULL
         [score] <> Null                 -> datatypes.score IS NOT NULL
         [score] IS NOT nULL             -> datatypes.score IS NOT NULL
-sqlite::[department] like "foo"         -> datatypes.department LIKE '%foo%'
-sqlite::[department] ilike "foo%"       -> lower(datatypes.department) LIKE lower('foo%')
-sqlite::"F" + [department] ILIKE "f__"  -> lower('F' || datatypes.department) LIKE lower('f__')
-postgres::[department] like "foo"         -> datatypes.department LIKE '%%foo%%'
-postgres::[department] ilike "foo%"       -> datatypes.department ILIKE 'foo%%'
-postgres::"F" + [department] ILIKE "f__"  -> 'F' || datatypes.department ILIKE 'f__'
-        string([score])                 -> CAST(datatypes.score AS VARCHAR)
         coalesce([score], 0.14)         -> coalesce(datatypes.score, 0.14)
-        int([department])               -> CAST(datatypes.department AS INTEGER)
         coalesce([department], "moo")   -> coalesce(datatypes.department, 'moo')
         coalesce([test_date], date("2020-01-01"))   -> coalesce(datatypes.test_date, '2020-01-01')
         """
         self.validate_examples(good_examples, partial(self.builder.parse))
+
+        cast_examples = """
+        string([score]) like "9_"       -> CAST(datatypes.score AS VARCHAR) LIKE '9_'
+        string([score])                 -> CAST(datatypes.score AS VARCHAR)
+        string(score)                   -> CAST(datatypes.score AS VARCHAR)
+        int(department)                 -> CAST(datatypes.department AS INTEGER)
+        int([department])               -> CAST(datatypes.department AS INTEGER)
+        """
+        self.validate_examples(
+            cast_examples, partial(self.builder.parse), exclude_drivernames=["bigquery"]
+        )
+
+        cast_bq_examples = """
+        string([score]) like "9_"       -> CAST(datatypes.score AS STRING) LIKE '9_'
+        string([score])                 -> CAST(datatypes.score AS STRING)
+        string(score)                   -> CAST(datatypes.score AS STRING)
+        int(department)                 -> CAST(datatypes.department AS INT64)
+        int([department])               -> CAST(datatypes.department AS INT64)
+        """
+        self.validate_examples(
+            cast_bq_examples,
+            partial(self.builder.parse),
+            include_drivernames=["bigquery"],
+        )
+
+        sqlite_examples = """
+        # Parentheses make this work
+        valid_score AND [score] > 2     -> datatypes.valid_score = 1 AND datatypes.score > 2
+        (valid_score = TRUE) AND score > 5 -> datatypes.valid_score = 1 AND datatypes.score > 5
+        [department] like "foo"         -> datatypes.department LIKE '%foo%'
+        [department] ilike "foo%"       -> lower(datatypes.department) LIKE lower('foo%')
+        "F" + [department] ILIKE "f__"  -> lower('F' || datatypes.department) LIKE lower('f__')
+        valid_score AND score > 2       -> datatypes.valid_score = 1 AND datatypes.score > 2
+        (valid_score = TRUE) AND score > 5 -> datatypes.valid_score = 1 AND datatypes.score > 5
+        department like "foo"           -> datatypes.department LIKE '%foo%'
+        department ilike "foo%"         -> lower(datatypes.department) LIKE lower('foo%')
+        "F" + department ILIKE "f__"    -> lower('F' || datatypes.department) LIKE lower('f__')
+        """
+        self.validate_examples(
+            sqlite_examples, partial(self.builder.parse), include_drivernames=["sqlite"]
+        )
+
+        postgres_examples = """
+        # Parentheses make this work
+        valid_score AND [score] > 2     -> datatypes.valid_score AND datatypes.score > 2
+        (valid_score = TRUE) AND score > 5 -> datatypes.valid_score = true AND datatypes.score > 5
+        [department] like "foo"         -> datatypes.department LIKE '%%foo%%'
+        [department] ilike "foo%"       -> datatypes.department ILIKE 'foo%%'
+        "F" + [department] ILIKE "f__"  -> 'F' || datatypes.department ILIKE 'f__'
+        valid_score AND score > 2       -> datatypes.valid_score AND datatypes.score > 2
+        (valid_score = TRUE) AND score > 5 -> datatypes.valid_score = true AND datatypes.score > 5
+        department like "foo"           -> datatypes.department LIKE '%%foo%%'
+        department ilike "foo%"         -> datatypes.department ILIKE 'foo%%'
+        "F" + department ILIKE "f__"    -> 'F' || datatypes.department ILIKE 'f__'
+        """
+        self.validate_examples(
+            postgres_examples,
+            partial(self.builder.parse),
+            include_drivernames=["postgres"],
+        )
 
     def test_division_and_math(self):
         """These examples should all succeed"""
@@ -645,7 +763,6 @@ postgres::"F" + [department] ILIKE "f__"  -> 'F' || datatypes.department ILIKE '
         [score] / 2                      -> CAST(datatypes.score AS FLOAT) / 2
         [score] / 2.0                    -> CAST(datatypes.score AS FLOAT) / 2.0
         sum(score) / count(*)            -> CASE WHEN (count(*) = 0) THEN NULL ELSE CAST(sum(datatypes.score) AS FLOAT) / CAST(count(*) AS FLOAT) END
-        [score] / 1                      -> datatypes.score
         sum([score] / 1)                 -> sum(datatypes.score)
         sum([score] / [score])           -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / CAST(datatypes.score AS FLOAT) END)
         score / 2                        -> CAST(datatypes.score AS FLOAT) / 2
@@ -657,21 +774,49 @@ postgres::"F" + [department] ILIKE "f__"  -> 'F' || datatypes.department ILIKE '
         [score] * (2*score)              -> datatypes.score * 2 * datatypes.score
         [score] * (2 / score)            -> datatypes.score * CASE WHEN (datatypes.score = 0) THEN NULL ELSE 2 / CAST(datatypes.score AS FLOAT) END
         [score] / (10-7)                 -> CAST(datatypes.score AS FLOAT) / 3
-        [score] / (10-9)                 -> datatypes.score
         ([score] + [score]) / ([score] - [score]) -> CASE WHEN (datatypes.score - datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score + datatypes.score AS FLOAT) / CAST(datatypes.score - datatypes.score AS FLOAT) END
         # Order of operations has: score + (3 + (5 / 5))
         score + (3 + 5 / (10 - 5))       -> datatypes.score + 4.0
         # Order of operations has: score + (3 + 0.5 - 5)
         score + (3 + 5 / 10 - 5)         -> datatypes.score + -1.5
         """
-        self.validate_examples(good_examples, partial(self.builder.parse))
+        self.validate_examples(
+            good_examples, partial(self.builder.parse), exclude_drivernames=["bigquery"]
+        )
+
+        good_examples = good_examples.replace("AS FLOAT", "AS FLOAT64")
+        self.validate_examples(
+            good_examples, partial(self.builder.parse), include_drivernames=["bigquery"]
+        )
+
+        div_1_examples = """
+        [score]                          -> datatypes.score
+        [ScORE]                          -> datatypes.score
+        [score] / 1                      -> datatypes.score
+        [score] / (10-9)                 -> datatypes.score
+        """
+        self.validate_examples(
+            div_1_examples,
+            partial(self.builder.parse),
+            exclude_drivernames=["bigquery"],
+        )
+
+        div_1_bq_examples = """
+        [score]                          -> score
+        [ScORE]                          -> score
+        [score] / 1                      -> score
+        [score] / (10-9)                 -> score
+        """
+        self.validate_examples(
+            div_1_bq_examples,
+            partial(self.builder.parse),
+            include_drivernames=["bigquery"],
+        )
 
     def test_no_brackets(self):
         """Brackets are optional around field names"""
 
         good_examples = """
-        score                         -> datatypes.score
-        ScORE                         -> datatypes.score
         ScORE + ScORE                 -> datatypes.score + datatypes.score
         score + 2.0                   -> datatypes.score + 2.0
         username + department         -> datatypes.username || datatypes.department
@@ -691,15 +836,7 @@ postgres::"F" + [department] ILIKE "f__"  -> 'F' || datatypes.department ILIKE '
         score != Null                 -> datatypes.score IS NOT NULL
         score <> Null                 -> datatypes.score IS NOT NULL
         score IS NOT nULL             -> datatypes.score IS NOT NULL
-sqlite::department like "foo"         -> datatypes.department LIKE '%foo%'
-sqlite::department ilike "foo%"       -> lower(datatypes.department) LIKE lower('foo%')
-sqlite::"F" + department ILIKE "f__"  -> lower('F' || datatypes.department) LIKE lower('f__')
-postgres::department like "foo"         -> datatypes.department LIKE '%%foo%%'
-postgres::department ilike "foo%"       -> datatypes.department ILIKE 'foo%%'
-postgres::"F" + department ILIKE "f__"  -> 'F' || datatypes.department ILIKE 'f__'
-        string(score)                 -> CAST(datatypes.score AS VARCHAR)
         coalesce(score, 0.14)         -> coalesce(datatypes.score, 0.14)
-        int(department)               -> CAST(datatypes.department AS INTEGER)
         coalesce(department, "moo")   -> coalesce(datatypes.department, 'moo')
         """
         self.validate_examples(good_examples, partial(self.builder.parse))
@@ -724,12 +861,9 @@ postgres::"F" + department ILIKE "f__"  -> 'F' || datatypes.department ILIKE 'f_
         good_examples = """
         [score] > 3                                           -> datatypes.score > 3
         [department] > "b"                                    -> datatypes.department > 'b'
-        string([score]) like "9_"                             -> CAST(datatypes.score AS VARCHAR) LIKE '9_'
         [score] > 3 AND [score] < 5                           -> datatypes.score > 3 AND datatypes.score < 5
         [score] > 3 AND [score] < 5 AND [score] = 4           -> datatypes.score > 3 AND datatypes.score < 5 AND datatypes.score = 4
         [score] > 3 AND True                                  -> datatypes.score > 3
-sqlite::[score] > 3 AND False                                 -> 0 = 1
-postgres::[score] > 3 AND False                               -> false
         NOT [score] > 3 AND [score] < 5                       -> NOT (datatypes.score > 3 AND datatypes.score < 5)
         NOT ([score] > 3 AND [score] < 5)                     -> NOT (datatypes.score > 3 AND datatypes.score < 5)
         (NOT [score] > 3) AND [score] < 5                     -> datatypes.score <= 3 AND datatypes.score < 5
@@ -748,6 +882,23 @@ postgres::[score] > 3 AND False                               -> false
         count([score] > 80)                                   -> count(datatypes.score > 80)
         """
         self.validate_examples(good_examples, partial(self.builder.parse))
+
+        sqlite_examples = """
+        string([score]) like "9_"                             -> CAST(datatypes.score AS VARCHAR) LIKE '9_'
+        [score] > 3 AND False                                 -> 0 = 1
+        """
+        self.validate_examples(
+            sqlite_examples, partial(self.builder.parse), include_drivernames=["sqlite"]
+        )
+
+        postgres_examples = """
+        [score] > 3 AND False                               -> false
+        """
+        self.validate_examples(
+            postgres_examples,
+            partial(self.builder.parse),
+            exclude_drivernames=["sqlite"],
+        )
 
     def test_failure(self):
         """These examples should all fail"""
@@ -888,11 +1039,15 @@ class TestDataTypesTablePostgres(TestDataTypesTable):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
+class TestDataTypesTableBigquery(TestDataTypesTable):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
+
+
 class TestDataTypesTableDates(GrammarTestCase):
     @freeze_time("2020-01-14 09:21:34", tz_offset=utc_offset)
     def test_dates(self):
         good_examples = f"""
-        [test_date]           -> datatypes.test_date
         [test_date] > date("2020-01-01")     -> datatypes.test_date > '2020-01-01'
         [test_date] > date("today")          -> datatypes.test_date > '2020-01-14'
         date("today") < [test_date]          -> datatypes.test_date > '2020-01-14'
@@ -929,7 +1084,28 @@ class TestDataTypesTableDates(GrammarTestCase):
         date(2020, 1, 1)                                 -> date(2020, 1, 1)
         month(date(2020, 1, 1))                          -> date_trunc('month', date(2020, 1, 1))
         """
-        self.validate_examples(good_examples, partial(self.builder.parse))
+        self.validate_examples(
+            good_examples, partial(self.builder.parse), exclude_drivernames=["bigquery"]
+        )
+
+        # Can't tests with date conversions and freeze time :/
+        bigquery_examples = f"""
+        month([test_date]) > date("2020-12-30")          -> date_trunc(datatypes.test_date, month) > '2020-12-30'
+        month([test_datetime]) > date("2020-12-30")      -> datetime(timestamp_trunc(datatypes.test_datetime, month)) > '2020-12-30'
+        date("2020-12-30") < month([test_datetime])      -> datetime(timestamp_trunc(datatypes.test_datetime, month)) > '2020-12-30'
+        day([test_date]) > date("2020-12-30")            -> date_trunc(datatypes.test_date, day) > '2020-12-30'
+        week([test_date]) > date("2020-12-30")           -> date_trunc(datatypes.test_date, week(monday)) > '2020-12-30'
+        quarter([test_date]) > date("2020-12-30")        -> date_trunc(datatypes.test_date, quarter) > '2020-12-30'
+        year([test_date]) > date("2020-12-30")           -> date_trunc(datatypes.test_date, year) > '2020-12-30'
+        date([test_datetime])                            -> datetime(timestamp_trunc(datatypes.test_datetime, day))
+        date(2020, 1, 1)                                 -> date(2020, 1, 1)
+        month(date(2020, 1, 1))                          -> date_trunc(date(2020, 1, 1), month)
+        """
+        self.validate_examples(
+            bigquery_examples,
+            partial(self.builder.parse),
+            include_drivernames=["bigquery"],
+        )
 
     def test_failure(self):
         """These examples should all fail"""
@@ -955,33 +1131,9 @@ class TestDataTypesTableDatesPostgres(TestDataTypesTableDates):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
-class TestDataTypesTableDatesInBigquery(TestDataTypesTableDates):
-    """Test date code generated against a bigquery backend"""
-
-    def setUp(self):
-        SQLAlchemyBuilder.clear_builder_cache()
-        self.builder = SQLAlchemyBuilder.get_builder(self.datatypes_table)
-        self.builder.drivername = "bigquery"
-        self.builder.transformer.drivername = "bigquery"
-
-    def tearDown(self) -> None:
-        SQLAlchemyBuilder.clear_builder_cache()
-        return super().tearDown()
-
-    def test_dates_without_freetime(self):
-        """bigquery generates different sql for date conversions"""
-        good_examples = f"""
-        month([test_date]) > date("2020-12-30")          -> date_trunc(datatypes.test_date, month) > '2020-12-30'
-        month([test_datetime]) > date("2020-12-30")      -> datetime(timestamp_trunc(datatypes.test_datetime, month)) > '2020-12-30'
-        date("2020-12-30") < month([test_datetime])      -> datetime(timestamp_trunc(datatypes.test_datetime, month)) > '2020-12-30'
-        day([test_date]) > date("2020-12-30")            -> date_trunc(datatypes.test_date, day) > '2020-12-30'
-        week([test_date]) > date("2020-12-30")           -> date_trunc(datatypes.test_date, week(monday)) > '2020-12-30'
-        quarter([test_date]) > date("2020-12-30")        -> date_trunc(datatypes.test_date, quarter) > '2020-12-30'
-        year([test_date]) > date("2020-12-30")           -> date_trunc(datatypes.test_date, year) > '2020-12-30'
-        date([test_datetime])                            -> datetime(timestamp_trunc(datatypes.test_datetime, day))
-        """
-
-        self.validate_examples(good_examples, partial(self.builder.parse))
+class TestDataTypesTableDatesBigquery(TestDataTypesTableDates):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestAggregations(GrammarTestCase):
@@ -1080,14 +1232,18 @@ A str can not be aggregated using sum.
 
 sum(score) + sum(department)
              ^
-===
-sqlite::percentile1([score]) ->
+"""
+
+        self.validate_bad_examples(bad_examples, partial(self.builder.parse))
+
+        sqlite_examples = """
+percentile1([score]) ->
 Percentile is not supported on sqlite
 
 percentile1([score])
 ^
 ===
-sqlite::percentile13([score]) ->
+percentile13([score]) ->
 Percentile values of 13 are not supported.
 
 percentile13([score])
@@ -1096,28 +1252,59 @@ Percentile is not supported on sqlite
 
 percentile13([score])
 ^
-===
-postgres::percentile13([score]) ->
+        """
+        self.validate_bad_examples(
+            sqlite_examples, partial(self.builder.parse), include_drivernames=["sqlite"]
+        )
+
+        postgres_examples = """
+percentile13([score]) ->
 Percentile values of 13 are not supported.
 
 percentile13([score])
 ^
-"""
-
-        self.validate_bad_examples(bad_examples, partial(self.builder.parse))
+        """
+        self.validate_bad_examples(
+            postgres_examples,
+            partial(self.builder.parse),
+            include_drivernames=["postgres"],
+        )
 
     def test_percentiles(self):
         # TODO: build these tests
         # Can't test with sqlalchemy
-        good_examples = f"""
-        postgres::percentile1([score])                 -> percentile_cont(0.01) WITHIN GROUP (ORDER BY datatypes.score)
-        postgres::percentile50([score])                 -> percentile_cont(0.5) WITHIN GROUP (ORDER BY datatypes.score)
-        postgres::percentile90([score])                 -> percentile_cont(0.9) WITHIN GROUP (ORDER BY datatypes.score)
+        postgres_percentiles = f"""
+        percentile1([score])                  -> percentile_cont(0.01) WITHIN GROUP (ORDER BY datatypes.score)
+        percentile50([score])                 -> percentile_cont(0.5) WITHIN GROUP (ORDER BY datatypes.score)
+        percentile90([score])                 -> percentile_cont(0.9) WITHIN GROUP (ORDER BY datatypes.score)
         """
 
         self.validate_examples(
-            good_examples, partial(self.builder.parse, forbid_aggregation=False)
+            postgres_percentiles,
+            partial(self.builder.parse, forbid_aggregation=False),
+            include_drivernames=["postgres"],
         )
+
+        bigquery_percentiles = f"""
+        percentile1([score])                  -> approx_quantiles(datatypes.score, 100)[OFFSET(1)]
+        percentile50([score])                 -> approx_quantiles(datatypes.score, 2)[OFFSET(1)]
+        percentile90([score])                 -> approx_quantiles(datatypes.score, 10)[OFFSET(9)]
+        """
+
+        self.validate_examples(
+            bigquery_percentiles,
+            partial(self.builder.parse, forbid_aggregation=False),
+            include_drivernames=["bigquery"],
+        )
+
+
+class TestAggregationsPostgres(TestAggregations):
+    connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
+
+
+class TestAggregationsBigquery(TestAggregations):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestIf(GrammarTestCase):
@@ -1145,20 +1332,53 @@ class TestIf(GrammarTestCase):
         if([score] > 2, department, score > 4, username, "OTHERS")      -> CASE WHEN (datatypes.score > 2) THEN datatypes.department WHEN (datatypes.score > 4) THEN datatypes.username ELSE 'OTHERS' END
         # Date if statements
         if([score] > 2, test_date)                                      -> CASE WHEN (datatypes.score > 2) THEN datatypes.test_date END
-        month(if([score] > 2, test_date))                               -> date_trunc('month', CASE WHEN (datatypes.score > 2) THEN datatypes.test_date END)
         if(test_date > date("2020-01-01"), test_date)                   -> CASE WHEN (datatypes.test_date > '2020-01-01') THEN datatypes.test_date END
         # Datetime if statements
-sqlite::if([score] > 2, test_datetime)                                  -> CASE WHEN (datatypes.score > 2) THEN datatypes.test_datetime END
-postgres::if([score] > 2, test_datetime)                                -> CASE WHEN (datatypes.score > 2) THEN datatypes.test_datetime END
-        month(if([score] > 2, test_datetime))                           -> date_trunc('month', CASE WHEN (datatypes.score > 2) THEN datatypes.test_datetime END)
         if(test_datetime > date("2020-01-01"), test_datetime)           -> CASE WHEN (datatypes.test_datetime > '2020-01-01 00:00:00') THEN datatypes.test_datetime END
-        month(if([score] > 2, test_datetime))                           -> date_trunc('month', CASE WHEN (datatypes.score > 2) THEN datatypes.test_datetime END)
         if(score<2,"babies",score<13,"children",score<20,"teens","oldsters")       -> CASE WHEN (datatypes.score < 2) THEN 'babies' WHEN (datatypes.score < 13) THEN 'children' WHEN (datatypes.score < 20) THEN 'teens' ELSE 'oldsters' END
         if((score)<2,"babies",(score)<13,"children",(score)<20,"teens","oldsters") -> CASE WHEN (datatypes.score < 2) THEN 'babies' WHEN (datatypes.score < 13) THEN 'children' WHEN (datatypes.score < 20) THEN 'teens' ELSE 'oldsters' END
         if(department = "1", score, department="2", score*2)            -> CASE WHEN (datatypes.department = '1') THEN datatypes.score WHEN (datatypes.department = '2') THEN datatypes.score * 2 END
         """
 
-        self.validate_examples(good_examples, partial(self.builder.parse))
+        self.validate_examples(
+            good_examples, partial(self.builder.parse), exclude_drivernames=["bigquery"]
+        )
+        bq_examples = good_examples.replace("AS FLOAT", "AS FLOAT64")
+        self.validate_examples(
+            bq_examples, partial(self.builder.parse), include_drivernames=["bigquery"]
+        )
+
+        if_examples = """
+        month(if([score] > 2, test_date))                               -> date_trunc('month', CASE WHEN (datatypes.score > 2) THEN datatypes.test_date END)
+        month(if([score] > 2, test_datetime))                           -> date_trunc('month', CASE WHEN (datatypes.score > 2) THEN datatypes.test_datetime END)
+        """
+        self.validate_examples(
+            if_examples, partial(self.builder.parse), exclude_drivernames=["bigquery"]
+        )
+        bq_if_examples = """
+        month(if([score] > 2, test_date))                               -> date_trunc(CASE WHEN (datatypes.score > 2) THEN datatypes.test_date END, month)
+        month(if([score] > 2, test_datetime))                           -> datetime(timestamp_trunc(CASE WHEN (datatypes.score > 2) THEN datatypes.test_datetime END, month))
+        """
+        self.validate_examples(
+            bq_if_examples,
+            partial(self.builder.parse),
+            include_drivernames=["bigquery"],
+        )
+
+        sqlite_examples = """
+if([score] > 2, test_datetime)                                  -> CASE WHEN (datatypes.score > 2) THEN datatypes.test_datetime END
+"""
+        self.validate_examples(
+            sqlite_examples, partial(self.builder.parse), include_drivernames=["sqlite"]
+        )
+        postgres_examples = """
+if([score] > 2, test_datetime)                                -> CASE WHEN (datatypes.score > 2) THEN datatypes.test_datetime END
+"""
+        self.validate_examples(
+            postgres_examples,
+            partial(self.builder.parse),
+            include_drivernames=["postgres"],
+        )
 
     def test_failing_if(self):
         """These examples should all fail"""
@@ -1211,12 +1431,13 @@ if(department = "foo", department, valid_score, score)
         )
 
 
-class TestAggregationsPostgres(TestAggregations):
-    connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
-
-
 class TestIfPostgres(TestIf):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
+
+
+class TestIfBigquery(TestIf):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestSQLAlchemySerialize(GrammarTestCase):

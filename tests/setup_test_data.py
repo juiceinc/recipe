@@ -15,7 +15,10 @@ from sqlalchemy import (
     create_engine,
 )
 from yaml import safe_load
+from dotenv import load_dotenv
+from .test_base import get_bigquery_engine_kwargs, get_bigquery_connection_string
 
+load_dotenv()
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -175,3 +178,9 @@ if __name__ == "__main__":
         f"postgresql+psycopg2://postgres:postgres@db:5432/postgres", echo=True
     )
     d.setup()
+
+    d = SetupData(
+        get_bigquery_connection_string(), echo=True, **get_bigquery_engine_kwargs()
+    )
+    # Google cloud setup takes a long time, so it's disabled by default
+    # d.setup()
