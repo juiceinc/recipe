@@ -49,7 +49,6 @@ def get_bigquery_connection_string():
     return f"bigquery://{GOOGLE_CLOUD_PROJECT}/recipe_test_data"
 
 
-
 class SetupData:
     """Setup databases for testing"""
 
