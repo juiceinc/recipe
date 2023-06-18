@@ -16,13 +16,38 @@ from sqlalchemy import (
 )
 from yaml import safe_load
 from dotenv import load_dotenv
-from .test_base import get_bigquery_engine_kwargs, get_bigquery_connection_string
 
 load_dotenv()
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 
 sqlite_db = os.path.join(ROOT_DIR, "testdata.db")
+
+
+def get_bigquery_engine_kwargs():
+    GOOGLE_CLOUD_PROJECT = os.environ["GOOGLE_CLOUD_PROJECT"]
+    GOOGLE_CLOUD_PRIVATE_KEY_ID = os.environ["GOOGLE_CLOUD_PRIVATE_KEY_ID"]
+    GOOGLE_CLOUD_PRIVATE_KEY = os.environ["GOOGLE_CLOUD_PRIVATE_KEY"]
+    creds = {
+        "type": "service_account",
+        "project_id": GOOGLE_CLOUD_PROJECT,
+        "private_key_id": GOOGLE_CLOUD_PRIVATE_KEY_ID,
+        "private_key": GOOGLE_CLOUD_PRIVATE_KEY,
+        "client_email": "jbo-test-bigquery-admin@juicebox-open-test.iam.gserviceaccount.com",
+        "client_id": "114757123849235966640",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/jbo-test-bigquery-admin%40juicebox-open-test.iam.gserviceaccount.com",
+    }
+    return {"credentials_info": creds}
+
+
+def get_bigquery_connection_string():
+    GOOGLE_CLOUD_PROJECT = os.environ["GOOGLE_CLOUD_PROJECT"]
+
+    return f"bigquery://{GOOGLE_CLOUD_PROJECT}/recipe_test_data"
+
 
 
 class SetupData:

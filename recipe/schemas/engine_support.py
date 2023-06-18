@@ -31,6 +31,11 @@ class bq_median(expression.FunctionElement):
     name = "bq_median"
 
 
+class bq_percentile50(expression.FunctionElement):
+    type = Numeric()
+    name = "bq_percentile50"
+
+
 class bq_percentile1(expression.FunctionElement):
     type = Numeric()
     name = "bq_percentile1"
@@ -73,6 +78,11 @@ class bq_percentile99(expression.FunctionElement):
 
 @compiles(bq_median, "bigquery")
 def bqmedian(element, compiler, **kw):
+    return f"approx_quantiles({compiler.process(element.clauses)}, 2)[OFFSET(1)]"
+
+
+@compiles(bq_percentile50, "bigquery")
+def bqpercentile50(element, compiler, **kw):
     return f"approx_quantiles({compiler.process(element.clauses)}, 2)[OFFSET(1)]"
 
 

@@ -9,17 +9,17 @@ from sqlalchemy.dialects import postgresql
 from datetime import date, datetime, timedelta
 
 
-def filter_to_string(filt):
+def filter_to_string(filt, engine=None):
     """Compile a filter object to a literal string"""
     try:
         if hasattr(filt, "filters") and filt.filters:
-            return expr_to_str(filt.filters[0])
+            return expr_to_str(filt.filters[0], engine)
         elif hasattr(filt, "havings") and filt.havings:
-            return expr_to_str(filt.havings[0])
+            return expr_to_str(filt.havings[0], engine)
         elif isinstance(filt, bool):
             return str(filt)
         else:
-            return expr_to_str(filt)
+            return expr_to_str(filt, engine)
     except UnsupportedCompilationError:
         return uuid4()
 
@@ -53,6 +53,11 @@ def prettyprintable_sql(statement, dialect=None, reindent=True):
              safe when handling user created data.
     """
     # Generate a class that can handle encoding
+    if isinstance(statement, Query):
+        if dialect is None:
+            dialect = statement.session.get_bind().dialect
+        statement = statement.statement
+
     if dialect:
         DialectKlass = dialect.__class__
     else:
@@ -76,4 +81,8 @@ def prettyprintable_sql(statement, dialect=None, reindent=True):
 
 def expr_to_str(expr, engine):
     """Utility to print sql for a expression"""
-    return prettyprintable_sql(expr, engine.dialect, reindent=False)
+    if engine is None:
+        dialect = DefaultDialect()
+    else:
+        dialect = getattr(engine, "dialect", None)
+    return prettyprintable_sql(expr, dialect, reindent=False)
