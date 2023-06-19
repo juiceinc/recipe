@@ -212,6 +212,32 @@ class RecipeTestCase(TestCase):
 
         return Recipe.from_config(shelf, config, **recipe_args)
 
+    def _skip_drivername(
+        self,
+        include_drivernames: Optional[List[str]] = None,
+        exclude_drivernames: Optional[List[str]] = None,
+    ):
+        drivername = self.drivername
+        if include_drivernames is not None:
+            return not any(drivername.startswith(dn) for dn in include_drivernames)
+        if exclude_drivernames is not None:
+            return any(drivername.startswith(dn) for dn in exclude_drivernames)
+
+    def assertRecipe(
+        self,
+        recipe: Recipe,
+        sql: Optional[str] = None,
+        csv: Optional[str] = None,
+        include_drivernames: Optional[List[str]] = None,
+        exclude_drivernames: Optional[List[str]] = None,
+    ):
+        if self._skip_drivername(include_drivernames, exclude_drivernames):
+            return
+        if sql:
+            self.assertRecipeSQL(recipe, sql)
+        if csv:
+            self.assertRecipeCSV(recipe, csv)
+
     @classmethod
     def setUpClass(cls):
         """Set up tables using connection_string. The data must be already loaded
@@ -221,6 +247,7 @@ class RecipeTestCase(TestCase):
         cls.dbinfo = get_dbinfo(cls.connection_string, **cls.engine_kwargs)
         cls.meta = cls.dbinfo.sqlalchemy_meta
         cls.session = cls.dbinfo.session_factory()
+        cls.drivername = "foo"
 
         cls.weird_table_with_column_named_true_table = Table(
             "weird_table_with_column_named_true",

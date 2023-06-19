@@ -5,8 +5,6 @@ from sqlalchemy.engine.default import DefaultDialect
 from sqlalchemy.exc import UnsupportedCompilationError
 from sqlalchemy.orm import Query
 from sqlalchemy.sql.sqltypes import Date, DateTime, NullType, String
-from sqlalchemy.dialects import postgresql
-from datetime import date, datetime, timedelta
 
 
 def filter_to_string(filt, engine=None):

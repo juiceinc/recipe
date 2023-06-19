@@ -17,6 +17,7 @@ class TestRecipeIngredients(RecipeTestCase):
 FROM foo
 GROUP BY first""",
         )
+
         self.assertRecipeCSV(
             recipe,
             """
@@ -33,16 +34,13 @@ GROUP BY first""",
         recipe = (
             self.recipe().metrics("age").dimensions("first", "first").metrics("age")
         )
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS first,
+        self.assertRecipe(
+            recipe,
+            sql="""SELECT foo.first AS first,
        sum(foo.age) AS age
 FROM foo
-GROUP BY first"""
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
+GROUP BY first""",
+            csv="""
             first,age,first_id
             hi,15,hi
             """,
@@ -54,18 +52,15 @@ GROUP BY first"""
 
     def test_idvaluedimension(self):
         recipe = self.recipe().metrics("age").dimensions("firstlast")
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS firstlast_id,
+        self.assertRecipe(
+            self.recipe().metrics("age").dimensions("firstlast"),
+            sql="""SELECT foo.first AS firstlast_id,
        foo.last AS firstlast,
        sum(foo.age) AS age
 FROM foo
 GROUP BY firstlast_id,
-         firstlast"""
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
+         firstlast""",
+            csv="""
             firstlast_id,firstlast,age
             hi,fred,10
             hi,there,5
@@ -80,25 +75,21 @@ GROUP BY firstlast_id,
             age_expression=self.basic_table.c.age,
             id="d",
         )
-        recipe = self.recipe().metrics("age").dimensions(d)
-        assert (
-            recipe.to_sql()
-            == """SELECT foo.first AS d_id,
+        self.assertRecipe(
+            self.recipe().metrics("age").dimensions(d),
+            sql="""SELECT foo.first AS d_id,
        foo.last AS d,
        foo.age AS d_age,
        sum(foo.age) AS age
 FROM foo
 GROUP BY d_id,
          d,
-         d_age"""
-        )
-        self.assertRecipeCSV(
-            recipe,
-            """
-            d_id,d,d_age,age
-            hi,fred,10,10
-            hi,there,5,5
-            """,
+         d_age""",
+            csv="""
+        d_id,d,d_age,age
+        hi,fred,10,10
+        hi,there,5,5
+        """,
         )
 
     def test_multirole_dimension_with_lookup(self):

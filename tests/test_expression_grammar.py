@@ -235,6 +235,7 @@ class GrammarTestCase(RecipeTestCase):
         self.builder = SQLAlchemyBuilder.get_builder(
             self.datatypes_table, extra_selectables=extra_selectables
         )
+        self.drivername = self.builder.drivername
 
     def examples(self, input_rows: str):
         """Take input where each line looks like
@@ -257,16 +258,25 @@ class GrammarTestCase(RecipeTestCase):
             expected_sql = expected_sql.strip()
             yield field, expected_sql
 
-    def _skip_drivername(
-        self,
-        include_drivernames: Optional[List[str]] = None,
-        exclude_drivernames: Optional[List[str]] = None,
-    ):
-        drivername = self.builder.drivername
-        if include_drivernames is not None:
-            return not any(drivername.startswith(dn) for dn in include_drivernames)
-        if exclude_drivernames is not None:
-            return any(drivername.startswith(dn) for dn in exclude_drivernames)
+    def _parse_examples(self, input_rows: str, split_on: str = "\n"):
+        """
+        Parse examples taken from a multiline string
+
+        field     -> expected_sql
+        #field    -> expected_sql (commented out)
+        # The following example only runs on sqlite
+        sqlite::field     -> expected_sql
+        """
+        for row in input_rows.split(split_on):
+            row = row.strip()
+            if row == "" or row.startswith("#"):
+                continue
+            if "->" not in row:
+                continue
+            field, expected_value = row.split("->", 1)
+            field = field.strip()
+            expected_value = expected_value.strip()
+            yield field, expected_value
 
     def validate_examples(
         self,
@@ -286,18 +296,9 @@ class GrammarTestCase(RecipeTestCase):
         if self._skip_drivername(include_drivernames, exclude_drivernames):
             return
 
-        for row in input_rows.split("\n"):
-            row = row.strip()
-            if row == "" or row.startswith("#"):
-                continue
-            if "->" not in row:
-                continue
+        print(f"Checking {self.builder.drivername}")
 
-            # None will match all drivers
-            drivername = None
-            field, expected_sql = row.split("->", 1)
-            expected_sql = expected_sql.strip()
-
+        for field, expected_sql in self._parse_examples(input_rows=input_rows):
             generated_expr, generated_dtype = constructor(field, debug=False)
             generated_sql = expr_to_str(generated_expr, engine=self.dbinfo.engine)
             if self.builder.drivername == "bigquery":
@@ -307,7 +308,7 @@ class GrammarTestCase(RecipeTestCase):
                     f"""Field '{field.strip()}'
     Expected: {expected_sql}
     Actual:   {generated_sql}
-    Filter driver={drivername}, current driver {self.builder.drivername}"""
+                    """
                 )
             self.assertEqual(generated_sql, expected_sql)
 
@@ -328,55 +329,17 @@ class GrammarTestCase(RecipeTestCase):
         """
         if self._skip_drivername(include_drivernames, exclude_drivernames):
             return
-        for row in input_rows.split("\n"):
-            row = row.strip()
-            if row == "" or row.startswith("#"):
-                continue
-            if "->" not in row:
-                continue
 
-            # None will match all drivers
-            drivername = None
-            field, expected_datatype = row.split("->", 1)
-            expected_datatype = expected_datatype.strip()
-
+        for field, expected_datatype in self._parse_examples(input_rows=input_rows):
             generated_expr, generated_dtype = constructor(field, debug=False)
             if generated_dtype != expected_datatype:
                 print(
                     f"""Field '{field.strip()}'
     Expected: {expected_datatype}
     Actual:   {generated_dtype}
-    Filter driver={drivername}, current driver {self.builder.drivername}"""
+"""
                 )
             self.assertEqual(expected_datatype, generated_dtype)
-
-    # def bad_examples(self, input_rows):
-    #     """Take input where each input is separated by three equals
-
-    #     field ->
-    #     expected_error
-    #     ===
-    #     field ->
-    #     expected_error
-    #     ===
-    #     #field ->
-    #     expected_error  (commented out)
-
-    #     """
-    #     for row in input_rows.split("==="):
-    #         row = row.strip()
-    #         if row == "" or row.startswith("#"):
-    #             continue
-
-    #         if "->" in row:
-    #             field, expected_error = row.split("->")
-    #         else:
-    #             field = row
-    #             expected_error = "None"
-
-    #         field = field.strip()
-    #         expected_error = expected_error.strip() + "\n"
-    #         yield field, expected_error
 
     def validate_bad_examples(
         self,
@@ -399,19 +362,9 @@ class GrammarTestCase(RecipeTestCase):
         """
         if self._skip_drivername(include_drivernames, exclude_drivernames):
             return
-        for row in input_rows.split("==="):
-            row = row.strip()
-            if row == "" or row.startswith("#"):
-                continue
-            if "->" not in row:
-                continue
-
-            # None will match all drivers
-            drivername = None
-            field, expected_error = row.split("->", 1)
-            expected_error = expected_error.strip() + "\n"
-            field = field.strip()
-
+        for field, expected_error in self._parse_examples(
+            input_rows=input_rows, split_on="==="
+        ):
             with self.assertRaises(Exception) as e:
                 constructor(field, debug=False)
 
@@ -424,8 +377,7 @@ Expected error:
 ----
 Actual error:
 {e.exception}
-----
-Filter driver={drivername}, current driver {self.builder.drivername}"""
+"""
                 )
             self.assertEqual(str(e.exception).strip(), expected_error.strip())
 
