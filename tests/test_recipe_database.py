@@ -6,8 +6,7 @@ from datetime import date, datetime
 
 from sqlalchemy import Column, Date, DateTime, Integer, MetaData, String, Table, insert
 
-from recipe import Recipe, Shelf, get_oven
-from recipe.oven.base import OvenBase
+from recipe import Recipe, Shelf
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

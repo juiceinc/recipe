@@ -12,7 +12,6 @@ import tablib
 from sqlalchemy import alias, func, select
 from sureberus import normalize_dict, normalize_schema
 
-from recipe.dynamic_extensions import run_hooks
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import Dimension, Filter, Having, Ingredient, Metric
 from recipe.schemas import recipe_schema
@@ -512,7 +511,6 @@ class Recipe(object):
         if "recipe" not in recipe_parts:
             recipe_parts["cache_region"] = self._cache_region
             recipe_parts["cache_prefix"] = self._cache_prefix
-        recipe_parts = run_hooks(recipe_parts, "modify_query", self.dynamic_extensions)
 
         # Apply limit on the outermost query
         # This happens after building the comparison recipe

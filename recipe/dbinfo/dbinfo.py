@@ -1,16 +1,19 @@
 import functools
+import os
+from contextlib import contextmanager
 from threading import Lock
 
 import attr
 import cachetools
 import structlog
 from cachetools import TTLCache, cached
-from sqlalchemy import MetaData, create_engine
+from sqlalchemy import Engine, MetaData, Select, create_engine, event, exc
 from sqlalchemy.orm import sessionmaker
+
+from .caching_query import CachingQuery
 
 SLOG = structlog.get_logger(__name__)
 
-from .caching_query import CachingQuery
 
 
 def query_callable(regions, query_cls=CachingQuery, **kwargs):
@@ -24,6 +27,20 @@ def engine_is_postgres(engine):
     if any(pg_id in engine.name for pg_id in pg_identifiers):
         is_postgres = True
     return is_postgres
+
+
+def connect(dbapi_connection, connection_record):
+    connection_record.info["pid"] = os.getpid()
+
+
+def checkout(dbapi_connection, connection_record, connection_proxy):
+    pid = os.getpid()
+    if connection_record.info["pid"] != pid:
+        connection_record.dbapi_connection = connection_proxy.dbapi_connection = None
+        raise exc.DisconnectionError(
+            "Connection record belongs to pid %s, "
+            "attempting to check out in pid %s" % (connection_record.info["pid"], pid)
+        )
 
 
 def refreshing_cached(cache, key=cachetools.keys.hashkey, lock=None):
@@ -50,25 +67,42 @@ def refreshing_cached(cache, key=cachetools.keys.hashkey, lock=None):
     return decorator
 
 
+def run_in_process(select: Select, engine: Engine):
+    with engine.connect() as conn:
+        return conn.execute(select).fetchall()
+
+
 @attr.s
-class DBInfo(object):
+class DBInfo:
     """An object for keeping track of some SQLAlchemy objects related to a
     single database.
     """
 
-    engine = attr.ib()
-    session_factory = attr.ib()
-    sqlalchemy_meta = attr.ib()
-    metadata_write_lock = attr.ib()
-    is_postgres = attr.ib(default=False)
+    engine: Engine = attr.ib()
+    session_factory: sessionmaker = attr.ib()
+    sqlalchemy_meta: MetaData = attr.ib()
+    metadata_write_lock: Lock = attr.ib()
+    is_postgres: bool = attr.ib(default=False)
+
+    def __attrs_post_init__(self):
+        self.session = sessionmaker(self.engine)
+        self.is_postgres = engine_is_postgres(self.engine)
 
     @property
     def Session(self):
-        return self.session_factory
+        return self.session
 
     @property
     def drivername(self):
         return self.engine.url.drivername
+
+    def execute(self):
+        pass
+
+    @contextmanager
+    def connection_scope(self):
+        """A Context Manager that manages a transaction around a block."""
+        yield self.engine.connect()
 
 
 # Decorate with an engine identifier
@@ -113,7 +147,9 @@ _DBINFO_CACHE_LOCK = Lock()
     key=lambda conn_string, *a, **kw: conn_string + str(a) + str(kw),
     lock=_DBINFO_CACHE_LOCK,
 )
-def get_dbinfo(conn_string: str, use_caching: bool = False, **engine_kwargs):
+def get_dbinfo(
+    conn_string: str, use_caching: bool = False, debug: bool = False, **engine_kwargs
+):
     """Get a (potentially cached) DBInfo object based on a connection string.
 
     Args:
@@ -126,33 +162,36 @@ def get_dbinfo(conn_string: str, use_caching: bool = False, **engine_kwargs):
     engine = create_engine(conn_string, **engine_kwargs)
 
     # Listen to events
-    # if settings.DEBUG_SQLALCHEMY:
-    #     for event_name in (
-    #         "checkout",
-    #         "checkin",
-    #         "close",
-    #         "close_detached",
-    #         "first_connect",
-    #         "detach",
-    #         "invalidate",
-    #         "reset",
-    #         "soft_invalidate",
-    #         "engine_connect",
-    #     ):
-    #         event.listen(
-    #             engine,
-    #             event_name,
-    #             make_engine_event_handler(
-    #                 event_name=event_name, engine_name=engine.url
-    #             ),
-    #         )
+    if debug:
+        for event_name in (
+            "checkout",
+            "checkin",
+            "close",
+            "close_detached",
+            "first_connect",
+            "detach",
+            "invalidate",
+            "reset",
+            "soft_invalidate",
+            "engine_connect",
+        ):
+            event.listen(
+                engine,
+                event_name,
+                make_engine_event_handler(
+                    event_name=event_name, engine_name=engine.url
+                ),
+            )
+
+    event.listen(engine, "connect", connect)
+    event.listen(engine, "checkout", checkout)
 
     is_postgres = engine_is_postgres(engine)
     if use_caching:
         session = init_caching_session(engine)
     else:
         session = init_session(engine)
-    sqlalchemy_meta = MetaData(bind=engine)
+    sqlalchemy_meta = MetaData()
 
     dbinfo = DBInfo(
         engine=engine,

@@ -31,7 +31,6 @@ install = [
     'sqlparse',
     'tablib',
     'pyyaml',
-    'stevedore',
     'sureberus',
     'faker',
     'dateparser>=1.1.1',

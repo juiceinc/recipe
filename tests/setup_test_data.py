@@ -2,20 +2,10 @@ import os
 from datetime import date
 
 from dateutil.relativedelta import relativedelta
-from sqlalchemy import (
-    Boolean,
-    Column,
-    Date,
-    DateTime,
-    Float,
-    Integer,
-    MetaData,
-    String,
-    Table,
-    create_engine,
-)
+from sqlalchemy import Boolean, Column, Date, DateTime, Float, Integer, String, Table
 from yaml import safe_load
 from dotenv import load_dotenv
+from recipe.dbinfo.dbinfo import get_dbinfo
 
 load_dotenv()
 
@@ -53,13 +43,17 @@ class SetupData:
     """Setup databases for testing"""
 
     def __init__(self, connection_string, **kwargs):
-        self.engine = create_engine(connection_string, **kwargs)
-        self.meta = MetaData(bind=self.engine)
+        self.dbinfo = get_dbinfo(connection_string, **kwargs)
+        self.engine = self.dbinfo.engine
+        self.meta = self.dbinfo.sqlalchemy_meta
 
     def load_data(self, table_name, table):
         """Load data from the data/ directory"""
         data = safe_load(open(os.path.join(ROOT_DIR, "data", f"{table_name}.yml")))
-        self.engine.execute(table.insert(), data)
+        with self.dbinfo.engine.connect().execution_options(
+            isolation_level="AUTOCOMMIT"
+        ) as con:
+            con.execute(table.insert(), data)
 
     def setup(self):
         """Set up tables using a connection_string to define an oven.
@@ -168,8 +162,8 @@ class SetupData:
             Column("circuit_court", String),
         )
 
-        self.meta.drop_all()
-        self.meta.create_all()
+        self.meta.drop_all(bind=self.engine)
+        self.meta.create_all(bind=self.engine)
         # self.engine.drop_all()
         # self.engine.create_all()
         self.load_data(
@@ -191,7 +185,10 @@ class SetupData:
             {"dt": start_dt + relativedelta(months=offset_month), "count": 1}
             for offset_month in range(-50, 50)
         ]
-        self.engine.execute(datetester_table.insert(), data)
+        with self.dbinfo.engine.connect().execution_options(
+            isolation_level="AUTOCOMMIT"
+        ) as con:
+            con.execute(datetester_table.insert(), data)
 
 
 if __name__ == "__main__":
@@ -203,8 +200,10 @@ if __name__ == "__main__":
     )
     d.setup()
 
-    d = SetupData(
-        get_bigquery_connection_string(), echo=True, **get_bigquery_engine_kwargs()
-    )
+    # print(get_bigquery_connection_string())
+
+    # d = SetupData(
+    #     get_bigquery_connection_string(), echo=True, **get_bigquery_engine_kwargs()
+    # )
     # Google cloud setup takes a long time, so it's disabled by default
     # d.setup()

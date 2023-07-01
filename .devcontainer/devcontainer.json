@@ -27,7 +27,8 @@
 				"ms-python.vscode-pylance",
 				"alexcvzz.vscode-sqlite",
 				"ms-python.black-formatter",
-				"ms-python.isort"
+				"ms-python.isort",
+				"GitHub.copilot"
 			]
 		}
 	}

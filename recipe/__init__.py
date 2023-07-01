@@ -30,7 +30,6 @@ from recipe.ingredients import (
     Metric,
     WtdAvgMetric,
 )
-from recipe.oven import get_oven
 from recipe.shelf import AutomaticShelf, Shelf
 from recipe.utils import FakerAnonymizer
 

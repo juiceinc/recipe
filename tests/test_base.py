@@ -18,7 +18,6 @@ from sqlalchemy import (
     func,
     select,
 )
-from yaml import safe_load
 
 from recipe import Dimension, Filter, IdValueDimension, Metric, Recipe, Shelf
 from recipe.dbinfo.dbinfo import get_dbinfo
@@ -440,6 +439,13 @@ class RecipeTestCase(TestCase):
 
 
 class TestRecipeTestCase(RecipeTestCase):
+    engine_kwargs = {
+        # "echo_pool": "debug",
+        "pool_size": 20,
+        "max_overflow": 0,
+        # "pool_reset_on_return": None,
+    }
+
     def test_sample_data_loaded(self):
         values = [
             (self.weird_table_with_column_named_true_table, 2),
@@ -455,14 +461,63 @@ class TestRecipeTestCase(RecipeTestCase):
         ]
 
         for table, expected_count in values:
-            self.assertEqual(
-                self.session.execute(
-                    select([func.count()]).select_from(table)
-                ).scalar(),
-                expected_count,
-            )
+            with self.dbinfo.connection_scope() as conn:
+                res = conn.execute(select(func.count()).select_from(table)).scalar()
+                print(self.dbinfo.drivername)
+                self.assertEqual(res, expected_count)
 
     def test_strip_columns_from_csv(self):
         content = """a,b,c\n1,2,3"""
         c2 = strip_columns_from_csv(content, ignore_columns=["b"])
         self.assertEqual(c2, "a,c\n1,3")
+
+
+class TestDBInfo(RecipeTestCase):
+    engine_kwargs = {
+        # "echo_pool": "debug",
+        "pool_size": 20,
+        "max_overflow": 0,
+        # "pool_reset_on_return": None,
+    }
+
+    def test_select(self):
+        values = [
+            (self.weird_table_with_column_named_true_table, 2),
+            (self.basic_table, 2),
+            (self.scores_table, 6),
+            (self.datatypes_table, 6),
+            (self.scores_with_nulls_table, 6),
+            (self.tagscores_table, 10),
+            (self.id_tests_table, 5),
+            (self.census_table, 344),
+            (self.state_fact_table, 2),
+            (self.datetester_table, 100),
+        ]
+
+        for table, expected_count in values:
+            with self.dbinfo.connection_scope() as conn:
+                res = conn.execute(select(func.count()).select_from(table)).scalar()
+                self.assertEqual(res, expected_count)
+
+    def test_select_pool(self):
+        values = [
+            (self.weird_table_with_column_named_true_table, 2),
+            (self.basic_table, 2),
+            (self.scores_table, 6),
+            (self.datatypes_table, 6),
+            (self.scores_with_nulls_table, 6),
+            (self.tagscores_table, 10),
+            (self.id_tests_table, 5),
+            (self.census_table, 344),
+            (self.state_fact_table, 2),
+            (self.datetester_table, 100),
+        ]
+
+        # selects = [select(func.count()).select_from(table) for table, cnt in values]
+        # result = self.dbinfo.run_in_pool(selects)
+        # self.assertEqual(result, [])
+
+        # for table, expected_count in values:
+        #     with self.dbinfo.connection_scope() as conn:
+        #         res = conn.execute(select(func.count()).select_from(table)).scalar()
+        #         self.assertEqual(res, expected_count)

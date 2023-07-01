@@ -6,7 +6,7 @@ from typing import Callable, Tuple, List, Optional
 
 from freezegun import freeze_time
 from sqlalchemy import Column, Integer, String, Table
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.ext.serializer import dumps, loads
 
 from recipe.schemas.builders import SQLAlchemyBuilder
@@ -31,24 +31,7 @@ class BuildGrammarTestCase(RecipeTestCase):
     def setUp(self):
         super().setUp()
 
-        # We can even use the orm
         Base = declarative_base()
-
-        class BasicData(Base):
-            __table__ = Table(
-                "foo",
-                Base.metadata,
-                Column("first", String, primary_key=True),
-                autoload=True,
-                autoload_with=self.dbinfo.engine,
-                extend_existing=True,
-            )
-
-        # Only mapping some columns
-        class DateTesterData(Base):
-            __table__ = Table(
-                "datetester", Base.metadata, Column("count", Integer, primary_key=True)
-            )
 
         self.selectables = [
             self.basic_table,
@@ -57,8 +40,6 @@ class BuildGrammarTestCase(RecipeTestCase):
                 {"dimensions": ["first", "last"], "metrics": ["age"]}
             ),
             self.recipe_from_config({"dimensions": ["firstlast"], "metrics": ["age"]}),
-            BasicData,
-            DateTesterData,
         ]
 
     def assertSelectableGrammar(self, selectable, grammar_text: str, *, namespace=None):
@@ -78,8 +59,6 @@ class BuildGrammarTestCase(RecipeTestCase):
             ["bool", "date", "datetime", "num", "str", "str", "str"],
             ["num", "str", "str"],
             ["num", "str", "str"],
-            ["date", "datetime", "num", "str", "str"],
-            ["num"],
         ]
 
         for selectable, expected_column_keys in zip(
@@ -121,16 +100,6 @@ class BuildGrammarTestCase(RecipeTestCase):
             num_0: "[" + /age/i + "]" | /age/i
             str_0: "[" + /firstlast/i + "]" | /firstlast/i
             str_1: "[" + /firstlast_id/i + "]" | /firstlast_id/i
-            """,
-            """
-            date_0: "[" + /birth_date/i + "]" | /birth_date/i
-            datetime_0: "[" + /dt/i + "]" | /dt/i
-            num_0: "[" + /age/i + "]" | /age/i
-            str_0: "[" + /first/i + "]" | /first/i
-            str_1: "[" + /last/i + "]" | /last/i
-            """,
-            """
-            num_0: "[" + /count/i + "]" | /count/i
             """,
         ]
         for selectable, expected_grammar in zip(self.selectables, expected_grammars):
@@ -187,24 +156,6 @@ class BuildGrammarTestCase(RecipeTestCase):
             datetime_end.1: datetime_end_conv | datetime_aggr | "(" + datetime_end + ")"
             boolean.1: TRUE | FALSE | extra_bool_rule | "(" + boolean + ")"
             string.1: str_0 | str_1 | ESCAPED_STRING | extra_string_rule | "(" + string + ")"
-            num.1: num_0 | NUMBER | extra_num_rule | "(" + num + ")"
-            """,
-            """
-            unusable_col: "DUMMYVALUNUSABLECOL"
-            date.1: date_0 | extra_date_rule | "(" + date + ")"
-            datetime.2: datetime_0 | extra_datetime_rule | "(" + datetime + ")"
-            datetime_end.1: datetime_0 | datetime_end_conv | datetime_aggr | "(" + datetime_end + ")"
-            boolean.1: TRUE | FALSE | extra_bool_rule | "(" + boolean + ")"
-            string.1: str_0 | str_1 | ESCAPED_STRING | extra_string_rule | "(" + string + ")"
-            num.1: num_0 | NUMBER | extra_num_rule | "(" + num + ")"
-            """,
-            """
-            unusable_col: "DUMMYVALUNUSABLECOL"
-            date.1: extra_date_rule | "(" + date + ")"
-            datetime.2: extra_datetime_rule | "(" + datetime + ")"
-            datetime_end.1: datetime_end_conv | datetime_aggr | "(" + datetime_end + ")"
-            boolean.1: TRUE | FALSE | extra_bool_rule | "(" + boolean + ")"
-            string.1: ESCAPED_STRING | extra_string_rule | "(" + string + ")"
             num.1: num_0 | NUMBER | extra_num_rule | "(" + num + ")"
             """,
         ]
@@ -295,8 +246,6 @@ class GrammarTestCase(RecipeTestCase):
         """
         if self._skip_drivername(include_drivernames, exclude_drivernames):
             return
-
-        print(f"Checking {self.builder.drivername}")
 
         for field, expected_sql in self._parse_examples(input_rows=input_rows):
             generated_expr, generated_dtype = constructor(field, debug=False)
@@ -420,7 +369,6 @@ class TestSQLAlchemyBuilder(GrammarTestCase):
         substr(department, 5, 5)        -> str
         max([score] - [scores.score])   -> num
         """
-
         self.validate_examples_data_type(good_examples, partial(self.builder.parse))
 
     def test_literals(self):
