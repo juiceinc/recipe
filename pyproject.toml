@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "recipe"
+version = "0.35.4"
+description = "Build SQL queries with config"
+authors = ["Chris Gemignani <chris.gemignani@juiceanalytics.com>"]
+license = "MIT"
+readme = "README.rst"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.12"
+Faker = "^18.11.2"
+SQLAlchemy = "<2.0"
+sqlparse = "^0.4.4"
+tablib = "^3.5.0"
+PyYAML = "^6.0"
+sureberus = "^0.15.0"
+dateparser = "^1.1.8"
+attrs = "^23.1.0"
+lark = "^1.1.5"
+structlog = "^23.1.0"
+"dogpile.cache" = "^1.2.1"
+python-dateutil = "^2.8.2"
+redis = "^4.6.0"
+
+[tool.poetry.group.dev.dependencies]
+bump2version = "^1.0.1"
+pytest = "^7.4.0"
+pytest-cov = "^4.1.0"
+freezegun = "^1.2.2"
+psycopg2-binary = "^2.9.6"
+sqlalchemy-redshift = "^0.8.14"
+google-api-core = "^2.11.1"
+sqlalchemy-bigquery = "^1.6.1"
+pyodbc = "^4.0.39"
+python-dotenv = "^1.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

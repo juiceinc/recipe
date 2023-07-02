@@ -246,7 +246,7 @@ class RecipeTestCase(TestCase):
         cls.dbinfo = get_dbinfo(cls.connection_string, **cls.engine_kwargs)
         cls.meta = cls.dbinfo.sqlalchemy_meta
         cls.session = cls.dbinfo.session_factory()
-        cls.drivername = "foo"
+        cls.drivername = cls.dbinfo.engine.url.drivername
 
         cls.weird_table_with_column_named_true_table = Table(
             "weird_table_with_column_named_true",
@@ -463,7 +463,6 @@ class TestRecipeTestCase(RecipeTestCase):
         for table, expected_count in values:
             with self.dbinfo.connection_scope() as conn:
                 res = conn.execute(select(func.count()).select_from(table)).scalar()
-                print(self.dbinfo.drivername)
                 self.assertEqual(res, expected_count)
 
     def test_strip_columns_from_csv(self):

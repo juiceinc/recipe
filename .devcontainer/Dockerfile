@@ -7,10 +7,12 @@ ENV PYTHONUNBUFFERED 1
 # COPY requirements_dev.txt /tmp/pip-tmp/
 # RUN pip3 --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requirements.txt  -r /tmp/pip-tmp/requirements_dev.txt \
 #     && rm -rf /tmp/pip-tmp
+RUN runuser -u vscode -- curl -sSL https://install.python-poetry.org | python3 -
+
 
 # [Optional] Uncomment this section to install additional OS packages.
-# RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-#     && apt-get -y install --no-install-recommends <your-package-list-here>
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends unixodbc-dev
 
 
 

@@ -126,10 +126,10 @@ class TransformToSQLAlchemyExpression(Transformer):
         """SQL safe division"""
         if not isinstance(denom, (int, float)):
             return (
-                case([(denom == 0, None)], else_=num / cast(denom, Float))
+                case((denom == 0, None), else_=num / cast(denom, Float))
                 if isinstance(num, (int, float))
                 else case(
-                    [(denom == 0, None)], else_=cast(num, Float) / cast(denom, Float)
+                    (denom == 0, None), else_=cast(num, Float) / cast(denom, Float)
                 )
             )
 
@@ -568,7 +568,7 @@ class TransformToSQLAlchemyExpression(Transformer):
         # collect the other args into pairs
         # ['a','b','c','d'] --> [('a',b'), ('c','d')]
         pairs = list(zip(args[::2], args[1::2]))
-        return case(pairs, else_=else_expr)
+        return case(*pairs, else_=else_expr)
 
     # Constants
 

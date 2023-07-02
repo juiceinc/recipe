@@ -7,7 +7,9 @@ import attr
 import cachetools
 import structlog
 from cachetools import TTLCache, cached
-from sqlalchemy import Engine, MetaData, Select, create_engine, event, exc
+from sqlalchemy.engine import Engine
+from sqlalchemy.sql.expression import Select
+from sqlalchemy import MetaData, create_engine, event, exc
 from sqlalchemy.orm import sessionmaker
 
 from .caching_query import CachingQuery

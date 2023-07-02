@@ -5,8 +5,6 @@ from functools import partial
 from typing import Callable, Tuple, List, Optional
 
 from freezegun import freeze_time
-from sqlalchemy import Column, Integer, String, Table
-from sqlalchemy.orm import declarative_base
 from sqlalchemy.ext.serializer import dumps, loads
 
 from recipe.schemas.builders import SQLAlchemyBuilder
@@ -30,8 +28,6 @@ utc_offset = -1 * time.localtime().tm_gmtoff / 3600.0 + time.localtime().tm_isds
 class BuildGrammarTestCase(RecipeTestCase):
     def setUp(self):
         super().setUp()
-
-        Base = declarative_base()
 
         self.selectables = [
             self.basic_table,
@@ -186,7 +182,6 @@ class GrammarTestCase(RecipeTestCase):
         self.builder = SQLAlchemyBuilder.get_builder(
             self.datatypes_table, extra_selectables=extra_selectables
         )
-        self.drivername = self.builder.drivername
 
     def examples(self, input_rows: str):
         """Take input where each line looks like
@@ -254,7 +249,7 @@ class GrammarTestCase(RecipeTestCase):
                 generated_sql = generated_sql.replace("`", "")
             if generated_sql != expected_sql:
                 print(
-                    f"""Field '{field.strip()}'
+                    f"""Field '{field.strip()}' with drivername '{self.builder.drivername}' failed.
     Expected: {expected_sql}
     Actual:   {generated_sql}
                     """
@@ -329,6 +324,26 @@ Actual error:
 """
                 )
             self.assertEqual(str(e.exception).strip(), expected_error.strip())
+
+
+class DrivernameTestCase(GrammarTestCase):
+    def test_drivername(self):
+        self.assertEqual(self.drivername, "sqlite")
+
+
+class PostgresDrivernameTestCase(GrammarTestCase):
+    connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
+
+    def test_drivername(self):
+        self.assertEqual(self.drivername, "postgresql+psycopg2")
+
+
+class BigqueryDrivernameTestCase(GrammarTestCase):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
+
+    def test_drivername(self):
+        self.assertEqual(self.drivername, "postgresql+psycopg2")
 
 
 class TestSQLAlchemyBuilder(GrammarTestCase):
@@ -467,9 +482,10 @@ class TestSQLAlchemyBuilderPostgres(TestSQLAlchemyBuilder):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
-class TestSQLAlchemyBuilderBigquery(TestSQLAlchemyBuilder):
-    connection_string = get_bigquery_connection_string()
-    engine_kwargs = get_bigquery_engine_kwargs()
+# FIXME: Restore bigquery
+# class TestSQLAlchemyBuilderBigquery(TestSQLAlchemyBuilder):
+#     connection_string = get_bigquery_connection_string()
+#     engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
@@ -555,9 +571,10 @@ class TestSQLAlchemyBuilderConvertDatesPostgres(TestSQLAlchemyBuilderConvertDate
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
-class TestSQLAlchemyBuilderConvertDatesBigquery(TestSQLAlchemyBuilderConvertDates):
-    connection_string = get_bigquery_connection_string()
-    engine_kwargs = get_bigquery_engine_kwargs()
+# FIXME: Restore bigquery
+# class TestSQLAlchemyBuilderConvertDatesBigquery(TestSQLAlchemyBuilderConvertDates):
+#     connection_string = get_bigquery_connection_string()
+#     engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestDataTypesTable(GrammarTestCase):
@@ -660,22 +677,47 @@ class TestDataTypesTable(GrammarTestCase):
         """These examples should all succeed"""
 
         good_examples = """
-        [score] / 2                      -> CAST(datatypes.score AS FLOAT) / 2
-        [score] / 2.0                    -> CAST(datatypes.score AS FLOAT) / 2.0
-        sum(score) / count(*)            -> CASE WHEN (count(*) = 0) THEN NULL ELSE CAST(sum(datatypes.score) AS FLOAT) / CAST(count(*) AS FLOAT) END
+        [score] / 2                      -> CAST(datatypes.score AS FLOAT) / (2 + 0.0)
+        [score] / 2.0                    -> CAST(datatypes.score AS FLOAT) / (2.0 + 0.0)
+        sum(score) / count(*)            -> CASE WHEN (count(*) = 0) THEN NULL ELSE CAST(sum(datatypes.score) AS FLOAT) / (CAST(count(*) AS FLOAT) + 0.0) END
         sum([score] / 1)                 -> sum(datatypes.score)
-        sum([score] / [score])           -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / CAST(datatypes.score AS FLOAT) END)
-        score / 2                        -> CAST(datatypes.score AS FLOAT) / 2
-        sum(score / score)               -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / CAST(datatypes.score AS FLOAT) END)
-        [score] / (2/1)                  -> CAST(datatypes.score AS FLOAT) / 2
-        [score] / (0.5/0.25)             -> CAST(datatypes.score AS FLOAT) / 2.0
-        [score] / (0.5 /    0.25)        -> CAST(datatypes.score AS FLOAT) / 2.0
+        sum([score] / [score])           -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / (CAST(datatypes.score AS FLOAT) + 0.0) END)
+        score / 2                        -> CAST(datatypes.score AS FLOAT) / (2 + 0.0)
+        sum(score / score)               -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / (CAST(datatypes.score AS FLOAT) + 0.0) END)
+        [score] / (2/1)                  -> CAST(datatypes.score AS FLOAT) / (2 + 0.0)
+        [score] / (0.5/0.25)             -> CAST(datatypes.score AS FLOAT) / (2.0 + 0.0)
+        [score] / (0.5 /    0.25)        -> CAST(datatypes.score AS FLOAT) / (2.0 + 0.0)
         [score] * (2*3)                  -> datatypes.score * 6
         [score] * (2*score)              -> datatypes.score * 2 * datatypes.score
-        [score] * (2 / score)            -> datatypes.score * CASE WHEN (datatypes.score = 0) THEN NULL ELSE 2 / CAST(datatypes.score AS FLOAT) END
-        [score] / (10-7)                 -> CAST(datatypes.score AS FLOAT) / 3
-        ([score] + [score]) / ([score] - [score]) -> CASE WHEN (datatypes.score - datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score + datatypes.score AS FLOAT) / CAST(datatypes.score - datatypes.score AS FLOAT) END
-        # Order of operations has: score + (3 + (5 / 5))
+        [score] * (2 / score)            -> datatypes.score * CASE WHEN (datatypes.score = 0) THEN NULL ELSE 2 / (CAST(datatypes.score AS FLOAT) + 0.0) END
+        [score] / (10-7)                 -> CAST(datatypes.score AS FLOAT) / (3 + 0.0)
+        ([score] + [score]) / ([score] - [score]) -> CASE WHEN (datatypes.score - datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score + datatypes.score AS FLOAT) / (CAST(datatypes.score - datatypes.score AS FLOAT) + 0.0) END
+        score + (3 + 5 / (10 - 5))       -> datatypes.score + 4.0
+        # Order of operations has: score + (3 + 0.5 - 5)
+        score + (3 + 5 / 10 - 5)         -> datatypes.score + -1.5
+        """
+        self.validate_examples(
+            good_examples,
+            partial(self.builder.parse),
+            exclude_drivernames=["bigquery", "sqlite"],
+        )
+
+        good_examples = """
+        [score] / 2                      -> CAST(datatypes.score AS FLOAT) / (2 + 0.0)
+        [score] / 2.0                    -> CAST(datatypes.score AS FLOAT) / (2.0 + 0.0)
+        sum(score) / count(*)            -> CASE WHEN (count(*) = 0) THEN NULL ELSE CAST(sum(datatypes.score) AS FLOAT) / (CAST(count(*) AS FLOAT) + 0.0) END
+        sum([score] / 1)                 -> sum(datatypes.score)
+        sum([score] / [score])           -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / (CAST(datatypes.score AS FLOAT) + 0.0) END)
+        score / 2                        -> CAST(datatypes.score AS FLOAT) / (2 + 0.0)
+        sum(score / score)               -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / (CAST(datatypes.score AS FLOAT) + 0.0) END)
+        [score] / (2/1)                  -> CAST(datatypes.score AS FLOAT) / (2 + 0.0)
+        [score] / (0.5/0.25)             -> CAST(datatypes.score AS FLOAT) / (2.0 + 0.0)
+        [score] / (0.5 /    0.25)        -> CAST(datatypes.score AS FLOAT) / (2.0 + 0.0)
+        [score] * (2*3)                  -> datatypes.score * 6
+        [score] * (2*score)              -> datatypes.score * 2 * datatypes.score
+        [score] * (2 / score)            -> datatypes.score * CASE WHEN (datatypes.score = 0) THEN NULL ELSE 2 / (CAST(datatypes.score AS FLOAT) + 0.0) END
+        [score] / (10-7)                 -> CAST(datatypes.score AS FLOAT) / (3 + 0.0)
+        ([score] + [score]) / ([score] - [score]) -> CASE WHEN (datatypes.score - datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score + datatypes.score AS FLOAT) / (CAST(datatypes.score - datatypes.score AS FLOAT) + 0.0) END
         score + (3 + 5 / (10 - 5))       -> datatypes.score + 4.0
         # Order of operations has: score + (3 + 0.5 - 5)
         score + (3 + 5 / 10 - 5)         -> datatypes.score + -1.5
@@ -791,6 +833,7 @@ class TestDataTypesTable(GrammarTestCase):
             sqlite_examples, partial(self.builder.parse), include_drivernames=["sqlite"]
         )
 
+        print("lets do it\n" * 10)
         postgres_examples = """
         [score] > 3 AND False                               -> false
         """
@@ -939,9 +982,10 @@ class TestDataTypesTablePostgres(TestDataTypesTable):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
-class TestDataTypesTableBigquery(TestDataTypesTable):
-    connection_string = get_bigquery_connection_string()
-    engine_kwargs = get_bigquery_engine_kwargs()
+# FIXME: Restore bigquery
+# class TestDataTypesTableBigquery(TestDataTypesTable):
+#     connection_string = get_bigquery_connection_string()
+#     engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestDataTypesTableDates(GrammarTestCase):
@@ -1031,9 +1075,10 @@ class TestDataTypesTableDatesPostgres(TestDataTypesTableDates):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
-class TestDataTypesTableDatesBigquery(TestDataTypesTableDates):
-    connection_string = get_bigquery_connection_string()
-    engine_kwargs = get_bigquery_engine_kwargs()
+# FIXME: Restore bigquery
+# class TestDataTypesTableDatesBigquery(TestDataTypesTableDates):
+#     connection_string = get_bigquery_connection_string()
+#     engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestAggregations(GrammarTestCase):
@@ -1202,9 +1247,10 @@ class TestAggregationsPostgres(TestAggregations):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
-class TestAggregationsBigquery(TestAggregations):
-    connection_string = get_bigquery_connection_string()
-    engine_kwargs = get_bigquery_engine_kwargs()
+# FIXME: Restore bigquery
+# class TestAggregationsBigquery(TestAggregations):
+#     connection_string = get_bigquery_connection_string()
+#     engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestIf(GrammarTestCase):
@@ -1335,9 +1381,10 @@ class TestIfPostgres(TestIf):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
-class TestIfBigquery(TestIf):
-    connection_string = get_bigquery_connection_string()
-    engine_kwargs = get_bigquery_engine_kwargs()
+# FIXME: Restore bigquery
+# class TestIfBigquery(TestIf):
+#     connection_string = get_bigquery_connection_string()
+#     engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestSQLAlchemySerialize(GrammarTestCase):

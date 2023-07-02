@@ -2,18 +2,7 @@ from datetime import date, datetime
 
 import structlog
 from lark import GrammarError, Lark
-from sqlalchemy import (
-    func,
-    text,
-    cast,
-    String,
-    Date,
-    DateTime,
-    Integer,
-    Float,
-    Boolean,
-    alias,
-)
+from sqlalchemy import func, text, cast, String, Date, DateTime, Integer, Float, Boolean
 from typing import List, Optional
 
 from .expression_grammar import (
@@ -43,12 +32,14 @@ class SQLAlchemyBuilder:
         constants: Optional[dict] = None,
         extra_selectables: Optional[List] = None,
         cache=None,
+        drivername=None,
     ):
         return cls(
             selectable,
             constants=constants,
             extra_selectables=extra_selectables,
             cache=cache,
+            drivername=drivername,
         )
 
     @classmethod
@@ -62,6 +53,7 @@ class SQLAlchemyBuilder:
         constants: Optional[dict] = None,
         extra_selectables: Optional[List] = None,
         cache=None,
+        drivername=None,
     ):
         """Parse a recipe field by building a custom grammar that
         uses the colums in a selectable.
@@ -70,16 +62,21 @@ class SQLAlchemyBuilder:
             selectable (Table): A SQLAlchemy selectable
 
         Keyword Args:
+            constants (dict): A dictionary of constants to add to the grammar.
             extra_selectables (list): A list containing pairs of selectable,
               namespace string.
             cache (cache): An optional cache.
+            drivername (str): The database driver name. Defaults to None.
         """
         self.selectable = selectable
         # Database driver
-        try:
-            self.drivername = selectable.metadata.bind.url.drivername
-        except Exception:
-            self.drivername = "unknown"
+        if drivername is None:
+            self.drivername = drivername
+        else:
+            try:
+                self.drivername = selectable.metadata.bind.url.drivername
+            except Exception:
+                self.drivername = "unknown"
 
         self.cache = cache
 
