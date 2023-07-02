@@ -55,7 +55,6 @@ class TestPostgres(object):
         return Recipe(shelf=self.shelf, session=self.session, **kwargs)
 
     def testit(self):
-
         tables = {}
         engine = self.oven.engine
         with engine.connect() as conn:

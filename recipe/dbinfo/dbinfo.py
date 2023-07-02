@@ -17,7 +17,6 @@ from .caching_query import CachingQuery
 SLOG = structlog.get_logger(__name__)
 
 
-
 def query_callable(regions, query_cls=CachingQuery, **kwargs):
     return functools.partial(query_cls, regions, **kwargs)
 
