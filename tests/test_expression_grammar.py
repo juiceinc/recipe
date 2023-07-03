@@ -25,7 +25,6 @@ from tests.test_base import (
 utc_offset = -1 * time.localtime().tm_gmtoff / 3600.0 + time.localtime().tm_isdst
 
 
-
 class GrammarTestCase(RecipeTestCase):
     maxDiff = None
 
@@ -97,7 +96,9 @@ class GrammarTestCase(RecipeTestCase):
         if self._skip_drivername(include_drivernames, exclude_drivernames):
             return
 
-        for idx, (field, expected_sql) in enumerate(self._parse_examples(input_rows=input_rows)):
+        for idx, (field, expected_sql) in enumerate(
+            self._parse_examples(input_rows=input_rows)
+        ):
             generated_expr, generated_dtype = constructor(field, debug=False)
             generated_sql = expr_to_str(generated_expr, engine=self.dbinfo.engine)
             if self.drivername.startswith("bigquery"):
@@ -179,8 +180,6 @@ Actual error:
 """
                 )
             self.assertEqual(str(e.exception).strip(), expected_error.strip())
-
-
 
 
 class DrivernameTestCase(GrammarTestCase):
