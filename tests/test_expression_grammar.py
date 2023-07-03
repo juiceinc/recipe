@@ -25,6 +25,184 @@ from tests.test_base import (
 utc_offset = -1 * time.localtime().tm_gmtoff / 3600.0 + time.localtime().tm_isdst
 
 
+
+class GrammarTestCase(RecipeTestCase):
+    maxDiff = None
+
+    def setUp(self):
+        super().setUp()
+        extra_selectables = [(self.scores_table, "scores")]
+        self.builder = SQLAlchemyBuilder.get_builder(
+            self.datatypes_table,
+            extra_selectables=extra_selectables,
+            drivername=self.dbinfo.engine.url.drivername,
+        )
+
+    def examples(self, input_rows: str):
+        """Take input where each line looks like
+        field     -> expected_sql
+        #field    -> expected_sql (commented out)
+        field     -> expected_sql  engine=sqlite
+        """
+        for row in input_rows.split("\n"):
+            row = row.strip()
+            if row == "" or row.startswith("#"):
+                continue
+
+            if "->" in row:
+                field, expected_sql = row.split("->")
+            else:
+                field = row
+                expected_sql = "None"
+            if expected_sql:
+                pass
+            expected_sql = expected_sql.strip()
+            yield field, expected_sql
+
+    def _parse_examples(self, input_rows: str, split_on: str = "\n"):
+        """
+        Parse examples taken from a multiline string
+
+        field     -> expected_sql
+        #field    -> expected_sql (commented out)
+        # The following example only runs on sqlite
+        sqlite::field     -> expected_sql
+        """
+        for row in input_rows.split(split_on):
+            row = row.strip()
+            if row == "" or row.startswith("#"):
+                continue
+            if "->" not in row:
+                continue
+            field, expected_value = row.split("->", 1)
+            field = field.strip()
+            expected_value = expected_value.strip()
+            yield field, expected_value
+
+    def validate_examples(
+        self,
+        input_rows: str,
+        constructor: Callable[[str], Tuple[str, str]],
+        include_drivernames: Optional[List[str]] = None,
+        exclude_drivernames: Optional[List[str]] = None,
+    ):
+        """
+        Test sql generation with examples taken from a string.
+
+        field     -> expected_sql
+        #field    -> expected_sql (commented out)
+        # The following example only runs on sqlite
+        sqlite::field     -> expected_sql
+        """
+        if self._skip_drivername(include_drivernames, exclude_drivernames):
+            return
+
+        for idx, (field, expected_sql) in enumerate(self._parse_examples(input_rows=input_rows)):
+            generated_expr, generated_dtype = constructor(field, debug=False)
+            generated_sql = expr_to_str(generated_expr, engine=self.dbinfo.engine)
+            if self.drivername.startswith("bigquery"):
+                generated_sql = generated_sql.replace("`", "")
+            if generated_sql != expected_sql:
+                print(
+                    f"""Field '{field.strip()}' with drivername '{self.builder.drivername}' failed.
+    Expected: {expected_sql}
+    Actual:   {generated_sql}
+                    """
+                )
+            self.assertEqual(generated_sql, expected_sql)
+
+    def validate_examples_data_type(
+        self,
+        input_rows: str,
+        constructor: Callable[[str], Tuple[str, str]],
+        include_drivernames: Optional[List[str]] = None,
+        exclude_drivernames: Optional[List[str]] = None,
+    ):
+        """
+        Test sql generation with examples taken from a string.
+
+        field     -> expected_sql
+        #field    -> expected_sql (commented out)
+        # The following example only runs on sqlite
+        sqlite::field     -> expected_sql
+        """
+        if self._skip_drivername(include_drivernames, exclude_drivernames):
+            return
+
+        for field, expected_datatype in self._parse_examples(input_rows=input_rows):
+            generated_expr, generated_dtype = constructor(field, debug=False)
+            if generated_dtype != expected_datatype:
+                print(
+                    f"""Field '{field.strip()}'
+    Expected: {expected_datatype}
+    Actual:   {generated_dtype}
+"""
+                )
+            self.assertEqual(expected_datatype, generated_dtype)
+
+    def validate_bad_examples(
+        self,
+        input_rows: str,
+        constructor: Callable[[str], Tuple[str, str]],
+        include_drivernames: Optional[List[str]] = None,
+        exclude_drivernames: Optional[List[str]] = None,
+    ):
+        """Take input where each input is separated by three equals
+
+        field ->
+        expected_error
+        ===
+        field ->
+        expected_error
+        ===
+        #field ->
+        expected_error  (commented out)
+
+        """
+        if self._skip_drivername(include_drivernames, exclude_drivernames):
+            return
+        for field, expected_error in self._parse_examples(
+            input_rows=input_rows, split_on="==="
+        ):
+            with self.assertRaises(Exception) as e:
+                constructor(field, debug=False)
+
+            if str(e.exception).strip() != expected_error.strip():
+                print(
+                    f"""Field '{field.strip()}'
+----
+Expected error:
+{expected_error}
+----
+Actual error:
+{e.exception}
+"""
+                )
+            self.assertEqual(str(e.exception).strip(), expected_error.strip())
+
+
+
+
+class DrivernameTestCase(GrammarTestCase):
+    def test_drivername(self):
+        self.assertEqual(self.drivername, "sqlite")
+
+
+class PostgresDrivernameTestCase(GrammarTestCase):
+    connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
+
+    def test_drivername(self):
+        self.assertEqual(self.drivername, "postgresql+psycopg2")
+
+
+class BigqueryDrivernameTestCase(GrammarTestCase):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
+
+    def test_drivername(self):
+        self.assertEqual(self.drivername, "bigquery")
+
+
 class BuildGrammarTestCase(RecipeTestCase):
     def setUp(self):
         super().setUp()
@@ -173,179 +351,6 @@ class BuildGrammarTestCase(RecipeTestCase):
             )
 
 
-class GrammarTestCase(RecipeTestCase):
-    maxDiff = None
-
-    def setUp(self):
-        super().setUp()
-        extra_selectables = [(self.scores_table, "scores")]
-        self.builder = SQLAlchemyBuilder.get_builder(
-            self.datatypes_table, extra_selectables=extra_selectables
-        )
-
-    def examples(self, input_rows: str):
-        """Take input where each line looks like
-        field     -> expected_sql
-        #field    -> expected_sql (commented out)
-        field     -> expected_sql  engine=sqlite
-        """
-        for row in input_rows.split("\n"):
-            row = row.strip()
-            if row == "" or row.startswith("#"):
-                continue
-
-            if "->" in row:
-                field, expected_sql = row.split("->")
-            else:
-                field = row
-                expected_sql = "None"
-            if expected_sql:
-                pass
-            expected_sql = expected_sql.strip()
-            yield field, expected_sql
-
-    def _parse_examples(self, input_rows: str, split_on: str = "\n"):
-        """
-        Parse examples taken from a multiline string
-
-        field     -> expected_sql
-        #field    -> expected_sql (commented out)
-        # The following example only runs on sqlite
-        sqlite::field     -> expected_sql
-        """
-        for row in input_rows.split(split_on):
-            row = row.strip()
-            if row == "" or row.startswith("#"):
-                continue
-            if "->" not in row:
-                continue
-            field, expected_value = row.split("->", 1)
-            field = field.strip()
-            expected_value = expected_value.strip()
-            yield field, expected_value
-
-    def validate_examples(
-        self,
-        input_rows: str,
-        constructor: Callable[[str], Tuple[str, str]],
-        include_drivernames: Optional[List[str]] = None,
-        exclude_drivernames: Optional[List[str]] = None,
-    ):
-        """
-        Test sql generation with examples taken from a string.
-
-        field     -> expected_sql
-        #field    -> expected_sql (commented out)
-        # The following example only runs on sqlite
-        sqlite::field     -> expected_sql
-        """
-        if self._skip_drivername(include_drivernames, exclude_drivernames):
-            return
-
-        for field, expected_sql in self._parse_examples(input_rows=input_rows):
-            generated_expr, generated_dtype = constructor(field, debug=False)
-            generated_sql = expr_to_str(generated_expr, engine=self.dbinfo.engine)
-            if self.builder.drivername == "bigquery":
-                generated_sql = generated_sql.replace("`", "")
-            if generated_sql != expected_sql:
-                print(
-                    f"""Field '{field.strip()}' with drivername '{self.builder.drivername}' failed.
-    Expected: {expected_sql}
-    Actual:   {generated_sql}
-                    """
-                )
-            self.assertEqual(generated_sql, expected_sql)
-
-    def validate_examples_data_type(
-        self,
-        input_rows: str,
-        constructor: Callable[[str], Tuple[str, str]],
-        include_drivernames: Optional[List[str]] = None,
-        exclude_drivernames: Optional[List[str]] = None,
-    ):
-        """
-        Test sql generation with examples taken from a string.
-
-        field     -> expected_sql
-        #field    -> expected_sql (commented out)
-        # The following example only runs on sqlite
-        sqlite::field     -> expected_sql
-        """
-        if self._skip_drivername(include_drivernames, exclude_drivernames):
-            return
-
-        for field, expected_datatype in self._parse_examples(input_rows=input_rows):
-            generated_expr, generated_dtype = constructor(field, debug=False)
-            if generated_dtype != expected_datatype:
-                print(
-                    f"""Field '{field.strip()}'
-    Expected: {expected_datatype}
-    Actual:   {generated_dtype}
-"""
-                )
-            self.assertEqual(expected_datatype, generated_dtype)
-
-    def validate_bad_examples(
-        self,
-        input_rows: str,
-        constructor: Callable[[str], Tuple[str, str]],
-        include_drivernames: Optional[List[str]] = None,
-        exclude_drivernames: Optional[List[str]] = None,
-    ):
-        """Take input where each input is separated by three equals
-
-        field ->
-        expected_error
-        ===
-        field ->
-        expected_error
-        ===
-        #field ->
-        expected_error  (commented out)
-
-        """
-        if self._skip_drivername(include_drivernames, exclude_drivernames):
-            return
-        for field, expected_error in self._parse_examples(
-            input_rows=input_rows, split_on="==="
-        ):
-            with self.assertRaises(Exception) as e:
-                constructor(field, debug=False)
-
-            if str(e.exception).strip() != expected_error.strip():
-                print(
-                    f"""Field '{field.strip()}'
-----
-Expected error:
-{expected_error}
-----
-Actual error:
-{e.exception}
-"""
-                )
-            self.assertEqual(str(e.exception).strip(), expected_error.strip())
-
-
-class DrivernameTestCase(GrammarTestCase):
-    def test_drivername(self):
-        self.assertEqual(self.drivername, "sqlite")
-
-
-class PostgresDrivernameTestCase(GrammarTestCase):
-    connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
-
-    def test_drivername(self):
-        self.assertEqual(self.drivername, "postgresql+psycopg2")
-
-
-class BigqueryDrivernameTestCase(GrammarTestCase):
-    connection_string = get_bigquery_connection_string()
-    engine_kwargs = get_bigquery_engine_kwargs()
-
-    def test_drivername(self):
-        self.assertEqual(self.drivername, "postgresql+psycopg2")
-
-
 class TestSQLAlchemyBuilder(GrammarTestCase):
     def test_enforce_aggregation(self):
         """Enforce aggregation will wrap the function in a sum if no aggregation was seen"""
@@ -482,10 +487,9 @@ class TestSQLAlchemyBuilderPostgres(TestSQLAlchemyBuilder):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
-# FIXME: Restore bigquery
-# class TestSQLAlchemyBuilderBigquery(TestSQLAlchemyBuilder):
-#     connection_string = get_bigquery_connection_string()
-#     engine_kwargs = get_bigquery_engine_kwargs()
+class TestSQLAlchemyBuilderBigquery(TestSQLAlchemyBuilder):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestSQLAlchemyBuilderConvertDates(GrammarTestCase):
@@ -571,10 +575,9 @@ class TestSQLAlchemyBuilderConvertDatesPostgres(TestSQLAlchemyBuilderConvertDate
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
-# FIXME: Restore bigquery
-# class TestSQLAlchemyBuilderConvertDatesBigquery(TestSQLAlchemyBuilderConvertDates):
-#     connection_string = get_bigquery_connection_string()
-#     engine_kwargs = get_bigquery_engine_kwargs()
+class TestSQLAlchemyBuilderConvertDatesBigquery(TestSQLAlchemyBuilderConvertDates):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestDataTypesTable(GrammarTestCase):
@@ -677,21 +680,21 @@ class TestDataTypesTable(GrammarTestCase):
         """These examples should all succeed"""
 
         good_examples = """
-        [score] / 2                      -> CAST(datatypes.score AS FLOAT) / (2 + 0.0)
-        [score] / 2.0                    -> CAST(datatypes.score AS FLOAT) / (2.0 + 0.0)
-        sum(score) / count(*)            -> CASE WHEN (count(*) = 0) THEN NULL ELSE CAST(sum(datatypes.score) AS FLOAT) / (CAST(count(*) AS FLOAT) + 0.0) END
+        [score] / 2                      -> CAST(datatypes.score AS FLOAT) / 2
+        [score] / 2.0                    -> CAST(datatypes.score AS FLOAT) / 2.0
+        sum(score) / count(*)            -> CASE WHEN (count(*) = 0) THEN NULL ELSE CAST(sum(datatypes.score) AS FLOAT) / CAST(count(*) AS FLOAT) END
         sum([score] / 1)                 -> sum(datatypes.score)
-        sum([score] / [score])           -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / (CAST(datatypes.score AS FLOAT) + 0.0) END)
-        score / 2                        -> CAST(datatypes.score AS FLOAT) / (2 + 0.0)
-        sum(score / score)               -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / (CAST(datatypes.score AS FLOAT) + 0.0) END)
-        [score] / (2/1)                  -> CAST(datatypes.score AS FLOAT) / (2 + 0.0)
-        [score] / (0.5/0.25)             -> CAST(datatypes.score AS FLOAT) / (2.0 + 0.0)
-        [score] / (0.5 /    0.25)        -> CAST(datatypes.score AS FLOAT) / (2.0 + 0.0)
+        sum([score] / [score])           -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / CAST(datatypes.score AS FLOAT) END)
+        score / 2                        -> CAST(datatypes.score AS FLOAT) / 2
+        sum(score / score)               -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / CAST(datatypes.score AS FLOAT) END)
+        [score] / (2/1)                  -> CAST(datatypes.score AS FLOAT) / 2
+        [score] / (0.5/0.25)             -> CAST(datatypes.score AS FLOAT) / 2.0
+        [score] / (0.5 /    0.25)        -> CAST(datatypes.score AS FLOAT) / 2.0
         [score] * (2*3)                  -> datatypes.score * 6
         [score] * (2*score)              -> datatypes.score * 2 * datatypes.score
-        [score] * (2 / score)            -> datatypes.score * CASE WHEN (datatypes.score = 0) THEN NULL ELSE 2 / (CAST(datatypes.score AS FLOAT) + 0.0) END
-        [score] / (10-7)                 -> CAST(datatypes.score AS FLOAT) / (3 + 0.0)
-        ([score] + [score]) / ([score] - [score]) -> CASE WHEN (datatypes.score - datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score + datatypes.score AS FLOAT) / (CAST(datatypes.score - datatypes.score AS FLOAT) + 0.0) END
+        [score] * (2 / score)            -> datatypes.score * CASE WHEN (datatypes.score = 0) THEN NULL ELSE 2 / CAST(datatypes.score AS FLOAT) END
+        [score] / (10-7)                 -> CAST(datatypes.score AS FLOAT) / 3
+        ([score] + [score]) / ([score] - [score]) -> CASE WHEN (datatypes.score - datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score + datatypes.score AS FLOAT) / CAST(datatypes.score - datatypes.score AS FLOAT) END
         score + (3 + 5 / (10 - 5))       -> datatypes.score + 4.0
         # Order of operations has: score + (3 + 0.5 - 5)
         score + (3 + 5 / 10 - 5)         -> datatypes.score + -1.5
@@ -699,31 +702,7 @@ class TestDataTypesTable(GrammarTestCase):
         self.validate_examples(
             good_examples,
             partial(self.builder.parse),
-            exclude_drivernames=["bigquery", "sqlite"],
-        )
-
-        good_examples = """
-        [score] / 2                      -> CAST(datatypes.score AS FLOAT) / (2 + 0.0)
-        [score] / 2.0                    -> CAST(datatypes.score AS FLOAT) / (2.0 + 0.0)
-        sum(score) / count(*)            -> CASE WHEN (count(*) = 0) THEN NULL ELSE CAST(sum(datatypes.score) AS FLOAT) / (CAST(count(*) AS FLOAT) + 0.0) END
-        sum([score] / 1)                 -> sum(datatypes.score)
-        sum([score] / [score])           -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / (CAST(datatypes.score AS FLOAT) + 0.0) END)
-        score / 2                        -> CAST(datatypes.score AS FLOAT) / (2 + 0.0)
-        sum(score / score)               -> sum(CASE WHEN (datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score AS FLOAT) / (CAST(datatypes.score AS FLOAT) + 0.0) END)
-        [score] / (2/1)                  -> CAST(datatypes.score AS FLOAT) / (2 + 0.0)
-        [score] / (0.5/0.25)             -> CAST(datatypes.score AS FLOAT) / (2.0 + 0.0)
-        [score] / (0.5 /    0.25)        -> CAST(datatypes.score AS FLOAT) / (2.0 + 0.0)
-        [score] * (2*3)                  -> datatypes.score * 6
-        [score] * (2*score)              -> datatypes.score * 2 * datatypes.score
-        [score] * (2 / score)            -> datatypes.score * CASE WHEN (datatypes.score = 0) THEN NULL ELSE 2 / (CAST(datatypes.score AS FLOAT) + 0.0) END
-        [score] / (10-7)                 -> CAST(datatypes.score AS FLOAT) / (3 + 0.0)
-        ([score] + [score]) / ([score] - [score]) -> CASE WHEN (datatypes.score - datatypes.score = 0) THEN NULL ELSE CAST(datatypes.score + datatypes.score AS FLOAT) / (CAST(datatypes.score - datatypes.score AS FLOAT) + 0.0) END
-        score + (3 + 5 / (10 - 5))       -> datatypes.score + 4.0
-        # Order of operations has: score + (3 + 0.5 - 5)
-        score + (3 + 5 / 10 - 5)         -> datatypes.score + -1.5
-        """
-        self.validate_examples(
-            good_examples, partial(self.builder.parse), exclude_drivernames=["bigquery"]
+            exclude_drivernames=["bigquery"],
         )
 
         good_examples = good_examples.replace("AS FLOAT", "AS FLOAT64")
@@ -982,10 +961,9 @@ class TestDataTypesTablePostgres(TestDataTypesTable):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
-# FIXME: Restore bigquery
-# class TestDataTypesTableBigquery(TestDataTypesTable):
-#     connection_string = get_bigquery_connection_string()
-#     engine_kwargs = get_bigquery_engine_kwargs()
+class TestDataTypesTableBigquery(TestDataTypesTable):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestDataTypesTableDates(GrammarTestCase):
@@ -1075,10 +1053,9 @@ class TestDataTypesTableDatesPostgres(TestDataTypesTableDates):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
-# FIXME: Restore bigquery
-# class TestDataTypesTableDatesBigquery(TestDataTypesTableDates):
-#     connection_string = get_bigquery_connection_string()
-#     engine_kwargs = get_bigquery_engine_kwargs()
+class TestDataTypesTableDatesBigquery(TestDataTypesTableDates):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestAggregations(GrammarTestCase):
@@ -1247,10 +1224,9 @@ class TestAggregationsPostgres(TestAggregations):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
-# FIXME: Restore bigquery
-# class TestAggregationsBigquery(TestAggregations):
-#     connection_string = get_bigquery_connection_string()
-#     engine_kwargs = get_bigquery_engine_kwargs()
+class TestAggregationsBigquery(TestAggregations):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestIf(GrammarTestCase):
@@ -1381,10 +1357,9 @@ class TestIfPostgres(TestIf):
     connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
 
 
-# FIXME: Restore bigquery
-# class TestIfBigquery(TestIf):
-#     connection_string = get_bigquery_connection_string()
-#     engine_kwargs = get_bigquery_engine_kwargs()
+class TestIfBigquery(TestIf):
+    connection_string = get_bigquery_connection_string()
+    engine_kwargs = get_bigquery_engine_kwargs()
 
 
 class TestSQLAlchemySerialize(GrammarTestCase):

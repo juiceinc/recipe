@@ -70,7 +70,7 @@ class SQLAlchemyBuilder:
         """
         self.selectable = selectable
         # Database driver
-        if drivername is None:
+        if drivername is not None:
             self.drivername = drivername
         else:
             try:

@@ -148,8 +148,6 @@ class RecipeTestCase(TestCase):
     maxDiff = None
     connection_string = f"sqlite:///{sqlite_db}"
     engine_kwargs = {}
-    # connection_string = "postgresql+psycopg2://postgres:postgres@db:5432/postgres"
-    create_table_kwargs = {}
 
     def setUp(self):
         super().setUp()
@@ -497,26 +495,3 @@ class TestDBInfo(RecipeTestCase):
             with self.dbinfo.connection_scope() as conn:
                 res = conn.execute(select(func.count()).select_from(table)).scalar()
                 self.assertEqual(res, expected_count)
-
-    def test_select_pool(self):
-        values = [
-            (self.weird_table_with_column_named_true_table, 2),
-            (self.basic_table, 2),
-            (self.scores_table, 6),
-            (self.datatypes_table, 6),
-            (self.scores_with_nulls_table, 6),
-            (self.tagscores_table, 10),
-            (self.id_tests_table, 5),
-            (self.census_table, 344),
-            (self.state_fact_table, 2),
-            (self.datetester_table, 100),
-        ]
-
-        # selects = [select(func.count()).select_from(table) for table, cnt in values]
-        # result = self.dbinfo.run_in_pool(selects)
-        # self.assertEqual(result, [])
-
-        # for table, expected_count in values:
-        #     with self.dbinfo.connection_scope() as conn:
-        #         res = conn.execute(select(func.count()).select_from(table)).scalar()
-        #         self.assertEqual(res, expected_count)

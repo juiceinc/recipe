@@ -7,7 +7,9 @@ import structlog
 from sqlalchemy import Boolean, Date, DateTime, Float, Integer, String, alias, cast
 from sqlalchemy.orm import DeclarativeMeta
 from sqlalchemy.sql.base import ColumnCollection
+
 from sqlalchemy.sql.sqltypes import Numeric
+
 
 SLOG = structlog.get_logger(__name__)
 
@@ -191,7 +193,7 @@ def make_column_collection_for_constant_literals(
         namespace (str, optional): A namespace to add. Defaults to None.
 
     Returns:
-        ColumnCollection: A column collection of constant values
+        ColCollection: A column collection of constant values
     """
     # Create columns
     constant_columns = [
@@ -218,7 +220,7 @@ def make_column_collection_for_constant_expressions(
         namespace (str, optional): A namespace to add. Defaults to None.
 
     Returns:
-        ColumnCollection: A column collection of constant values
+        ColCollection: A column collection of constant values
     """
     # Create columns
     from sqlalchemy import select
@@ -234,7 +236,7 @@ def make_column_collection_for_constant_expressions(
     return make_column_collection_for_selectable(sel, namespace=namespace)
 
 
-def make_columns_grammar(cc: ColumnCollection) -> str:
+def make_columns_grammar(cc: ColCollection) -> str:
     """Return a lark rule that looks like
 
     // These are my raw columns
@@ -249,7 +251,7 @@ def make_columns_grammar(cc: ColumnCollection) -> str:
 
 def gather_columns(
     datatype_rule_name: str,
-    cc: ColumnCollection,
+    cc: ColCollection,
     datatype: str,
     *,
     additional_rules=None,

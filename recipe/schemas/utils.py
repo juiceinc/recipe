@@ -9,7 +9,6 @@ from sqlalchemy import text
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql.base import ColumnCollection
 
-ColumnCollection
 from sureberus import schema as S
 
 from recipe.exceptions import InvalidColumnError
