@@ -3,7 +3,8 @@ import io
 import os
 from typing import Iterator, List, Optional
 from unittest import TestCase
-
+from functools import partial
+import structlog
 from dotenv import load_dotenv
 from sqlalchemy import (
     Boolean,
@@ -21,15 +22,17 @@ from sqlalchemy import (
 
 from recipe import Dimension, Filter, IdValueDimension, Metric, Recipe, Shelf
 from recipe.dbinfo.dbinfo import get_dbinfo
+from recipe.dbinfo.pool import SimplePool
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 
 sqlite_db = os.path.join(ROOT_DIR, "testdata.db")
 
 load_dotenv()
+SLOG = structlog.get_logger()
 
 
-def get_bigquery_engine_kwargs():
+def get_bigquery_engine_kwargs() -> dict:
     GOOGLE_CLOUD_PROJECT = os.environ["GOOGLE_CLOUD_PROJECT"]
     GOOGLE_CLOUD_PRIVATE_KEY_ID = os.environ["GOOGLE_CLOUD_PRIVATE_KEY_ID"]
     GOOGLE_CLOUD_PRIVATE_KEY = os.environ["GOOGLE_CLOUD_PRIVATE_KEY"]
@@ -48,10 +51,26 @@ def get_bigquery_engine_kwargs():
     return {"credentials_info": creds}
 
 
-def get_bigquery_connection_string():
+def get_bigquery_connection_string() -> str:
     GOOGLE_CLOUD_PROJECT = os.environ["GOOGLE_CLOUD_PROJECT"]
 
     return f"bigquery://{GOOGLE_CLOUD_PROJECT}/recipe_test_data"
+
+
+postgres_engine_kwargs = {
+    # "echo_pool": "debug",
+    "pool_size": 20,
+    "max_overflow": 0,
+    # "pool_reset_on_return": None,
+}
+
+bigquery_dbinfo = get_dbinfo(
+    get_bigquery_connection_string(), **get_bigquery_engine_kwargs()
+)
+postgres_dbinfo = get_dbinfo(
+    "postgresql://postgres@localhost:5432/postgres", **postgres_engine_kwargs
+)
+sqlite_dbinfo = get_dbinfo(f"sqlite:///{sqlite_db}")
 
 
 def strip_columns_from_csv(content: str, ignore_columns: Optional[List]) -> str:
@@ -145,9 +164,8 @@ class UtilsTestCase(TestCase):
 class RecipeTestCase(TestCase):
     """Test cases for Recipe"""
 
+    dbinfo = sqlite_dbinfo
     maxDiff = None
-    connection_string = f"sqlite:///{sqlite_db}"
-    engine_kwargs = {}
 
     def setUp(self):
         super().setUp()
@@ -241,10 +259,8 @@ class RecipeTestCase(TestCase):
         into the tables.
         """
         super(RecipeTestCase, cls).setUpClass()
-        cls.dbinfo = get_dbinfo(cls.connection_string, **cls.engine_kwargs)
         cls.meta = cls.dbinfo.sqlalchemy_meta
         cls.session = cls.dbinfo.session_factory()
-        cls.drivername = cls.dbinfo.engine.url.drivername
 
         cls.weird_table_with_column_named_true_table = Table(
             "weird_table_with_column_named_true",
@@ -436,49 +452,16 @@ class RecipeTestCase(TestCase):
         )
 
 
-class TestRecipeTestCase(RecipeTestCase):
-    engine_kwargs = {
-        # "echo_pool": "debug",
-        "pool_size": 20,
-        "max_overflow": 0,
-        # "pool_reset_on_return": None,
-    }
-
-    def test_sample_data_loaded(self):
-        values = [
-            (self.weird_table_with_column_named_true_table, 2),
-            (self.basic_table, 2),
-            (self.scores_table, 6),
-            (self.datatypes_table, 6),
-            (self.scores_with_nulls_table, 6),
-            (self.tagscores_table, 10),
-            (self.id_tests_table, 5),
-            (self.census_table, 344),
-            (self.state_fact_table, 2),
-            (self.datetester_table, 100),
-        ]
-
-        for table, expected_count in values:
-            with self.dbinfo.connection_scope() as conn:
-                res = conn.execute(select(func.count()).select_from(table)).scalar()
-                self.assertEqual(res, expected_count)
-
+class TestStripColumns(RecipeTestCase):
     def test_strip_columns_from_csv(self):
         content = """a,b,c\n1,2,3"""
         c2 = strip_columns_from_csv(content, ignore_columns=["b"])
         self.assertEqual(c2, "a,c\n1,3")
 
 
-class TestDBInfo(RecipeTestCase):
-    engine_kwargs = {
-        # "echo_pool": "debug",
-        "pool_size": 20,
-        "max_overflow": 0,
-        # "pool_reset_on_return": None,
-    }
-
-    def test_select(self):
-        values = [
+class SqliteRecipeTestCase(RecipeTestCase):
+    def setUp(self):
+        self.values = [
             (self.weird_table_with_column_named_true_table, 2),
             (self.basic_table, 2),
             (self.scores_table, 6),
@@ -490,8 +473,42 @@ class TestDBInfo(RecipeTestCase):
             (self.state_fact_table, 2),
             (self.datetester_table, 100),
         ]
+        return super().setUp()
 
-        for table, expected_count in values:
+    def test_sample_data_loaded(self):
+        """Test that the sample data was loaded correctly."""
+        log = SLOG.bind()
+        with self.dbinfo.connection_scope() as conn:
+            for table, expected_count in self.values:
+                log.info("Testing %s", table)
+                res = conn.execute(select(func.count()).select_from(table)).scalar()
+                self.assertEqual(res, expected_count)
+
+    def test_sample_data_loaded_using_pool(self):
+        def call_select(table):
             with self.dbinfo.connection_scope() as conn:
+                return conn.execute(select(func.count()).select_from(table)).scalar() 
+
+        callables = [partial(call_select, table) for table, _ in self.values]
+        pool = SimplePool(callables)
+
+        for (table, expected_count), data in zip(self.values, pool.get_data()):
+            self.assertEqual(expected_count, data)
+
+
+class PostgresRecipeTestCase(SqliteRecipeTestCase):
+    dbinfo = postgres_dbinfo
+
+
+class BigqueryRecipeTestCase(SqliteRecipeTestCase):
+    dbinfo = bigquery_dbinfo
+
+    def test_sample_data_loaded(self):
+        """Test that the sample data was loaded correctly. BQ is slow when running
+        queries sequentially."""
+        log = SLOG.bind()
+        with self.dbinfo.connection_scope() as conn:
+            for table, expected_count in self.values[:2]:
+                log.info("Testing %s", table)
                 res = conn.execute(select(func.count()).select_from(table)).scalar()
                 self.assertEqual(res, expected_count)

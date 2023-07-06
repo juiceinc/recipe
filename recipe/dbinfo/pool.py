@@ -1,34 +1,35 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List, Callable
+import structlog
 
+SLOG = structlog.get_logger(__name__)
 
-class SimpleRecipePool:
-    """"""
+class SimplePool:
+    """Simple thread pool to fetch data from the database."""
 
-    def __init__(self, session_factory, recipes):
-        self.session_factory = session_factory
-        self.recipes = recipes
-        self.POOL_MAX = 5
+    def __init__(self, callables: List[Callable], pool_max: int = 10):
+        """Initialize the pool."""
+        self.callables = callables
+        self.POOL_MAX = pool_max
 
     def get_data(self):
         """Fetch data for each recipe."""
+        results = []
+        log = SLOG.bind(num_callables=len(self.callables))
+
         with ThreadPoolExecutor(max_workers=self.POOL_MAX) as executor:
-            return list(executor.map(self._data, self.recipes))
+            # Run the callables and gather the results.
+            future_select = {executor.submit(self.call_with_idx, callable, idx) for idx, callable in enumerate(self.callables)}
+            results = []
+            for future in as_completed(future_select):
+                try:
+                    data = future.result()
+                    results.append(data)
+                except Exception as exc:
+                    log.exception("Exception in thread", exc=exc)
 
-    def _data(self, task):
-        if isinstance(task, dict):
-            recipe = task["recipe"]
-            name = task["name"]
-            op = task.get("operation", "all")
-        else:
-            recipe, name = task
-            op = "all"
+        return [data for idx, data in sorted(results)]
 
-        # Sessions are not thread-safe, and must be isolated to a specific thread.
-        recipe.session(self.session_factory())
-
-        getattr(recipe, op)()
-
-        if isinstance(task, dict):
-            return {"recipe": recipe, "name": name, "operation": op}
-        else:
-            return (recipe, name)
+    def call_with_idx(self, callable, idx):
+        """Helps to return the callables in the original order."""
+        return idx, callable()

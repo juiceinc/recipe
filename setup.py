@@ -63,12 +63,5 @@ setup(
     ],
     tests_require=["pytest", "pytest-cov"],
     install_requires=install,
-    entry_points={
-        "recipe.oven.drivers": [
-            "standard = recipe.oven.drivers.standard_oven:StandardOven"
-        ],
-        "recipe.hooks.testing": [
-            "toyextension2 = tests.test_dynamic_extensions:ToyExtension2"
-        ],
-    },
+    entry_points={},
 )

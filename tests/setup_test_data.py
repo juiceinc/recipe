@@ -6,6 +6,8 @@ from sqlalchemy import Boolean, Column, Date, DateTime, Float, Integer, String, 
 from yaml import safe_load
 from dotenv import load_dotenv
 from recipe.dbinfo.dbinfo import get_dbinfo
+from functools import partial
+from recipe.dbinfo.pool import SimplePool
 
 load_dotenv()
 
@@ -42,21 +44,33 @@ def get_bigquery_connection_string():
 class SetupData:
     """Setup databases for testing"""
 
-    def __init__(self, connection_string, **kwargs):
+    def __init__(self, connection_string:str, **kwargs):
         self.dbinfo = get_dbinfo(connection_string, **kwargs)
         self.engine = self.dbinfo.engine
         self.meta = self.dbinfo.sqlalchemy_meta
 
-    def load_data(self, table_name, table):
+    def load_data(self, table_name:str, table):
         """Load data from the data/ directory"""
+        def chunk_list(lst, chunk_size):
+            for i in range(0, len(lst), chunk_size):
+                yield lst[i : i + chunk_size]
+
         data = safe_load(open(os.path.join(ROOT_DIR, "data", f"{table_name}.yml")))
-        with self.dbinfo.engine.connect().execution_options(
-            isolation_level="AUTOCOMMIT"
-        ) as con:
-            con.execute(table.insert(), data)
+        try:
+            with self.dbinfo.engine.connect().execution_options(
+                isolation_level="AUTOCOMMIT"
+            ) as con:
+                for chunk in chunk_list(data, 50):
+                    print(f"Loading chunk from {table_name}")
+                    con.execute(table.insert(), chunk)
+        except NotImplementedError:
+            with self.dbinfo.engine.connect() as con:
+                for chunk in chunk_list(data, 50):
+                    print(f"Loading chunk from {table_name}")
+                    con.execute(table.insert(), chunk)
 
     def setup(self):
-        """Set up tables using a connection_string to define an oven.
+        """Set up tables using a connection_string
 
         Tables are loaded using data in data/{tablename}.yml
         """
@@ -164,20 +178,24 @@ class SetupData:
 
         self.meta.drop_all(bind=self.engine)
         self.meta.create_all(bind=self.engine)
-        # self.engine.drop_all()
-        # self.engine.create_all()
-        self.load_data(
-            "weird_table_with_column_named_true_table",
-            weird_table_with_column_named_true_table,
-        )
-        self.load_data("basic_table", basic_table)
-        self.load_data("scores_table", scores_table)
-        self.load_data("datatypes_table", datatypes_table)
-        self.load_data("scores_with_nulls_table", scores_with_nulls_table)
-        self.load_data("tagscores_table", tagscores_table)
-        self.load_data("id_tests_table", id_tests_table)
-        self.load_data("census_table", census_table)
-        self.load_data("state_fact_table", state_fact_table)
+        
+        data = [
+            ["weird_table_with_column_named_true_table",
+            weird_table_with_column_named_true_table],
+            ["basic_table", basic_table],
+            ["scores_table", scores_table],
+            ["datatypes_table", datatypes_table],
+            ["scores_with_nulls_table", scores_with_nulls_table],
+            ["tagscores_table", tagscores_table],
+            ["id_tests_table", id_tests_table],
+            ["census_table", census_table],
+            ["state_fact_table", state_fact_table],
+        ]
+
+        callables = [
+            partial(self.load_data, name, tbl) for name,tbl in data
+        ]
+        SimplePool(callables=callables, pool_max=10).get_data()
 
         # Load the datetester_table with dynamic date data
         start_dt = date(date.today().year, date.today().month, 1)
@@ -185,10 +203,14 @@ class SetupData:
             {"dt": start_dt + relativedelta(months=offset_month), "count": 1}
             for offset_month in range(-50, 50)
         ]
-        with self.dbinfo.engine.connect().execution_options(
-            isolation_level="AUTOCOMMIT"
-        ) as con:
-            con.execute(datetester_table.insert(), data)
+        try:
+            with self.dbinfo.engine.connect().execution_options(
+                isolation_level="AUTOCOMMIT"
+            ) as con:
+                con.execute(datetester_table.insert(), data)
+        except NotImplementedError:
+            with self.dbinfo.engine.connect() as con:
+                con.execute(datetester_table.insert(), data)
 
 
 if __name__ == "__main__":
@@ -200,10 +222,10 @@ if __name__ == "__main__":
     )
     d.setup()
 
-    # print(get_bigquery_connection_string())
+    print(get_bigquery_connection_string())
 
-    # d = SetupData(
-    #     get_bigquery_connection_string(), echo=True, **get_bigquery_engine_kwargs()
-    # )
+    d = SetupData(
+        get_bigquery_connection_string(), echo=True, **get_bigquery_engine_kwargs()
+    )
     # Google cloud setup takes a long time, so it's disabled by default
     # d.setup()

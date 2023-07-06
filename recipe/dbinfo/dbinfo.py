@@ -12,6 +12,7 @@ from sqlalchemy.sql.expression import Select
 from sqlalchemy import MetaData, create_engine, event, exc
 from sqlalchemy.orm import sessionmaker
 
+
 from .caching_query import CachingQuery
 
 SLOG = structlog.get_logger(__name__)
@@ -160,6 +161,7 @@ def get_dbinfo(
     Returns:
         DBInfo: A cached db info object
     """
+    log = SLOG.bind(conn_string=conn_string, engine_kwargs=engine_kwargs)
     engine = create_engine(conn_string, **engine_kwargs)
 
     # Listen to events

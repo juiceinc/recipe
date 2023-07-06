@@ -34,15 +34,6 @@ from recipe.shelf import AutomaticShelf, Shelf
 from recipe.utils import FakerAnonymizer
 
 
-class DefaultSettings(object):
-    def __init__(self, *args, **kwargs):
-        self.POOL_SIZE = 5
-        self.POOL_RECYCLE = 60 * 60
-
-
-SETTINGS = DefaultSettings()
-
-
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
@@ -69,8 +60,6 @@ __all__ = [
     "Recipe",
     "Shelf",
     "AutomaticShelf",
-    "SETTINGS",
-    "get_oven",
     "Anonymize",
     "AutomaticFilters",
     "BlendRecipe",

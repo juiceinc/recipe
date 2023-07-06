@@ -1,7 +1,8 @@
 import threading
 import unicodedata
+from typing import Dict
 
-from dogpile.cache import make_region
+from dogpile.cache import CacheRegion, make_region
 from dogpile.cache.util import sha1_mangle_key
 
 
@@ -49,7 +50,7 @@ def clean_unicode(value):
     return cleaned_value
 
 
-def unicode_sha1_mangle_key(key):
+def unicode_sha1_mangle_key(key: str) -> str:
     """Used by mangle_key to sha1 mangle and clean_unicode from a supplied key
 
     :param key: the value to be mangled and prefixed, typically a SQL query
@@ -60,7 +61,7 @@ def unicode_sha1_mangle_key(key):
     return sha1_mangle_key(clean_unicode(key))
 
 
-def mangle_key(key):
+def mangle_key(key: str) -> str:
     """Used by build_region as the key_mangler for dogpile.cache. It prefixes,
     sha1 mangles, and cleans unicode from a supplied key
 
@@ -79,7 +80,7 @@ def mangle_key(key):
     return f"{base}:{unicode_sha1_mangle_key(key)}"
 
 
-def build_region(region_type="redis", region_args={}):
+def build_region(region_type: str = "redis", region_args: Dict = {}) -> CacheRegion:
     """An implementation of dogpile.caches make_region that provides a thread
     based async_creation_runner and a prefix sha1 key_mangler.
 
