@@ -487,7 +487,7 @@ class SqliteRecipeTestCase(RecipeTestCase):
     def test_sample_data_loaded_using_pool(self):
         def call_select(table):
             with self.dbinfo.connection_scope() as conn:
-                return conn.execute(select(func.count()).select_from(table)).scalar() 
+                return conn.execute(select(func.count()).select_from(table)).scalar()
 
         callables = [partial(call_select, table) for table, _ in self.values]
         pool = SimplePool(callables)

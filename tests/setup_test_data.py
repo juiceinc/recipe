@@ -44,13 +44,14 @@ def get_bigquery_connection_string():
 class SetupData:
     """Setup databases for testing"""
 
-    def __init__(self, connection_string:str, **kwargs):
+    def __init__(self, connection_string: str, **kwargs):
         self.dbinfo = get_dbinfo(connection_string, **kwargs)
         self.engine = self.dbinfo.engine
         self.meta = self.dbinfo.sqlalchemy_meta
 
-    def load_data(self, table_name:str, table):
+    def load_data(self, table_name: str, table):
         """Load data from the data/ directory"""
+
         def chunk_list(lst, chunk_size):
             for i in range(0, len(lst), chunk_size):
                 yield lst[i : i + chunk_size]
@@ -178,10 +179,12 @@ class SetupData:
 
         self.meta.drop_all(bind=self.engine)
         self.meta.create_all(bind=self.engine)
-        
+
         data = [
-            ["weird_table_with_column_named_true_table",
-            weird_table_with_column_named_true_table],
+            [
+                "weird_table_with_column_named_true_table",
+                weird_table_with_column_named_true_table,
+            ],
             ["basic_table", basic_table],
             ["scores_table", scores_table],
             ["datatypes_table", datatypes_table],
@@ -192,9 +195,7 @@ class SetupData:
             ["state_fact_table", state_fact_table],
         ]
 
-        callables = [
-            partial(self.load_data, name, tbl) for name,tbl in data
-        ]
+        callables = [partial(self.load_data, name, tbl) for name, tbl in data]
         SimplePool(callables=callables, pool_max=10).get_data()
 
         # Load the datetester_table with dynamic date data

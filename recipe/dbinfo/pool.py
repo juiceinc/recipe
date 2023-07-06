@@ -4,6 +4,7 @@ import structlog
 
 SLOG = structlog.get_logger(__name__)
 
+
 class SimplePool:
     """Simple thread pool to fetch data from the database."""
 
@@ -19,7 +20,10 @@ class SimplePool:
 
         with ThreadPoolExecutor(max_workers=self.POOL_MAX) as executor:
             # Run the callables and gather the results.
-            future_select = {executor.submit(self.call_with_idx, callable, idx) for idx, callable in enumerate(self.callables)}
+            future_select = {
+                executor.submit(self.call_with_idx, callable, idx)
+                for idx, callable in enumerate(self.callables)
+            }
             results = []
             for future in as_completed(future_select):
                 try:
