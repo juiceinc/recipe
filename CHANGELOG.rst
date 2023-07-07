@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.35.5 (2023-06-12)
+-----------------------------------------
+* Fix count(*) in PaginateCountOver
+
 v0.35.4 (2023-06-12)
 -----------------------------------------
 * Support expressions for database column names that contain spaces

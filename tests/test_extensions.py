@@ -1271,7 +1271,7 @@ class PaginateCountOverTestCase(PaginateTestCase):
                 census.sex AS sex,
                 census.state AS state,
                 sum(census.pop2000) AS pop2000,
-                count('*') OVER () AS _total_count
+                count(*) OVER () AS _total_count
             FROM census
             WHERE lower(census.state) LIKE lower('T%')
             OR lower(census.sex) LIKE lower('T%')
