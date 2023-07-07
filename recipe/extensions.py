@@ -1193,7 +1193,7 @@ class PaginateCountOver(Paginate):
     def add_ingredients(self):
         self._apply_pagination_order_by()
         self._apply_pagination_q()
-        count_over = Ingredient(columns=[func.count("*").over()], id="_total_count")
+        count_over = Ingredient(columns=[func.count().over()], id="_total_count")
         self.recipe._cauldron.use(count_over)
 
     def modify_postquery_parts(self, postquery_parts):
