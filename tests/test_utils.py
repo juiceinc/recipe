@@ -300,6 +300,7 @@ class TestMakeSchema(RecipeTestCase):
                         "schema": {"type": "string"},
                     },
                     "apply_automatic_filters": {"type": "boolean"},
+                    "strict_automatic_filters": {"type": "boolean"},
                 },
                 "type": "dict",
                 "required": True,
