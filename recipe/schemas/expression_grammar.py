@@ -289,7 +289,7 @@ def make_grammar(columns):
     {gather_columns("datetime_end.1", columns, "datetime", additional_rules=["datetime_end_conv", "datetime_aggr"])}
     {gather_columns("boolean.1", columns, "bool", additional_rules=["TRUE", "FALSE", "bool_expr", "date_bool_expr", "datetime_bool_expr", "str_like_expr", "vector_expr", "between_expr", "date_between_expr", "datetime_between_expr", "not_boolean", "or_boolean", "and_boolean", "paren_boolean", "intelligent_date_expr", "intelligent_datetime_expr"])}
     {gather_columns("string.1", columns, "str", additional_rules=["ESCAPED_STRING", "string_add", "string_cast", "string_coalesce", "string_substr", "string_if_statement", "string_aggr"])}
-    {gather_columns("num.1", columns, "num", additional_rules=["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "num_coalesce", "aggr", "error_aggr", "num_if_statement", "age_conv", "datediff"])}
+    {gather_columns("num.1", columns, "num", additional_rules=["NUMBER", "num_add", "num_sub", "num_mul", "num_div", "int_cast", "num_coalesce", "aggr", "error_aggr", "num_if_statement", "age_conv", "datediff", "extract"])}
     string_add: string "+" string
     num_add.1: num "+" num | "(" num "+" num ")"
     num_sub.1: num "-" num | "(" num "-" num ")"
@@ -363,7 +363,8 @@ def make_grammar(columns):
     dt_quarter_conv: /quarter/i "(" datetime ")"
     dt_year_conv: /year/i "(" datetime ")"
     /// date->int
-    datediff: /datediff/i "(" date "," date ")"
+    datediff: /datediff/i "(" date "," date ("," DATEPART )? ")"
+    extract: /extract/i "(" DATEPART "," (date | datetime) ")"
     // col->string
     string_cast: /string/i "(" col ")"
     string_substr: /substr/i "(" string "," [num ("," num)?] ")"
@@ -431,6 +432,8 @@ def make_grammar(columns):
     IF: /IF/i
     INTELLIGENT_DATE_OFFSET: /prior/i | /last/i | /previous/i | /current/i | /this/i | /next/i
     INTELLIGENT_DATE_UNITS: /ytd/i | /year/i | /qtr/i | /month/i | /mtd/i | /day/i
+    DATEPART: /dayofweek/i | /day/i | /dayofyear/i | /week/i | /week/i "(" WEEKDAY ")" | /month/i | /quarter/i | /year/i | /isoyear/i | /isoweek/i
+    WEEKDAY: /monday/i | /tuesday/i | /wednesday/i | /thursday/i | /friday/i | /saturday/i | /sunday/i
     COMMENT: /#.*/
 
     %import common.CNAME                       -> NAME
