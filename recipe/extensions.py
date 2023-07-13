@@ -191,7 +191,7 @@ class AutomaticFilters(RecipeExtension):
         self._automatic_filters = []
         self.exclude_keys = None
         self.include_keys = None
-        self.strict = False
+        self.strict = True
         self._optimize_redshift = False
 
     @recipe_arg()

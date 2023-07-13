@@ -402,26 +402,22 @@ class AutomaticFiltersTestCase(RecipeTestCase):
             {
                 "metrics": ["age"],
                 "dimensions": ["first"],
-                "strict_automatic_filters": True,
                 "automatic_filters": {"first": ["foo"], "potato": ["pancake"]},
             },
             {
                 "metrics": ["age"],
                 "dimensions": ["first"],
-                "strict_automatic_filters": True,
                 "automatic_filters": {"first": ["foo"], "potato__in": ["pancake"]},
             },
             {
                 "metrics": ["age"],
                 "dimensions": ["first"],
-                "strict_automatic_filters": True,
                 "automatic_filters": {"first": [None], "potato": "pancake"},
             },
             # Compound filters with unknown key
             {
                 "metrics": ["age"],
                 "dimensions": ["first"],
-                "strict_automatic_filters": True,
                 "automatic_filters": {
                     "first,potato": [["foo", "moo"], ["chicken", "cluck"]]
                 },
@@ -683,7 +679,6 @@ class AutomaticFiltersTestCase(RecipeTestCase):
                         "metrics": ["age"],
                         "dimensions": ["first"],
                         "automatic_filters": bad_filter,
-                        "strict_automatic_filters": True,
                         "exclude_automatic_filter_keys": ["foo"],
                     }
                 )
