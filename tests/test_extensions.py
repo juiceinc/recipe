@@ -712,26 +712,26 @@ class AutomaticFiltersTestCase(RecipeTestCase):
                 recipe.all()
             self.assertEqual(str(cm.exception), error_msg)
 
-            recipe = self.recipe_from_config(
-                {
-                    "metrics": ["age"],
-                    "dimensions": ["first"],
-                    "automatic_filters": {"first,potato": ['["moo", "cow"]']},
-                    "strict_automatic_filters": False,
-                    "exclude_automatic_filter_keys": ["foo"],
-                }
-            )
-            # Same as {"first": ["moo"]}
-            self.assertRecipeSQL(
-                recipe,
-                """
+        recipe = self.recipe_from_config(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": {"first,potato": ['["moo", "cow"]']},
+                "strict_automatic_filters": False,
+                "exclude_automatic_filter_keys": ["foo"],
+            }
+        )
+        # Same as {"first": ["moo"]}
+        self.assertRecipeSQL(
+            recipe,
+            """
 SELECT foo.first AS first,
-       sum(foo.age) AS age
+    sum(foo.age) AS age
 FROM foo
 WHERE foo.first = 'moo'
 GROUP BY first
-                """,
-            )
+            """,
+        )
 
     def test_invalid_operators(self):
         """Invalid operators raise an exception"""
