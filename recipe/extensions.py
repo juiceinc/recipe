@@ -101,7 +101,7 @@ class RecipeExtension(object):
         Return a tuple of the field names that are being added with
         this method
         """
-        return tuple()
+        return ()
 
     def enchant_row(self, row):
         """This method adds the fields named in ``enchant_add_fields`` to
@@ -125,7 +125,7 @@ def handle_directives(directives, handlers):
 
 def is_compound_filter(key: str) -> bool:
     """Is this key a compound filter key?"""
-    return bool("," in key)
+    return "," in key
 
 
 def clean_filtering_values(values, ingr, operator=None, optimize_for_redshift=False):
@@ -182,6 +182,7 @@ class AutomaticFilters(RecipeExtension):
         "include_automatic_filter_keys": {"type": "list", "schema": {"type": "string"}},
         "exclude_automatic_filter_keys": {"type": "list", "schema": {"type": "string"}},
         "apply_automatic_filters": {"type": "boolean"},
+        "strict_automatic_filters": {"type": "boolean"},
     }
 
     def __init__(self, *args, **kwargs):
@@ -190,6 +191,7 @@ class AutomaticFilters(RecipeExtension):
         self._automatic_filters = []
         self.exclude_keys = None
         self.include_keys = None
+        self.strict = True
         self._optimize_redshift = False
 
     @recipe_arg()
@@ -199,6 +201,7 @@ class AutomaticFilters(RecipeExtension):
             {
                 "automatic_filters": self.automatic_filters,
                 "apply_automatic_filters": self.apply_automatic_filters,
+                "strict_automatic_filters": self.strict_automatic_filters,
                 "include_automatic_filter_keys": lambda v: self.include_automatic_filter_keys(
                     *v
                 ),
@@ -281,7 +284,14 @@ class AutomaticFilters(RecipeExtension):
             return None
 
         # TODO: If dim can't be found, optionally raise a warning
-        dimension = self.recipe._shelf.find(dim, Dimension)
+        try:
+            dimension = self.recipe._shelf.find(dim, Dimension)
+        except BadRecipe as e:
+            if self.strict:
+                raise e
+            else:
+                # If you can't find the dimension, ignore it
+                return None
         values = clean_filtering_values(
             values, dimension, operator, self._optimize_redshift
         )
@@ -310,13 +320,24 @@ class AutomaticFilters(RecipeExtension):
         self._optimize_redshift = value
 
     @recipe_arg()
-    def apply_automatic_filters(self, value):
+    def apply_automatic_filters(self, value: bool):
         """Toggles whether automatic filters are applied to a recipe. The
         following will disable automatic filters for this recipe::
 
             recipe.apply_automatic_filters(False)
         """
         self.apply = value
+
+    @recipe_arg()
+    def strict_automatic_filters(self, value: bool):
+        """Toggles automatic filters are evaluated strictly. If set to True,
+        any automatic filter that can't be found will raise an error. If set
+        to False, any automatic filter that can't be found will be ignored.
+        The default is False::
+
+            recipe.strict_automatic_filters(False)
+        """
+        self.strict = value
 
     @recipe_arg()
     def automatic_filters(self, value: Union[dict, list]):
