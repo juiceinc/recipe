@@ -355,16 +355,25 @@ class TransformToSQLAlchemyExpression(Transformer):
     def timedelta(self):
         pass
 
-    def datediff(self, _, dt1, dt2):
+    def datediff(self, _, dt1, dt2, datepart="day"):
         if self.drivername == "bigquery":
-            return func.date_diff(dt1, dt2, text("day"))
+            return func.date_diff(dt1, dt2, text(datepart))
         elif self.drivername == "sqlite":
             return cast(func.julianday(dt1), Integer()) - cast(
                 func.julianday(dt2), Integer()
             )
         else:
             # This works for postgres and mssql
-            return func.datediff(text("day"), dt1, dt2)
+            return func.datediff(text(datepart), dt1, dt2)
+
+    def extract(self, _, datepart, dt):
+        if self.drivername == "bigquery":
+            return func.extract(text(datepart), dt)
+        elif self.drivername == "sqlite":
+            raise GrammarError("Sqlite does not support extract")
+        else:
+            # This works for postgres and mssql
+            return func.extract(text(datepart), dt)
 
     # Booleans
 

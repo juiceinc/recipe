@@ -891,6 +891,16 @@ class TestDataTypesTableDatesInBigquery(TestDataTypesTableDates):
         quarter([test_date]) > date("2020-12-30")        -> date_trunc(datatypes.test_date, quarter) > '2020-12-30'
         year([test_date]) > date("2020-12-30")           -> date_trunc(datatypes.test_date, year) > '2020-12-30'
         date([test_datetime])                            -> datetime(timestamp_trunc(datatypes.test_datetime, day))
+        datediff([test_date], [test_date])               -> date_diff(datatypes.test_date, datatypes.test_date, day)
+        datediff([test_date], [test_date], day)          -> date_diff(datatypes.test_date, datatypes.test_date, day)
+        datediff([test_date], [test_date], week)         -> date_diff(datatypes.test_date, datatypes.test_date, week)
+        datediff([test_date], [test_date], year)         -> date_diff(datatypes.test_date, datatypes.test_date, year)
+        datediff([test_date], [test_date], week(monday)) -> date_diff(datatypes.test_date, datatypes.test_date, week(monday))
+        # Extract works on both dates and datetimes
+        extract(day, [test_date])                        -> EXTRACT(day FROM datatypes.test_date)
+        extract(week(monday), [test_date])               -> EXTRACT(week(monday) FROM datatypes.test_date)
+        extract(day, [test_datetime])                    -> EXTRACT(day FROM datatypes.test_datetime)
+        extract(week(monday), [test_datetime])           -> EXTRACT(week(monday) FROM datatypes.test_datetime)
         """
 
         for field, expected_sql in self.examples(good_examples):
