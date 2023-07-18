@@ -2,6 +2,11 @@
 Changelog
 =========
 
+v0.36.0 (2023-07-18)
+-----------------------------------------
+* Add a strict flag to automatic_filters with default true
+* Add extract(datepart, date) and add an optional datepart to datediff
+
 v0.35.5 (2023-06-12)
 -----------------------------------------
 * Fix count(*) in PaginateCountOver
