@@ -283,7 +283,7 @@ def make_grammar(columns):
     {make_columns_grammar(columns)}
 
     {gather_columns("unusable_col", columns, "unusable")}
-    {gather_columns("date.1", columns, "date", additional_rules=["date_conv", "date_fn", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "dt_day_conv", "dt_week_conv", "dt_month_conv", "dt_quarter_conv", "dt_year_conv", "datetime_to_date_conv", "date_aggr", "date_if_statement", "date_coalesce"])}
+    {gather_columns("date.1", columns, "date", additional_rules=["date_conv", "date_fn", "day_conv", "week_conv", "month_conv", "quarter_conv", "year_conv", "dt_day_conv", "dt_week_conv", "dt_month_conv", "dt_quarter_conv", "dt_year_conv", "datetime_to_date_conv", "date_aggr", "date_if_statement", "date_coalesce", "lastday"])}
     {gather_columns("datetime.2", columns, "datetime", additional_rules=["datetime_conv", "datetime_if_statement", "datetime_coalesce"])}
     // Datetimes that are converted to the end of day
     {gather_columns("datetime_end.1", columns, "datetime", additional_rules=["datetime_end_conv", "datetime_aggr"])}
@@ -365,6 +365,7 @@ def make_grammar(columns):
     /// date->int
     datediff: /datediff/i "(" date "," date ("," DATEPART )? ")"
     extract: /extract/i "(" DATEPART "," (date | datetime) ")"
+    lastday: /lastday/i "(" (date | datetime) ("," DATEPART )? ")"
     // col->string
     string_cast: /string/i "(" col ")"
     string_substr: /substr/i "(" string "," [num ("," num)?] ")"
