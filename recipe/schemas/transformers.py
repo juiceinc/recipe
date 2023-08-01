@@ -375,6 +375,12 @@ class TransformToSQLAlchemyExpression(Transformer):
             # This works for postgres and mssql
             return func.extract(text(datepart), dt)
 
+    def lastday(self, _, dt, datepart="month"):
+        if self.drivername in ("bigquery", "snowflake"):
+            return func.last_day(dt, text(datepart))
+        else:
+            raise GrammarError(f"{self.drivername} does not support lastday")
+
     # Booleans
 
     def and_boolean(self, left_boolean, AND, right_boolean):
