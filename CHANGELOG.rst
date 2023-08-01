@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.36.1 (2023-08-01)
+-----------------------------------------
+* Add lastday(date, datepart) for bigquery/snowflake
+
 v0.36.0 (2023-07-18)
 -----------------------------------------
 * Add a strict flag to automatic_filters with default true
