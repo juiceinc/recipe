@@ -2,7 +2,7 @@ import contextlib
 from collections import OrderedDict
 from copy import copy
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 from lark.exceptions import VisitError
 from sqlalchemy import Float, Integer, String, Table
@@ -10,6 +10,7 @@ from sqlalchemy.util import lightweight_named_tuple
 from sureberus import errors as E
 from sureberus import normalize_schema
 from yaml import safe_load
+
 
 from recipe.exceptions import BadIngredient, BadRecipe, InvalidColumnError
 from recipe.ingredients import Dimension, Filter, Ingredient, InvalidIngredient, Metric
@@ -47,6 +48,9 @@ class SelectParts:
     raw_order_by_keys: list = field(default_factory=list)
     order_bys: list = field(default_factory=list)
     all_filters: set = field(default_factory=set)
+    query: Any = None
+    cache_region: Any = None
+    cache_prefix: str = ""
 
     def add_ingredient(self, ingredient):
         """Gather the SQLAlchemy fragments from this ingredient into a consolidated list."""
@@ -415,7 +419,9 @@ class Shelf(object):
         else:
             raise BadRecipe("{} is not a {}".format(obj, filter_to_class))
 
-    def brew_select_parts(self, order_by_keys=None) -> SelectParts:
+    def brew_select_parts(
+        self, order_by_keys: Optional[List[str]] = None
+    ) -> SelectParts:
         if order_by_keys is None:
             order_by_keys = []
         parts = SelectParts(raw_order_by_keys=order_by_keys)
@@ -425,71 +431,6 @@ class Shelf(object):
 
         parts.validate_order_bys(self)
         return parts
-
-    def brew_query_parts(self, order_by_keys=None):
-        """Make columns, group_bys, filters, havings"""
-        columns, group_bys, filters, havings = [], [], set(), set()
-        if order_by_keys is None:
-            order_by_keys = []
-        order_by_keys = list(order_by_keys)
-        all_filters = set()
-
-        for ingredient in self.ingredients():
-            if ingredient.error:
-                error_type = ingredient.error.get("type")
-                if error_type == "invalid_column":
-                    extra = ingredient.error.get("extra", {})
-                    column_name = extra.get("column_name")
-                    ingredient_name = extra.get("ingredient_name")
-                    error_msg = 'Invalid column "{0}" in ingredient "{1}"'.format(
-                        column_name, ingredient_name
-                    )
-                    raise InvalidColumnError(error_msg, column_name=column_name)
-                raise BadIngredient(str(ingredient.error))
-            columns.extend(ingredient.labeled_columns)
-            group_bys.extend(ingredient.group_by)
-            # Ensure we don't add duplicate filters
-            for new_f in ingredient.filters:
-                from recipe.utils import filter_to_string
-
-                new_f_str = filter_to_string(new_f)
-                if new_f_str not in all_filters:
-                    filters.add(new_f)
-                    all_filters.add(new_f_str)
-            havings.update(ingredient.havings)
-
-            # If there is an order_by key on one of the ingredients, make sure
-            # the recipe orders by this ingredient
-            if "order_by" in ingredient.roles:
-                if (
-                    ingredient.id not in order_by_keys
-                    and "-" + ingredient.id not in order_by_keys
-                ):
-                    if ingredient.ordering == "desc":
-                        order_by_keys.append("-" + ingredient.id)
-                    else:
-                        order_by_keys.append(ingredient.id)
-
-        order_bys = OrderedDict()
-        for key in order_by_keys:
-            try:
-                ingr = self.find(key, (Dimension, Metric))
-                for c in ingr.order_by_columns:
-                    # Avoid duplicate order by columns
-                    if str(c) not in [str(o) for o in order_bys]:
-                        order_bys[c] = None
-            except BadRecipe as e:
-                # Ignore order_by if the dimension/metric is not used.
-                # TODO: Add structlog warning
-                pass
-
-        return {
-            "columns": columns,
-            "group_bys": group_bys,
-            "filters": filters,
-            "havings": havings,
-            "order_bys": list(order_bys.keys()),
-        }
 
     def enchant(self, data, cache_context=None):
         """Add any calculated values to each row of a resultset generating a

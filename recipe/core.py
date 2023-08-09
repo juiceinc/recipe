@@ -1,12 +1,11 @@
 from __future__ import annotations
-
 import contextlib
 import logging
 import time
 import warnings
 from copy import copy
 from uuid import uuid4
-
+from typing import Optional
 import attr
 import tablib
 from sqlalchemy import alias, func, select
@@ -261,7 +260,7 @@ class Recipe(object):
         self._allow_multiple_tables = value
 
     @recipe_arg()
-    def shelf(self, shelf=None) -> Recipe:
+    def shelf(self, shelf: Optional[Shelf] = None) -> Recipe:
         """Defines a shelf to use for this recipe"""
         if shelf is None:
             self._shelf = Shelf({})
@@ -469,29 +468,29 @@ class Recipe(object):
         #             "havings": havings,
         #             "order_bys": list(order_bys)
         #         }
-        recipe_parts = self._cauldron.brew_query_parts(self._order_bys)
+        select_parts = self._cauldron.brew_select_parts(self._order_bys)
 
         for extension in self.recipe_extensions:
-            recipe_parts = extension.modify_recipe_parts(recipe_parts)
+            select_parts = extension.modify_recipe_parts(select_parts)
 
         # Start building the query
-        query = self._session.query(*recipe_parts["columns"])
+        query = self._session.query(*select_parts.columns)
         if self._select_from is not None:
             query = query.select_from(self._select_from)
-        recipe_parts["query"] = (
-            query.group_by(*recipe_parts["group_bys"])
-            .order_by(*recipe_parts["order_bys"])
-            .filter(*recipe_parts["filters"])
+        select_parts.query = (
+            query.group_by(*select_parts.group_bys)
+            .order_by(*select_parts.order_bys)
+            .filter(*select_parts.filters)
         )
 
-        if recipe_parts["havings"]:
-            for having in recipe_parts["havings"]:
-                recipe_parts["query"] = recipe_parts["query"].having(having)
+        if select_parts.havings:
+            for having in select_parts.havings:
+                select_parts.query = select_parts.query.having(having)
 
         if (
             self._allow_multiple_tables is False
             and self._select_from is None
-            and len(recipe_parts["query"].selectable.froms) != 1
+            and len(select_parts.query.selectable.froms) != 1
         ):
             raise BadRecipe(
                 f"Recipes must use ingredients that all come from the same table. \n"
@@ -499,25 +498,24 @@ class Recipe(object):
             )
 
         for extension in self.recipe_extensions:
-            recipe_parts = extension.modify_postquery_parts(recipe_parts)
+            select_parts = extension.modify_postquery_parts(select_parts)
 
-        if "recipe" not in recipe_parts:
-            recipe_parts["cache_region"] = self._cache_region
-            recipe_parts["cache_prefix"] = self._cache_prefix
-        recipe_parts = run_hooks(recipe_parts, "modify_query", self.dynamic_extensions)
+        select_parts.cache_region = self._cache_region
+        select_parts.cache_prefix = self._cache_prefix
+        select_parts = run_hooks(select_parts, "modify_query", self.dynamic_extensions)
 
         # Apply limit on the outermost query
         # This happens after building the comparison recipe
         if self._limit and self._limit > 0:
-            recipe_parts["query"] = recipe_parts["query"].limit(self._limit)
+            select_parts.query = select_parts.query.limit(self._limit)
 
         if self._offset and self._offset > 0:
-            recipe_parts["query"] = recipe_parts["query"].offset(self._offset)
+            select_parts.query = select_parts.query.offset(self._offset)
 
         # Patch the query if there's a comparison query
         # cache results
 
-        self._query = recipe_parts["query"]
+        self._query = select_parts.query
         return self._query
 
     def _table(self):

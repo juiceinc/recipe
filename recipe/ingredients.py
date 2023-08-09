@@ -9,7 +9,8 @@ from recipe.utils.datatype import (
     determine_datatype,
     datatype_from_column_expression,
 )
-from typing import List
+from dataclasses import dataclass
+from typing import List, Optional
 
 ALLOWED_OPERATORS = set(
     [
@@ -38,6 +39,12 @@ def is_nested_condition(v) -> bool:
 def contains_complex_values(v: List) -> bool:
     """Check if any of the values in a list requires special handling to filter on"""
     return None in v or any(map(is_nested_condition, v))
+
+
+class Join:
+    selectables: Optional[List] = None
+    # A boolean expression that will be used to join this ingredient to the query
+    join_expression: Optional[str] = None
 
 
 @total_ordering
@@ -122,7 +129,8 @@ class Ingredient(object):
         self.column_suffixes = kwargs.pop("column_suffixes", None)
         self.cache_context = kwargs.pop("cache_context", "")
         self.datatype = kwargs.pop("datatype", None)
-        self.datatype_by_role = kwargs.pop("datatype_by_role", dict())
+        self.datatype_by_role = kwargs.pop("datatype_by_role", {})
+        self.join = None
         self.anonymize = False
         self.roles = {}
         self._labels = []

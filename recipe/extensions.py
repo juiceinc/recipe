@@ -5,6 +5,7 @@ from sqlalchemy import and_, func, text, or_, String
 from sqlalchemy.ext.declarative import declarative_base
 
 from recipe.core import Recipe
+from recipe.shelf import SelectParts
 from recipe.exceptions import BadRecipe
 from recipe.ingredients import ALLOWED_OPERATORS, Dimension, Ingredient, Metric, Filter
 from recipe.utils import FakerAnonymizer, recipe_arg, pad_values
@@ -68,33 +69,21 @@ class RecipeExtension(object):
         This method should be overridden by subclasses"""
         pass
 
-    def modify_recipe_parts(self, recipe_parts: dict) -> dict:
+    def modify_recipe_parts(self, parts: SelectParts) -> SelectParts:
         """
         Modify sqlalchemy components of the query
 
         This method allows extensions to directly modify columns,
         group_bys, filters, and order_bys generated from collected
         ingredients."""
-        return {
-            "columns": recipe_parts["columns"],
-            "group_bys": recipe_parts["group_bys"],
-            "filters": recipe_parts["filters"],
-            "havings": recipe_parts["havings"],
-            "order_bys": recipe_parts["order_bys"],
-        }
+        return parts
 
-    def modify_postquery_parts(self, postquery_parts: dict) -> dict:
+    def modify_postquery_parts(self, parts: SelectParts) -> SelectParts:
         """This method allows extensions to directly modify query,
         group_bys, filters, and order_bys generated from collected
         ingredients after a final query using columns has been created.
         """
-        return {
-            "query": postquery_parts["query"],
-            "group_bys": postquery_parts["group_bys"],
-            "filters": postquery_parts["filters"],
-            "havings": postquery_parts["havings"],
-            "order_bys": postquery_parts["order_bys"],
-        }
+        return parts
 
     def enchant_add_fields(self) -> tuple:
         """This method allows extensions to add fields to a result row.
@@ -489,7 +478,7 @@ class SummarizeOver(RecipeExtension):
     def summarize_over(self, dimension_key):
         self._summarize_over = dimension_key
 
-    def modify_postquery_parts(self, postquery_parts):
+    def modify_postquery_parts(self, postquery_parts: SelectParts) -> SelectParts:
         """
         Take a recipe that has dimensions
         Resummarize it over one of the dimensions returning averages of the
@@ -500,7 +489,7 @@ class SummarizeOver(RecipeExtension):
         assert self._summarize_over in self.recipe.dimension_ids
 
         # Start with a subquery
-        subq = postquery_parts["query"].subquery(name="summarize")
+        subq = postquery_parts.query.subquery(name="summarize")
 
         summarize_over_dim = set(
             (
@@ -547,12 +536,12 @@ class SummarizeOver(RecipeExtension):
 
         # Find the ordering columns and apply them to the new query
         order_by_columns = []
-        for col in postquery_parts["query"]._order_by:
+        for col in postquery_parts.query._order_by:
             subq_col = getattr(subq.c, str(col).split(" ")[0])
             if subq_col is not None:
                 order_by_columns.append(subq_col)
 
-        postquery_parts["query"] = (
+        postquery_parts.query = (
             self.recipe._session.query(*(group_by_columns + metric_columns))
             .group_by(*group_by_columns)
             .order_by(*order_by_columns)
@@ -922,7 +911,7 @@ class Paginate(RecipeExtension):
         self._apply_pagination_order_by()
         self._apply_pagination_q()
 
-    def modify_postquery_parts(self, postquery_parts):
+    def modify_postquery_parts(self, postquery_parts: SelectParts) -> SelectParts:
         """Apply validated pagination limits and offset to a completed query."""
         if not self.do_pagination():
             return postquery_parts
@@ -931,7 +920,7 @@ class Paginate(RecipeExtension):
 
         # Validate what page we are on by looking at the total
         # number of items.
-        total_count = self.recipe.total_count(postquery_parts["query"])
+        total_count = self.recipe.total_count(postquery_parts.query)
 
         d, m = divmod(total_count, limit)
         total_pages = max(1, d + (1 if m > 0 else 0))
@@ -948,9 +937,9 @@ class Paginate(RecipeExtension):
         # page=1 is the first page
         offset = limit * (validated_page - 1)
 
-        postquery_parts["query"] = postquery_parts["query"].limit(limit)
+        postquery_parts.query = postquery_parts.query.limit(limit)
         if offset:
-            postquery_parts["query"] = postquery_parts["query"].offset(offset)
+            postquery_parts.query = postquery_parts.query.offset(offset)
 
         return postquery_parts
 
@@ -1060,7 +1049,7 @@ class PaginateInline(Paginate):
 
     """
 
-    def modify_postquery_parts(self, postquery_parts):
+    def modify_postquery_parts(self, postquery_parts: SelectParts) -> SelectParts:
         """Apply validated pagination limits and offset to a completed query."""
         if not self.do_pagination():
             return postquery_parts
@@ -1080,11 +1069,11 @@ class PaginateInline(Paginate):
         # page=1 is the first page
         offset = limit * (validated_page - 1)
 
-        postquery_parts["query"] = postquery_parts["query"].limit(limit)
+        postquery_parts.query = postquery_parts.query.limit(limit)
         if offset:
-            postquery_parts["query"] = postquery_parts["query"].offset(offset)
+            postquery_parts.query = postquery_parts.query.offset(offset)
 
-        q = postquery_parts["query"]
+        q = postquery_parts.query
 
         # Count the rows in our query without limit or offset or ordering
         total_counter = (
@@ -1097,7 +1086,7 @@ class PaginateInline(Paginate):
         # Need an aggregation even though there's only one row
         q = q.add_columns(func.min(total_counter.c._total_count).label("_total_count"))
 
-        postquery_parts["query"] = q
+        postquery_parts.query = q
         return postquery_parts
 
     def validated_pagination(self):
@@ -1217,7 +1206,7 @@ class PaginateCountOver(Paginate):
         count_over = Ingredient(columns=[func.count().over()], id="_total_count")
         self.recipe._cauldron.use(count_over)
 
-    def modify_postquery_parts(self, postquery_parts):
+    def modify_postquery_parts(self, postquery_parts: SelectParts) -> SelectParts:
         """Apply validated pagination limits and offset to a completed query."""
         if not self.do_pagination():
             return postquery_parts
@@ -1237,9 +1226,9 @@ class PaginateCountOver(Paginate):
         # page=1 is the first page
         offset = limit * (validated_page - 1)
 
-        postquery_parts["query"] = postquery_parts["query"].limit(limit)
+        postquery_parts.query = postquery_parts.query.limit(limit)
         if offset:
-            postquery_parts["query"] = postquery_parts["query"].offset(offset)
+            postquery_parts.query = postquery_parts.query.offset(offset)
         return postquery_parts
 
     def validated_pagination(self):
@@ -1324,7 +1313,7 @@ class BlendRecipe(RecipeExtension):
                 if isinstance(ingr, Dimension):
                     ingr.group_by_strategy = "direct"
 
-    def modify_postquery_parts(self, postquery_parts):
+    def modify_postquery_parts(self, postquery_parts: SelectParts) -> SelectParts:
         """
         Make the comparison recipe a subquery that is left joined to the
         base recipe using dimensions that are shared between the recipes.
@@ -1352,7 +1341,7 @@ class BlendRecipe(RecipeExtension):
                 for suffix in met.make_column_suffixes():
                     col = getattr(blend_subq.c, met.id, None)
                     if col is not None:
-                        postquery_parts["query"] = postquery_parts["query"].add_columns(
+                        postquery_parts.query = postquery_parts.query.add_columns(
                             col.label(met.id + suffix)
                         )
                     else:
@@ -1376,10 +1365,10 @@ class BlendRecipe(RecipeExtension):
                             f"{id + suffix} could not be found in .blend() recipe subquery"
                         )
 
-                    postquery_parts["query"] = postquery_parts["query"].add_columns(
+                    postquery_parts.query = postquery_parts.query.add_columns(
                         col.label(dim.id + suffix)
                     )
-                    postquery_parts["query"] = postquery_parts["query"].group_by(col)
+                    postquery_parts.query = postquery_parts.query.group_by(col)
             base_dim = self.recipe._cauldron[join_base]
             blend_dim = blend_recipe._cauldron[join_blend]
 
@@ -1394,11 +1383,11 @@ class BlendRecipe(RecipeExtension):
                 )
 
             if blend_type == "outer":
-                postquery_parts["query"] = postquery_parts["query"].outerjoin(
+                postquery_parts.query = postquery_parts.query.outerjoin(
                     blend_subq, base_col == blend_col
                 )
             else:
-                postquery_parts["query"] = postquery_parts["query"].join(
+                postquery_parts.query = postquery_parts.query.join(
                     blend_subq, base_col == blend_col
                 )
 
@@ -1440,7 +1429,7 @@ class CompareRecipe(RecipeExtension):
                 if isinstance(ingr, Dimension):
                     ingr.group_by_strategy = "direct"
 
-    def modify_postquery_parts(self, postquery_parts):
+    def modify_postquery_parts(self, postquery_parts: SelectParts) -> SelectParts:
         """Make the comparison recipe a subquery that is left joined to the
         base recipe using dimensions that are shared between the recipes.
 
@@ -1471,7 +1460,7 @@ class CompareRecipe(RecipeExtension):
                 for suffix in met.make_column_suffixes():
                     col = getattr(comparison_subq.c, id + suffix, None)
                     if col is not None:
-                        postquery_parts["query"] = postquery_parts["query"].add_columns(
+                        postquery_parts.query = postquery_parts.query.add_columns(
                             summary_aggregation(col).label(met.id + suffix)
                         )
                     else:
@@ -1499,7 +1488,7 @@ class CompareRecipe(RecipeExtension):
             if join_conditions:
                 join_clause = and_(*join_conditions)
 
-            postquery_parts["query"] = postquery_parts["query"].outerjoin(
+            postquery_parts.query = postquery_parts.query.outerjoin(
                 comparison_subq, join_clause
             )
 
