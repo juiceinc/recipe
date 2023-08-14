@@ -74,12 +74,14 @@ class SQLAlchemyBuilder:
               namespace string.
             cache (cache): An optional cache.
         """
+        from recipe.core import Recipe
+
+        if isinstance(selectable, Recipe):
+            selectable = selectable.subquery()
+
         self.selectable = selectable
         # Database driver
-        try:
-            self.drivername = selectable.metadata.bind.url.drivername
-        except Exception:
-            self.drivername = "unknown"
+        self.drivername = selectable.bind.url.drivername
 
         self.cache = cache
 

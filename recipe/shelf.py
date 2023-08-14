@@ -90,7 +90,7 @@ class SelectParts:
         for key in self.raw_order_by_keys:
             with contextlib.suppress(BadRecipe):
                 ingr = shelf.find(key, (Dimension, Metric))
-                for c in ingr.order_by_columns:
+                for c in ingr.order_by_columns(engine=shelf.Meta.engine):
                     # Avoid duplicate order by columns
                     if str(c) not in [str(o) for o in validated_order_bys]:
                         validated_order_bys[c] = None
@@ -118,6 +118,7 @@ class Shelf(object):
         select_from = None
         ingredient_order = []
         metadata = None
+        engine = None
 
     def __init__(self, *args, **kwargs):
         self.Meta = type(self).Meta()
@@ -125,6 +126,7 @@ class Shelf(object):
         self.Meta.table = kwargs.pop("table", None)
         self.Meta.select_from = kwargs.pop("select_from", None)
         self.Meta.metadata = kwargs.pop("metadata", None)
+        self.Meta.engine = kwargs.pop("engine", None)
         self._ingredients = {}
         self.update(*args, **kwargs)
 
@@ -349,8 +351,10 @@ class Shelf(object):
                     d[k].error["extra"] = {}
                 d[k].error["extra"]["ingredient_name"] = k
 
+        engine = builder.selectable.bind
+
         # TODO: Evaluate how and if we're using select_from
-        shelf = cls(d, select_from=builder.selectable)
+        shelf = cls(d, select_from=builder.selectable, engine=engine)
         if builder and ingredient_cache is not None:
             builder.save_cache()
 
@@ -474,7 +478,7 @@ class Shelf(object):
         for key in order_by_keys:
             try:
                 ingr = self.find(key, (Dimension, Metric))
-                for c in ingr.order_by_columns:
+                for c in ingr.order_by_columns(engine=self.Meta.engine):
                     # Avoid duplicate order by columns
                     if str(c) not in [str(o) for o in order_bys]:
                         order_bys[c] = None

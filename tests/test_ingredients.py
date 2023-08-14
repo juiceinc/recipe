@@ -84,23 +84,23 @@ class IngredientsTestCase(RecipeTestCase):
             column_suffixes=("_a", "_b"),
         )
         self.assertEqual(
-            [str(tc) for tc in multi_column_ingr_with_suffixes.order_by_columns],
+            [str(tc) for tc in multi_column_ingr_with_suffixes.order_by_columns()],
             ["foo_b", "foo_a"],
         )
         multi_column_ingr_with_suffixes.ordering = "desc"
         self.assertEqual(
-            [str(tc) for tc in multi_column_ingr_with_suffixes.order_by_columns],
+            [str(tc) for tc in multi_column_ingr_with_suffixes.order_by_columns()],
             ["foo_b DESC", "foo_a DESC"],
         )
         multi_column_ingr_with_suffixes.ordering = ""
         multi_column_ingr_with_suffixes.group_by_strategy = "none"
         self.assertEqual(
-            [str(tc) for tc in multi_column_ingr_with_suffixes.order_by_columns],
+            [str(tc) for tc in multi_column_ingr_with_suffixes.order_by_columns()],
             ["foo.last", "foo.first"],
         )
         multi_column_ingr_with_suffixes.ordering = "desc"
         self.assertEqual(
-            [str(tc) for tc in multi_column_ingr_with_suffixes.order_by_columns],
+            [str(tc) for tc in multi_column_ingr_with_suffixes.order_by_columns()],
             ["foo.last DESC", "foo.first DESC"],
         )
 
@@ -571,13 +571,13 @@ class TestDimension(RecipeTestCase):
 
     def test_dimension_order_by(self):
         d = Dimension(self.basic_table.c.first)
-        self.assertEqual(len(list(d.order_by_columns)), 1)
+        self.assertEqual(len(list(d.order_by_columns())), 1)
 
         # Dimension with different id and value expressions
         d = Dimension(self.basic_table.c.first, id_expression=self.basic_table.c.last)
-        self.assertEqual(len(list(d.order_by_columns)), 2)
+        self.assertEqual(len(list(d.order_by_columns())), 2)
         # Order by value expression then id expression
-        self.assertEqual(list(map(str, d.order_by_columns)), [d.id, d.id + "_id"])
+        self.assertEqual(list(map(str, d.order_by_columns())), [d.id, d.id + "_id"])
 
         # Extra roles DO participate in ordering
         d = Dimension(
@@ -586,9 +586,9 @@ class TestDimension(RecipeTestCase):
             age_expression=self.basic_table.c.age,
             id="moo",
         )
-        self.assertEqual(len(list(d.order_by_columns)), 3)
+        self.assertEqual(len(list(d.order_by_columns())), 3)
         self.assertEqual(
-            list(map(str, d.order_by_columns)), ["moo_age", "moo", "moo_id"]
+            list(map(str, d.order_by_columns())), ["moo_age", "moo", "moo_id"]
         )
 
         # Extra roles DO participate in ordering, order_by_expression is always first
@@ -599,9 +599,9 @@ class TestDimension(RecipeTestCase):
             order_by_expression=self.basic_table.c.age,
             id="moo",
         )
-        self.assertEqual(len(list(d.order_by_columns)), 4)
+        self.assertEqual(len(list(d.order_by_columns())), 4)
         self.assertEqual(
-            list(map(str, d.order_by_columns)),
+            list(map(str, d.order_by_columns())),
             ["moo_order_by", "moo_age", "moo", "moo_id"],
         )
 
@@ -612,9 +612,9 @@ class TestDimension(RecipeTestCase):
             order_by_expression=self.basic_table.c.age,
             id="moo",
         )
-        self.assertEqual(len(list(d.order_by_columns)), 4)
+        self.assertEqual(len(list(d.order_by_columns())), 4)
         self.assertEqual(
-            list(map(str, d.order_by_columns)),
+            list(map(str, d.order_by_columns())),
             ["moo_order_by", "moo_zed", "moo", "moo_id"],
         )
 
@@ -627,9 +627,9 @@ class TestDimension(RecipeTestCase):
             ordering="desc",
             id="moo",
         )
-        self.assertEqual(len(list(d.order_by_columns)), 4)
+        self.assertEqual(len(list(d.order_by_columns())), 4)
         self.assertEqual(
-            list(map(str, d.order_by_columns)),
+            list(map(str, d.order_by_columns())),
             ["moo_order_by DESC", "moo_zed DESC", "moo DESC", "moo_id DESC"],
         )
 

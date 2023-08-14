@@ -122,7 +122,7 @@ class Ingredient(object):
         self.column_suffixes = kwargs.pop("column_suffixes", None)
         self.cache_context = kwargs.pop("cache_context", "")
         self.datatype = kwargs.pop("datatype", None)
-        self.datatype_by_role = kwargs.pop("datatype_by_role", dict())
+        self.datatype_by_role = kwargs.pop("datatype_by_role", {})
         self.anonymize = False
         self.roles = {}
         self._labels = []
@@ -196,26 +196,29 @@ class Ingredient(object):
             self._labels.append(self.id + suffix)
             yield column.label(self.id + suffix)
 
-    @property
-    def order_by_columns(self):
+    def order_by_columns(self, engine=None):
         """Yield columns to be used in an order by using this ingredient. Column
         ordering is in reverse order of columns. When grouping, recipe supports
         two strategies. group_by_strategy == "labels" uses the labels added to columns.
         This is preferable and is supported by some databases. SQL Server requires
         grouping by the original column expressions
         """
+        if engine is None:
+            quote_label = lambda label: label
+        else:
+            preparer = engine.dialect.preparer
+            quote_label = lambda label: preparer.format_label_name(label)
+
         # Ensure the labels are generated
         if not self._labels:
             list(self.labeled_columns)
 
         if self.group_by_strategy == "labels":
-            if self.ordering == "desc":
-                suffix = " DESC"
-            else:
-                suffix = ""
+            suffix = " DESC" if self.ordering == "desc" else ""
 
+            # Ensure the labels are quoted per the current dialect
             return [
-                text(f"{lbl}{suffix}")
+                text(f"{quote_label(lbl)}{suffix}")
                 for _, lbl in reversed(list(zip(self.columns, self._labels)))
             ]
         else:
