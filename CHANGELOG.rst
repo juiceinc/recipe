@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v0.36.2 (2023-08-14)
+-----------------------------------------
+* Improve quoting of order_by columns when using labels strategy
+
 v0.36.1 (2023-08-01)
 -----------------------------------------
 * Add lastday(date, datepart) for bigquery/snowflake
