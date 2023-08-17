@@ -351,7 +351,7 @@ class Shelf(object):
                     d[k].error["extra"] = {}
                 d[k].error["extra"]["ingredient_name"] = k
 
-        engine = builder.selectable.bind
+        engine = builder.get_engine()
 
         # TODO: Evaluate how and if we're using select_from
         shelf = cls(d, select_from=builder.selectable, engine=engine)
