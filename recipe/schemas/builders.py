@@ -80,15 +80,10 @@ class SQLAlchemyBuilder:
             selectable = selectable.subquery()
 
         self.selectable = selectable
-        # Database driver
 
-        try:
-            self.drivername = selectable.bind.url.drivername
-        except AttributeError:
-            try:
-                self.drivername = selectable.metadata.bind.url.drivername
-            except AttributeError:
-                self.drivername = "unknown"
+        # Database driver
+        engine = self.get_engine()
+        self.drivername = engine.url.drivername if engine else "unknown"
 
         self.cache = cache
 
@@ -128,6 +123,17 @@ class SQLAlchemyBuilder:
                 )
 
         self.finalize_grammar()
+
+    def get_engine(self):
+        """Determine the engine for the selectable"""
+        try:
+            engine = self.selectable.bind
+        except AttributeError:
+            try:
+                engine = self.selectable.metadata.bind
+            except AttributeError:
+                engine = None
+        return engine
 
     def finalize_grammar(self):
         """Once we have a set of columns, we can generate the parser and transformer"""
