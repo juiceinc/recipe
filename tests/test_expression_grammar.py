@@ -104,6 +104,7 @@ class BuildGrammarTestCase(RecipeTestCase):
             self.selectables, expected_drivernames
         ):
             b = SQLAlchemyBuilder(selectable)
+            print(b, b.drivername)
             self.assertEqual(b.drivername, expected_drivername)
 
     def test_make_columns_grammar(self):
