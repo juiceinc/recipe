@@ -95,7 +95,7 @@ class BuildGrammarTestCase(RecipeTestCase):
             "sqlite",
             "sqlite",
             "sqlite",
-            "unknown",
+            "sqlite",
             "unknown",
             "unknown",
         ]
