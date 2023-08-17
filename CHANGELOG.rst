@@ -2,10 +2,17 @@
 Changelog
 =========
 
+v0.36.5 (2023-08-17)
+-----------------------------------------
+* Get engine consistently
+
+v0.36.4 (2023-08-17)
+-----------------------------------------
+* Ensure filters appear in sorted order
+
 v0.36.3 (2023-08-17)
 -----------------------------------------
 * Fix quoting of order_by columns when using labels strategy
-* Ensure filters appear in sorted order
 
 v0.36.2 (2023-08-14)
 -----------------------------------------
