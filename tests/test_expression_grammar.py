@@ -75,6 +75,7 @@ class BuildGrammarTestCase(RecipeTestCase):
             ["num", "str", "str"],
             ["date", "datetime", "num", "str", "str"],
             ["num"],
+            ["str"],
         ]
 
         for selectable, expected_column_keys in zip(
@@ -88,6 +89,23 @@ class BuildGrammarTestCase(RecipeTestCase):
             make_column_collection_for_selectable(None)
         with self.assertRaises(Exception):
             make_column_collection_for_selectable("foo")
+
+    def test_drivername(self):
+        expected_drivernames = [
+            "sqlite",
+            "sqlite",
+            "sqlite",
+            "sqlite",
+            "unknown",
+            "unknown",
+        ]
+
+        for selectable, expected_drivername in zip(
+            self.selectables, expected_drivernames
+        ):
+            b = SQLAlchemyBuilder(selectable)
+            print(b, b.drivername)
+            self.assertEqual(b.drivername, expected_drivername)
 
     def test_make_columns_grammar(self):
         expected_grammars = [

@@ -81,7 +81,14 @@ class SQLAlchemyBuilder:
 
         self.selectable = selectable
         # Database driver
-        self.drivername = selectable.bind.url.drivername
+
+        try:
+            self.drivername = selectable.bind.url.drivername
+        except AttributeError:
+            try:
+                self.drivername = selectable.metadata.bind.url.drivername
+            except AttributeError:
+                self.drivername = "unknown"
 
         self.cache = cache
 
