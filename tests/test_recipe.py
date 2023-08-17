@@ -388,6 +388,62 @@ ORDER BY first""",
             """,
         )
 
+    def test_recipe_filters_ordered(self):
+        """Filters appear in the SQL in order and are deduped"""
+        recipe = (
+            self.recipe()
+            .metrics("age")
+            .dimensions("last")
+            .filters(
+                Filter(self.basic_table.c.age > 3),
+                self.basic_table.c.age > 4,
+                self.basic_table.c.age > 5,
+                Filter(self.basic_table.c.age > 4),
+                self.basic_table.c.age > 4,
+            )
+            .order_by("last")
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.last AS last,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.age > 3
+  AND foo.age > 4
+  AND foo.age > 5
+GROUP BY last
+ORDER BY last""",
+        )
+
+        recipe = self.recipe(
+            metrics=["age"],
+            dimensions=["first"],
+            filters=[
+                self.basic_table.c.age > 5,
+                self.basic_table.c.age > 4,
+                self.basic_table.c.age > 3,
+            ],
+            order_by=["first"],
+        )
+        self.assertRecipeSQL(
+            recipe,
+            """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.age > 3
+  AND foo.age > 4
+  AND foo.age > 5
+GROUP BY first
+ORDER BY first""",
+        )
+        self.assertRecipeCSV(
+            recipe,
+            """
+            first,age,first_id
+            hi,10,hi
+            """,
+        )
+
     def test_from_config(self):
         shelf = copy(self.mytable_shelf)
         shelf["ageover4"] = Filter(self.basic_table.c.age > 4)

@@ -18,6 +18,7 @@ from recipe.ingredients import Dimension, Filter, Having, Ingredient, Metric
 from recipe.schemas import recipe_schema
 from recipe.shelf import Shelf
 from recipe.utils import prettyprintable_sql, recipe_arg
+from recipe.utils.formatting import filter_to_string
 
 ALLOW_QUERY_CACHING = True
 
@@ -478,10 +479,15 @@ class Recipe(object):
         query = self._session.query(*recipe_parts["columns"])
         if self._select_from is not None:
             query = query.select_from(self._select_from)
+
+        # To build a deterministic query, we must sort our filters
+        filts = list(recipe_parts["filters"])
+        sorted_filts = sorted(filts, key=lambda f: filter_to_string(f))
+
         recipe_parts["query"] = (
             query.group_by(*recipe_parts["group_bys"])
             .order_by(*recipe_parts["order_bys"])
-            .filter(*recipe_parts["filters"])
+            .filter(*sorted_filts)
         )
 
         if recipe_parts["havings"]:
