@@ -203,12 +203,6 @@ class Ingredient(object):
         This is preferable and is supported by some databases. SQL Server requires
         grouping by the original column expressions
         """
-        if engine is None:
-            quote_label = lambda label: label
-        else:
-            preparer = engine.dialect.preparer
-            quote_label = lambda label: preparer.format_label_name(label)
-
         # Ensure the labels are generated
         if not self._labels:
             list(self.labeled_columns)
@@ -217,10 +211,23 @@ class Ingredient(object):
             suffix = " DESC" if self.ordering == "desc" else ""
 
             # Ensure the labels are quoted per the current dialect
-            return [
-                text(f"{quote_label(lbl)}{suffix}")
-                for _, lbl in reversed(list(zip(self.columns, self._labels)))
-            ]
+            # Construct a preparer to quote the labels
+            preparer = (
+                None
+                if engine is None
+                else engine.dialect.preparer(dialect=engine.dialect)
+            )
+            result = []
+            for col, lbl in reversed(list(zip(self.columns, self._labels))):
+                if preparer is None:
+                    result.append(text(f"{lbl}{suffix}"))
+                else:
+                    labeled_col = col.label(lbl)
+                    result.append(
+                        text(f"{preparer.format_column(column=labeled_col)}{suffix}")
+                    )
+            return result
+
         else:
             if self.ordering == "desc":
                 return [col.desc() for col in reversed(self.columns)]
