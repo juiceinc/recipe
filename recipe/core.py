@@ -470,6 +470,9 @@ class Recipe(object):
         #             "havings": havings,
         #             "order_bys": list(order_bys)
         #         }
+
+        # Ensure the cauldron and shelf have the same engine
+        self._cauldron.Meta.engine = self._shelf.Meta.engine
         recipe_parts = self._cauldron.brew_query_parts(self._order_bys)
 
         for extension in self.recipe_extensions:
