@@ -2,6 +2,11 @@
 Changelog
 =========
 
+
+v0.36.6 (2023-08-24)
+-----------------------------------------
+* Properly quote order_by columns when using labels strategy
+
 v0.36.5 (2023-08-17)
 -----------------------------------------
 * Get engine consistently
