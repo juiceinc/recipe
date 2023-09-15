@@ -27,7 +27,7 @@ if sys.argv[-1] == "test":
 
 # yapf: disable
 install = [
-    'sqlalchemy>=1.2.2,<1.4',
+    'sqlalchemy>=1.4.0,<2.0',
     'sqlparse',
     'tablib',
     'pyyaml',
