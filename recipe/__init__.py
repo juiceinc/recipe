@@ -13,7 +13,6 @@ from recipe.extensions import (
     BlendRecipe,
     CompareRecipe,
     RecipeExtension,
-    SummarizeOver,
     Paginate,
     PaginateInline,
     PaginateCountOver,
@@ -80,6 +79,5 @@ __all__ = [
     "Paginate",
     "PaginateInline",
     "PaginateCountOver",
-    "SummarizeOver",
     "FakerAnonymizer",
 ]

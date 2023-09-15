@@ -475,92 +475,9 @@ class AutomaticFilters(RecipeExtension):
 
 
 class SummarizeOver(RecipeExtension):
-    recipe_schema = {"summarize_over": {"type": "string"}}
+    """Just a stub in sqlalchemy 1.4/2.0"""
 
-    def __init__(self, *args, **kwargs):
-        super(SummarizeOver, self).__init__(*args, **kwargs)
-        self._summarize_over = None
-
-    @recipe_arg()
-    def from_config(self, obj):
-        handle_directives(obj, {"summarize_over": self.summarize_over})
-
-    @recipe_arg()
-    def summarize_over(self, dimension_key):
-        self._summarize_over = dimension_key
-
-    def modify_postquery_parts(self, postquery_parts):
-        """
-        Take a recipe that has dimensions
-        Resummarize it over one of the dimensions returning averages of the
-        metrics.
-        """
-        if self._summarize_over is None:
-            return postquery_parts
-        assert self._summarize_over in self.recipe.dimension_ids
-
-        # Start with a subquery
-        subq = postquery_parts["query"].subquery(name="summarize")
-
-        summarize_over_dim = set(
-            (
-                self._summarize_over,
-                self._summarize_over + "_id",
-                self._summarize_over + "_raw",
-            )
-        )
-        dim_column_names = (
-            set(dim for dim in self.recipe.dimension_ids)
-            .union(set(dim + "_id" for dim in self.recipe.dimension_ids))
-            .union(set(dim + "_raw" for dim in self.recipe.dimension_ids))
-        )
-        used_dim_column_names = dim_column_names - summarize_over_dim
-
-        # Build a new query around the subquery
-        group_by_columns = [col for col in subq.c if col.name in used_dim_column_names]
-
-        # Generate columns for the metric, remapping the aggregation function
-        # count -> sum
-        # sum -> sum
-        # avg -> avg
-        # Metrics can override the summary aggregation by providing a
-        # metric.meta.summary_aggregation callable parameter
-        metric_columns = []
-        for col in subq.c:
-            if col.name not in dim_column_names:
-                met = self.recipe._cauldron.find(col.name, Metric)
-                summary_aggregation = met.meta.get("summary_aggregation", None)
-                if summary_aggregation is None:
-                    if str(met.expression).startswith("avg"):
-                        summary_aggregation = func.avg
-                    elif str(met.expression).startswith("count"):
-                        summary_aggregation = func.sum
-                    elif str(met.expression).startswith("sum"):
-                        summary_aggregation = func.sum
-
-                if summary_aggregation is None:
-                    # We don't know how to aggregate this metric in a summary
-                    raise BadRecipe(
-                        f"Provide a summary_aggregation for metric {col.name}"
-                    )
-                metric_columns.append(summary_aggregation(col).label(col.name))
-
-        # Find the ordering columns and apply them to the new query
-        order_by_columns = []
-        for col in postquery_parts["query"]._order_by:
-            subq_col = getattr(subq.c, str(col).split(" ")[0])
-            if subq_col is not None:
-                order_by_columns.append(subq_col)
-
-        postquery_parts["query"] = (
-            self.recipe._session.query(*(group_by_columns + metric_columns))
-            .group_by(*group_by_columns)
-            .order_by(*order_by_columns)
-        )
-
-        # Remove the summarized dimension
-        self.recipe._cauldron.pop(self._summarize_over, None)
-        return postquery_parts
+    pass
 
 
 class Anonymize(RecipeExtension):
@@ -1091,11 +1008,13 @@ class PaginateInline(Paginate):
             q.limit(None)
             .offset(None)
             .order_by(None)
-            .from_self(func.count().label("_total_count"))
+            .from_self(func.count().label("recipe_total_count"))
             .subquery()
         )
         # Need an aggregation even though there's only one row
-        q = q.add_columns(func.min(total_counter.c._total_count).label("_total_count"))
+        q = q.add_columns(
+            func.min(total_counter.c.recipe_total_count).label("recipe_total_count")
+        )
 
         postquery_parts["query"] = q
         return postquery_parts
@@ -1116,7 +1035,7 @@ class PaginateInline(Paginate):
         rows = self.recipe.all()
         if rows:
             row = rows[0]
-            validated_pagination["totalItems"] = row._total_count
+            validated_pagination["totalItems"] = row.recipe_total_count
         elif self._pagination_page != 1:
             # Go to the first page and rerun the query
             self.pagination_page(1)
@@ -1214,7 +1133,7 @@ class PaginateCountOver(Paginate):
     def add_ingredients(self):
         self._apply_pagination_order_by()
         self._apply_pagination_q()
-        count_over = Ingredient(columns=[func.count().over()], id="_total_count")
+        count_over = Ingredient(columns=[func.count().over()], id="recipe_total_count")
         self.recipe._cauldron.use(count_over)
 
     def modify_postquery_parts(self, postquery_parts):
@@ -1258,7 +1177,7 @@ class PaginateCountOver(Paginate):
         rows = self.recipe.all()
         if rows:
             row = rows[0]
-            validated_pagination["totalItems"] = row._total_count
+            validated_pagination["totalItems"] = row.recipe_total_count
         elif self._pagination_page != 1:
             # Go to the first page and rerun the query
             self.pagination_page(1)
@@ -1464,19 +1383,19 @@ class CompareRecipe(RecipeExtension):
             # metric.meta.summary_aggregation callable parameter
             for m in compare_recipe.metric_ids:
                 met = compare_recipe._cauldron[m]
-                id = met.id
-                met.id = id + compare_suffix
+                id_ = met.id
+                met.id = id_ + compare_suffix
                 summary_aggregation = met.meta.get("summary_aggregation", func.avg)
                 self.recipe._cauldron.use(met)
                 for suffix in met.make_column_suffixes():
-                    col = getattr(comparison_subq.c, id + suffix, None)
+                    col = getattr(comparison_subq.c, id_ + suffix, None)
                     if col is not None:
                         postquery_parts["query"] = postquery_parts["query"].add_columns(
                             summary_aggregation(col).label(met.id + suffix)
                         )
                     else:
                         raise BadRecipe(
-                            f"{id + suffix} could not be found in .compare() recipe subquery"
+                            f"{id_ + suffix} could not be found in .compare() recipe subquery"
                         )
 
             join_conditions = []
@@ -1485,15 +1404,14 @@ class CompareRecipe(RecipeExtension):
                     raise BadRecipe(
                         "{} dimension in comparison recipe must exist " "in base recipe"
                     )
-                base_dim = self.recipe._cauldron[dim]
                 compare_dim = compare_recipe._cauldron[dim]
-                base_col = base_dim.columns[0]
                 compare_col = getattr(comparison_subq.c, compare_dim.id_prop, None)
                 if compare_col is None:
                     raise BadRecipe(
                         f"Can't find join property for {compare_dim.id_prop} dimension in compare recipe"
                     )
-                join_conditions.append(base_col == compare_col)
+                base_dim = self.recipe._cauldron[dim]
+                join_conditions.append(base_dim.columns[0] == compare_col)
 
             join_clause = text("1=1")
             if join_conditions:
