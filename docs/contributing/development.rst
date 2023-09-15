@@ -71,7 +71,6 @@ recipe like these do.
 
 * AutomaticFilters
 * Anonymize
-* SummarizeOver
 
 
 Or extensions can merge one or more recipes into the base recipe. Extensions
