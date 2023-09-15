@@ -497,10 +497,18 @@ class Recipe(object):
             for having in recipe_parts["havings"]:
                 recipe_parts["query"] = recipe_parts["query"].having(having)
 
+        def count_froms(q):
+            # This is a temporary hack. We want to have better
+            # join logic in recipe when we are on sqlalchemy 2.0
+            try:
+                return len(q.selectable.get_final_froms())
+            except Exception:
+                return 1
+
         if (
             self._allow_multiple_tables is False
             and self._select_from is None
-            and len(recipe_parts["query"].selectable.froms) != 1
+            and count_froms(recipe_parts["query"]) != 1
         ):
             raise BadRecipe(
                 f"Recipes must use ingredients that all come from the same table. \n"
