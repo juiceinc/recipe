@@ -37,7 +37,6 @@ Extensions add to Recipe to change how SQL queries get built.
 Recipe includes the following built-in extensions.
 
 * **AutomaticFilter**: Supports a configuration syntax for applying filters.
-* **SummarizeOver**: Supports summarizing over a dimension
 * **BlendRecipe**: Allows data from different tables to be combined
 * **CompareRecipe**: Allows a secondary recipe against the same table to be combined.
 * **Anonymize**: Allows result data to be anonymized.
