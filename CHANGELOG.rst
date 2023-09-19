@@ -3,6 +3,10 @@ Changelog
 =========
 
 
+v0.36.7 (2023-09-19)
+-----------------------------------------
+* Handle NullType columns
+
 v0.36.6 (2023-08-24)
 -----------------------------------------
 * Properly quote order_by columns when using labels strategy
