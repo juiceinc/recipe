@@ -8,6 +8,7 @@ from sqlalchemy import Boolean, Date, DateTime, Float, Integer, String, alias, c
 from sqlalchemy.orm import DeclarativeMeta
 from sqlalchemy.sql.base import ColumnCollection
 from sqlalchemy.sql.sqltypes import Numeric
+from sqlalchemy.exc import CompileError
 
 SLOG = structlog.get_logger(__name__)
 
@@ -33,6 +34,8 @@ class Col:
     @classmethod
     def make_from_sqla_col(cls, sqla_col):
         if is_valid_column(sqla_col.name):
+            datatype = "unusable"
+
             if isinstance(sqla_col.type, String):
                 datatype = "str"
             elif isinstance(sqla_col.type, Date):
@@ -45,13 +48,17 @@ class Col:
                 datatype = "num"
             elif isinstance(sqla_col.type, Boolean):
                 datatype = "bool"
-            elif str(sqla_col.type).startswith("TIMESTAMP"):
+            else:
                 # This check is to support snowflake which uses custom
                 # types for timestamps that are not derived from sqlalchemy
                 # types.
-                datatype = "datetime"
-            else:
-                datatype = "unusable"
+                try:
+                    _type = str(sqla_col.type)
+                    if _type.startswith("TIMESTAMP"):
+                        datatype = "datetime"
+                except CompileError:
+                    datatype = "unusable"
+
             return cls(
                 namespace="", datatype=datatype, sqla_col=sqla_col, name=sqla_col.name
             )
