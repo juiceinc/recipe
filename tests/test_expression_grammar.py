@@ -606,10 +606,10 @@ class TestDataTypesTable(GrammarTestCase):
 
     def test_arrays(self):
         good_examples = """
-        [score] NOT in (1,2,3)            -> datatypes.score NOT IN (1, 2, 3)
-        [score] In (1,2,   3.0)           -> datatypes.score IN (1, 2, 3.0)
+        [score] NOT in (1,2,3)            -> (datatypes.score NOT IN (1, 2, 3))
+        [score] In (1,2,   3.0)           -> datatypes.score IN (1, 2, 3)
         [score] In (1)                    -> datatypes.score IN (1)
-        NOT [score] In (1)                -> datatypes.score NOT IN (1)
+        NOT [score] In (1)                -> (datatypes.score NOT IN (1))
         NOT NOT [score] In (1)            -> datatypes.score IN (1)
         [department] In ("A", "B")        -> datatypes.department IN ('A', 'B')
         [department] In ("A", "B",)       -> datatypes.department IN ('A', 'B')
@@ -813,6 +813,7 @@ class TestDataTypesTableDates(GrammarTestCase):
         good_examples = f"""
         [test_date]           -> datatypes.test_date
         [test_date] > date("2020-01-01")     -> datatypes.test_date > '2020-01-01'
+        [test_date] > date("2020-03-02T00:00:00")     -> datatypes.test_date > '2020-03-02'
         [test_date] > date("today")          -> datatypes.test_date > '2020-01-14'
         date("today") < [test_date]          -> datatypes.test_date > '2020-01-14'
         [test_date] > date("1 day ago")      -> datatypes.test_date > '2020-01-13'

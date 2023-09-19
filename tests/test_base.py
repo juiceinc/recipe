@@ -21,6 +21,7 @@ from sqlalchemy import (
     select,
 )
 from yaml import safe_load
+from typing import Optional, List
 
 from recipe import Dimension, Filter, IdValueDimension, Metric, Recipe, Shelf, get_oven
 
@@ -119,7 +120,12 @@ class RecipeTestCase(TestCase):
         # Set up a default shelf to use
         self.shelf = self.mytable_shelf
 
-    def assertRecipeCSV(self, recipe: Recipe, csv_text: str, ignore_columns=None):
+    def assertRecipeCSV(
+        self,
+        recipe: Recipe,
+        csv_text: str,
+        ignore_columns: Optional[List] = ["recipe_total_count"],
+    ):
         """Recipe data returns the supplied csv content"""
         actual = recipe.dataset.export("csv", lineterminator=str("\n")).strip("\n")
         actual = strip_columns_from_csv(actual, ignore_columns=ignore_columns)

@@ -13,7 +13,6 @@ from recipe.extensions import (
     BlendRecipe,
     CompareRecipe,
     RecipeExtension,
-    SummarizeOver,
     Paginate,
     PaginateInline,
     PaginateCountOver,
@@ -51,7 +50,7 @@ class NullHandler(logging.Handler):
 
 logging.getLogger(__name__).addHandler(NullHandler())
 
-__version__ = "0.36.7"
+__version__ = "0.37.0"
 
 __all__ = [
     "BadIngredient",
@@ -80,6 +79,5 @@ __all__ = [
     "Paginate",
     "PaginateInline",
     "PaginateCountOver",
-    "SummarizeOver",
     "FakerAnonymizer",
 ]

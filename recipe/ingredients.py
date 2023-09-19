@@ -788,7 +788,7 @@ class DivideMetric(Metric):
             # If the denominator is zero, return the ifzero value otherwise do
             # the division
             expression = case(
-                ((cast(denominator, Float) == 0.0, ifzero),),
+                [(cast(denominator, Float) == 0.0, ifzero)],
                 else_=cast(numerator, Float) / cast(denominator, Float),
             )
         super(DivideMetric, self).__init__(expression, **kwargs)

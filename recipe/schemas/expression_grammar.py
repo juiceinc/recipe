@@ -5,7 +5,7 @@ from typing import List, Optional
 import attr
 import structlog
 from sqlalchemy import Boolean, Date, DateTime, Float, Integer, String, alias, cast
-from sqlalchemy.ext.declarative.api import DeclarativeMeta
+from sqlalchemy.orm import DeclarativeMeta
 from sqlalchemy.sql.base import ColumnCollection
 from sqlalchemy.sql.sqltypes import Numeric
 from sqlalchemy.exc import CompileError

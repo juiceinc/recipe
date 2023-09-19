@@ -388,7 +388,7 @@ class TestIngredientBuildFilter(RecipeTestCase):
             (strdim, ["moo", "foo"], None, "foo.first IN ('foo', 'moo')"),
             (strdim, ["moo", "foo"], "in", "foo.first IN ('foo', 'moo')"),
             # Not in
-            (strdim, ["moo", "foo"], "notin", "foo.first NOT IN ('foo', 'moo')"),
+            (strdim, ["moo", "foo"], "notin", "(foo.first NOT IN ('foo', 'moo'))"),
             (
                 strdim,
                 ["moo", None],
@@ -415,7 +415,7 @@ class TestIngredientBuildFilter(RecipeTestCase):
                 datedim,
                 [seconds_in_day * 3],
                 "notin",
-                "foo.birth_date NOT IN ('1970-01-04')",
+                "(foo.birth_date NOT IN ('1970-01-04'))",
             ),
             (
                 dtdim,
@@ -434,7 +434,7 @@ class TestIngredientBuildFilter(RecipeTestCase):
                 strdim,
                 ["moo", {"operator": "notin", "value": ["cow", "pig"]}, "horse"],
                 None,
-                "foo.first IN ('horse', 'moo') OR foo.first NOT IN ('cow', 'pig')",
+                "foo.first IN ('horse', 'moo') OR (foo.first NOT IN ('cow', 'pig'))",
             ),
             (
                 strdim,
@@ -443,7 +443,7 @@ class TestIngredientBuildFilter(RecipeTestCase):
                     {"operator": "notin", "value": [3, 4, 5]},
                 ],
                 "and",
-                "foo.first IN (1, 2, 3) AND foo.first NOT IN (3, 4, 5)",
+                "foo.first IN (1, 2, 3) AND (foo.first NOT IN (3, 4, 5))",
             ),
         ]
 

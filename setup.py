@@ -27,7 +27,7 @@ if sys.argv[-1] == "test":
 
 # yapf: disable
 install = [
-    'sqlalchemy>=1.2.2,<1.4',
+    'sqlalchemy>=1.4.0,<2.0',
     'sqlparse',
     'tablib',
     'pyyaml',
@@ -43,7 +43,7 @@ install = [
 
 setup(
     name="recipe",
-    version="0.36.7",
+    version="0.37.0",
     description="A construction kit for SQL",
     long_description=(open("README.rst").read()),
     author="Chris Gemignani",

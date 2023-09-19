@@ -2108,10 +2108,10 @@ student_id:
         self.assertRecipeCSV(
             recipe,
             """
-            student,student_id,student_id,student_id_id
-            annika,2,annika,2
-            chip,3,chip,3
-            chris,1,chris,1
+            student,student_id,student_id_id
+            annika,2,2
+            chip,3,3
+            chris,1,1
             """,
         )
 
@@ -2127,10 +2127,10 @@ student_id:
         self.assertRecipeCSV(
             recipe,
             """
-            student,student_id,student_id,student_id_id
-            annika,2,annika,2
-            chip,3,chip,3
-            chris,1,chris,1
+            student,student_id,student_id_id
+            annika,2,2
+            chip,3,3
+            chris,1,1
             """,
         )
 
