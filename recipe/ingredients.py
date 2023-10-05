@@ -11,24 +11,22 @@ from recipe.utils.datatype import (
 )
 from typing import List
 
-ALLOWED_OPERATORS = set(
-    [
-        "eq",
-        "ne",
-        "lt",
-        "lte",
-        "gt",
-        "gte",
-        "is",
-        "isnot",
-        "like",
-        "ilike",
-        "quickselect",
-        "in",
-        "notin",
-        "between",
-    ]
-)
+ALLOWED_OPERATORS = {
+    "eq",
+    "ne",
+    "lt",
+    "lte",
+    "gt",
+    "gte",
+    "is",
+    "isnot",
+    "like",
+    "ilike",
+    "quickselect",
+    "in",
+    "notin",
+    "between",
+}
 
 
 def is_nested_condition(v) -> bool:
@@ -113,6 +111,10 @@ class Ingredient(object):
 
     def __init__(self, **kwargs):
         self.id = kwargs.pop("id", uuid4().hex[:12])
+        # Ingredients can't start with underscore because sqlalchemy 1.4
+        # won't allow them in column names
+        if not isinstance(self.id, str) or self.id.startswith("_"):
+            self.id = f"recipe{self.id}"
         self.columns = kwargs.pop("columns", [])
         self.filters = kwargs.pop("filters", [])
         self.havings = kwargs.pop("havings", [])
@@ -159,7 +161,7 @@ class Ingredient(object):
 
     def describe(self):
         """A string representation of the ingredient."""
-        return "({}){} {}".format(self.__class__.__name__, self.id, self._stringify())
+        return f"({self.__class__.__name__}){self.id} {self._stringify()}"
 
     def _format_value(self, value):
         """Formats value using any stored formatters."""
