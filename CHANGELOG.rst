@@ -2,6 +2,15 @@
 Changelog
 =========
 
+
+v0.37.2 (2023-10-05)
+-----------------------------------------
+* Require ingredient ids to be strings that don't start with underscore
+
+v0.37.1 (2023-09-19)
+-----------------------------------------
+* Handle NullType columns
+
 v0.37.0 (2023-09-18)
 -----------------------------------------
 * Update sqlalchemy to 1.4
