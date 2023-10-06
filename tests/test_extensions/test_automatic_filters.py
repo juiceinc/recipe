@@ -235,6 +235,86 @@ class AutomaticFiltersTestCase(RecipeTestCase):
         self.assertRecipeSQLContains(recipe, "foo.first IN ('foo')")
         self.assertRecipeSQLContains(recipe, "foo.last > 't'")
 
+    def test_namedfilters(self):
+        """Automatic filters can be passed multiple times and all will apply"""
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": [{"namedfilter": ["babies"]}],
+            }
+        ):
+            self.assertTrue(recipe.recipe_extensions[0].apply)
+            # The "babies" condition is applied
+            self.assertRecipeSQL(
+                recipe,
+                """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.age < 2
+GROUP BY first""",
+            )
+
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": [{"namedfilter": ["babies", "freds"]}],
+            }
+        ):
+            self.assertTrue(recipe.recipe_extensions[0].apply)
+            # The "babies" condition AND the "freds" condition is applied
+            self.assertRecipeSQL(
+                recipe,
+                """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.age < 2
+  AND foo.last = 'fred'
+GROUP BY first""",
+            )
+
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": [{"namedfilter__or": ["babies", "freds"]}],
+            }
+        ):
+            self.assertTrue(recipe.recipe_extensions[0].apply)
+            # The "babies" OR "freds" condition is applied
+            self.assertRecipeSQL(
+                recipe,
+                """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE foo.age < 2
+  OR foo.last = 'fred'
+GROUP BY first""",
+            )
+
+        for recipe in self.recipe_list(
+            {
+                "metrics": ["age"],
+                "dimensions": ["first"],
+                "automatic_filters": [
+                    {"namedfilter__not": ["babies", "freds"], "last__gt": "x"}
+                ],
+            }
+        ):
+            self.assertTrue(recipe.recipe_extensions[0].apply)
+            # The "babies" OR "freds" condition is applied
+            self.assertRecipeSQL(
+                recipe,
+                """SELECT foo.first AS first,
+       sum(foo.age) AS age
+FROM foo
+WHERE NOT (foo.age < 2
+           AND foo.last = 'fred')
+  AND foo.last > 'x'
+GROUP BY first""",
+            )
+
     def test_multiple_automatic_filters_with_exclude(self):
         """Automatic filters can be passed multiple times and all will apply"""
         for recipe in self.recipe_list(
