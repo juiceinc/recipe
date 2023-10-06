@@ -208,11 +208,11 @@ GROUP BY first"""
 
     def test_shelf(self):
         recipe = self.recipe().metrics("age").dimensions("first")
-        self.assertEqual(len(recipe._shelf), 4)
+        self.assertEqual(len(recipe._shelf), 5)
         recipe.shelf(None)
         self.assertEqual(len(recipe._shelf), 0)
         recipe.shelf(self.shelf)
-        self.assertEqual(len(recipe._shelf), 4)
+        self.assertEqual(len(recipe._shelf), 5)
         recipe.shelf({})
         self.assertEqual(len(recipe._shelf), 0)
         with self.assertRaises(BadRecipe):

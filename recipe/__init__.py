@@ -22,6 +22,7 @@ from recipe.ingredients import (
     DivideMetric,
     Filter,
     Having,
+    NamedFilters,
     IdValueDimension,
     Ingredient,
     InvalidIngredient,

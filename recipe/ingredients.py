@@ -27,6 +27,10 @@ ALLOWED_OPERATORS = {
     "in",
     "notin",
     "between",
+    # Allowed operators for NamedFilters
+    "and",
+    "or",
+    "not",
 }
 
 
@@ -768,6 +772,9 @@ class NamedFilters(Ingredient):
         if operator == "and":
             # SQLAlchemy AND clause these together
             return and_(*conditions)
+        if operator == "not":
+            # SQLAlchemy NOT AND clause these together
+            return not_(and_(*conditions))
         elif operator == "or":
             # SQLAlchemy OR clause these together
             return or_(*conditions)

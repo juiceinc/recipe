@@ -6,7 +6,14 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from recipe.core import Recipe
 from recipe.exceptions import BadRecipe
-from recipe.ingredients import ALLOWED_OPERATORS, Dimension, Ingredient, Metric, Filter
+from recipe.ingredients import (
+    ALLOWED_OPERATORS,
+    Dimension,
+    Ingredient,
+    Metric,
+    Filter,
+    NamedFilters,
+)
 from recipe.utils import FakerAnonymizer, recipe_arg, pad_values
 
 Base = declarative_base()
@@ -283,19 +290,17 @@ class AutomaticFilters(RecipeExtension):
             # Ignore keys that are in exclude_keys
             return None
 
-        # TODO: If dim can't be found, optionally raise a warning
+        # TODO: If the ingr can't be found, optionally raise a warning
         try:
-            dimension = self.recipe._shelf.find(dim, Dimension)
+            ingr = self.recipe._shelf.find(dim, (Dimension, NamedFilters))
         except BadRecipe as e:
             if self.strict:
                 raise e
             else:
                 # If you can't find the dimension, ignore it
                 return None
-        values = clean_filtering_values(
-            values, dimension, operator, self._optimize_redshift
-        )
-        return dimension.build_filter(values, operator)
+        values = clean_filtering_values(values, ingr, operator, self._optimize_redshift)
+        return ingr.build_filter(values, operator)
 
     def add_ingredients(self):
         if self.apply:

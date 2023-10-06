@@ -23,7 +23,16 @@ from sqlalchemy import (
 from yaml import safe_load
 from typing import Optional, List
 
-from recipe import Dimension, Filter, IdValueDimension, Metric, Recipe, Shelf, get_oven
+from recipe import (
+    Dimension,
+    Filter,
+    NamedFilters,
+    IdValueDimension,
+    Metric,
+    Recipe,
+    Shelf,
+    get_oven,
+)
 
 
 def strip_columns_from_csv(content: str, ignore_columns: list = None) -> str:
@@ -337,6 +346,17 @@ class RecipeTestCase(TestCase):
                     cls.basic_table.c.last, id_expression=cls.basic_table.c.first
                 ),
                 "age": Metric(func.sum(cls.basic_table.c.age)),
+                # A collection of named sqlalchemy boolean expressions
+                "namedfilter": NamedFilters(
+                    named_filters=[
+                        {"label": "babies", "condition": cls.basic_table.c.age < 2},
+                        {"label": "adults", "condition": cls.basic_table.c.age > 18},
+                        {
+                            "label": "freds",
+                            "condition": cls.basic_table.c.last == "fred",
+                        },
+                    ]
+                ),
             }
         )
 
