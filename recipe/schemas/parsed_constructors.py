@@ -6,8 +6,6 @@ from lark.exceptions import GrammarError, LarkError
 from recipe.exceptions import BadIngredient
 from recipe.ingredients import InvalidIngredient
 
-from .utils import ingredient_class_for_name
-
 
 def _convert_bucket_to_field(field, bucket, buckets_default_label, builder):
     """Convert a bucket structure if statement
@@ -172,9 +170,26 @@ def convert_extra_fields(
 def create_ingredient_from_parsed(
     ingr_config: dict, builder: SQLAlchemyBuilder, debug: bool = False
 ):
-    """Create an ingredient from config version 2 object ."""
+    """Create a recipe ingredient from a config dictionary.
+    The `kind` is used to determine the class of the ingredient.
+
+    Use the builder to convert properties of the config to SQLAlchemy expressions.
+    These are collected into args, and ingr_configs dict which are provided to the ingredient
+    class.
+    """
     kind = ingr_config.pop("kind", "metric")
-    IngredientClass = ingredient_class_for_name(kind.title())
+
+    from recipe.ingredients import Metric, Dimension, Filter, Having, NamedFilters
+
+    ingredient_classes = {
+        "metric": Metric,
+        "measure": Metric,
+        "dimension": Dimension,
+        "filter": Filter,
+        "having": Having,
+        "namedfilters": NamedFilters,
+    }
+    IngredientClass = ingredient_classes.get(kind.lower())
     if IngredientClass is None:
         raise BadIngredient(f"Unknown ingredient kind {kind}")
 
@@ -259,6 +274,20 @@ def create_ingredient_from_parsed(
                 condition_defn, forbid_aggregation=True, **builder_kwargs
             )
             args = [expr]
+
+        elif kind == "named_filters":
+            args = []
+            named_filters = []
+            for itm in ingr_config.get("named_filters", []):
+                label = itm.get("label")
+                condition_defn = itm.get("condition")
+                expr, datatype = builder.parse(
+                    condition_defn, forbid_aggregation=True, **builder_kwargs
+                )
+                if datatype != "bool":
+                    raise BadIngredient("Conditions must be boolean")
+                named_filters.append({"label": label, "condition": expr})
+            ingr_config["named_filters"] = named_filters
 
         elif kind == "having":
             condition_defn = ingr_config.get("condition")
