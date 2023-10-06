@@ -9,6 +9,7 @@ from recipe.utils.datatype import (
     determine_datatype,
     datatype_from_column_expression,
 )
+from collections import OrderedDict
 from typing import List
 
 ALLOWED_OPERATORS = {
@@ -695,6 +696,83 @@ class Dimension(Ingredient):
             return f"{self.id}_raw"
         else:
             return self.id
+
+
+class NamedFilters(Ingredient):
+    """
+    This is a collection of named filters.
+
+    This can be created from config like this. Each condition contains a
+    label and boolean expression (similar to conditions in a bucket).
+
+    We will be able to add this to filters slices.
+
+    .. code:: yaml
+
+        myfilter:
+            kind: NamedFilters
+            singular: Fitler
+            plural: Filters
+            named_filters:
+            - label: "Babies"
+              condition: age<5
+            - label: "Adults"
+              condition: age>=18
+            - label: "Red Haired"
+              condition: hair_color in ("red")
+
+    You can select redhaired babies with:
+
+        {
+            "myfilter": ["Babies", "Red Haired"]
+        }
+
+    This is equivalent to:
+
+        {
+            "myfilter__and": ["Babies", "Red Haired"]
+        }
+
+    If you want to select Babies OR Red Haired, you would use this in automatic
+    filters.
+
+        {
+            "myfilter__or": ["Babies", "Red Haired"]
+        }
+
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        # Named filters is a list of dictionaries with a label and condition
+        self.named_filters = OrderedDict()
+        for nf in kwargs.get("named_filters", []):
+            self.named_filters[nf["label"]] = nf["condition"]
+
+    def build_filter(self, value, operator=None, target_role=None):
+        """This builds a filter.
+
+        value: A scalar or vector value that contains strings that match the named_filters label.
+            The built filter will will be
+        operator: The operator to use when building the filter. The default operator is "and"
+        """
+        if operator is None:
+            operator = "and"
+
+        if not isinstance(value, list):
+            value = [value]
+
+        # Get the condition
+        conditions = [self.named_filters[v] for v in value if v in self.named_filters]
+        if operator == "and":
+            # SQLAlchemy AND clause these together
+            return and_(*conditions)
+        elif operator == "or":
+            # SQLAlchemy OR clause these together
+            return or_(*conditions)
+        else:
+            raise ValueError(f"Unknown operator {operator}")
 
 
 class IdValueDimension(Dimension):
