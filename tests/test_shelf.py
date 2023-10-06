@@ -198,40 +198,41 @@ class ShelfTestCase(RecipeTestCase):
 
     def test_repr(self):
         """Find ingredients on the shelf"""
-        print(self.shelf.__repr__())
         assert (
-            self.shelf.__repr__()
+            self.shelf.__repr__().strip()
             == """(Dimension)first foo.first
 (Dimension)firstlast foo.first foo.last
 (Dimension)last foo.last
-(Metric)age sum(foo.age)"""
+(Metric)age sum(foo.age)
+(NamedFilters)namedfilter"""
         )
 
     def test_keys(self):
         self.assertEqual(
-            sorted(self.shelf.keys()), ["age", "first", "firstlast", "last"]
+            sorted(self.shelf.keys()),
+            ["age", "first", "firstlast", "last", "namedfilter"],
         )
 
     def test_update(self):
         """Shelves can be updated with other shelves"""
         new_shelf = Shelf({"squee": Dimension(self.basic_table.c.first)})
-        self.assertEqual(len(self.shelf), 4)
-        self.shelf.update(new_shelf)
         self.assertEqual(len(self.shelf), 5)
+        self.shelf.update(new_shelf)
+        self.assertEqual(len(self.shelf), 6)
 
     def test_update_key_value(self):
         """Shelves can be built with key_values and updated"""
         new_shelf = Shelf(squee=Dimension(self.basic_table.c.first))
-        self.assertEqual(len(self.shelf), 4)
-        self.shelf.update(new_shelf)
         self.assertEqual(len(self.shelf), 5)
+        self.shelf.update(new_shelf)
+        self.assertEqual(len(self.shelf), 6)
         assert isinstance(self.shelf.get("squee"), Dimension)
 
     def test_update_key_value_direct(self):
         """Shelves can be updated directly with key_value"""
-        self.assertEqual(len(self.shelf), 4)
-        self.shelf.update(squee=Dimension(self.basic_table.c.first))
         self.assertEqual(len(self.shelf), 5)
+        self.shelf.update(squee=Dimension(self.basic_table.c.first))
+        self.assertEqual(len(self.shelf), 6)
         assert isinstance(self.shelf.get("squee"), Dimension)
 
     def test_brew(self):
@@ -289,12 +290,12 @@ class ShelfTestCase(RecipeTestCase):
 
     def test_clear(self):
         self.shelf = copy(self.shelf)
-        self.assertEqual(len(self.shelf), 4)
+        self.assertEqual(len(self.shelf), 5)
         self.shelf.clear()
         self.assertEqual(len(self.shelf), 0)
 
     def test_dimension_ids(self):
-        self.assertEqual(len(self.shelf), 4)
+        self.assertEqual(len(self.shelf), 5)
         self.assertEqual(len(self.shelf.dimension_ids), 3)
         self.assertEqual(
             sorted(self.shelf.dimension_ids), ["first", "firstlast", "last"]
