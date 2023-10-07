@@ -136,12 +136,7 @@ format_schema = S.String(coerce=coerce_format, required=False)
 
 
 metric_schema = S.Dict(
-    schema={
-        "field": field_schema,
-        "format": format_schema,
-        "quickselects": S.List(required=False, schema=labeled_condition_schema),
-    },
-    allow_unknown=True,
+    schema={"field": field_schema, "format": format_schema}, allow_unknown=True
 )
 
 dimension_schema = S.Dict(
@@ -157,7 +152,6 @@ dimension_schema = S.Dict(
         "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
         "format": format_schema,
         "lookup": S.Dict(required=False),
-        "quickselects": S.List(required=False, schema=named_condition_schema),
     },
     coerce=move_extra_fields,
     allow_unknown=True,
@@ -197,7 +191,6 @@ strict_metric_schema = S.Dict(
         "plural": S.String(required=False),
         "field": field_schema,
         "format": format_schema,
-        "quickselects": S.List(required=False, schema=labeled_condition_schema),
     },
 )
 
@@ -225,7 +218,21 @@ strict_dimension_schema = S.Dict(
         "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
         "format": format_schema,
         "lookup": S.Dict(required=False),
-        "quickselects": S.List(required=False, schema=named_condition_schema),
+    },
+    coerce=move_extra_fields,
+)
+
+strict_namedfilters_schema = S.Dict(
+    allow_unknown=False,
+    schema={
+        # _version is deprecated.
+        "icon": S.String(required=False),
+        "_meta": S.Dict(required=False),
+        "_config": S.Dict(required=False),
+        "singular": S.String(required=False),
+        "plural": S.String(required=False),
+        "description": S.String(required=False),
+        "named_filters": S.List(required=True, schema=labeled_condition_schema),
     },
     coerce=move_extra_fields,
 )
