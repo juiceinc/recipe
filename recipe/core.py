@@ -212,15 +212,17 @@ class Recipe(object):
         :param name:
         :return:
         """
+        proxy_callable = None
+        print(self.recipe_extensions)
         with contextlib.suppress(AttributeError):
             return self.__getattribute__(name)
         for extension in self.recipe_extensions:
+            print("Searching for ", name, "in", extension)
             with contextlib.suppress(AttributeError):
                 proxy_callable = getattr(extension, name)
                 break
-        try:
-            proxy_callable
-        except NameError:
+
+        if proxy_callable is None:
             raise AttributeError(
                 f"{name} isn't available on this recipe, you may need to add an extension"
             )

@@ -161,6 +161,13 @@ filter_schema = S.Dict(allow_unknown=True, schema={"condition": field_schema})
 
 having_schema = S.Dict(allow_unknown=True, schema={"condition": field_schema})
 
+having_schema = S.Dict(allow_unknown=True, schema={"condition": field_schema})
+
+namedfilters_schema = S.Dict(
+    allow_unknown=True,
+    schema={"named_filters": S.List(required=True, schema=labeled_condition_schema)},
+)
+
 ingredient_schema = S.Dict(
     choose_schema=S.when_key_is(
         "kind",
@@ -169,6 +176,7 @@ ingredient_schema = S.Dict(
             "dimension": dimension_schema,
             "filter": filter_schema,
             "having": having_schema,
+            "namedfilters": namedfilters_schema,
         },
         default_choice="metric",
     ),
@@ -218,6 +226,7 @@ strict_dimension_schema = S.Dict(
         "buckets_default_label": {"anyof": SCALAR_TYPES, "required": False},
         "format": format_schema,
         "lookup": S.Dict(required=False),
+        "named_filters": S.List(required=False, schema=labeled_condition_schema),
     },
     coerce=move_extra_fields,
 )
@@ -267,6 +276,7 @@ strict_ingredient_schema = S.Dict(
             "dimension": strict_dimension_schema,
             "filter": strict_filter_schema,
             "having": strict_having_schema,
+            "namedfilters": strict_namedfilters_schema,
         },
         default_choice="metric",
     ),

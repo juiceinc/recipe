@@ -268,6 +268,20 @@ def create_ingredient_from_parsed(
             convert_filter(builder, ingr_config, builder_kwargs)
             convert_quickselects(builder, ingr_config, builder_kwargs)
 
+            # This is a hack to store named filters in dimensions for tsting
+            named_filters = []
+            for itm in ingr_config.get("named_filters", []):
+                label = itm.get("label")
+                condition_defn = itm.get("condition")
+                expr, datatype = builder.parse(
+                    condition_defn, forbid_aggregation=True, **builder_kwargs
+                )
+                if datatype != "bool":
+                    raise BadIngredient("Conditions must be boolean")
+                named_filters.append({"label": label, "condition": expr})
+            if named_filters:
+                ingr_config["named_filters"] = named_filters
+
         elif kind == "filter":
             condition_defn = ingr_config.get("condition")
             expr, datatype = builder.parse(

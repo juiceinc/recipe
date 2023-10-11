@@ -135,6 +135,11 @@ class Ingredient(object):
         self._labels = []
         self.error = kwargs.pop("error", None)
 
+        # Named filters is a list of dictionaries with a label and condition
+        self.named_filters = OrderedDict()
+        for nf in kwargs.get("named_filters", []):
+            self.named_filters[nf["label"]] = nf["condition"]
+
         # What order should this be in
         self.ordering = kwargs.pop("ordering", "asc")
         self.group_by_strategy = kwargs.pop("group_by_strategy", "labels")
@@ -347,11 +352,10 @@ class Ingredient(object):
                 if qs.get("name") == value:
                     return qs.get("condition")
             raise ValueError(
-                "quickselect {} was not found in "
-                "ingredient {}".format(value, self.id)
+                f"quickselect {value} was not found in ingredient {self.id}"
             )
         else:
-            raise ValueError("Unknown operator {}".format(operator))
+            raise ValueError(f"Unknown operator {operator}")
 
     def _build_vector_filter(self, value, operator=None, target_role=None):
         """Build a Filter given a list of values.
@@ -444,7 +448,34 @@ class Ingredient(object):
                     )
             return or_(*qs_conditions)
         else:
-            raise ValueError("Unknown operator {}".format(operator))
+            raise ValueError(f"Unknown operator {operator}")
+
+    def _build_named_filter(self, value, operator=None, target_role=None):
+        """This builds a filter.
+
+        value: A scalar or vector value that contains strings that match the named_filters label.
+            The built filter will will be
+        operator: The operator to use when building the filter. The default operator is "and"
+        """
+        if operator is None:
+            operator = "and"
+
+        if not isinstance(value, list):
+            value = [value]
+
+        # Get the condition
+        conditions = [self.named_filters[v] for v in value if v in self.named_filters]
+        if operator == "and":
+            # SQLAlchemy AND clause these together
+            return and_(*conditions)
+        if operator == "not":
+            # SQLAlchemy NOT AND clause these together
+            return not_(and_(*conditions))
+        elif operator == "or":
+            # SQLAlchemy OR clause these together
+            return or_(*conditions)
+        else:
+            raise ValueError(f"Unknown operator {operator}")
 
     def build_filter(self, value, operator=None, target_role=None):
         """
@@ -474,7 +505,11 @@ class Ingredient(object):
         """
         value_is_scalar = not isinstance(value, (list, tuple))
 
-        if value_is_scalar:
+        if self.named_filters:
+            return self._build_named_filter(
+                value, operator=operator, target_role=target_role
+            )
+        elif value_is_scalar:
             return self._build_scalar_filter(
                 value, operator=operator, target_role=target_role
             )
@@ -588,6 +623,7 @@ class Dimension(Ingredient):
 
     def __init__(self, expression, **kwargs):
         super(Dimension, self).__init__(**kwargs)
+        self.named_filters = kwargs.pop("named_filters", [])
         if self.datatype is None:
             self.datatype = datatype_from_column_expression(expression)
 

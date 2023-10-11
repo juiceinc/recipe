@@ -136,7 +136,7 @@ class RecipeTestCase(TestCase):
         ignore_columns: Optional[List] = ["recipe_total_count"],
     ):
         """Recipe data returns the supplied csv content"""
-        actual = recipe.dataset.export("csv", lineterminator=str("\n")).strip("\n")
+        actual = recipe.dataset.export("csv", lineterminator="\n").strip("\n")
         actual = strip_columns_from_csv(actual, ignore_columns=ignore_columns)
         expected = str_dedent(csv_text).strip("\n")
         if actual != expected:
