@@ -460,11 +460,17 @@ class Ingredient(object):
         if operator is None:
             operator = "and"
 
+        print("Building named\n" * 5, value, operator, target_role)
+
         if not isinstance(value, list):
             value = [value]
 
         # Get the condition
-        conditions = [self.named_filters[v] for v in value if v in self.named_filters]
+        conditions = [
+            nf["condition"] for nf in self.named_filters if nf["label"] in value
+        ]
+        print("The seelcted conditions are", conditions)
+        # conditions = [self.named_filters[v] for v in value if v in self.named_filters]
         if operator == "and":
             # SQLAlchemy AND clause these together
             return and_(*conditions)
@@ -504,8 +510,9 @@ class Ingredient(object):
 
         """
         value_is_scalar = not isinstance(value, (list, tuple))
-
+        print("We are going to build a filter!\n" * 5, value)
         if self.named_filters:
+            print("Building a named filter\n" * 5)
             return self._build_named_filter(
                 value, operator=operator, target_role=target_role
             )
